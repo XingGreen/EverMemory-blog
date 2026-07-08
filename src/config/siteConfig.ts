@@ -159,7 +159,7 @@ export const siteConfig: SiteConfig = {
 		generateOgImages: false,
 	},
 
-/*	// bangumi配置
+	/*	// bangumi配置
 	bangumi: {
 		// Bangumi用户ID
 		userId: "1143164",
@@ -184,14 +184,14 @@ export const siteConfig: SiteConfig = {
 			// 你的 Bilibili 用户 UID
 			uid: "38932988",
 		},
-*/		// TMDB 配置（可选，需要翻墙）
-		// tmdb: {
-		//   // TMDB API 密钥
-		//   apiKey: "your_tmdb_api_key",
-		//   // TMDB 列表 ID
-		//   listId: "your_list_id",
-		// },
-		// 	},
+*/ // TMDB 配置（可选，需要翻墙）
+	// tmdb: {
+	//   // TMDB API 密钥
+	//   apiKey: "your_tmdb_api_key",
+	//   // TMDB 列表 ID
+	//   listId: "your_list_id",
+	// },
+	// 	},
 
 	// 分页配置
 	pagination: {
