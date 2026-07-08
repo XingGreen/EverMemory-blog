@@ -2,13 +2,13 @@ import type { BackgroundWallpaperConfig } from "@/types/backgroundWallpaper";
 
 export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	// 壁纸模式："banner" 横幅壁纸，"fullscreen" 全屏壁纸，"overlay" 全屏透明，"none" 纯色背景无壁纸
-	mode: "banner",
+	mode: "fullscreen",
 	// 是否允许用户通过导航栏切换壁纸模式
 	// 且同时维护多种壁纸模式过于复杂（已经屎山代码），在切换时有时候可能会出现一些奇怪的过渡效果或者bug
 	// 推荐只选择自己喜欢的模式并关闭切换功能
-	switchable: true,
+	switchable: false,
 	// 是否启用背景视频播放，配置后将在导航栏显示视频播放按钮
-	playerEnable: true,
+	playerEnable: false,
 	/**
 	 * 背景图片配置
 	 * 图片路径支持三种格式：
@@ -81,17 +81,33 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			// 是否允许用户通过控制面板切换横幅标题显示
 			switchable: true,
 			// 主页横幅主标题
-			title: "Lovely firefly!",
+			title: "创新是引领发展的第一动力",
 			// 主页横幅主标题字体大小
 			titleSize: "3.8rem",
 			// 主页横幅副标题
 			subtitle: [
-				"In Reddened Chrysalis, I Once Rest",
-				"From Shattered Sky, I Free Fall",
-				"Amidst Silenced Stars, I Deep Sleep",
-				"Upon Lighted Fyrefly, I Soon Gaze",
-				"From Undreamt Night, I Thence Shine",
-				"In Finalized Morrow, I Full Bloom",
+				//"In Reddened Chrysalis, I Once Rest",
+				//"From Shattered Sky, I Free Fall",
+				//"Amidst Silenced Stars, I Deep Sleep",
+				//"Upon Lighted Fyrefly, I Soon Gaze",
+				//"From Undreamt Night, I Thence Shine",
+				//"In Finalized Morrow, I Full Bloom",
+				"永恒瞬间，不费青春，人生苦短，不留遗憾！",
+				"把今天的日落收进口袋，明早拿它当起床铃——再灰暗的尽头也能点亮自己的光",
+				"愿你像红糖般纯粹，在生活中沉淀出甜而不腻的滋味",
+				"保持创作的勇气，即使面对压力也能谱出属于自己的韵律",
+				"记得偶尔停下脚步，像熬制红糖般耐心等待美好的结晶",
+				"愿你的日常像我们对话那样，总藏着意想不到的精彩片段",
+				"在幕后规划全局时，别忘了给自己留一块红糖般温暖的角落",
+				"对待责任与爱好，如对待宠物般细腻，找到平衡的支点",
+				"用幽默化解凝重，像给历史加勺红糖，让过往也变得可口",
+				"最后——愿每个明天都比昨天多一分甜度，少一分焦灼",
+				"世界上只有一种取向 —— 心之所向。",
+				"化学很适合一句话：我的生命，遇到不同的人，便绽放出不同色彩的焰火。",
+				"没有人的文明毫无意义。",
+				"有些遗憾之所以美丽，正是因为它们永远停留在了完美的可能性中，不受现实的磨损和平凡。",
+				"你身体里的铁，来自璀璨的超新星爆炸；血液里的锌，源自两次中子星对撞。我们，本就是星辰之子。",
+				"宇宙在几十亿年前埋下的星尘，如今成了我的骨血。对星空的好奇，不过是本能在寻找自己的来处。",
 			],
 			// 主页横幅副标题字体大小
 			subtitleSize: "1.5rem",
@@ -111,9 +127,9 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 		// 导航栏配置
 		navbar: {
 			// 导航栏透明模式："semi" 半透明，"full" 完全透明，"semifull" 动态透明
-			transparentMode: "semi",
+			transparentMode: "semifull",
 			// 是否开启毛玻璃模糊效果，开启可能会影响页面性能，如果不开启则是半透明，请根据自己的喜好开启
-			enableBlur: true,
+			enableBlur: false,
 			// 毛玻璃模糊度
 			blur: 5,
 		},
@@ -121,9 +137,9 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 		waves: {
 			enable: {
 				// 桌面端是否启用水波纹动画效果
-				desktop: true,
+				desktop: false,
 				// 移动端是否启用水波纹动画效果
-				mobile: true,
+				mobile: false,
 			},
 			// 是否允许用户通过控制面板切换水波纹动画
 			switchable: true,
@@ -148,7 +164,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			// 轮播切换间隔（毫秒）
 			interval: 5000,
 			// 过渡效果: 'fade' 渐变 | 'zoom' 缩放 | 'slide' 滑动 | 'kenburns' 旋转木马
-			transitionEffect: "zoom",
+			transitionEffect: "fade",
 			// 是否允许用户通过控制面板切换壁纸轮播
 			switchable: true,
 		},

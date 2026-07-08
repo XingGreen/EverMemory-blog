@@ -21,7 +21,7 @@ export const sidebarLayoutConfig: SidebarLayoutConfig = {
 	// 文章详情页隐藏侧边栏，设为 true 则只在首页等非文章页显示
 	hideSidebarOnPostPage: false,
 
-	// 文章详情页保持双侧栏
+	// 文章详情页保持双侧栏显示
 	// 使用单侧栏(position为left或right)时，是否在文章详情页显示双侧边栏，（hideSidebarOnPostPage需要保持false）
 	// 当position为left时开启此项，文章详情页将额外显示右侧边栏
 	// 当position为right时开启此项，文章详情页将额外显示左侧边栏
@@ -124,8 +124,8 @@ export const sidebarLayoutConfig: SidebarLayoutConfig = {
 			// 组件专属配置
 			specificConfig: {
 				siteInfo: {
-					// 未能识别的构建平台回退显示文本，可自定义
-					unknownBuildPlatform: "Unknown CI",
+					// 未能识别的构建平台回退显示文本,可自定义,默认值为"Unknown CI"
+					unknownBuildPlatform: "不知道的 CI 喵！猫猫不认识喵！",
 				},
 			},
 		},
@@ -135,7 +135,7 @@ export const sidebarLayoutConfig: SidebarLayoutConfig = {
 			// 是否启用该组件
 			enable: true,
 			// 是否显示组件标题
-			showTitle: false,
+			showTitle: true,
 			// 组件位置
 			position: "sticky",
 			// 是否在文章详情页显示
