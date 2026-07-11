@@ -380,6 +380,11 @@ export const en: Translation = {
 	[Key.galleryBackToAlbums]: "Back to albums",
 	[Key.searchAlbums]: "Search albums...",
 
+	[Key.software]: "Software",
+	[Key.softwareDescription]: "Some useful software and tools I recommend.",
+	[Key.searchSoftware]: "Search software...",
+	[Key.softwareNoItems]: "No software yet",
+
 	// Password Protection
 	[Key.passwordProtected]: "Password Protected",
 	[Key.passwordProtectedDesc]:

@@ -379,6 +379,11 @@ export const ja: Translation = {
 	[Key.galleryBackToAlbums]: "アルバム一覧に戻る",
 	[Key.searchAlbums]: "アルバムを検索...",
 
+	[Key.software]: "ソフトウェア",
+	[Key.softwareDescription]: "おすすめのソフトウェアとツール",
+	[Key.searchSoftware]: "ソフトウェアを検索...",
+	[Key.softwareNoItems]: "ソフトウェアはまだありません",
+
 	// パスワード保護
 	[Key.passwordProtected]: "パスワード保護",
 	[Key.passwordProtectedDesc]:

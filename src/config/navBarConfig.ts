@@ -53,6 +53,9 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 
 			// 番组计划
 			LinkPresets.Bangumi,
+
+			// 软件推荐
+			LinkPresets.Software,
 		],
 	});
 
@@ -71,7 +74,7 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 	});
 
 	// 自定义导航栏链接
-	links.push({
+/*	links.push({
 		name: "Firefly链接",
 		url: "#",
 		icon: "material-symbols:link",
@@ -103,6 +106,7 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 			},
 		],
 	});
+*/
 
 	// 文档链接
 	// links.push({
@@ -185,6 +189,12 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		url: "/anime/",
 		icon: "material-symbols:live-tv",
 		pageKey: "anime",
+	},
+	Software: {
+		name: "软件推荐",
+		url: "/software/",
+		icon: "material-symbols:apps",
+		pageKey: "software",
 	},
 };
 

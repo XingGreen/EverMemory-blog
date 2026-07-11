@@ -371,6 +371,11 @@ export const zh_CN: Translation = {
 	[Key.galleryBackToAlbums]: "返回相册列表",
 	[Key.searchAlbums]: "搜索相簿...",
 
+	[Key.software]: "软件推荐",
+	[Key.softwareDescription]: "我推荐的一些实用软件和工具，希望能对你有所帮助。",
+	[Key.searchSoftware]: "搜索软件...",
+	[Key.softwareNoItems]: "暂无软件推荐",
+
 	// 密码保护
 	[Key.passwordProtected]: "密码保护",
 	[Key.passwordProtectedDesc]: "此内容已被密码保护，请输入密码查看。",

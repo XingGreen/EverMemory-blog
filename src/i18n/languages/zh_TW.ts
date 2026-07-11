@@ -373,6 +373,11 @@ export const zh_TW: Translation = {
 	[Key.galleryBackToAlbums]: "返回相簿列表",
 	[Key.searchAlbums]: "搜尋相簿...",
 
+	[Key.software]: "軟體推薦",
+	[Key.softwareDescription]: "我推薦的一些實用軟體和工具，希望能對你有所幫助。",
+	[Key.searchSoftware]: "搜尋軟體...",
+	[Key.softwareNoItems]: "暫無軟體推薦",
+
 	// 密碼保護
 	[Key.passwordProtected]: "密碼保護",
 	[Key.passwordProtectedDesc]: "此內容已被密碼保護，請輸入密碼查看。",

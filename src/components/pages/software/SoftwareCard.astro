@@ -1,0 +1,159 @@
+---
+import { Icon } from "astro-icon/components";
+
+interface Props {
+	name: string;
+	description?: string;
+	tags?: string[];
+	visitUrl?: string;
+	sourceCode?: string;
+	icon?: string;
+	rating?: number;
+	platform?: string[];
+	price?: string;
+}
+
+const {
+	name,
+	description,
+	tags,
+	visitUrl,
+	sourceCode,
+	icon,
+	rating,
+	platform,
+	price,
+} = Astro.props;
+
+const isIconUrl = icon && (icon.startsWith("http://") || icon.startsWith("https://"));
+---
+
+<div
+	data-tags={tags?.join(",") || ""}
+	class="software-card group relative block overflow-hidden rounded-xl border border-(--line-divider) hover:border-(--primary) hover:bg-(--card-bg) transition-all duration-300 hover:shadow-lg"
+>
+	<div class="absolute inset-0 bg-(--primary) opacity-0 group-hover:opacity-5 transition-opacity duration-300 pointer-events-none" />
+	<div class="relative p-5">
+		<div class="flex items-start gap-4">
+			<div
+				class="flex-shrink-0 w-12 h-12 rounded-xl bg-(--btn-regular-bg) flex items-center justify-center text-(--primary) group-hover:bg-(--primary) group-hover:text-white/80 transition-colors duration-300 overflow-hidden"
+			>
+				{icon ? (
+					isIconUrl ? (
+						<img
+							src={icon}
+							alt={name}
+							class="w-full h-full object-contain"
+							loading="lazy"
+						/>
+					) : (
+						<Icon is:inline name={icon} class="text-2xl" />
+					)
+				) : (
+					<span class="text-xl">📦</span>
+				)}
+			</div>
+
+			<div class="flex-1 min-w-0">
+				<div class="flex items-center justify-between gap-2 mb-1">
+					<h3 class="font-bold text-lg text-neutral-900 dark:text-neutral-100 line-clamp-1">
+						{name}
+					</h3>
+					{price && (
+						<span
+							class="text-xs px-2 py-0.5 rounded-full bg-(--primary)/10 text-(--primary) font-medium"
+						>
+							{price}
+						</span>
+					)}
+				</div>
+
+				{description && (
+					<p
+						class="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed mb-3"
+						title={description}
+					>
+						{description}
+					</p>
+				)}
+
+				<div class="flex flex-wrap items-center gap-2">
+					{rating && (
+						<div class="flex items-center gap-1">
+							{Array.from({ length: 5 }).map((_, i) => (
+								<svg
+									key={i}
+									class={`w-3.5 h-3.5 ${
+										i < rating
+											? "text-yellow-400 fill-yellow-400"
+											: "text-neutral-300 dark:text-neutral-600"
+									}`}
+									viewBox="0 0 24 24"
+								>
+									<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+								</svg>
+							))}
+						</div>
+					)}
+
+					{platform && platform.length > 0 && (
+						<div class="flex flex-wrap gap-1">
+							{platform.slice(0, 3).map((p) => (
+								<span
+									key={p}
+									class="text-[0.65rem] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
+								>
+									{p}
+								</span>
+							))}
+						</div>
+					)}
+				</div>
+
+				{tags && tags.length > 0 && (
+					<div class="flex flex-wrap gap-1 mt-3">
+						{tags.slice(0, 4).map((tag) => (
+							<span
+								key={tag}
+								class="text-[0.6rem] px-1.5 py-0.5 rounded bg-(--primary)/5 text-(--primary) border border-(--primary)/10"
+							>
+								{tag}
+							</span>
+						))}
+					</div>
+				)}
+			</div>
+		</div>
+
+		<div class="relative mt-4 flex gap-2 px-1">
+			{visitUrl && (
+				<a
+					href={visitUrl}
+					target="_blank"
+					rel="noopener noreferrer"
+					class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg btn-regular text-sm font-medium"
+				>
+					<Icon is:inline name="material-symbols:open-in-new-rounded" class="text-sm" />
+					访问网站
+				</a>
+			)}
+			{sourceCode && (
+				<a
+					href={sourceCode}
+					target="_blank"
+					rel="noopener noreferrer"
+					class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg btn-regular text-sm font-medium"
+				>
+					<Icon is:inline name="simple-icons:github" class="text-sm" />
+					GitHub
+				</a>
+			)}
+			{!visitUrl && !sourceCode && (
+				<span class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 text-sm cursor-not-allowed">
+					<Icon is:inline name="material-symbols:link-off-rounded" class="text-sm" />
+					暂无链接
+				</span>
+			)}
+		</div>
+	</div>
+</div>

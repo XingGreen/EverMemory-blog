@@ -125,7 +125,7 @@ export const sidebarLayoutConfig: SidebarLayoutConfig = {
 			specificConfig: {
 				siteInfo: {
 					// 未能识别的构建平台回退显示文本,可自定义,默认值为"Unknown CI"
-					unknownBuildPlatform: "不知道的 CI 喵！猫猫不认识喵！",
+					unknownBuildPlatform: "不知道的 CI 喵!猫猫不认识喵!",
 				},
 			},
 		},

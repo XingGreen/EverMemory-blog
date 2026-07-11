@@ -1,0 +1,232 @@
+---
+import { Icon } from "astro-icon/components";
+import SoftwareCard from "@/components/pages/software/SoftwareCard.astro";
+import { softwareConfig, siteConfig } from "@/config";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+
+if (!siteConfig.pages.software) {
+	return Astro.redirect("/404/");
+}
+
+const title = i18n(I18nKey.software);
+const description = i18n(I18nKey.softwareDescription);
+
+const software = softwareConfig.software;
+const allTags = [...new Set(software.flatMap((s) => s.tags || []))].sort();
+---
+
+<MainGridLayout title={title} description={description}>
+	<div class="flex w-full rounded-(--radius-large) overflow-hidden relative min-h-32">
+		<div class="card-base z-10 px-9 py-6 relative w-full">
+			<div class="mb-4">
+				<div class="flex items-center gap-3 mb-3">
+					<div
+						class="h-8 w-8 rounded-lg bg-(--primary) flex items-center justify-center text-white dark:text-black/70"
+					>
+						<Icon is:inline name="material-symbols:apps" class="text-[1.5rem]" />
+					</div>
+					<div class="text-3xl font-bold text-neutral-900 dark:text-neutral-100">
+						{title}
+					</div>
+				</div>
+				{description && (
+					<p class="text-base text-neutral-600 dark:text-neutral-400 leading-relaxed mb-4">
+						{description}
+					</p>
+				)}
+			</div>
+
+			{software.length > 0 && (
+				<software-filter class="mb-6">
+					<div class="relative mb-3">
+						<Icon is:inline
+							name="material-symbols:search"
+							class="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-neutral-500 text-lg pointer-events-none"
+						/>
+						<input
+							type="text"
+							data-search
+							placeholder={i18n(I18nKey.searchSoftware)}
+							class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-(--line-divider) bg-transparent text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-(--primary) focus:ring-1 focus:ring-(--primary) outline-none transition-all duration-200 text-sm"
+						/>
+					</div>
+					{allTags.length > 0 && (
+						<div class="flex flex-wrap gap-2">
+							<button
+								data-tag="all"
+								class="btn-regular px-3 py-1.5 rounded-lg bg-(--primary) text-white hover:bg-(--primary) transition-colors duration-200 text-sm font-medium"
+							>
+								{i18n(I18nKey.all)}
+							</button>
+							{allTags.map((tag) => (
+								<button
+									data-tag={tag}
+									class="btn-regular px-3 py-1.5 rounded-lg bg-(--btn-regular-bg) text-(--btn-content) hover:bg-(--btn-regular-bg-hover) transition-colors duration-200 text-sm font-medium"
+								>
+									{tag}
+								</button>
+							))}
+						</div>
+					)}
+				</software-filter>
+			)}
+
+			{software.length > 0 ? (
+				<>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+						{software.map((item) => (
+							<SoftwareCard
+								name={item.name}
+								description={item.description}
+								tags={item.tags}
+								visitUrl={item.visitUrl}
+								sourceCode={item.sourceCode}
+								icon={item.icon}
+								rating={softwareConfig.enableRating ? item.rating : undefined}
+								platform={item.platform}
+								price={item.price}
+							/>
+						))}
+					</div>
+					<div class="software-empty hidden flex-col items-center justify-center py-12 text-neutral-400 dark:text-neutral-500">
+						<Icon is:inline name="material-symbols:search-off-rounded" class="text-4xl mb-3" />
+						<div class="text-sm">{i18n(I18nKey.searchNoResults)}</div>
+					</div>
+				</>
+			) : (
+				<div class="flex flex-col items-center justify-center py-16 text-neutral-400 dark:text-neutral-500">
+					<Icon is:inline name="material-symbols:apps" class="text-6xl mb-4 opacity-50" />
+					<p class="text-lg">{i18n(I18nKey.softwareNoItems)}</p>
+				</div>
+			)}
+		</div>
+	</div>
+
+	<div class="mt-4 flex w-full rounded-(--radius-large) overflow-hidden relative">
+		<div class="card-base z-10 px-9 py-6 relative w-full">
+			<div class="flex items-center gap-3 mb-4">
+				<div class="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+					<Icon is:inline name="material-symbols:warning-rounded" class="text-[1.5rem]" />
+				</div>
+				<div class="text-xl font-bold text-neutral-900 dark:text-neutral-100">第三方软件声明</div>
+			</div>
+			<div class="space-y-3 text-sm text-neutral-600 dark:text-neutral-400">
+				<div class="flex gap-3">
+					<span class="flex-shrink-0 w-5 h-5 rounded-full bg-(--primary)/10 text-(--primary) flex items-center justify-center text-xs font-medium">1</span>
+					<span><strong>链接政策：</strong>本站仅提供有官方网站的软件链接。无官网或官网无法访问的软件，仅提供名称及功能描述，不附任何下载链接。</span>
+				</div>
+				<div class="flex gap-3">
+					<span class="flex-shrink-0 w-5 h-5 rounded-full bg-(--primary)/10 text-(--primary) flex items-center justify-center text-xs font-medium">2</span>
+					<span><strong>来源说明：</strong>官网链接指向软件开发者自行维护的页面，本站不存储、不分发、不修改任何软件内容。</span>
+				</div>
+				<div class="flex gap-3">
+					<span class="flex-shrink-0 w-5 h-5 rounded-full bg-(--primary)/10 text-(--primary) flex items-center justify-center text-xs font-medium">3</span>
+					<span><strong>安全提示：</strong>下载和使用前请自行进行病毒扫描及安全性评估。本站不对软件的安全性、完整性、合法性做任何担保。</span>
+				</div>
+				<div class="flex gap-3">
+					<span class="flex-shrink-0 w-5 h-5 rounded-full bg-(--primary)/10 text-(--primary) flex items-center justify-center text-xs font-medium">4</span>
+					<span><strong>责任限制：</strong>因使用第三方软件导致的任何损失，请直接联系软件提供方或权利方，本站不承担法律责任。</span>
+				</div>
+				<div class="flex gap-3">
+					<span class="flex-shrink-0 w-5 h-5 rounded-full bg-(--primary)/10 text-(--primary) flex items-center justify-center text-xs font-medium">5</span>
+					<span><strong>内容时效：</strong>软件信息可能存在更新滞后，请以官方最新说明为准。</span>
+				</div>
+			
+			</div>
+		</div>
+	</div>
+
+	<script slot="head" is:inline>
+		if (!customElements.get("software-filter")) {
+			class SoftwareFilter extends HTMLElement {
+				selectedTag = "all";
+
+				constructor() {
+					super();
+				}
+
+				connectedCallback() {
+					this.addEventListener("click", this.handleClick);
+					const input = this.querySelector("[data-search]");
+					if (input) {
+						input.addEventListener("input", () => this.applyFilters());
+					}
+				}
+
+				disconnectedCallback() {
+					this.removeEventListener("click", this.handleClick);
+				}
+
+				handleClick(e) {
+					const target = e.target;
+					const button = target.closest("button");
+					if (!button) return;
+
+					this.selectedTag = button.dataset.tag;
+					const filters = this.querySelectorAll("button");
+
+					filters.forEach((f) => {
+						f.classList.remove("bg-(--primary)", "text-white");
+						f.classList.remove("hover:bg-(--primary)");
+						f.classList.add("bg-(--btn-regular-bg)", "text-(--btn-content)");
+						f.classList.add("hover:bg-(--btn-regular-bg-hover)");
+
+						if (f === button) {
+							f.classList.remove("bg-(--btn-regular-bg)", "text-(--btn-content)");
+							f.classList.remove("hover:bg-(--btn-regular-bg-hover)");
+							f.classList.add("bg-(--primary)", "text-white");
+							f.classList.add("hover:bg-(--primary)");
+						}
+					});
+
+					this.applyFilters();
+				}
+
+				applyFilters() {
+					const container = this.closest(".card-base");
+					if (!container) return;
+
+					const input = this.querySelector("[data-search]");
+					const query = (input?.value || "").toLowerCase().trim();
+					const cards = container.querySelectorAll(".software-card");
+
+					let hasVisible = false;
+
+					cards.forEach((card) => {
+						const cardEl = card;
+						const tags = (cardEl.dataset.tags || "").split(",");
+						const name = (cardEl.querySelector("h3")?.textContent || "").toLowerCase();
+						const desc = (cardEl.querySelector("p")?.textContent || "").toLowerCase();
+
+						const tagMatch =
+							this.selectedTag === "all" ||
+							(this.selectedTag && tags.includes(this.selectedTag));
+						const searchMatch =
+							!query ||
+							name.includes(query) ||
+							desc.includes(query) ||
+							tags.some((t) => t.toLowerCase().includes(query));
+
+						if (tagMatch && searchMatch) {
+							cardEl.style.display = "";
+							cardEl.classList.add("animate-fade-in-up");
+							hasVisible = true;
+						} else {
+							cardEl.style.display = "none";
+							cardEl.classList.remove("animate-fade-in-up");
+						}
+					});
+
+					const emptyEl = container.querySelector(".software-empty");
+					if (emptyEl) {
+						emptyEl.classList.toggle("hidden", hasVisible);
+						emptyEl.classList.toggle("flex", !hasVisible);
+					}
+				}
+			}
+			customElements.define("software-filter", SoftwareFilter);
+		}
+	</script>
+</MainGridLayout>

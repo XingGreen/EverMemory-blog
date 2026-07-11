@@ -367,6 +367,12 @@ enum I18nKey {
 	galleryBackToAlbums = "galleryBackToAlbums",
 	searchAlbums = "searchAlbums",
 
+	// 软件推荐页面
+	software = "software",
+	softwareDescription = "softwareDescription",
+	searchSoftware = "searchSoftware",
+	softwareNoItems = "softwareNoItems",
+
 	// 密码保护
 	passwordProtected = "passwordProtected",
 	passwordProtectedDesc = "passwordProtectedDesc",

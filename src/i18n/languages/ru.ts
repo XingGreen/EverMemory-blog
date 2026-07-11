@@ -382,6 +382,11 @@ export const ru: Translation = {
 	[Key.galleryBackToAlbums]: "Вернуться к альбомам",
 	[Key.searchAlbums]: "Поиск альбомов...",
 
+	[Key.software]: "Программное обеспечение",
+	[Key.softwareDescription]: "Полезное программное обеспечение и инструменты",
+	[Key.searchSoftware]: "Поиск программ...",
+	[Key.softwareNoItems]: "Нет программ",
+
 	// Защита паролем
 	[Key.passwordProtected]: "Защищено паролем",
 	[Key.passwordProtectedDesc]:
