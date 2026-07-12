@@ -375,7 +375,7 @@ export const zh_CN: Translation = {
 	[Key.softwareDescription]: "我推荐的一些实用软件和工具，希望能对你有所帮助。",
 	[Key.searchSoftware]: "搜索软件...",
 	[Key.softwareNoItems]: "暂无软件推荐",
-	[Key.softwareVisitSite]: "访问网站",
+	[Key.softwareVisitSite]: "网站链接",
 	[Key.softwareSourceCode]: "GitHub",
 	[Key.softwareNoLink]: "暂无链接",
 

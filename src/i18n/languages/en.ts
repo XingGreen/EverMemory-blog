@@ -384,7 +384,7 @@ export const en: Translation = {
 	[Key.softwareDescription]: "Some useful software and tools I recommend.",
 	[Key.searchSoftware]: "Search software...",
 	[Key.softwareNoItems]: "No software yet",
-	[Key.softwareVisitSite]: "Visit Website",
+	[Key.softwareVisitSite]: "Website",
 	[Key.softwareSourceCode]: "GitHub",
 	[Key.softwareNoLink]: "No Link",
 

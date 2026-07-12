@@ -383,7 +383,7 @@ export const ja: Translation = {
 	[Key.softwareDescription]: "おすすめのソフトウェアとツール",
 	[Key.searchSoftware]: "ソフトウェアを検索...",
 	[Key.softwareNoItems]: "ソフトウェアはまだありません",
-	[Key.softwareVisitSite]: "ウェブサイトを訪問",
+	[Key.softwareVisitSite]: "ウェブサイト",
 	[Key.softwareSourceCode]: "GitHub",
 	[Key.softwareNoLink]: "リンクなし",
 
