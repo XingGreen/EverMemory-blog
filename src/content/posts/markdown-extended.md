@@ -7,6 +7,7 @@ image: ""
 tags: [演示, 示例, Markdown, Firefly]
 category: "文章示例"
 draft: false
+author: 'Firefly'
 ---
 
 ## GitHub 仓库卡片

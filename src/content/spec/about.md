@@ -1,6 +1,6 @@
 # 关于我 / About Me
 
-你好！我是 **夏叶** ，一个在数字世界中默默无闻的一片叶子。
+你好！我是 **恒若忆EverMemory** 。
 
 ## 🛠️ 关于本站
 
@@ -8,10 +8,7 @@
 
 **Firefly** 是一款基于 Astro 框架和 Fuwari 模板开发的清新美观且现代化个人博客主题模板，专为技术爱好者和内容创作者设计。该主题融合了现代 Web 技术栈，提供了丰富的功能模块和高度可定制的界面，让您能够轻松打造出专业且美观的个人博客网站。
 
-
 **🖥️在线预览： [Firefly - Demo site](https://firefly.cuteleaf.cn/)**
-
-**🏠我的博客： [https://blog.cuteleaf.cn](https://blog.cuteleaf.cn/)**
 
 **📝Firefly使用文档： [https://docs-firefly.cuteleaf.cn](https://docs-firefly.cuteleaf.cn/)**
 
@@ -19,9 +16,14 @@
 
 **⭐Fuwari开源地址：[https://github.com/saicaca/fuwari](https://github.com/saicaca/fuwari)**
 
+**⭐EverMemory's blog开源地址：[https://github.com/XingGreen/Hengruoyi-blog-firefly](https://github.com/XingGreen/Hengruoyi-blog-firefly)**
+
 ::github{repo="CuteLeaf/Firefly"}
 
 ::github{repo="saicaca/fuwari"}
+
+::github{repo="XingGreen/Hengruoyi-blog-firefly"}
+
 
 ---
 

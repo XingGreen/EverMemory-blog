@@ -16,10 +16,11 @@ export const siteConfig: SiteConfig = {
 
 	// 站点描述
 	description:
-		"EverMemory's Blog 是一款基于 Firefly 开发的清新美观且现代化个人博客主题模板，专为技术爱好者和内容创作者设计。该主题融合了现代 Web 技术栈，提供了丰富的功能模块和高度可定制的界面，让您能够轻松打造出专业且美观的个人博客网站。",
+		"EverMemory's blog 是一款基于 Firefly 开发的清新美观且现代化个人博客主题模板，专为技术爱好者和内容创作者设计。该主题融合了现代 Web 技术栈，提供了丰富的功能模块和高度可定制的界面，让您能够轻松打造出专业且美观的个人博客网站。",
 
 	// 站点关键词
 	keywords: [
+		"EverMemory",
 		"Firefly",
 		"Fuwari",
 		"Astro",
@@ -103,7 +104,7 @@ export const siteConfig: SiteConfig = {
 		// 打赏页面开关
 		sponsor: false,
 		// 留言板页面开关，需要配置评论系统
-		guestbook: true,
+		guestbook: false,
 		// 番组计划页面开关，含追番、游戏、书籍和音乐
 		bangumi: false,
 		// 相册页面开关
@@ -129,7 +130,7 @@ export const siteConfig: SiteConfig = {
 		// 是否在文章列表中显示标签
 		showTags: true,
 		// 文章简介显示行数，设为 0 则不截断
-		descriptionLines: 2,
+		descriptionLines: 0,
 		// 是否允许用户切换布局
 		allowSwitch: true,
 		// 网格布局配置，仅在 defaultMode 为 "grid" 或允许切换布局时生效
@@ -161,7 +162,7 @@ export const siteConfig: SiteConfig = {
 		generateOgImages: false,
 	},
 
-	/*	// bangumi配置
+/*	// bangumi配置
 	bangumi: {
 		// Bangumi用户ID
 		userId: "1143164",
@@ -186,7 +187,7 @@ export const siteConfig: SiteConfig = {
 			// 你的 Bilibili 用户 UID
 			uid: "38932988",
 		},
-*/ // TMDB 配置（可选，需要翻墙）
+ // TMDB 配置（可选，需要翻墙）
 	// tmdb: {
 	//   // TMDB API 密钥
 	//   apiKey: "your_tmdb_api_key",
@@ -195,10 +196,10 @@ export const siteConfig: SiteConfig = {
 	// },
 	// 	},
 
-	// 分页配置
+*/	// 分页配置
 	pagination: {
 		// 每页显示的文章数量
-		postsPerPage: 10,
+		postsPerPage: 6,
 	},
 
 	// 图像优化及响应式配置

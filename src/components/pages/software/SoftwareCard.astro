@@ -133,13 +133,23 @@ const isIconUrl = icon && (icon.startsWith("http://") || icon.startsWith("https:
 					href={visitUrl}
 					target="_blank"
 					rel="noopener noreferrer"
-					class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg btn-regular text-sm font-medium"
+					class="flex-[9] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg btn-regular text-sm font-medium"
 				>
 					<Icon is:inline name="material-symbols:open-in-new-rounded" class="text-sm" />
 					{i18n(I18nKey.softwareVisitSite)}
 				</a>
 			)}
-			{sourceCode && (
+			{sourceCode && visitUrl && (
+				<a
+					href={sourceCode}
+					target="_blank"
+					rel="noopener noreferrer"
+					class="flex-[1] inline-flex items-center justify-center px-3 py-2 rounded-lg btn-regular text-sm font-medium"
+				>
+					<Icon is:inline name="simple-icons:github" class="text-sm" />
+				</a>
+			)}
+			{sourceCode && !visitUrl && (
 				<a
 					href={sourceCode}
 					target="_blank"
