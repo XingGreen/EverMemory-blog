@@ -386,6 +386,9 @@ export const ru: Translation = {
 	[Key.softwareDescription]: "Полезное программное обеспечение и инструменты",
 	[Key.searchSoftware]: "Поиск программ...",
 	[Key.softwareNoItems]: "Нет программ",
+	[Key.softwareVisitSite]: "Посетить сайт",
+	[Key.softwareSourceCode]: "GitHub",
+	[Key.softwareNoLink]: "Нет ссылки",
 
 	// Защита паролем
 	[Key.passwordProtected]: "Защищено паролем",

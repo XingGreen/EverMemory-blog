@@ -1,5 +1,7 @@
 ---
 import { Icon } from "astro-icon/components";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
 
 interface Props {
 	name: string;
@@ -134,7 +136,7 @@ const isIconUrl = icon && (icon.startsWith("http://") || icon.startsWith("https:
 					class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg btn-regular text-sm font-medium"
 				>
 					<Icon is:inline name="material-symbols:open-in-new-rounded" class="text-sm" />
-					访问网站
+					{i18n(I18nKey.softwareVisitSite)}
 				</a>
 			)}
 			{sourceCode && (
@@ -145,13 +147,13 @@ const isIconUrl = icon && (icon.startsWith("http://") || icon.startsWith("https:
 					class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg btn-regular text-sm font-medium"
 				>
 					<Icon is:inline name="simple-icons:github" class="text-sm" />
-					GitHub
+					{i18n(I18nKey.softwareSourceCode)}
 				</a>
 			)}
 			{!visitUrl && !sourceCode && (
 				<span class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 text-sm cursor-not-allowed">
 					<Icon is:inline name="material-symbols:link-off-rounded" class="text-sm" />
-					暂无链接
+					{i18n(I18nKey.softwareNoLink)}
 				</span>
 			)}
 		</div>

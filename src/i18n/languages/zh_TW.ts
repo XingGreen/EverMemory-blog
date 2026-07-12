@@ -377,6 +377,9 @@ export const zh_TW: Translation = {
 	[Key.softwareDescription]: "我推薦的一些實用軟體和工具，希望能對你有所幫助。",
 	[Key.searchSoftware]: "搜尋軟體...",
 	[Key.softwareNoItems]: "暫無軟體推薦",
+	[Key.softwareVisitSite]: "訪問網站",
+	[Key.softwareSourceCode]: "GitHub",
+	[Key.softwareNoLink]: "暫無連結",
 
 	// 密碼保護
 	[Key.passwordProtected]: "密碼保護",
