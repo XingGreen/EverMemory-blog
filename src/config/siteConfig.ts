@@ -162,8 +162,8 @@ export const siteConfig: SiteConfig = {
 		generateOgImages: false,
 	},
 
-/*	// bangumi配置
-	bangumi: {
+	// bangumi配置
+/*	bangumi: {
 		// Bangumi用户ID
 		userId: "1143164",
 		// 数据模式：static=构建时获取，dynamic=客户端实时获取
@@ -187,6 +187,7 @@ export const siteConfig: SiteConfig = {
 			// 你的 Bilibili 用户 UID
 			uid: "38932988",
 		},
+*/		
  // TMDB 配置（可选，需要翻墙）
 	// tmdb: {
 	//   // TMDB API 密钥
@@ -196,7 +197,7 @@ export const siteConfig: SiteConfig = {
 	// },
 	// 	},
 
-*/	// 分页配置
+	// 分页配置
 	pagination: {
 		// 每页显示的文章数量
 		postsPerPage: 6,
