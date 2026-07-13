@@ -10,9 +10,8 @@ interface Props {
 	visitUrl?: string;
 	sourceCode?: string;
 	icon?: string;
-	rating?: number;
 	platform?: string[];
-	price?: string;
+	priceType?: "free" | "freemium" | "paid";
 }
 
 const {
@@ -22,9 +21,8 @@ const {
 	visitUrl,
 	sourceCode,
 	icon,
-	rating,
 	platform,
-	price,
+	priceType,
 } = Astro.props;
 
 const isIconUrl = icon && (icon.startsWith("http://") || icon.startsWith("https://"));
@@ -61,11 +59,11 @@ const isIconUrl = icon && (icon.startsWith("http://") || icon.startsWith("https:
 					<h3 class="font-bold text-lg text-neutral-900 dark:text-neutral-100 line-clamp-1">
 						{name}
 					</h3>
-					{price && (
+					{priceType && (
 						<span
-							class="text-xs px-2 py-0.5 rounded-full bg-(--primary)/10 text-(--primary) font-medium"
+							class={`text-xs px-2 py-0.5 rounded-full font-medium ${priceType === "free" ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" : priceType === "freemium" ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400" : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"}`}
 						>
-							{price}
+							{priceType === "free" ? i18n(I18nKey.softwareFree) : priceType === "freemium" ? i18n(I18nKey.softwareFreemium) : i18n(I18nKey.softwarePaid)}
 						</span>
 					)}
 				</div>
@@ -80,24 +78,6 @@ const isIconUrl = icon && (icon.startsWith("http://") || icon.startsWith("https:
 				)}
 
 				<div class="flex flex-wrap items-center gap-2">
-					{rating && (
-						<div class="flex items-center gap-1">
-							{Array.from({ length: 5 }).map((_, i) => (
-								<svg
-									key={i}
-									class={`w-3.5 h-3.5 ${
-										i < rating
-											? "text-yellow-400 fill-yellow-400"
-											: "text-neutral-300 dark:text-neutral-600"
-									}`}
-									viewBox="0 0 24 24"
-								>
-									<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-								</svg>
-							))}
-						</div>
-					)}
-
 					{platform && platform.length > 0 && (
 						<div class="flex flex-wrap gap-1">
 							{platform.slice(0, 3).map((p) => (

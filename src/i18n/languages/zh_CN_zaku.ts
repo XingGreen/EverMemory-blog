@@ -379,6 +379,9 @@ export const zaku: Translation = {
 	[Key.softwareVisitSite]: "软件官网",
 	[Key.softwareSourceCode]: "开源仓库GitHub",
 	[Key.softwareNoLink]: "没有附上网址",
+	[Key.softwareFree]: "免费哒~",
+	[Key.softwareFreemium]: "有免费和付费两种哦",
+	[Key.softwarePaid]: "要花钱的说",
 
 	// 密码保护
 	[Key.passwordProtected]: "上锁内容",

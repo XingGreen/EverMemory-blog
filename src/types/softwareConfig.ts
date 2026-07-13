@@ -1,3 +1,5 @@
+export type PriceType = "free" | "freemium" | "paid";
+
 export type SoftwareItem = {
 	name: string;
 	description?: string;
@@ -5,12 +7,10 @@ export type SoftwareItem = {
 	visitUrl?: string;
 	sourceCode?: string;
 	icon?: string;
-	rating?: number;
 	platform?: string[];
-	price?: string;
+	priceType?: PriceType;
 };
 
 export type SoftwareConfig = {
 	software: SoftwareItem[];
-	enableRating?: boolean;
 };

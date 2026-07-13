@@ -389,6 +389,9 @@ export const ru: Translation = {
 	[Key.softwareVisitSite]: "Веб-сайт",
 	[Key.softwareSourceCode]: "GitHub",
 	[Key.softwareNoLink]: "Нет ссылки",
+	[Key.softwareFree]: "Бесплатно",
+	[Key.softwareFreemium]: "Бесплатно/платно",
+	[Key.softwarePaid]: "Платно",
 
 	// Защита паролем
 	[Key.passwordProtected]: "Защищено паролем",

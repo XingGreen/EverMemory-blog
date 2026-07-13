@@ -380,6 +380,9 @@ export const zh_TW: Translation = {
 	[Key.softwareVisitSite]: "網站連結",
 	[Key.softwareSourceCode]: "GitHub",
 	[Key.softwareNoLink]: "暫無連結",
+	[Key.softwareFree]: "免費",
+	[Key.softwareFreemium]: "免費/付費",
+	[Key.softwarePaid]: "付費",
 
 	// 密碼保護
 	[Key.passwordProtected]: "密碼保護",

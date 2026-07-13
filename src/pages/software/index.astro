@@ -84,9 +84,8 @@ const allTags = [...new Set(software.flatMap((s) => s.tags || []))].sort();
 								visitUrl={item.visitUrl}
 								sourceCode={item.sourceCode}
 								icon={item.icon}
-								rating={softwareConfig.enableRating ? item.rating : undefined}
 								platform={item.platform}
-								price={item.price}
+								priceType={item.priceType}
 							/>
 						))}
 					</div>

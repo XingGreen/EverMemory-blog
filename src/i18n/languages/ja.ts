@@ -386,6 +386,9 @@ export const ja: Translation = {
 	[Key.softwareVisitSite]: "ウェブサイト",
 	[Key.softwareSourceCode]: "GitHub",
 	[Key.softwareNoLink]: "リンクなし",
+	[Key.softwareFree]: "無料",
+	[Key.softwareFreemium]: "無料/有料",
+	[Key.softwarePaid]: "有料",
 
 	// パスワード保護
 	[Key.passwordProtected]: "パスワード保護",

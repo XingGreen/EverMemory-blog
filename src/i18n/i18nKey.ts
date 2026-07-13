@@ -375,6 +375,9 @@ enum I18nKey {
 	softwareVisitSite = "softwareVisitSite",
 	softwareSourceCode = "softwareSourceCode",
 	softwareNoLink = "softwareNoLink",
+	softwareFree = "softwareFree",
+	softwareFreemium = "softwareFreemium",
+	softwarePaid = "softwarePaid",
 
 	// 密码保护
 	passwordProtected = "passwordProtected",

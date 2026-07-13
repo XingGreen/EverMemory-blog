@@ -387,6 +387,9 @@ export const en: Translation = {
 	[Key.softwareVisitSite]: "Website",
 	[Key.softwareSourceCode]: "GitHub",
 	[Key.softwareNoLink]: "No Link",
+	[Key.softwareFree]: "Free",
+	[Key.softwareFreemium]: "Free/Paid",
+	[Key.softwarePaid]: "Paid",
 
 	// Password Protection
 	[Key.passwordProtected]: "Password Protected",
