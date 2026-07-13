@@ -11,14 +11,10 @@
 > ![Astro](https://img.shields.io/badge/Astro-7.0.2-orange)
 > ![TypeScript](https://img.shields.io/badge/TypeScript-5.9.2-blue)
 >
-> [![Stars](https://img.shields.io/github/stars/CuteLeaf/Firefly?style=social)](https://github.com/CuteLeaf/Firefly/stargazers)
-> [![Forks](https://img.shields.io/github/forks/CuteLeaf/Firefly?style=social)](https://github.com/CuteLeaf/Firefly/network/members)
-> [![Issues](https://img.shields.io/github/issues/CuteLeaf/Firefly)](https://github.com/CuteLeaf/Firefly/issues)
+> [![Issues](https://img.shields.io/github/issues/XingGreen/EverMemory-blog)](https://github.com/XingGreen/EverMemory-blog/issues)
 >
-> [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Z8Z41NQALY)
->
-> ![GitHub License](https://img.shields.io/github/license/CuteLeaf/Firefly)
-> [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/CuteLeaf/Firefly)
+> ![GitHub License](https://img.shields.io/github/license/XingGreen/EverMemory-blog)
+> [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/XingGreen/EverMemory-blog)
 
 </div>
 
@@ -52,7 +48,6 @@ README：
     <td align="center"><img src="./docs/images/4.png" width="300"><br>纯色模式</td>
   </tr>
 </table>
-<!--<img alt="Lighthouse" src="./docs/images/Lighthouse.png" />-->
 
 > \[!TIP]
 >
