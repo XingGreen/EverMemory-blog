@@ -57,7 +57,7 @@ export default defineConfig({
 	site: siteConfig.site_url,
 
 	//base: process.env.BASE_PATH || "/",
-	base: "/",
+	base: "/EverMemory-blog",
 
 	trailingSlash: "always",
 
