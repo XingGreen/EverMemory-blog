@@ -262,9 +262,7 @@ comment: true    # 是否允许评论
 
 本项目遵循 [MIT license](https://mit-license.org/) 开源协议，详细查看 [LICENSE](./LICENSE) 文件
 
-最初 Fork 自 [saicaca/fuwari](https://github.com/saicaca/fuwari)，感谢原作者的贡献
-
-本次 Fork 自 [CuteLeaf/Firefly](https://github.com/CuteLeaf/Firefly)，感谢作者的贡献
+Fork 自 [CuteLeaf/Firefly](https://github.com/CuteLeaf/Firefly)，感谢作者的贡献
 
 **版权声明：**
 
@@ -273,12 +271,6 @@ comment: true    # 是否允许评论
 - Copyright (c) 2026 [XingGreen](https://github.com/XingGreen) - [EverMemory-blog](https://github.com/XingGreen/EverMemory-blog)
 
 根据 MIT 开源协议，你可以自由使用、修改、分发代码，但需保留上述版权声明。
-
-## 🍀 贡献者
-
-感谢以下贡献者对本项目做出的贡献，如有问题或建议，请提交 [Issue](https://github.com/CuteLeaf/Firefly/issues) 或 [Pull Request](https://github.com/CuteLeaf/Firefly/pulls)。
-
-感谢以下贡献者对原项目 [fuwari](https://github.com/saicaca/fuwari) 做出的贡献，为本项目奠定了基础。
 
 ## ⭐ Star History
 
