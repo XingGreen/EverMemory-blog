@@ -56,8 +56,7 @@ const adapter = process.env.CF_WORKERS
 export default defineConfig({
 	site: siteConfig.site_url,
 
-	//base: process.env.BASE_PATH || "/",
-	base: "/EverMemory-blog",
+	base: process.env.BASE_PATH || "/",
 
 	trailingSlash: "always",
 
