@@ -295,7 +295,7 @@ export const zh_CN: Translation = {
 	[Key.sponsorButton]: "支持与分享",
 	[Key.sponsorButtonText]:
 		"如果这篇文章对你有帮助，欢迎分享给更多人或打赏支持！",
-
+		
 	[Key.shareOnSocial]: "文章分享",
 	[Key.shareOnSocialDescription]: "如果这篇文章对你有帮助，欢迎分享给更多人！",
 

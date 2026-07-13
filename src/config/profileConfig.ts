@@ -49,11 +49,11 @@ export const profileConfig: ProfileConfig = {
 			icon: "mdi:git",
 			url: "https://gitee.com/XingGreen",
 		},
-		{
-			name: "RSS",
-			icon: "fa7-solid:rss",
-			url: "/rss/",
-			showName: false,
-		},
+		//{
+		//	name: "RSS",
+		//	icon: "fa7-solid:rss",
+		//	url: "/rss/",
+		//	showName: false,
+		//},
 	],
 };
