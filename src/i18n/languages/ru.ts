@@ -392,6 +392,8 @@ export const ru: Translation = {
 	[Key.softwareFree]: "Бесплатно",
 	[Key.softwareFreemium]: "Бесплатно/платно",
 	[Key.softwarePaid]: "Платно",
+	[Key.category]: "Категория",
+	[Key.platform]: "Платформа",
 
 	// Защита паролем
 	[Key.passwordProtected]: "Защищено паролем",

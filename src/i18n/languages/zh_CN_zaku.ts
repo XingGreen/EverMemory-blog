@@ -382,6 +382,8 @@ export const zaku: Translation = {
 	[Key.softwareFree]: "免费哒~",
 	[Key.softwareFreemium]: "有免费和付费两种哦",
 	[Key.softwarePaid]: "要花钱的说",
+	[Key.category]: "分类啦",
+	[Key.platform]: "平台的说",
 
 	// 密码保护
 	[Key.passwordProtected]: "上锁内容",

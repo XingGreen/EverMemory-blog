@@ -389,6 +389,8 @@ export const ja: Translation = {
 	[Key.softwareFree]: "無料",
 	[Key.softwareFreemium]: "無料/有料",
 	[Key.softwarePaid]: "有料",
+	[Key.category]: "カテゴリ",
+	[Key.platform]: "プラットフォーム",
 
 	// パスワード保護
 	[Key.passwordProtected]: "パスワード保護",

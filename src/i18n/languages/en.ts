@@ -390,6 +390,8 @@ export const en: Translation = {
 	[Key.softwareFree]: "Free",
 	[Key.softwareFreemium]: "Free/Paid",
 	[Key.softwarePaid]: "Paid",
+	[Key.category]: "Category",
+	[Key.platform]: "Platform",
 
 	// Password Protection
 	[Key.passwordProtected]: "Password Protected",

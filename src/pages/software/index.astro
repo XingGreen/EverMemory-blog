@@ -15,6 +15,7 @@ const description = i18n(I18nKey.softwareDescription);
 
 const software = softwareConfig.software;
 const allTags = [...new Set(software.flatMap((s) => s.tags || []))].sort();
+const allPlatforms = [...new Set(software.flatMap((s) => s.platform || []))].sort();
 ---
 
 <MainGridLayout title={title} description={description}>
@@ -52,24 +53,54 @@ const allTags = [...new Set(software.flatMap((s) => s.tags || []))].sort();
 							class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-(--line-divider) bg-transparent text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-(--primary) focus:ring-1 focus:ring-(--primary) outline-none transition-all duration-200 text-sm"
 						/>
 					</div>
-					{allTags.length > 0 && (
-						<div class="flex flex-wrap gap-2">
-							<button
-								data-tag="all"
-								class="btn-regular px-3 py-1.5 rounded-lg bg-(--primary) text-white hover:bg-(--primary) transition-colors duration-200 text-sm font-medium"
-							>
-								{i18n(I18nKey.all)}
-							</button>
-							{allTags.map((tag) => (
-								<button
-									data-tag={tag}
-									class="btn-regular px-3 py-1.5 rounded-lg bg-(--btn-regular-bg) text-(--btn-content) hover:bg-(--btn-regular-bg-hover) transition-colors duration-200 text-sm font-medium"
-								>
-									{tag}
-								</button>
-							))}
-						</div>
-					)}
+					<div class="space-y-4">
+						{allTags.length > 0 && (
+							<div>
+								<div class="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">
+									{i18n(I18nKey.category)}
+								</div>
+								<div class="flex flex-wrap gap-2">
+									<button
+										data-tag="all"
+										class="btn-regular px-3 py-1.5 rounded-lg bg-(--primary) text-white hover:bg-(--primary) transition-colors duration-200 text-sm font-medium"
+									>
+										{i18n(I18nKey.all)}
+									</button>
+									{allTags.map((tag) => (
+										<button
+											data-tag={tag}
+											class="btn-regular px-3 py-1.5 rounded-lg bg-(--btn-regular-bg) text-(--btn-content) hover:bg-(--btn-regular-bg-hover) transition-colors duration-200 text-sm font-medium"
+										>
+											{tag}
+										</button>
+									))}
+								</div>
+							</div>
+						)}
+						{allPlatforms.length > 0 && (
+							<div>
+								<div class="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">
+									{i18n(I18nKey.platform)}
+								</div>
+								<div class="flex flex-wrap gap-2">
+									<button
+										data-platform="all"
+										class="btn-regular px-3 py-1.5 rounded-lg bg-(--primary) text-white hover:bg-(--primary) transition-colors duration-200 text-sm font-medium"
+									>
+										{i18n(I18nKey.all)}
+									</button>
+									{allPlatforms.map((platform) => (
+										<button
+											data-platform={platform}
+											class="btn-regular px-3 py-1.5 rounded-lg bg-(--btn-regular-bg) text-(--btn-content) hover:bg-(--btn-regular-bg-hover) transition-colors duration-200 text-sm font-medium"
+										>
+											{platform}
+										</button>
+									))}
+								</div>
+							</div>
+						)}
+					</div>
 				</software-filter>
 			)}
 
@@ -141,6 +172,7 @@ const allTags = [...new Set(software.flatMap((s) => s.tags || []))].sort();
 		if (!customElements.get("software-filter")) {
 			class SoftwareFilter extends HTMLElement {
 				selectedTag = "all";
+				selectedPlatform = "all";
 
 				constructor() {
 					super();
@@ -163,22 +195,39 @@ const allTags = [...new Set(software.flatMap((s) => s.tags || []))].sort();
 					const button = target.closest("button");
 					if (!button) return;
 
-					this.selectedTag = button.dataset.tag;
-					const filters = this.querySelectorAll("button");
+					if ("tag" in button.dataset) {
+						this.selectedTag = button.dataset.tag;
+						const tagFilters = this.querySelectorAll("[data-tag]");
+						tagFilters.forEach((f) => {
+							f.classList.remove("bg-(--primary)", "text-white");
+							f.classList.remove("hover:bg-(--primary)");
+							f.classList.add("bg-(--btn-regular-bg)", "text-(--btn-content)");
+							f.classList.add("hover:bg-(--btn-regular-bg-hover)");
 
-					filters.forEach((f) => {
-						f.classList.remove("bg-(--primary)", "text-white");
-						f.classList.remove("hover:bg-(--primary)");
-						f.classList.add("bg-(--btn-regular-bg)", "text-(--btn-content)");
-						f.classList.add("hover:bg-(--btn-regular-bg-hover)");
+							if (f === button) {
+								f.classList.remove("bg-(--btn-regular-bg)", "text-(--btn-content)");
+								f.classList.remove("hover:bg-(--btn-regular-bg-hover)");
+								f.classList.add("bg-(--primary)", "text-white");
+								f.classList.add("hover:bg-(--primary)");
+							}
+						});
+					} else if ("platform" in button.dataset) {
+						this.selectedPlatform = button.dataset.platform;
+						const platformFilters = this.querySelectorAll("[data-platform]");
+						platformFilters.forEach((f) => {
+							f.classList.remove("bg-(--primary)", "text-white");
+							f.classList.remove("hover:bg-(--primary)");
+							f.classList.add("bg-(--btn-regular-bg)", "text-(--btn-content)");
+							f.classList.add("hover:bg-(--btn-regular-bg-hover)");
 
-						if (f === button) {
-							f.classList.remove("bg-(--btn-regular-bg)", "text-(--btn-content)");
-							f.classList.remove("hover:bg-(--btn-regular-bg-hover)");
-							f.classList.add("bg-(--primary)", "text-white");
-							f.classList.add("hover:bg-(--primary)");
-						}
-					});
+							if (f === button) {
+								f.classList.remove("bg-(--btn-regular-bg)", "text-(--btn-content)");
+								f.classList.remove("hover:bg-(--btn-regular-bg-hover)");
+								f.classList.add("bg-(--primary)", "text-white");
+								f.classList.add("hover:bg-(--primary)");
+							}
+						});
+					}
 
 					this.applyFilters();
 				}
@@ -196,19 +245,23 @@ const allTags = [...new Set(software.flatMap((s) => s.tags || []))].sort();
 					cards.forEach((card) => {
 						const cardEl = card;
 						const tags = (cardEl.dataset.tags || "").split(",");
+						const platforms = (cardEl.dataset.platform || "").split(",");
 						const name = (cardEl.querySelector("h3")?.textContent || "").toLowerCase();
 						const desc = (cardEl.querySelector("p")?.textContent || "").toLowerCase();
 
 						const tagMatch =
 							this.selectedTag === "all" ||
 							(this.selectedTag && tags.includes(this.selectedTag));
+						const platformMatch =
+							this.selectedPlatform === "all" ||
+							(this.selectedPlatform && platforms.includes(this.selectedPlatform));
 						const searchMatch =
 							!query ||
 							name.includes(query) ||
 							desc.includes(query) ||
 							tags.some((t) => t.toLowerCase().includes(query));
 
-						if (tagMatch && searchMatch) {
+						if (tagMatch && platformMatch && searchMatch) {
 							cardEl.style.display = "";
 							cardEl.classList.add("animate-fade-in-up");
 							hasVisible = true;

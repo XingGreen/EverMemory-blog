@@ -383,6 +383,8 @@ export const zh_TW: Translation = {
 	[Key.softwareFree]: "免費",
 	[Key.softwareFreemium]: "免費/付費",
 	[Key.softwarePaid]: "付費",
+	[Key.category]: "分類",
+	[Key.platform]: "平台",
 
 	// 密碼保護
 	[Key.passwordProtected]: "密碼保護",

@@ -381,6 +381,8 @@ export const zh_CN: Translation = {
 	[Key.softwareFree]: "免费",
 	[Key.softwareFreemium]: "免费/付费",
 	[Key.softwarePaid]: "付费",
+	[Key.category]: "分类",
+	[Key.platform]: "平台",
 
 	// 密码保护
 	[Key.passwordProtected]: "密码保护",

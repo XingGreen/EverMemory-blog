@@ -378,6 +378,8 @@ enum I18nKey {
 	softwareFree = "softwareFree",
 	softwareFreemium = "softwareFreemium",
 	softwarePaid = "softwarePaid",
+	category = "category",
+	platform = "platform",
 
 	// 密码保护
 	passwordProtected = "passwordProtected",

@@ -25,11 +25,13 @@ const {
 	priceType,
 } = Astro.props;
 
-const isIconUrl = icon && (icon.startsWith("http://") || icon.startsWith("https://"));
+const isIconUrl =
+	icon && (icon.startsWith("http://") || icon.startsWith("https://"));
 ---
 
 <div
 	data-tags={tags?.join(",") || ""}
+	data-platform={platform?.join(",") || ""}
 	class="software-card group relative block overflow-hidden rounded-xl border border-(--line-divider) hover:border-(--primary) hover:bg-(--card-bg) transition-all duration-300 hover:shadow-lg"
 >
 	<div class="absolute inset-0 bg-(--primary) opacity-0 group-hover:opacity-5 transition-opacity duration-300 pointer-events-none" />
@@ -80,7 +82,7 @@ const isIconUrl = icon && (icon.startsWith("http://") || icon.startsWith("https:
 				<div class="flex flex-wrap items-center gap-2">
 					{platform && platform.length > 0 && (
 						<div class="flex flex-wrap gap-1">
-							{platform.slice(0, 3).map((p) => (
+							{platform.map((p) => (
 								<span
 									key={p}
 									class="text-[0.65rem] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
