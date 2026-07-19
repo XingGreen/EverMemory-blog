@@ -1,6 +1,6 @@
 export type PriceType = "free" | "freemium" | "paid";
 
-export type SoftwareItem = {
+export type AppItem = {
 	name: string;
 	description?: string;
 	tags?: string[];
@@ -11,6 +11,6 @@ export type SoftwareItem = {
 	priceType?: PriceType;
 };
 
-export type SoftwareConfig = {
-	software: SoftwareItem[];
+export type AppConfig = {
+	apps: AppItem[];
 };

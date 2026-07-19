@@ -54,8 +54,8 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 			// 番组计划
 			LinkPresets.Bangumi,
 
-			// 软件推荐
-			LinkPresets.Software,
+			// 应用推荐
+			LinkPresets.App,
 		],
 	});
 
@@ -190,11 +190,11 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		icon: "material-symbols:live-tv",
 		pageKey: "anime",
 	},
-	Software: {
-		name: "软件推荐",
-		url: "/software/",
+	App: {
+		name: "应用推荐",
+		url: "/app/",
 		icon: "material-symbols:apps",
-		pageKey: "software",
+		pageKey: "app",
 	},
 };
 

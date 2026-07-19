@@ -1,7 +1,7 @@
-import type { SoftwareConfig } from "@/types/softwareConfig";
+import type { AppConfig } from "@/types/appConfig";
 
-export const softwareConfig: SoftwareConfig = {
-	software: [
+export const appConfig: AppConfig = {
+	apps: [
 		{
 			name: "设备信息X",
 			description: "查看手机硬件和系统信息,该软件暂无官方网站",
@@ -56,7 +56,7 @@ export const softwareConfig: SoftwareConfig = {
 			visitUrl: "https://steampp.net/",
 			sourceCode: "https://github.com/BeyondDimension/SteamTools",
 			icon: "https://store-images.s-microsoft.com/image/apps.49815.13810726275500961.53450795-b99b-437a-849b-6599bed03235.164e92bb-9c74-4d22-8a35-7e1530f9dc4e",
-			platform: ["Android"],
+			platform: ["Android", "macOS", "Linux", "Windows"],
 			priceType: "freemium",
 		},
 		{
@@ -72,7 +72,7 @@ export const softwareConfig: SoftwareConfig = {
 		{
 			name: "MeloYou",
 			description: "音乐播放器,可免费播放各音乐平台的试听音乐",
-			tags: ["music"],
+			tags: ["音乐"],
 			visitUrl: "http://meloyou.fun",
 			sourceCode: "https://github.com/nkolp/meloyou/",
 			icon: "https://image.goapk.com/goapkmarket/imgfile/20260424/241005098tle.png",
@@ -82,7 +82,7 @@ export const softwareConfig: SoftwareConfig = {
 		{
 			name: "SuperImage",
 			description: "图像画质增强,纯本地运行,工作完成所需时间由你的设备性能决定",
-			tags: ["Image", "Local", "AI"],
+			tags: ["图像", "本地", "AI"],
 			sourceCode: "https://github.com/Lucchetto/SuperImage",
 			visitUrl: "https://superimage.io/",
 			icon: "https://www.openapk.net/images/icons/superimage-apk-for-android.png",
@@ -106,13 +106,13 @@ export const softwareConfig: SoftwareConfig = {
 			visitUrl: "https://count.beejz.com/",
 			sourceCode: "https://github.com/TNT-Likely/BeeCount",
 			icon: "https://count.beejz.com/img/logo.svg",
-			platform: ["Android", "macOS", "iOS"],
+			platform: ["Android", "macOS", "iOS", "Web"],
 			priceType: "free",
 		},
 		{
 			name: "Kiwi Browser",
 			description: "带开发人员模式的浏览器",
-			tags: ["Web"],
+			tags: ["浏览器"],
 			visitUrl: "https://kiwibrowsercn.github.io/",
 			sourceCode: "https://github.com/kiwibrowser/src",
 			icon: "https://avatars.githubusercontent.com/u/40272275",
@@ -126,29 +126,58 @@ export const softwareConfig: SoftwareConfig = {
 			visitUrl: "https://gopeed.com/",
 			sourceCode: "https://github.com/GopeedLab/gopeed",
 			icon: "https://ts1.tc.mm.bing.net/th/id/ODF.6YtYBdtRDTKubGiNpDxCQQ",
-			platform: ["Android", "Windows", "macOS","Linux","iOS", "Web", "Docker", "QNAP"],
+			platform: ["Android", "Windows", "macOS", "Linux", "iOS", "Web", "Docker", "QNAP"],
 			priceType: "free",
 		},
 		{
 			name: "Kvaseitso",
-			description: "MD3桌面启动器",
+			description: "Material Design 3桌面启动器",
 			tags: ["MD3", "桌面启动器"],
+			visitUrl: "https://kvaesitso.mm20.de/",
 			sourceCode: "https://github.com/MM2-0/Kvaesitso",
-			icon: "https://raw.githubusercontent.com/MM2-0/Kvaesitso/main/assets/icons/ic_launcher.png",
+			icon: "https://kvaesitso.mm20.de/icon.png",
 			platform: ["Android"],
 			priceType: "free",
 		},
-		/*
-			{
-				name: "",
-				description: "",
-				tags: [""],
-				visitUrl: "",
-				sourceCode: "",
-				icon: "",
-				platform: [""],
-				price: "",
-			},
-		*/
+		{
+			name: "自由笔记",
+			description: "",
+			tags: ["办公/效率"],
+			visitUrl: "https://www.freenotetech.com/",
+			sourceCode: "",
+			icon: "https://share.freenotetech.com/statics/ic_launcher.png",
+			platform: ["Android"],
+			priceType: "free",
+		},
+		{
+			name: "Xmind",
+			description: "思维导图",
+			tags: ["办公/效率"],
+			visitUrl: "https://xmind.com/download",
+			sourceCode: "",
+			icon: "https://ts2.tc.mm.bing.net/th/id/ODF.nmYI60Y00_N7lNZeN0iQFA",
+			platform: ["Android"],
+			priceType: "free"
+		},
+		{
+			name: "WakeUp课程表",
+			description: "课程管理",
+			tags: ["办公/效率"],
+			visitUrl: "https://www.wakeup.fun/",
+			sourceCode: "",
+			icon: "https://www.wakeup.fun/images/logo.png",
+			platform: ["Android"],
+			priceType: "free",
+		},
+		{
+			name: "",
+			description: "",
+			tags: [""],
+			visitUrl: "",
+			sourceCode: "",
+			icon: "",
+			platform: ["Android"],
+			priceType: "free",
+		},
 	],
 };

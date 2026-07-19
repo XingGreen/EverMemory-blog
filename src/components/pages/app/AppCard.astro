@@ -32,7 +32,7 @@ const isIconUrl =
 <div
 	data-tags={tags?.join(",") || ""}
 	data-platform={platform?.join(",") || ""}
-	class="software-card group relative block overflow-hidden rounded-xl border border-(--line-divider) hover:border-(--primary) hover:bg-(--card-bg) transition-all duration-300 hover:shadow-lg"
+	class="app-card group relative block overflow-hidden rounded-xl border border-(--line-divider) hover:border-(--primary) hover:bg-(--card-bg) transition-all duration-300 hover:shadow-lg"
 >
 	<div class="absolute inset-0 bg-(--primary) opacity-0 group-hover:opacity-5 transition-opacity duration-300 pointer-events-none" />
 	<div class="relative p-5">
@@ -65,7 +65,7 @@ const isIconUrl =
 						<span
 							class={`text-xs px-2 py-0.5 rounded-full font-medium ${priceType === "free" ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" : priceType === "freemium" ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400" : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"}`}
 						>
-							{priceType === "free" ? i18n(I18nKey.softwareFree) : priceType === "freemium" ? i18n(I18nKey.softwareFreemium) : i18n(I18nKey.softwarePaid)}
+							{priceType === "free" ? i18n(I18nKey.appFree) : priceType === "freemium" ? i18n(I18nKey.appFreemium) : i18n(I18nKey.appPaid)}
 						</span>
 					)}
 				</div>
@@ -84,7 +84,6 @@ const isIconUrl =
 						<div class="flex flex-wrap gap-1">
 							{platform.map((p) => (
 								<span
-									key={p}
 									class="text-[0.65rem] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
 								>
 									{p}
@@ -98,7 +97,6 @@ const isIconUrl =
 					<div class="flex flex-wrap gap-1 mt-3">
 						{tags.slice(0, 4).map((tag) => (
 							<span
-								key={tag}
 								class="text-[0.6rem] px-1.5 py-0.5 rounded bg-(--primary)/5 text-(--primary) border border-(--primary)/10"
 							>
 								{tag}
@@ -118,7 +116,7 @@ const isIconUrl =
 					class="flex-[9] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg btn-regular text-sm font-medium"
 				>
 					<Icon is:inline name="material-symbols:open-in-new-rounded" class="text-sm" />
-					{i18n(I18nKey.softwareVisitSite)}
+					{i18n(I18nKey.appVisitSite)}
 				</a>
 			)}
 			{sourceCode && visitUrl && (
@@ -139,13 +137,13 @@ const isIconUrl =
 					class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg btn-regular text-sm font-medium"
 				>
 					<Icon is:inline name="simple-icons:github" class="text-sm" />
-					{i18n(I18nKey.softwareSourceCode)}
+					{i18n(I18nKey.appSourceCode)}
 				</a>
 			)}
 			{!visitUrl && !sourceCode && (
 				<span class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 text-sm cursor-not-allowed">
 					<Icon is:inline name="material-symbols:link-off-rounded" class="text-sm" />
-					{i18n(I18nKey.softwareNoLink)}
+					{i18n(I18nKey.appNoLink)}
 				</span>
 			)}
 		</div>

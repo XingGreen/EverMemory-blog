@@ -367,17 +367,17 @@ enum I18nKey {
 	galleryBackToAlbums = "galleryBackToAlbums",
 	searchAlbums = "searchAlbums",
 
-	// 软件推荐页面
-	software = "software",
-	softwareDescription = "softwareDescription",
-	searchSoftware = "searchSoftware",
-	softwareNoItems = "softwareNoItems",
-	softwareVisitSite = "softwareVisitSite",
-	softwareSourceCode = "softwareSourceCode",
-	softwareNoLink = "softwareNoLink",
-	softwareFree = "softwareFree",
-	softwareFreemium = "softwareFreemium",
-	softwarePaid = "softwarePaid",
+	// 应用推荐页面
+	app = "app",
+	appDescription = "appDescription",
+	searchApp = "searchApp",
+	appNoItems = "appNoItems",
+	appVisitSite = "appVisitSite",
+	appSourceCode = "appSourceCode",
+	appNoLink = "appNoLink",
+	appFree = "appFree",
+	appFreemium = "appFreemium",
+	appPaid = "appPaid",
 	category = "category",
 	platform = "platform",
 

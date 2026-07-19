@@ -1,21 +1,21 @@
 ---
 import { Icon } from "astro-icon/components";
-import SoftwareCard from "@/components/pages/software/SoftwareCard.astro";
-import { softwareConfig, siteConfig } from "@/config";
+import AppCard from "@/components/pages/app/AppCard.astro";
+import { appConfig, siteConfig } from "@/config";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
 
-if (!siteConfig.pages.software) {
+if (!siteConfig.pages.app) {
 	return Astro.redirect("/404/");
 }
 
-const title = i18n(I18nKey.software);
-const description = i18n(I18nKey.softwareDescription);
+const title = i18n(I18nKey.app);
+const description = i18n(I18nKey.appDescription);
 
-const software = softwareConfig.software;
-const allTags = [...new Set(software.flatMap((s) => s.tags || []))].sort();
-const allPlatforms = [...new Set(software.flatMap((s) => s.platform || []))].sort();
+const apps = appConfig.apps;
+const allTags = [...new Set(apps.flatMap((s) => s.tags || []))].sort();
+const allPlatforms = [...new Set(apps.flatMap((s) => s.platform || []))].sort();
 ---
 
 <MainGridLayout title={title} description={description}>
@@ -39,8 +39,8 @@ const allPlatforms = [...new Set(software.flatMap((s) => s.platform || []))].sor
 				)}
 			</div>
 
-			{software.length > 0 && (
-				<software-filter class="mb-6">
+			{apps.length > 0 && (
+				<app-filter class="mb-6">
 					<div class="relative mb-3">
 						<Icon is:inline
 							name="material-symbols:search"
@@ -49,7 +49,7 @@ const allPlatforms = [...new Set(software.flatMap((s) => s.platform || []))].sor
 						<input
 							type="text"
 							data-search
-							placeholder={i18n(I18nKey.searchSoftware)}
+							placeholder={i18n(I18nKey.searchApp)}
 							class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-(--line-divider) bg-transparent text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-(--primary) focus:ring-1 focus:ring-(--primary) outline-none transition-all duration-200 text-sm"
 						/>
 					</div>
@@ -101,14 +101,14 @@ const allPlatforms = [...new Set(software.flatMap((s) => s.platform || []))].sor
 							</div>
 						)}
 					</div>
-				</software-filter>
+				</app-filter>
 			)}
 
-			{software.length > 0 ? (
+			{apps.length > 0 ? (
 				<>
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
-						{software.map((item) => (
-							<SoftwareCard
+						{apps.map((item) => (
+							<AppCard
 								name={item.name}
 								description={item.description}
 								tags={item.tags}
@@ -120,7 +120,7 @@ const allPlatforms = [...new Set(software.flatMap((s) => s.platform || []))].sor
 							/>
 						))}
 					</div>
-					<div class="software-empty hidden flex-col items-center justify-center py-12 text-neutral-400 dark:text-neutral-500">
+					<div class="app-empty hidden flex-col items-center justify-center py-12 text-neutral-400 dark:text-neutral-500">
 						<Icon is:inline name="material-symbols:search-off-rounded" class="text-4xl mb-3" />
 						<div class="text-sm">{i18n(I18nKey.searchNoResults)}</div>
 					</div>
@@ -128,7 +128,7 @@ const allPlatforms = [...new Set(software.flatMap((s) => s.platform || []))].sor
 			) : (
 				<div class="flex flex-col items-center justify-center py-16 text-neutral-400 dark:text-neutral-500">
 					<Icon is:inline name="material-symbols:apps" class="text-6xl mb-4 opacity-50" />
-					<p class="text-lg">{i18n(I18nKey.softwareNoItems)}</p>
+					<p class="text-lg">{i18n(I18nKey.appNoItems)}</p>
 				</div>
 			)}
 		</div>
@@ -140,37 +140,36 @@ const allPlatforms = [...new Set(software.flatMap((s) => s.platform || []))].sor
 				<div class="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
 					<Icon is:inline name="material-symbols:warning-rounded" class="text-[1.5rem]" />
 				</div>
-				<div class="text-xl font-bold text-neutral-900 dark:text-neutral-100">第三方软件声明</div>
+				<div class="text-xl font-bold text-neutral-900 dark:text-neutral-100">第三方应用声明</div>
 			</div>
 			<div class="space-y-3 text-sm text-neutral-600 dark:text-neutral-400">
 				<div class="flex gap-3">
 					<span class="flex-shrink-0 w-5 h-5 rounded-full bg-(--primary)/10 text-(--primary) flex items-center justify-center text-xs font-medium">1</span>
-					<span><strong>链接政策：</strong>本站仅提供有官方网站的软件链接。无官网或官网无法访问的软件，仅提供名称及功能描述，不附任何下载链接。</span>
+					<span><strong>链接政策：</strong>本站仅提供有官方网站的应用链接。无官网或官网无法访问的应用，仅提供名称及功能描述，不附任何下载链接。</span>
 				</div>
 				<div class="flex gap-3">
 					<span class="flex-shrink-0 w-5 h-5 rounded-full bg-(--primary)/10 text-(--primary) flex items-center justify-center text-xs font-medium">2</span>
-					<span><strong>来源说明：</strong>官网链接指向软件开发者自行维护的页面，本站不存储、不分发、不修改任何软件内容。</span>
+					<span><strong>来源说明：</strong>官网链接指向应用开发者自行维护的页面，本站不存储、不分发、不修改任何应用内容。</span>
 				</div>
 				<div class="flex gap-3">
 					<span class="flex-shrink-0 w-5 h-5 rounded-full bg-(--primary)/10 text-(--primary) flex items-center justify-center text-xs font-medium">3</span>
-					<span><strong>安全提示：</strong>下载和使用前请自行进行病毒扫描及安全性评估。本站不对软件的安全性、完整性、合法性做任何担保。</span>
+					<span><strong>安全提示：</strong>下载和使用前请自行进行病毒扫描及安全性评估。本站不对应用的安全性、完整性、合法性做任何担保。</span>
 				</div>
 				<div class="flex gap-3">
 					<span class="flex-shrink-0 w-5 h-5 rounded-full bg-(--primary)/10 text-(--primary) flex items-center justify-center text-xs font-medium">4</span>
-					<span><strong>责任限制：</strong>因使用第三方软件导致的任何损失，请直接联系软件提供方或权利方，本站不承担法律责任。</span>
+					<span><strong>责任限制：</strong>因使用第三方应用导致的任何损失，请直接联系应用提供方或权利方，本站不承担法律责任。</span>
 				</div>
 				<div class="flex gap-3">
 					<span class="flex-shrink-0 w-5 h-5 rounded-full bg-(--primary)/10 text-(--primary) flex items-center justify-center text-xs font-medium">5</span>
-					<span><strong>内容时效：</strong>软件信息可能存在更新滞后，请以官方最新说明为准。</span>
+					<span><strong>内容时效：</strong>应用信息可能存在更新滞后，请以官方最新说明为准。</span>
 				</div>
-			
 			</div>
 		</div>
 	</div>
 
 	<script slot="head" is:inline>
-		if (!customElements.get("software-filter")) {
-			class SoftwareFilter extends HTMLElement {
+		if (!customElements.get("app-filter")) {
+			class AppFilter extends HTMLElement {
 				selectedTag = "all";
 				selectedPlatform = "all";
 
@@ -238,7 +237,7 @@ const allPlatforms = [...new Set(software.flatMap((s) => s.platform || []))].sor
 
 					const input = this.querySelector("[data-search]");
 					const query = (input?.value || "").toLowerCase().trim();
-					const cards = container.querySelectorAll(".software-card");
+					const cards = container.querySelectorAll(".app-card");
 
 					let hasVisible = false;
 
@@ -271,14 +270,14 @@ const allPlatforms = [...new Set(software.flatMap((s) => s.platform || []))].sor
 						}
 					});
 
-					const emptyEl = container.querySelector(".software-empty");
+					const emptyEl = container.querySelector(".app-empty");
 					if (emptyEl) {
 						emptyEl.classList.toggle("hidden", hasVisible);
 						emptyEl.classList.toggle("flex", !hasVisible);
 					}
 				}
 			}
-			customElements.define("software-filter", SoftwareFilter);
+			customElements.define("app-filter", AppFilter);
 		}
 	</script>
 </MainGridLayout>
