@@ -2,6 +2,17 @@ import type { AppConfig } from "@/types/appConfig";
 
 export const appConfig: AppConfig = {
 	apps: [
+		// 完整格式
+		/*{
+			name: "",
+			description: "",
+			tags: [""],
+			visitUrl: "",
+			sourceCode: "",
+			icon: "",
+			platform: [""],
+			priceType: "",
+		},*/
 		{
 			name: "设备信息X",
 			description: "查看手机硬件和系统信息,该软件暂无官方网站",
@@ -20,7 +31,7 @@ export const appConfig: AppConfig = {
 			platform: ["Android"],
 			priceType: "free",
 		},
-		{
+		{ 
 			name: "GKD",
 			description: "跳广告工具(需订阅规则)",
 			tags: ["系统工具"],
@@ -166,16 +177,6 @@ export const appConfig: AppConfig = {
 			visitUrl: "https://www.wakeup.fun/",
 			sourceCode: "",
 			icon: "https://www.wakeup.fun/images/logo.png",
-			platform: ["Android"],
-			priceType: "free",
-		},
-		{
-			name: "",
-			description: "",
-			tags: [""],
-			visitUrl: "",
-			sourceCode: "",
-			icon: "",
 			platform: ["Android"],
 			priceType: "free",
 		},
