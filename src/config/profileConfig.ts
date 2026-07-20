@@ -55,5 +55,10 @@ export const profileConfig: ProfileConfig = {
 		//	url: "/rss/",
 		//	showName: false,
 		//},
+		{
+			name: "neteasecloudmusic",
+			icon: "simple-icons:neteasecloudmusic",
+			url: "https://y.music.163.com/m/user?id=9010085648",
+		},
 	],
 };
