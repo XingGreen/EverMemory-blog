@@ -12,7 +12,7 @@ export const siteConfig: SiteConfig = {
 	subtitle: "Demo site",
 
 	// 站点 URL
-	site_url: "https://xinggreen.github.io/EverMemory-blog",
+	site_url: "https://evermemory.dpdns.org",
 
 	// 站点描述
 	description:
