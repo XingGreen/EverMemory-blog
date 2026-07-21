@@ -56,6 +56,9 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 
 			// 应用推荐
 			LinkPresets.App,
+
+			// 音乐
+			LinkPresets.Music,
 		],
 	});
 
@@ -195,6 +198,12 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		url: "/app/",
 		icon: "material-symbols:apps",
 		pageKey: "app",
+	},
+	Music: {
+		name: "音乐",
+		url: "/music/",
+		icon: "simple-icons:neteasecloudmusic",
+		pageKey: "music",
 	},
 };
 

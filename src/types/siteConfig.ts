@@ -86,6 +86,7 @@ export type SiteConfig = {
 		gallery: boolean; // 相册页面开关
 		anime: boolean; // 追番页面开关
 		app: boolean; // 应用推荐页面开关
+		music: boolean; // 音乐歌单页面开关
 	};
 
 	// 分类导航栏开关
@@ -145,6 +146,11 @@ export type SiteConfig = {
 			apiKey: string; // TMDB API Key
 			listId: string; // TMDB 列表 ID
 		};
+	};
+
+	// 音乐配置（网易云音乐）
+	music?: {
+		userId?: string; // 网易云音乐用户ID
 	};
 
 	// 分页配置

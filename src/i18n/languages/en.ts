@@ -42,6 +42,17 @@ export const en: Translation = {
 	[Key.musicCover]: "Cover",
 	[Key.musicNoCover]: "No cover available",
 	[Key.musicAudioPlayer]: "Audio Player",
+	[Key.musicDescription]: "View my NetEase Cloud Music playlists, click to switch playback",
+	[Key.musicNotConfigured]: "Music Not Configured",
+	[Key.musicNotConfiguredDesc]: "Please set your NetEase Cloud Music user ID in the configuration file to display your playlists",
+	[Key.musicTotalPlaylists]: "Total Playlists",
+	[Key.musicTotalTracks]: "Total Tracks",
+	[Key.musicSource]: "Data Source",
+	[Key.musicTotalSubscribed]: "Subscribed",
+	[Key.musicTracks]: "tracks",
+	[Key.musicPlays]: "plays",
+	[Key.musicNoDescription]: "No description",
+	[Key.musicNoPlaylists]: "No playlists",
 
 	// Announcement
 	[Key.announcement]: "Announcement",

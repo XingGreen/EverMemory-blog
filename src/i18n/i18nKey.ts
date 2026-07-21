@@ -63,6 +63,17 @@ enum I18nKey {
 	musicCover = "musicCover",
 	musicNoCover = "musicNoCover",
 	musicAudioPlayer = "musicAudioPlayer",
+	musicDescription = "musicDescription",
+	musicNotConfigured = "musicNotConfigured",
+	musicNotConfiguredDesc = "musicNotConfiguredDesc",
+	musicTotalPlaylists = "musicTotalPlaylists",
+	musicTotalTracks = "musicTotalTracks",
+	musicSource = "musicSource",
+	musicTotalSubscribed = "musicTotalSubscribed",
+	musicTracks = "musicTracks",
+	musicPlays = "musicPlays",
+	musicNoDescription = "musicNoDescription",
+	musicNoPlaylists = "musicNoPlaylists",
 
 	themeColor = "themeColor",
 

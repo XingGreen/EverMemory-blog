@@ -1,0 +1,69 @@
+---
+import { Icon } from "astro-icon/components";
+
+interface Props {
+    id: string;
+    name: string;
+    cover: string;
+    description: string;
+    songCount: number;
+    playCount: number;
+}
+
+const { id, name, cover, description, songCount, playCount } = Astro.props;
+
+function formatNumber(num: number): string {
+    if (num >= 10000) {
+        return (num / 10000).toFixed(1) + "万";
+    }
+    return num.toString();
+}
+
+function handleClick(e: Event) {
+    e.preventDefault();
+    const mgr = window.__fireflyMusic;
+    if (mgr) {
+        mgr.loadPlaylist("netease", "playlist", id);
+    }
+}
+---
+
+<div 
+    class="playlist-card card-base cursor-pointer hover:border-(--primary)/30 hover:shadow-lg hover:shadow-(--primary)/5 transition-all duration-300 group"
+    onclick={handleClick}
+>
+    <div class="flex gap-4 p-4">
+        <div class="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+            <img 
+                src={cover} 
+                alt={name}
+                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                loading="lazy"
+            />
+            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <Icon is:inline name="material-symbols:play-arrow-rounded" class="text-white text-3xl drop-shadow-lg" aria-hidden="true" />
+            </div>
+        </div>
+        
+        <div class="flex-1 min-w-0 flex flex-col">
+            <h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 truncate mb-1 group-hover:text-(--primary) transition-colors">
+                {name}
+            </h3>
+            
+            <p class="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 mb-3 flex-1">
+                {description || "暂无简介"}
+            </p>
+            
+            <div class="flex items-center gap-4 text-xs text-neutral-400">
+                <span class="flex items-center gap-1">
+                    <Icon is:inline name="material-symbols:music-note-rounded" class="text-base" aria-hidden="true" />
+                    {songCount} 首
+                </span>
+                <span class="flex items-center gap-1">
+                    <Icon is:inline name="material-symbols:play-circle-rounded" class="text-base" aria-hidden="true" />
+                    {formatNumber(playCount)} 次播放
+                </span>
+            </div>
+        </div>
+    </div>
+</div>

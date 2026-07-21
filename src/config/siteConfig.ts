@@ -106,13 +106,15 @@ export const siteConfig: SiteConfig = {
 		// 留言板页面开关，需要配置评论系统
 		guestbook: false,
 		// 番组计划页面开关，含追番、游戏、书籍和音乐
-		bangumi: false,
+		bangumi: true,
 		// 相册页面开关
-		gallery: false,
+		gallery: true,
 		// 追番页面开关
-		anime: false,
+		anime: true,
 		// 软件推荐页面开关
 		app: true,
+		// 音乐歌单页面开关
+		music: true,
 	},
 
 	// 分类导航栏开关，在首页和归档页顶部显示分类快捷导航
@@ -163,7 +165,7 @@ export const siteConfig: SiteConfig = {
 	},
 
 	// bangumi配置
-/*	bangumi: {
+	bangumi: {
 		// Bangumi用户ID
 		userId: "1143164",
 		// 数据模式：static=构建时获取，dynamic=客户端实时获取
@@ -187,15 +189,20 @@ export const siteConfig: SiteConfig = {
 			// 你的 Bilibili 用户 UID
 			uid: "38932988",
 		},
-*/		
- // TMDB 配置（可选，需要翻墙）
-	// tmdb: {
-	//   // TMDB API 密钥
-	//   apiKey: "your_tmdb_api_key",
-	//   // TMDB 列表 ID
-	//   listId: "your_list_id",
-	// },
-	// 	},
+		// TMDB 配置（可选，需要翻墙）
+		// tmdb: {
+		// 	// TMDB API 密钥
+		// 	apiKey: "your_tmdb_api_key",
+		// 	// TMDB 列表 ID
+		// 	listId: "your_list_id",
+		// },
+	},
+
+	// 音乐配置（网易云音乐）
+	music: {
+		// 网易云音乐用户ID
+		userId: "9010085648",
+	},
 
 	// 分页配置
 	pagination: {

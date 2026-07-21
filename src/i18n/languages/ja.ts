@@ -42,6 +42,17 @@ export const ja: Translation = {
 	[Key.musicCover]: "カバー",
 	[Key.musicNoCover]: "カバーなし",
 	[Key.musicAudioPlayer]: "オーディオプレーヤー",
+	[Key.musicDescription]: "私のネットイーズクラウドミュージックのプレイリストを見る",
+	[Key.musicNotConfigured]: "音楽が設定されていません",
+	[Key.musicNotConfiguredDesc]: "設定ファイルにネットイーズクラウドミュージックのユーザーIDを設定してください",
+	[Key.musicTotalPlaylists]: "プレイリスト総数",
+	[Key.musicTotalTracks]: "トラック総数",
+	[Key.musicSource]: "データソース",
+	[Key.musicTotalSubscribed]: "サブスクライブ",
+	[Key.musicTracks]: "曲",
+	[Key.musicPlays]: "再生回数",
+	[Key.musicNoDescription]: "説明がありません",
+	[Key.musicNoPlaylists]: "プレイリストがありません",
 
 	// お知らせ
 	[Key.announcement]: "お知らせ",
