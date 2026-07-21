@@ -42,6 +42,17 @@ export const ru: Translation = {
 	[Key.musicCover]: "Обложка",
 	[Key.musicNoCover]: "Нет обложки",
 	[Key.musicAudioPlayer]: "Аудиоплеер",
+	[Key.musicDescription]: "Посмотреть мои плейлисты NetEase Cloud Music",
+	[Key.musicNotConfigured]: "Музыка не настроена",
+	[Key.musicNotConfiguredDesc]: "Пожалуйста, установите ID пользователя NetEase Cloud Music в файле конфигурации",
+	[Key.musicTotalPlaylists]: "Всего плейлистов",
+	[Key.musicTotalTracks]: "Всего треков",
+	[Key.musicSource]: "Источник данных",
+	[Key.musicTotalSubscribed]: "Подписок",
+	[Key.musicTracks]: "треков",
+	[Key.musicPlays]: "прослушиваний",
+	[Key.musicNoDescription]: "Нет описания",
+	[Key.musicNoPlaylists]: "Нет плейлистов",
 
 	// Объявление
 	[Key.announcement]: "Объявление",

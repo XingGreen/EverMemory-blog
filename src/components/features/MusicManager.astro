@@ -439,7 +439,18 @@ const managerConfigStr = JSON.stringify({
         seek: seek,
         seekToTime: seekToTime,
         playTrackByIndex: playTrackByIndex,
-        loadTrack: loadTrack
+        loadTrack: loadTrack,
+        loadPlaylist: function (server, type, id) {
+            config.meting = config.meting || {};
+            config.meting.server = server;
+            config.meting.type = type;
+            config.meting.id = id;
+            config.mode = 'meting';
+            state.playlist = [];
+            state.currentIndex = 0;
+            state.initialized = false;
+            init();
+        }
     };
 })();
 </script>

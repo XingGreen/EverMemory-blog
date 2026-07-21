@@ -42,6 +42,17 @@ export const zh_TW: Translation = {
 	[Key.musicCover]: "封面",
 	[Key.musicNoCover]: "暫無封面",
 	[Key.musicAudioPlayer]: "音頻播放器",
+	[Key.musicDescription]: "查看我的網易雲音樂歌單，點擊歌單即可切換播放列表",
+	[Key.musicNotConfigured]: "未配置音樂",
+	[Key.musicNotConfiguredDesc]: "請在配置文件中設置網易雲音樂用戶ID，即可展示您的歌單列表",
+	[Key.musicTotalPlaylists]: "歌單總數",
+	[Key.musicTotalTracks]: "歌曲總數",
+	[Key.musicSource]: "數據來源",
+	[Key.musicTotalSubscribed]: "總收藏",
+	[Key.musicTracks]: "首",
+	[Key.musicPlays]: "次播放",
+	[Key.musicNoDescription]: "暫無簡介",
+	[Key.musicNoPlaylists]: "暫無歌單",
 
 	// 公告欄
 	[Key.announcement]: "公告",

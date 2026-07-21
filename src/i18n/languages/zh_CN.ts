@@ -42,6 +42,17 @@ export const zh_CN: Translation = {
 	[Key.musicCover]: "封面",
 	[Key.musicNoCover]: "暂无封面",
 	[Key.musicAudioPlayer]: "音频播放器",
+	[Key.musicDescription]: "查看我的网易云音乐歌单，点击歌单即可切换播放列表",
+	[Key.musicNotConfigured]: "未配置音乐",
+	[Key.musicNotConfiguredDesc]: "请在配置文件中设置网易云音乐用户ID，即可展示您的歌单列表",
+	[Key.musicTotalPlaylists]: "歌单总数",
+	[Key.musicTotalTracks]: "歌曲总数",
+	[Key.musicSource]: "数据来源",
+	[Key.musicTotalSubscribed]: "总收藏",
+	[Key.musicTracks]: "首",
+	[Key.musicPlays]: "次播放",
+	[Key.musicNoDescription]: "暂无简介",
+	[Key.musicNoPlaylists]: "暂无歌单",
 
 	// 公告栏
 	[Key.announcement]: "公告",

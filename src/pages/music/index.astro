@@ -1,0 +1,265 @@
+---
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { Icon } from "astro-icon/components";
+import { siteConfig } from "@/config";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import type { StandardizedPlaylist } from "@/types/music";
+import { formatDateI18nWithTime } from "@/utils/date-utils";
+
+if (!siteConfig.pages.music) {
+	return Astro.redirect("/404/");
+}
+
+const buildTime = formatDateI18nWithTime(new Date());
+
+const musicConfig = siteConfig.music;
+const NETEASE_USER_ID = musicConfig?.userId;
+
+interface NeteasePlaylist {
+	id: number;
+	name: string;
+	coverImgUrl: string;
+	description?: string;
+	trackCount: number;
+	playCount: number;
+	creator?: {
+		nickname?: string;
+	};
+	subscribed?: boolean;
+}
+
+interface NeteaseUserResponse {
+	code: number;
+	playlist?: NeteasePlaylist[];
+	message?: string;
+}
+
+function readLocalCache(): NeteasePlaylist[] {
+	try {
+		const localPath = path.resolve("public/music-playlists.json");
+		if (fs.existsSync(localPath)) {
+			const localData = JSON.parse(fs.readFileSync(localPath, "utf-8"));
+			const playlists = localData.playlists || localData.playlist || [];
+			console.log(`[Music] Using local cache: ${playlists.length} playlists.`);
+			return playlists;
+		}
+	} catch {
+		// ignore
+	}
+	return [];
+}
+
+let neteasePlaylists: NeteasePlaylist[] = [];
+if (NETEASE_USER_ID) {
+	try {
+		console.log(`[Music] Fetching Netease playlists for user: ${NETEASE_USER_ID}...`);
+		
+		const apis = [
+			`https://apis.netstart.cn/music/user/playlist?uid=${NETEASE_USER_ID}`,
+			`https://api.yimian.xyz/msc/?type=playlist&id=${NETEASE_USER_ID}`,
+			`https://music.163.com/api/user/playlist/?uid=${NETEASE_USER_ID}`,
+		];
+
+		let success = false;
+		for (const url of apis) {
+			try {
+				const response = await fetch(url, {
+					headers: {
+						"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+						"Referer": "https://music.163.com/",
+					},
+				});
+				const data: NeteaseUserResponse = await response.json();
+
+				if (data.code === 200 && data.playlist) {
+					neteasePlaylists = data.playlist;
+					console.log(`[Music] Fetched ${neteasePlaylists.length} playlists from Netease (API: ${url}).`);
+					success = true;
+					break;
+				}
+			} catch {
+				continue;
+			}
+		}
+
+		if (!success) {
+			console.error(`[Music] All Netease APIs failed`);
+			neteasePlaylists = readLocalCache();
+		}
+	} catch (error: unknown) {
+		console.error(
+			"[Music] Netease fetch error:",
+			error instanceof Error ? error.message : error,
+		);
+		neteasePlaylists = readLocalCache();
+	}
+}
+
+const playlistList: StandardizedPlaylist[] = neteasePlaylists.map((playlist) => ({
+	id: playlist.id.toString(),
+	name: playlist.name,
+	cover: playlist.coverImgUrl,
+	description: playlist.description || "",
+	trackCount: playlist.trackCount,
+	playCount: playlist.playCount,
+	creator: playlist.creator?.nickname || "",
+	subscribed: playlist.subscribed || false,
+}));
+
+const totalCount = playlistList.length;
+const totalTracks = playlistList.reduce((sum, p) => sum + p.trackCount, 0);
+const totalSubscribed = playlistList.filter((p) => p.subscribed).length;
+
+const isConfigured = !!NETEASE_USER_ID;
+---
+
+<MainGridLayout title={i18n(I18nKey.music)} description={i18n(I18nKey.musicDescription)}>
+	<div class="flex w-full rounded-(--radius-large) overflow-hidden relative min-h-32">
+		<div class="card-base z-10 px-4 sm:px-6 md:px-9 py-4 sm:py-6 relative w-full">
+			<div class="relative w-full mb-8">
+				<div class="mb-6">
+					<div class="flex items-center gap-3 mb-3">
+						<div class="h-8 w-8 rounded-lg bg-(--primary) flex items-center justify-center text-white dark:text-black/70">
+							<Icon is:inline name="simple-icons:neteasecloudmusic" class="text-[1.5rem]" />
+						</div>
+						<div class="text-3xl font-bold text-neutral-900 dark:text-neutral-100">
+							{i18n(I18nKey.music)}
+						</div>
+					</div>
+					<p class="text-base text-neutral-600 dark:text-neutral-400 leading-relaxed">
+						{i18n(I18nKey.musicDescription)}
+					</p>
+					<p class="text-xs text-neutral-500 dark:text-neutral-500 mt-2">
+						{i18n(I18nKey.animeLastUpdated)} {buildTime}
+					</p>
+				</div>
+
+				{!isConfigured ? (
+					<div class="text-center py-16">
+						<div class="inline-flex items-center justify-center w-16 h-16 bg-(--btn-regular-bg) rounded-full mb-6 border border-(--line-divider)">
+							<Icon is:inline name="material-symbols:settings" class="text-[2rem] text-(--btn-content)" />
+						</div>
+						<h2 class="text-xl font-semibold text-black/80 dark:text-white/80 mb-3">
+							{i18n(I18nKey.musicNotConfigured)}
+						</h2>
+						<p class="text-black/60 dark:text-white/60 mb-4 max-w-md mx-auto">
+							{i18n(I18nKey.musicNotConfiguredDesc)}
+						</p>
+					</div>
+				) : (
+					<>
+						<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+							<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+								<div class="flex items-center gap-2 sm:gap-3">
+									<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-(--primary)/10 flex items-center justify-center shrink-0">
+										<Icon is:inline name="material-symbols:music-note-rounded" class="text-[1rem] sm:text-[1.25rem] text-(--primary)" />
+									</div>
+									<div class="min-w-0">
+										<div class="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicTotalPlaylists)}</div>
+										<div class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">{totalCount}</div>
+									</div>
+								</div>
+							</div>
+							<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+								<div class="flex items-center gap-2 sm:gap-3">
+									<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
+										<Icon is:inline name="material-symbols:queue-music-rounded" class="text-[1rem] sm:text-[1.25rem] text-purple-500" />
+									</div>
+									<div class="min-w-0">
+										<div class="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicTotalTracks)}</div>
+										<div class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">{totalTracks}</div>
+									</div>
+								</div>
+							</div>
+							<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+								<div class="flex items-center gap-2 sm:gap-3">
+									<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+										<Icon is:inline name="material-symbols:database" class="text-[1rem] sm:text-[1.25rem] text-blue-500" />
+									</div>
+									<div class="min-w-0">
+										<div class="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicSource)}</div>
+										<div class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100 truncate">Netease</div>
+									</div>
+								</div>
+							</div>
+							<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+								<div class="flex items-center gap-2 sm:gap-3">
+									<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-pink-500/10 flex items-center justify-center shrink-0">
+										<Icon is:inline name="material-symbols:star" class="text-[1rem] sm:text-[1.25rem] text-pink-500" />
+									</div>
+									<div class="min-w-0">
+										<div class="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicTotalSubscribed)}</div>
+										<div class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">{totalSubscribed}</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div id="emptyState" class="{playlistList.length === 0 ? '' : 'hidden'} flex flex-col items-center justify-center py-12 text-center">
+							<Icon is:inline name="material-symbols:airwave-rounded" class="text-5xl text-neutral-400 mb-4" aria-hidden="true" />
+							<p class="text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicNoPlaylists)}</p>
+						</div>
+
+						<div id="playlistsContainer" class="{playlistList.length === 0 ? 'hidden' : ''} space-y-3">
+							{playlistList.map((playlist) => (
+								<div
+									key={playlist.id}
+									class="playlist-card card-base hover:border-(--primary)/30 hover:shadow-lg hover:shadow-(--primary)/5 transition-all duration-300 group"
+								>
+									<div class="flex gap-4 p-4">
+										<button
+											class="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 focus:outline-none group/cover"
+											data-playlist-id={playlist.id}
+											onclick="event.stopPropagation(); if (window.__fireflyMusic) window.__fireflyMusic.loadPlaylist('netease', 'playlist', this.getAttribute('data-playlist-id'));"
+										>
+											<img
+												src={playlist.cover}
+												alt={playlist.name}
+												class="w-full h-full object-cover transition-transform duration-500 group-hover/cover:scale-110"
+												loading="lazy"
+											/>
+											<div class="absolute inset-0 bg-black/20 opacity-0 group-hover/cover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+												<Icon is:inline name="material-symbols:play-arrow-rounded" class="text-white text-3xl drop-shadow-lg" aria-hidden="true" />
+											</div>
+										</button>
+										<div
+											class="flex-1 min-w-0 flex flex-col cursor-pointer hover:text-[var(--primary)] transition-colors"
+											data-playlist-id={playlist.id}
+											onclick="window.open('https://music.163.com/#/playlist?id=' + this.getAttribute('data-playlist-id'), '_blank');"
+										>
+											<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 truncate mb-1">
+												{playlist.name}
+											</h3>
+											<p class="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 mb-3 flex-1">
+												{playlist.description || i18n(I18nKey.musicNoDescription)}
+											</p>
+											<div class="flex items-center gap-4 text-xs text-neutral-400">
+												<span class="flex items-center gap-1">
+													<Icon is:inline name="material-symbols:music-note-rounded" class="text-base" aria-hidden="true" />
+													{playlist.trackCount} {i18n(I18nKey.musicTracks)}
+												</span>
+												<span class="flex items-center gap-1">
+													<Icon is:inline name="material-symbols:play-circle-rounded" class="text-base" aria-hidden="true" />
+													{playlist.playCount >= 10000 ? (playlist.playCount / 10000).toFixed(1) + "万" : playlist.playCount} {i18n(I18nKey.musicPlays)}
+												</span>
+												{playlist.creator && (
+													<span class="flex items-center gap-1">
+														<Icon is:inline name="material-symbols:account-circle" class="text-base" aria-hidden="true" />
+														{playlist.creator}
+													</span>
+												)}
+											</div>
+										</div>
+									</div>
+								</div>
+							))}
+						</div>
+					</>
+				)}
+			</div>
+		</div>
+	</div>
+</MainGridLayout>

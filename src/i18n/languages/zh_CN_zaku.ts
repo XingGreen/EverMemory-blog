@@ -43,6 +43,17 @@ export const zaku: Translation = {
 	[Key.musicCover]: "歌曲封面",
 	[Key.musicNoCover]: "没有封面图，好廉价哦",
 	[Key.musicAudioPlayer]: "音频播放器",
+	[Key.musicDescription]: "本小姐的网易云音乐歌单，点击就能切换播放啦",
+	[Key.musicNotConfigured]: "音乐还没配置呢，笨蛋",
+	[Key.musicNotConfiguredDesc]: "在配置文件里设置网易云音乐用户ID啦，不然怎么看本小姐的歌单",
+	[Key.musicTotalPlaylists]: "歌单总数",
+	[Key.musicTotalTracks]: "歌曲总数",
+	[Key.musicSource]: "数据来源",
+	[Key.musicTotalSubscribed]: "总收藏",
+	[Key.musicTracks]: "首",
+	[Key.musicPlays]: "次播放",
+	[Key.musicNoDescription]: "没写简介啦",
+	[Key.musicNoPlaylists]: "歌单空空如也，真是扫兴",
 
 	// 公告栏
 	[Key.announcement]: "公告板",
