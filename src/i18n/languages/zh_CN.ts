@@ -53,6 +53,12 @@ export const zh_CN: Translation = {
 	[Key.musicPlays]: "次播放",
 	[Key.musicNoDescription]: "暂无简介",
 	[Key.musicNoPlaylists]: "暂无歌单",
+	[Key.musicOfficialPage]: "官方页面",
+	[Key.musicTrackList]: "歌曲列表",
+	[Key.musicNoTracks]: "暂无歌曲",
+	[Key.musicLoadingHint]: "如果长时间没有加载内容，请手动刷新",
+	[Key.musicMyPlaylists]: "我的歌单",
+	[Key.musicSubscribedPlaylists]: "收藏歌单",
 
 	// 公告栏
 	[Key.announcement]: "公告",

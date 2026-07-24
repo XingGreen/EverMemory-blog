@@ -53,6 +53,12 @@ export const en: Translation = {
 	[Key.musicPlays]: "plays",
 	[Key.musicNoDescription]: "No description",
 	[Key.musicNoPlaylists]: "No playlists",
+	[Key.musicOfficialPage]: "Official Page",
+	[Key.musicTrackList]: "Track List",
+	[Key.musicNoTracks]: "No tracks",
+	[Key.musicLoadingHint]: "If content doesn't load for a long time, please refresh manually",
+	[Key.musicMyPlaylists]: "My Playlists",
+	[Key.musicSubscribedPlaylists]: "Subscribed Playlists",
 
 	// Announcement
 	[Key.announcement]: "Announcement",

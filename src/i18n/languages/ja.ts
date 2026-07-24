@@ -53,6 +53,12 @@ export const ja: Translation = {
 	[Key.musicPlays]: "再生回数",
 	[Key.musicNoDescription]: "説明がありません",
 	[Key.musicNoPlaylists]: "プレイリストがありません",
+	[Key.musicOfficialPage]: "公式ページ",
+	[Key.musicTrackList]: "トラックリスト",
+	[Key.musicNoTracks]: "トラックがありません",
+	[Key.musicLoadingHint]: "長時間読み込まれない場合は、手動で更新してください",
+	[Key.musicMyPlaylists]: "マイプレイリスト",
+	[Key.musicSubscribedPlaylists]: "購読中のプレイリスト",
 
 	// お知らせ
 	[Key.announcement]: "お知らせ",

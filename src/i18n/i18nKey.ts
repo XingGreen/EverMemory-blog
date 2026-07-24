@@ -74,6 +74,12 @@ enum I18nKey {
 	musicPlays = "musicPlays",
 	musicNoDescription = "musicNoDescription",
 	musicNoPlaylists = "musicNoPlaylists",
+	musicOfficialPage = "musicOfficialPage",
+	musicTrackList = "musicTrackList",
+	musicNoTracks = "musicNoTracks",
+	musicLoadingHint = "musicLoadingHint",
+	musicMyPlaylists = "musicMyPlaylists",
+	musicSubscribedPlaylists = "musicSubscribedPlaylists",
 
 	themeColor = "themeColor",
 
