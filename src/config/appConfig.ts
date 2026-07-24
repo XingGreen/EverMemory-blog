@@ -4,13 +4,21 @@ export const appConfig: AppConfig = {
 	apps: [
 		// 完整格式
 		/*{
+			// 名字	
 			name: "",
+			// 简介
 			description: "",
+			// 标签
 			tags: [""],
+			// 网站链接
 			visitUrl: "",
+			// 开源链接
 			sourceCode: "",
+			// 图标, 支持图标库和 Url 链接
 			icon: "",
+			// 支持的系统
 			platform: [""],
+			// 选择一个选项: free 免费｜paid付费｜freemium 两者皆有
 			priceType: "",
 		},*/
 		{

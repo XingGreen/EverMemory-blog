@@ -53,6 +53,12 @@ export const ru: Translation = {
 	[Key.musicPlays]: "прослушиваний",
 	[Key.musicNoDescription]: "Нет описания",
 	[Key.musicNoPlaylists]: "Нет плейлистов",
+	[Key.musicOfficialPage]: "Официальная страница",
+	[Key.musicTrackList]: "Список треков",
+	[Key.musicNoTracks]: "Нет треков",
+	[Key.musicLoadingHint]: "Если контент не загружается долгое время, обновите вручную",
+	[Key.musicMyPlaylists]: "Мои плейлисты",
+	[Key.musicSubscribedPlaylists]: "Подписанные плейлисты",
 
 	// Объявление
 	[Key.announcement]: "Объявление",

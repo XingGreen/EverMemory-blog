@@ -9,7 +9,7 @@ export const siteConfig: SiteConfig = {
 	title: "EverMemory's Blog",
 
 	// 站点副标题
-	subtitle: "Demo site",
+	subtitle: "",
 
 	// 站点 URL
 	site_url: "https://evermemory.dpdns.org",
@@ -200,7 +200,7 @@ export const siteConfig: SiteConfig = {
 
 	// 音乐配置（网易云音乐）
 	music: {
-		// 网易云音乐用户ID
+		// 网易云音乐用户ID,用来给music页面配置，当前仅支持网易云
 		userId: "9010085648",
 	},
 

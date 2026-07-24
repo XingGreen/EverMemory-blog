@@ -54,6 +54,12 @@ export const zaku: Translation = {
 	[Key.musicPlays]: "次播放",
 	[Key.musicNoDescription]: "没写简介啦",
 	[Key.musicNoPlaylists]: "歌单空空如也，真是扫兴",
+	[Key.musicOfficialPage]: "官方页面",
+	[Key.musicTrackList]: "歌曲列表",
+	[Key.musicNoTracks]: "没有歌曲啦",
+	[Key.musicLoadingHint]: "加载太久的话就自己刷新嘛~",
+	[Key.musicMyPlaylists]: "人家的歌单啦~",
+	[Key.musicSubscribedPlaylists]: "收藏的歌单哟~",
 
 	// 公告栏
 	[Key.announcement]: "公告板",
