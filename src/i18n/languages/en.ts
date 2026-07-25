@@ -59,6 +59,7 @@ export const en: Translation = {
 	[Key.musicLoadingHint]: "If content doesn't load for a long time, please refresh manually",
 	[Key.musicMyPlaylists]: "My Playlists",
 	[Key.musicSubscribedPlaylists]: "Subscribed Playlists",
+	[Key.musicPlaylistDesc]: "Description",
 	[Key.musicSearch]: "Search playlists...",
 	[Key.musicNoResults]: "No matching playlists found",
 

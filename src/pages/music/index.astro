@@ -117,13 +117,13 @@ const isConfigured = !!NETEASE_USER_ID;
 						<div id="filterTabs" class="hidden border-b border-(--line-divider) mb-3">
 							<div class="overflow-x-auto">
 								<nav class="flex min-w-max space-x-8" aria-label="Tabs">
-									<button id="tab-all" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-(--primary) text-(--primary)">
+									<button id="tab-all" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 active-tab">
 										{i18n(I18nKey.all)}
 									</button>
-									<button id="tab-mine" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300">
+									<button id="tab-mine" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 inactive-tab">
 										{i18n(I18nKey.musicMyPlaylists)}
 									</button>
-									<button id="tab-subscribed" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300">
+									<button id="tab-subscribed" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 inactive-tab">
 										{i18n(I18nKey.musicSubscribedPlaylists)}
 									</button>
 								</nav>
@@ -175,7 +175,7 @@ const isConfigured = !!NETEASE_USER_ID;
 											<span id="modalPlayBadge" class="inline-flex items-center gap-1 rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-1 text-xs font-bold text-green-600 dark:text-green-400"></span>
 										</div>
 										<div id="modalDescriptionContainer" class="mb-6 hidden">
-											<h3 class="mb-2 text-sm font-semibold text-neutral-700 dark:text-neutral-300">{i18n(I18nKey.musicDescription)}</h3>
+											<h3 class="mb-2 text-sm font-semibold text-neutral-700 dark:text-neutral-300">{i18n(I18nKey.musicPlaylistDesc)}</h3>
 											<p id="modalDescription" class="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed max-h-40 overflow-y-auto"></p>
 										</div>
 										<div class="flex gap-3">
@@ -313,9 +313,22 @@ const isConfigured = !!NETEASE_USER_ID;
 	function setFilter(filter) {
 		currentFilter = filter;
 		
-		tabAll.className = 'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ' + (filter === 'all' ? 'border-(--primary) text-(--primary)' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300');
-		tabMine.className = 'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ' + (filter === 'mine' ? 'border-(--primary) text-(--primary)' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300');
-		tabSubscribed.className = 'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ' + (filter === 'subscribed' ? 'border-(--primary) text-(--primary)' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300');
+		const tabs = [tabAll, tabMine, tabSubscribed];
+		tabs.forEach(tab => {
+			tab.classList.remove('active-tab');
+			tab.classList.add('inactive-tab');
+		});
+		
+		if (filter === 'all') {
+			tabAll.classList.remove('inactive-tab');
+			tabAll.classList.add('active-tab');
+		} else if (filter === 'mine') {
+			tabMine.classList.remove('inactive-tab');
+			tabMine.classList.add('active-tab');
+		} else if (filter === 'subscribed') {
+			tabSubscribed.classList.remove('inactive-tab');
+			tabSubscribed.classList.add('active-tab');
+		}
 		
 		const query = searchInput.value.toLowerCase().trim();
 		filterPlaylists(query);
@@ -659,5 +672,23 @@ const isConfigured = !!NETEASE_USER_ID;
 }
 .animate-in {
 	animation: animate-in 0.2s ease-out;
+}
+.active-tab {
+	border-bottom-color: var(--primary);
+	color: var(--primary);
+}
+.inactive-tab {
+	border-bottom-color: transparent;
+	color: gray;
+}
+.dark .inactive-tab {
+	color: gray;
+}
+.inactive-tab:hover {
+	color: gray;
+	border-bottom-color: gray;
+}
+.dark .inactive-tab:hover {
+	color: gray;
 }
 </style>
