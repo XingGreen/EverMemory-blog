@@ -83,6 +83,8 @@ enum I18nKey {
 	musicPlaylistDesc = "musicPlaylistDesc",
 	musicSearch = "musicSearch",
 	musicNoResults = "musicNoResults",
+	musicPlaylistSwitched = "musicPlaylistSwitched",
+	musicPlayerNotLoaded = "musicPlayerNotLoaded",
 
 	themeColor = "themeColor",
 

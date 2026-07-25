@@ -62,6 +62,8 @@ export const ja: Translation = {
 	[Key.musicPlaylistDesc]: "概要",
 	[Key.musicSearch]: "プレイリストを検索...",
 	[Key.musicNoResults]: "一致するプレイリストが見つかりません",
+	[Key.musicPlaylistSwitched]: "プレイリストを切り替えました",
+	[Key.musicPlayerNotLoaded]: "プレイヤーが読み込まれていません",
 
 	// お知らせ
 	[Key.announcement]: "お知らせ",
