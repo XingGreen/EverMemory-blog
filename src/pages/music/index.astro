@@ -100,11 +100,41 @@ const isConfigured = !!NETEASE_USER_ID;
 							</div>
 						</div>
 
+						<div class="mb-4">
+							<div class="relative">
+								<svg class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+								</svg>
+								<input
+									type="text"
+									id="searchInput"
+									placeholder={i18n(I18nKey.musicSearch)}
+									class="w-full rounded-xl border border-(--line-divider) bg-(--card-bg) py-2.5 pl-10 pr-4 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 outline-none transition-colors focus:border-(--primary)"
+								/>
+							</div>
+						</div>
+
+						<div id="filterTabs" class="hidden border-b border-(--line-divider) mb-3">
+							<div class="overflow-x-auto">
+								<nav class="flex min-w-max space-x-8" aria-label="Tabs">
+									<button id="tab-all" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-(--primary) text-(--primary)">
+										{i18n(I18nKey.all)}
+									</button>
+									<button id="tab-mine" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300">
+										{i18n(I18nKey.musicMyPlaylists)}
+									</button>
+									<button id="tab-subscribed" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300">
+										{i18n(I18nKey.musicSubscribedPlaylists)}
+									</button>
+								</nav>
+							</div>
+						</div>
+
 						<div id="loadingState" class="flex flex-col items-center justify-center py-12 text-center">
-						<Icon is:inline name="material-symbols:refresh-rounded" class="text-5xl text-neutral-400 mb-4 animate-spin" aria-hidden="true" />
-						<p class="text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicLoading)}</p>
-						<p class="text-sm text-neutral-400 dark:text-neutral-500 mt-2">{i18n(I18nKey.musicLoadingHint)}</p>
-					</div>
+							<Icon is:inline name="material-symbols:refresh-rounded" class="text-5xl text-neutral-400 mb-4 animate-spin" aria-hidden="true" />
+							<p class="text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicLoading)}</p>
+							<p class="text-sm text-neutral-400 dark:text-neutral-500 mt-2">{i18n(I18nKey.musicLoadingHint)}</p>
+						</div>
 
 						<div id="emptyState" class="hidden flex flex-col items-center justify-center py-12 text-center">
 							<Icon is:inline name="material-symbols:airwave-rounded" class="text-5xl text-neutral-400 mb-4" aria-hidden="true" />
@@ -186,6 +216,11 @@ const isConfigured = !!NETEASE_USER_ID;
 
 	const loadingState = document.getElementById('loadingState');
 	const emptyState = document.getElementById('emptyState');
+	const searchInput = document.getElementById('searchInput');
+	const filterTabs = document.getElementById('filterTabs');
+	const tabAll = document.getElementById('tab-all');
+	const tabMine = document.getElementById('tab-mine');
+	const tabSubscribed = document.getElementById('tab-subscribed');
 	const myPlaylistsSection = document.getElementById('myPlaylistsSection');
 	const myPlaylistsContainer = document.getElementById('myPlaylistsContainer');
 	const subscribedPlaylistsSection = document.getElementById('subscribedPlaylistsSection');
@@ -193,6 +228,10 @@ const isConfigured = !!NETEASE_USER_ID;
 	const statsPlaylists = document.getElementById('stats-playlists');
 	const statsTracks = document.getElementById('stats-tracks');
 	const statsSubscribed = document.getElementById('stats-subscribed');
+	
+	let allDetailedMyPlaylists = [];
+	let allDetailedSubscribedPlaylists = [];
+	let currentFilter = 'all';
 	
 	let modal = document.getElementById('playlistModal');
 	document.body.appendChild(modal);
@@ -265,6 +304,91 @@ const isConfigured = !!NETEASE_USER_ID;
 			closeModal();
 		}
 	});
+	
+	function handleSearch(e) {
+		const query = e.target.value.toLowerCase().trim();
+		filterPlaylists(query);
+	}
+	
+	function setFilter(filter) {
+		currentFilter = filter;
+		
+		tabAll.className = 'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ' + (filter === 'all' ? 'border-(--primary) text-(--primary)' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300');
+		tabMine.className = 'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ' + (filter === 'mine' ? 'border-(--primary) text-(--primary)' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300');
+		tabSubscribed.className = 'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ' + (filter === 'subscribed' ? 'border-(--primary) text-(--primary)' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300');
+		
+		const query = searchInput.value.toLowerCase().trim();
+		filterPlaylists(query);
+	}
+	
+	function filterPlaylists(query) {
+		let myPlaylists = allDetailedMyPlaylists;
+		let subscribedPlaylists = allDetailedSubscribedPlaylists;
+		
+		if (currentFilter === 'mine') {
+			subscribedPlaylists = [];
+		} else if (currentFilter === 'subscribed') {
+			myPlaylists = [];
+		}
+		
+		if (!query) {
+			displayPlaylists(myPlaylists, subscribedPlaylists);
+			return;
+		}
+		
+		const filteredMy = myPlaylists.filter(p => 
+			p.name.toLowerCase().includes(query) || 
+			(p.description || '').toLowerCase().includes(query)
+		);
+		const filteredSubscribed = subscribedPlaylists.filter(p => 
+			p.name.toLowerCase().includes(query) || 
+			(p.description || '').toLowerCase().includes(query)
+		);
+		
+		displayPlaylists(filteredMy, filteredSubscribed);
+	}
+	
+	function displayPlaylists(myPlaylists, subscribedPlaylists) {
+		myPlaylistsContainer.innerHTML = '';
+		subscribedPlaylistsContainer.innerHTML = '';
+		
+		filterTabs.classList.remove('hidden');
+		
+		if (myPlaylists.length === 0 && subscribedPlaylists.length === 0) {
+			myPlaylistsSection.classList.add('hidden');
+			subscribedPlaylistsSection.classList.add('hidden');
+			emptyState.classList.remove('hidden');
+			return;
+		}
+		
+		emptyState.classList.add('hidden');
+		
+		if (myPlaylists.length > 0) {
+			myPlaylistsSection.classList.remove('hidden');
+			myPlaylists.forEach(playlist => {
+				const card = createPlaylistCard(playlist);
+				myPlaylistsContainer.appendChild(card);
+			});
+		} else {
+			myPlaylistsSection.classList.add('hidden');
+		}
+		
+		if (subscribedPlaylists.length > 0) {
+			subscribedPlaylistsSection.classList.remove('hidden');
+			subscribedPlaylists.forEach(playlist => {
+				const card = createPlaylistCard(playlist);
+				subscribedPlaylistsContainer.appendChild(card);
+			});
+		} else {
+			subscribedPlaylistsSection.classList.add('hidden');
+		}
+	}
+	
+	searchInput.addEventListener('input', handleSearch);
+	
+	tabAll.addEventListener('click', () => setFilter('all'));
+	tabMine.addEventListener('click', () => setFilter('mine'));
+	tabSubscribed.addEventListener('click', () => setFilter('subscribed'));
 
 	async function fetchPlaylists() {
 		const timestamp = Date.now();
@@ -478,9 +602,8 @@ const isConfigured = !!NETEASE_USER_ID;
 	}
 
 	fetchPlaylists().then(async (result) => {
-		loadingState.classList.add('hidden');
-		
 		if (!result) {
+			loadingState.classList.add('hidden');
 			emptyState.classList.remove('hidden');
 			return;
 		}
@@ -489,45 +612,33 @@ const isConfigured = !!NETEASE_USER_ID;
 		const allPlaylists = [...myPlaylists, ...subscribedPlaylists];
 		
 		if (allPlaylists.length === 0) {
+			loadingState.classList.add('hidden');
 			emptyState.classList.remove('hidden');
 			return;
 		}
 
-		const detailedMyPlaylists = myPlaylists.length > 0 ? await Promise.all(
+		allDetailedMyPlaylists = myPlaylists.length > 0 ? await Promise.all(
 			myPlaylists.map(async (playlist) => {
 				const detail = await fetchPlaylistDetail(playlist.id);
 				return detail || playlist;
 			})
 		) : [];
 		
-		const detailedSubscribedPlaylists = subscribedPlaylists.length > 0 ? await Promise.all(
+		allDetailedSubscribedPlaylists = subscribedPlaylists.length > 0 ? await Promise.all(
 			subscribedPlaylists.map(async (playlist) => {
 				const detail = await fetchPlaylistDetail(playlist.id);
 				return detail || playlist;
 			})
 		) : [];
 		
-		const totalTracks = [...detailedMyPlaylists, ...detailedSubscribedPlaylists].reduce((sum, p) => sum + (p.trackCount || p.tracks?.length || 0), 0);
+		const totalTracks = [...allDetailedMyPlaylists, ...allDetailedSubscribedPlaylists].reduce((sum, p) => sum + (p.trackCount || p.tracks?.length || 0), 0);
 		
-		statsPlaylists.textContent = detailedMyPlaylists.length;
+		statsPlaylists.textContent = allDetailedMyPlaylists.length;
 		statsTracks.textContent = totalTracks;
-		statsSubscribed.textContent = detailedSubscribedPlaylists.length;
+		statsSubscribed.textContent = allDetailedSubscribedPlaylists.length;
 
-		if (detailedMyPlaylists.length > 0) {
-			myPlaylistsSection.classList.remove('hidden');
-			detailedMyPlaylists.forEach(playlist => {
-				const card = createPlaylistCard(playlist);
-				myPlaylistsContainer.appendChild(card);
-			});
-		}
-
-		if (detailedSubscribedPlaylists.length > 0) {
-			subscribedPlaylistsSection.classList.remove('hidden');
-			detailedSubscribedPlaylists.forEach(playlist => {
-				const card = createPlaylistCard(playlist);
-				subscribedPlaylistsContainer.appendChild(card);
-			});
-		}
+		loadingState.classList.add('hidden');
+		displayPlaylists(allDetailedMyPlaylists, allDetailedSubscribedPlaylists);
 	}).catch(() => {
 		loadingState.classList.add('hidden');
 		emptyState.classList.remove('hidden');
