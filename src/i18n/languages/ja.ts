@@ -59,6 +59,7 @@ export const ja: Translation = {
 	[Key.musicLoadingHint]: "長時間読み込まれない場合は、手動で更新してください",
 	[Key.musicMyPlaylists]: "マイプレイリスト",
 	[Key.musicSubscribedPlaylists]: "購読中のプレイリスト",
+	[Key.musicPlaylistDesc]: "概要",
 	[Key.musicSearch]: "プレイリストを検索...",
 	[Key.musicNoResults]: "一致するプレイリストが見つかりません",
 

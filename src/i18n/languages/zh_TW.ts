@@ -59,6 +59,7 @@ export const zh_TW: Translation = {
 	[Key.musicLoadingHint]: "如果長時間沒有載入內容，請手動刷新",
 	[Key.musicMyPlaylists]: "我的歌單",
 	[Key.musicSubscribedPlaylists]: "收藏歌單",
+	[Key.musicPlaylistDesc]: "簡介",
 	[Key.musicSearch]: "搜尋歌單...",
 	[Key.musicNoResults]: "沒有找到匹配的歌單",
 
