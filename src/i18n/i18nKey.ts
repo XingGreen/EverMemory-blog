@@ -80,6 +80,8 @@ enum I18nKey {
 	musicLoadingHint = "musicLoadingHint",
 	musicMyPlaylists = "musicMyPlaylists",
 	musicSubscribedPlaylists = "musicSubscribedPlaylists",
+	musicSearch = "musicSearch",
+	musicNoResults = "musicNoResults",
 
 	themeColor = "themeColor",
 

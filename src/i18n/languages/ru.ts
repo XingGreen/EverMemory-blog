@@ -59,6 +59,8 @@ export const ru: Translation = {
 	[Key.musicLoadingHint]: "Если контент не загружается долгое время, обновите вручную",
 	[Key.musicMyPlaylists]: "Мои плейлисты",
 	[Key.musicSubscribedPlaylists]: "Подписанные плейлисты",
+	[Key.musicSearch]: "Поиск плейлистов...",
+	[Key.musicNoResults]: "Нет совпадающих плейлистов",
 
 	// Объявление
 	[Key.announcement]: "Объявление",

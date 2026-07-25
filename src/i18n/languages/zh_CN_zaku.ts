@@ -60,6 +60,8 @@ export const zaku: Translation = {
 	[Key.musicLoadingHint]: "加载太久的话就自己刷新嘛~",
 	[Key.musicMyPlaylists]: "人家的歌单啦~",
 	[Key.musicSubscribedPlaylists]: "收藏的歌单哟~",
+	[Key.musicSearch]: "搜索歌单的说~",
+	[Key.musicNoResults]: "没有找到的说~",
 
 	// 公告栏
 	[Key.announcement]: "公告板",
