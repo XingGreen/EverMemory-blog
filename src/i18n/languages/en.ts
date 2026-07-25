@@ -62,6 +62,8 @@ export const en: Translation = {
 	[Key.musicPlaylistDesc]: "Description",
 	[Key.musicSearch]: "Search playlists...",
 	[Key.musicNoResults]: "No matching playlists found",
+	[Key.musicPlaylistSwitched]: "Playlist switched",
+	[Key.musicPlayerNotLoaded]: "Player not loaded",
 
 	// Announcement
 	[Key.announcement]: "Announcement",

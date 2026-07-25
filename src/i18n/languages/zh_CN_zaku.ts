@@ -63,6 +63,8 @@ export const zaku: Translation = {
 	[Key.musicPlaylistDesc]: "简介的说~",
 	[Key.musicSearch]: "搜索歌单的说~",
 	[Key.musicNoResults]: "没有找到的说~",
+	[Key.musicPlaylistSwitched]: "播放列表切换了哟~",
+	[Key.musicPlayerNotLoaded]: "播放器还没加载啦~",
 
 	// 公告栏
 	[Key.announcement]: "公告板",

@@ -62,6 +62,8 @@ export const ru: Translation = {
 	[Key.musicPlaylistDesc]: "Описание",
 	[Key.musicSearch]: "Поиск плейлистов...",
 	[Key.musicNoResults]: "Нет совпадающих плейлистов",
+	[Key.musicPlaylistSwitched]: "Плейлист изменён",
+	[Key.musicPlayerNotLoaded]: "Плеер не загружен",
 
 	// Объявление
 	[Key.announcement]: "Объявление",

@@ -62,6 +62,8 @@ export const zh_CN: Translation = {
 	[Key.musicPlaylistDesc]: "简介",
 	[Key.musicSearch]: "搜索歌单...",
 	[Key.musicNoResults]: "没有找到匹配的歌单",
+	[Key.musicPlaylistSwitched]: "已切换播放列表",
+	[Key.musicPlayerNotLoaded]: "播放器未加载",
 
 	// 公告栏
 	[Key.announcement]: "公告",

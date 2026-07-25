@@ -156,6 +156,9 @@ const isConfigured = !!NETEASE_USER_ID;
 							<div id="subscribedPlaylistsContainer" class="space-y-3"></div>
 						</div>
 
+						<input type="hidden" id="i18n-switched" value={i18n(I18nKey.musicPlaylistSwitched)} />
+						<input type="hidden" id="i18n-not-loaded" value={i18n(I18nKey.musicPlayerNotLoaded)} />
+
 						<div id="playlistModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
 							<div class="relative w-full max-w-lg max-h-[90vh] overflow-hidden rounded-xl sm:rounded-2xl bg-(--card-bg) border border-(--line-divider) shadow-2xl animate-in">
 								<button id="modalCloseBtn" class="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70" aria-label="Close">
@@ -246,8 +249,55 @@ const isConfigured = !!NETEASE_USER_ID;
 	const modalPlayBtn = document.getElementById('modalPlayBtn');
 	const modalOfficialBtn = document.getElementById('modalOfficialBtn');
 	const modalCloseBtn = document.getElementById('modalCloseBtn');
+	let musicToast = document.getElementById('musicToast');
+	if (!musicToast) {
+		musicToast = document.createElement('div');
+		musicToast.id = 'musicToast';
+		musicToast.style.position = 'fixed';
+		musicToast.style.left = '50%';
+		musicToast.style.top = '50%';
+		musicToast.style.transform = 'translate(-50%, -50%) scale(0.9)';
+		musicToast.style.zIndex = '1001';
+		musicToast.style.pointerEvents = 'none';
+		musicToast.style.opacity = '0';
+		musicToast.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+		
+		const isDarkMode = document.documentElement.classList.contains('dark') || window.matchMedia('(prefers-color-scheme: dark)').matches;
+		musicToast.style.background = isDarkMode 
+			? 'linear-gradient(135deg, rgba(45, 55, 72, 0.95), rgba(26, 32, 44, 0.9))' 
+			: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(240, 248, 255, 0.9))';
+		musicToast.style.color = isDarkMode ? '#e2e8f0' : '#2c3e50';
+		musicToast.style.padding = '12px 20px';
+		musicToast.style.borderRadius = '16px';
+		musicToast.style.fontSize = '14px';
+		musicToast.style.fontWeight = '500';
+		musicToast.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+		musicToast.style.boxShadow = isDarkMode
+			? '0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2)'
+			: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)';
+		musicToast.style.border = isDarkMode
+			? '1px solid rgba(255, 255, 255, 0.1)'
+			: '1px solid rgba(255, 255, 255, 0.6)';
+		musicToast.style.backdropFilter = 'blur(12px)';
+		musicToast.style.textAlign = 'center';
+		
+		document.body.appendChild(musicToast);
+	}
 	
 	let currentPlaylistId = null;
+	let toastTimer = null;
+	
+	function showToast(message) {
+		if (!musicToast) return;
+		musicToast.textContent = message;
+		musicToast.style.opacity = '1';
+		musicToast.style.transform = 'translate(-50%, -50%) scale(1)';
+		if (toastTimer) clearTimeout(toastTimer);
+		toastTimer = setTimeout(function () {
+			musicToast.style.opacity = '0';
+			musicToast.style.transform = 'translate(-50%, -50%) scale(0.95)';
+		}, 2500);
+	}
 	
 	modal.addEventListener('click', function(event) {
 		if (event.target === event.currentTarget) {
@@ -260,6 +310,9 @@ const isConfigured = !!NETEASE_USER_ID;
 	modalPlayBtn.addEventListener('click', function() {
 		if (currentPlaylistId && window.__fireflyMusic) {
 			window.__fireflyMusic.loadPlaylist('netease', 'playlist', currentPlaylistId);
+			showToast(document.getElementById('i18n-switched').value);
+		} else {
+			showToast(document.getElementById('i18n-not-loaded').value);
 		}
 		closeModal();
 	});
@@ -547,6 +600,9 @@ const isConfigured = !!NETEASE_USER_ID;
 			e.stopPropagation();
 			if (window.__fireflyMusic) {
 				window.__fireflyMusic.loadPlaylist('netease', 'playlist', this.getAttribute('data-playlist-id'));
+				showToast(document.getElementById('i18n-switched').value);
+			} else {
+				showToast(document.getElementById('i18n-not-loaded').value);
 			}
 		};
 		flexDiv.appendChild(button);
@@ -679,16 +735,16 @@ const isConfigured = !!NETEASE_USER_ID;
 }
 .inactive-tab {
 	border-bottom-color: transparent;
-	color: gray;
+	color: #6b7280;
 }
 .dark .inactive-tab {
-	color: gray;
+	color: #9ca3af;
 }
 .inactive-tab:hover {
-	color: gray;
-	border-bottom-color: gray;
+	color: #374151;
+	border-bottom-color: #d1d5db;
 }
 .dark .inactive-tab:hover {
-	color: gray;
+	color: #e5e7eb;
 }
 </style>
