@@ -742,6 +742,7 @@ if (!isConfigured) {
 		return;
 	}
 
+	function initDynamic() {
 	const apis = [
 		`https://apis.netstart.cn/music/user/playlist?uid=${userId}`,
 		`https://api.i-meto.com/meting/api?server=netease&type=playlist&id=${userId}`,
@@ -1127,7 +1128,14 @@ if (!isConfigured) {
 				loadingState.classList.add('hidden');
 				emptyState.classList.remove('hidden');
 			});
-		})();
+	}
+	
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initDynamic);
+	} else {
+		initDynamic();
+	}
+})();
 	</script>
 
 	<style>
