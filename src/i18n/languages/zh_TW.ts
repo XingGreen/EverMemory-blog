@@ -64,6 +64,17 @@ export const zh_TW: Translation = {
 	[Key.musicNoResults]: "沒有找到匹配的歌單",
 	[Key.musicPlaylistSwitched]: "已切換播放列表",
 	[Key.musicPlayerNotLoaded]: "播放器未加載",
+	[Key.musicStaticMode]: "靜態模式",
+	[Key.musicDynamicMode]: "動態模式",
+	[Key.musicBuildTime]: "構建時間",
+	[Key.musicLoading]: "正在載入歌單...",
+	[Key.musicFetchError]: "獲取數據失敗",
+	[Key.musicFetchErrorDesc]: "構建時獲取歌單數據失敗，請檢查網路連線或稍後重試",
+	[Key.musicSearchPlaceholder]: "搜尋歌單...",
+	[Key.musicTabAll]: "全部",
+	[Key.musicTabMine]: "我的",
+	[Key.musicTabSubscribed]: "收藏",
+	[Key.musicUpdateTime]: "更新時間",
 
 	// 公告欄
 	[Key.announcement]: "公告",

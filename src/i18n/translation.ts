@@ -5,7 +5,7 @@ import { ja } from "./languages/ja";
 import { ru } from "./languages/ru";
 import { zh_CN } from "./languages/zh_CN";
 import { zh_TW } from "./languages/zh_TW";
-import { zaku } from "./languages/zh_CN_zaku"; // 豆包翻译的雌小鬼语言，暂未完成
+// import { zaku } from "./languages/zh_CN_zaku"; // 豆包翻译的雌小鬼语言，暂未完成
 
 export type Translation = {
 	[K in I18nKey]: string;
@@ -24,8 +24,8 @@ const map: { [key: string]: Translation } = {
 	ja_jp: ja,
 	ru: ru,
 	ru_ru: ru,
-	zaku: zaku,
-	"zh_cn_zaku": zaku,
+//	zaku: zaku,
+//	"zh_cn_zaku": zaku,
 };
 
 export function getTranslation(lang: string): Translation {

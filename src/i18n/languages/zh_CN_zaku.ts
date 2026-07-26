@@ -65,6 +65,17 @@ export const zaku: Translation = {
 	[Key.musicNoResults]: "没有找到的说~",
 	[Key.musicPlaylistSwitched]: "播放列表切换了哟~",
 	[Key.musicPlayerNotLoaded]: "播放器还没加载啦~",
+	[Key.musicStaticMode]: "靜態模式",
+	[Key.musicDynamicMode]: "動態模式",
+	[Key.musicBuildTime]: "構建時間",
+	[Key.musicLoading]: "正在加載歌單...",
+	[Key.musicFetchError]: "获取数据失败了啦~",
+	[Key.musicFetchErrorDesc]: "构建时获取歌单数据失败，杂鱼快检查网络连接啦~",
+	[Key.musicSearchPlaceholder]: "搜索歌单的说~",
+	[Key.musicTabAll]: "全部的说~",
+	[Key.musicTabMine]: "本小姐的~",
+	[Key.musicTabSubscribed]: "收藏的哟~",
+	[Key.musicUpdateTime]: "更新时间啦~",
 
 	// 公告栏
 	[Key.announcement]: "公告板",
