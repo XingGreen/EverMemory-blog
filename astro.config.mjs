@@ -290,6 +290,32 @@ export default defineConfig({
 			watch: {
 				ignored: ["**/package/**", "**/Firefly-docs/**"],
 			},
+			proxy: {
+				"/api/netease": {
+					target: "https://api.i-meto.com",
+					changeOrigin: true,
+					rewrite: (path) => path.replace(/^\/api\/netease/, "/meting/api"),
+					headers: {
+						"Referer": "https://music.163.com/",
+					},
+				},
+				"/api/music": {
+					target: "https://apis.netstart.cn",
+					changeOrigin: true,
+					rewrite: (path) => path.replace(/^\/api\/music/, "/music"),
+					headers: {
+						"Referer": "https://music.163.com/",
+					},
+				},
+				"/api/injahow": {
+					target: "https://api.injahow.cn",
+					changeOrigin: true,
+					rewrite: (path) => path.replace(/^\/api\/injahow/, "/meting"),
+					headers: {
+						"Referer": "https://music.163.com/",
+					},
+				},
+			},
 		},
 		resolve: {
 			alias: {
