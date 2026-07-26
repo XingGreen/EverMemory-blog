@@ -85,6 +85,17 @@ enum I18nKey {
 	musicNoResults = "musicNoResults",
 	musicPlaylistSwitched = "musicPlaylistSwitched",
 	musicPlayerNotLoaded = "musicPlayerNotLoaded",
+	musicStaticMode = "musicStaticMode",
+	musicDynamicMode = "musicDynamicMode",
+	musicBuildTime = "musicBuildTime",
+	musicLoading = "musicLoading",
+	musicFetchError = "musicFetchError",
+	musicFetchErrorDesc = "musicFetchErrorDesc",
+	musicSearchPlaceholder = "musicSearchPlaceholder",
+	musicTabAll = "musicTabAll",
+	musicTabMine = "musicTabMine",
+	musicTabSubscribed = "musicTabSubscribed",
+	musicUpdateTime = "musicUpdateTime",
 
 	themeColor = "themeColor",
 

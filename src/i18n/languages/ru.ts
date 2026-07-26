@@ -64,6 +64,17 @@ export const ru: Translation = {
 	[Key.musicNoResults]: "Нет совпадающих плейлистов",
 	[Key.musicPlaylistSwitched]: "Плейлист изменён",
 	[Key.musicPlayerNotLoaded]: "Плеер не загружен",
+	[Key.musicStaticMode]: "Статический режим",
+	[Key.musicDynamicMode]: "Динамический режим",
+	[Key.musicBuildTime]: "Время сборки",
+	[Key.musicLoading]: "Загрузка плейлистов...",
+	[Key.musicFetchError]: "Ошибка получения данных",
+	[Key.musicFetchErrorDesc]: "Ошибка получения данных плейлиста во время сборки. Проверьте подключение к сети или повторите попытку позже",
+	[Key.musicSearchPlaceholder]: "Поиск плейлистов...",
+	[Key.musicTabAll]: "Все",
+	[Key.musicTabMine]: "Мои",
+	[Key.musicTabSubscribed]: "Подписанные",
+	[Key.musicUpdateTime]: "Время обновления",
 
 	// Объявление
 	[Key.announcement]: "Объявление",

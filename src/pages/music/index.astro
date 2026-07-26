@@ -14,41 +14,342 @@ const buildTime = formatDateI18nWithTime(new Date());
 
 const musicConfig = siteConfig.music;
 const NETEASE_USER_ID = musicConfig?.userId;
+const MODE = (musicConfig?.mode || "dynamic") as "static" | "dynamic";
 
 const isConfigured = !!NETEASE_USER_ID;
+
+interface Playlist {
+	id: string | number;
+	name: string;
+	coverImgUrl?: string;
+	cover?: string;
+	description?: string;
+	creator?: {
+		nickname?: string;
+		userId?: string | number;
+		id?: string | number;
+	};
+	trackCount?: number;
+	tracks?: Array<{
+		id: string | number;
+		name: string;
+		artist: string;
+		album: string;
+		duration?: number;
+	}>;
+	playCount?: number;
+	subscribed?: boolean;
+}
+
+const apis = [
+		`https://apis.netstart.cn/music/user/playlist?uid=${NETEASE_USER_ID}`,
+		`https://music.163.com/api/user/playlist/?uid=${NETEASE_USER_ID}`,
+		`https://api.i-meto.com/meting/api?server=netease&type=playlist&id=${NETEASE_USER_ID}`,
+	];
+
+async function fetchPlaylists(userId: string) {
+	for (const url of apis) {
+		try {
+			const response = await fetch(url, {
+				headers: {
+					"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+					"Referer": "https://music.163.com/",
+				},
+			});
+			const data = await response.json();
+
+			if (data.code === 200 && data.playlist) {
+				if (data.subscribedPlaylist && Array.isArray(data.subscribedPlaylist)) {
+					return {
+						myPlaylists: (data.playlist as Playlist[]).filter(p => {
+							const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
+							return creatorId === userId.toString();
+						}),
+						subscribedPlaylists: data.subscribedPlaylist as Playlist[]
+					};
+				}
+				return {
+					myPlaylists: (data.playlist as Playlist[]).filter(p => {
+						const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
+						return creatorId === userId.toString();
+					}),
+					subscribedPlaylists: (data.playlist as Playlist[]).filter(p => {
+						const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
+						return creatorId !== userId.toString();
+					})
+				};
+			}
+		} catch (error) {
+			console.error(`[Music] API request failed: ${url}`, error);
+		}
+	}
+	return { myPlaylists: [], subscribedPlaylists: [] };
+}
+
+async function fetchPlaylistDetail(playlistId: string | number) {
+	const detailApis = [
+		`https://api.i-meto.com/meting/api?server=netease&type=playlist&id=${playlistId}&limit=1000`,
+		`https://music.163.com/api/playlist/detail?id=${playlistId}`,
+	];
+
+	for (const url of detailApis) {
+		try {
+			const response = await fetch(url, {
+				headers: {
+					"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+					"Referer": "https://music.163.com/",
+				},
+			});
+			const data = await response.json();
+			if (data && data.tracks) {
+				return data;
+			}
+		} catch (error) {
+			console.error(`[Music] Detail API request failed: ${url}`, error);
+		}
+	}
+	return null;
+}
+
+let staticPlaylists = { myPlaylists: [], subscribedPlaylists: [] } as { myPlaylists: Playlist[], subscribedPlaylists: Playlist[] };
+let fetchFailed = false;
+
+if (!isConfigured) {
+	console.log("[Music] ⚠️ 未配置网易云音乐用户ID，跳过数据获取");
+} else if (MODE === "static") {
+	console.log("[Music] 🌐 从 API 获取数据（static 模式）");
+	try {
+		const result = await fetchPlaylists(NETEASE_USER_ID!);
+		staticPlaylists = result;
+
+		const allPlaylists = [...result.myPlaylists, ...result.subscribedPlaylists];
+		const detailPromises = allPlaylists.map(p => fetchPlaylistDetail(p.id));
+		const details = await Promise.all(detailPromises);
+
+		details.forEach((detail, index) => {
+			if (detail && detail.tracks) {
+				allPlaylists[index].trackCount = detail.tracks.length;
+				allPlaylists[index].tracks = detail.tracks;
+			}
+		});
+
+		staticPlaylists = {
+			myPlaylists: allPlaylists.filter(p => {
+				const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
+				return creatorId === NETEASE_USER_ID.toString();
+			}),
+			subscribedPlaylists: allPlaylists.filter(p => {
+				const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
+				return creatorId !== NETEASE_USER_ID.toString();
+			})
+		};
+	} catch (error) {
+		console.error("[Music] 获取数据失败:", error);
+		fetchFailed = true;
+	}
+}
 ---
 
 <MainGridLayout title={i18n(I18nKey.music)} description={i18n(I18nKey.musicDescription)}>
 	<div class="flex w-full rounded-(--radius-large) overflow-hidden relative min-h-32">
 		<div class="card-base z-10 px-4 sm:px-6 md:px-9 py-4 sm:py-6 relative w-full">
-			<div class="relative w-full mb-8">
-				<div class="mb-6">
-					<div class="flex items-center gap-3 mb-3">
-						<div class="h-8 w-8 rounded-lg bg-(--primary) flex items-center justify-center text-white dark:text-black/70">
-							<Icon is:inline name="simple-icons:neteasecloudmusic" class="text-[1.5rem]" />
-						</div>
-						<div class="text-3xl font-bold text-neutral-900 dark:text-neutral-100">
-							{i18n(I18nKey.music)}
+			<div class="mb-6">
+				<div class="flex items-center gap-3 mb-3">
+					<div class="h-8 w-8 rounded-lg bg-(--primary) flex items-center justify-center text-white dark:text-black/70">
+						<Icon is:inline name="material-symbols:music-note" class="text-[1.5rem]"></Icon>
+					</div>
+					<div class="text-3xl font-bold text-neutral-900 dark:text-neutral-100">
+						{i18n(I18nKey.music)}
+					</div>
+				</div>
+				<p class="text-base text-neutral-600 dark:text-neutral-400 leading-relaxed">
+					{i18n(I18nKey.musicDescription)}
+				</p>
+				<div class="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-500 mt-2">
+					<Icon is:inline name="material-symbols:cloud" class="w-4 h-4" />
+					<span>{MODE === "static" ? i18n(I18nKey.musicStaticMode) : i18n(I18nKey.musicDynamicMode)}</span>
+					{MODE === "static" ? (
+						<span class="hidden sm:inline">| {i18n(I18nKey.musicBuildTime)} {buildTime}</span>
+					) : (
+						<span id="updateTime" class="hidden sm:inline">| {i18n(I18nKey.musicUpdateTime)} --</span>
+					)}
+				</div>
+			</div>
+
+		{!isConfigured ? (
+			<div class="text-center py-16">
+				<div class="inline-flex items-center justify-center w-16 h-16 bg-(--btn-regular-bg) rounded-full mb-6 border border-(--line-divider)">
+					<Icon is:inline name="material-symbols:settings" class="text-[2rem] text-(--btn-content)" />
+				</div>
+				<h2 class="text-xl font-semibold text-black/80 dark:text-white/80 mb-3">
+					{i18n(I18nKey.musicNotConfigured)}
+				</h2>
+				<p class="text-black/60 dark:text-white/60 mb-4 max-w-md mx-auto">
+					{i18n(I18nKey.musicNotConfiguredDesc)}
+				</p>
+				<code class="inline-block px-3 py-1 bg-(--bg-secondary) rounded-lg text-sm text-(--btn-content)">
+					siteConfig.music.userId
+				</code>
+			</div>
+		) : MODE === "dynamic" ? (
+			<>
+				<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+					<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+						<div class="flex items-center gap-2 sm:gap-3">
+							<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-(--primary)/10 flex items-center justify-center shrink-0">
+								<Icon is:inline name="material-symbols:music-note" class="text-[1rem] sm:text-[1.25rem] text-(--primary)" />
+							</div>
+							<div class="min-w-0">
+								<div class="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicTotalPlaylists)}</div>
+								<div id="stats-playlists" class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">--</div>
+							</div>
 						</div>
 					</div>
-					<p class="text-base text-neutral-600 dark:text-neutral-400 leading-relaxed">
-						{i18n(I18nKey.musicDescription)}
-					</p>
-					<p class="text-xs text-neutral-500 dark:text-neutral-500 mt-2">
-						{i18n(I18nKey.animeLastUpdated)} {buildTime}
+					<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+						<div class="flex items-center gap-2 sm:gap-3">
+							<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
+								<Icon is:inline name="material-symbols:queue-music-rounded" class="text-[1rem] sm:text-[1.25rem] text-purple-500" />
+							</div>
+							<div class="min-w-0">
+								<div class="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicTotalTracks)}</div>
+								<div id="stats-tracks" class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">--</div>
+							</div>
+						</div>
+					</div>
+					<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+						<div class="flex items-center gap-2 sm:gap-3">
+							<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-pink-500/10 flex items-center justify-center shrink-0">
+								<Icon is:inline name="material-symbols:star" class="text-[1rem] sm:text-[1.25rem] text-pink-500" />
+							</div>
+							<div class="min-w-0">
+								<div class="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicTotalSubscribed)}</div>
+								<div id="stats-subscribed" class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">--</div>
+							</div>
+						</div>
+					</div>
+					<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+						<div class="flex items-center gap-2 sm:gap-3">
+							<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+								<Icon is:inline name="material-symbols:database" class="text-[1rem] sm:text-[1.25rem] text-blue-500" />
+							</div>
+							<div class="min-w-0">
+								<div class="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicSource)}</div>
+								<div class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100 truncate">Netease</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="relative mb-4">
+					<Icon is:inline name="material-symbols:search" class="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
+					<input type="text" id="searchInput" placeholder={i18n(I18nKey.musicSearchPlaceholder)} class="w-full pl-10 pr-4 py-2.5 bg-(--card-bg) border border-(--line-divider) rounded-xl text-sm focus:outline-none focus:border-(--primary) focus:ring-2 focus:ring-(--primary)/20 transition-all" />
+				</div>
+
+				<div id="filterTabs" class="hidden flex gap-4 mb-4">
+					<button id="tab-all" onclick="setFilter('all')" class="text-sm font-medium px-4 py-2 border-b-2 transition-colors active-tab">
+						{i18n(I18nKey.musicTabAll)}
+					</button>
+					<button id="tab-mine" onclick="setFilter('mine')" class="text-sm font-medium px-4 py-2 border-b-2 transition-colors inactive-tab">
+						{i18n(I18nKey.musicTabMine)}
+					</button>
+					<button id="tab-subscribed" onclick="setFilter('subscribed')" class="text-sm font-medium px-4 py-2 border-b-2 transition-colors inactive-tab">
+						{i18n(I18nKey.musicTabSubscribed)}
+					</button>
+				</div>
+
+				<input type="hidden" id="i18n-switched" value={i18n(I18nKey.musicPlaylistSwitched)} />
+				<input type="hidden" id="i18n-not-loaded" value={i18n(I18nKey.musicPlayerNotLoaded)} />
+
+				<div id="loadingState" class="text-center py-16">
+					<div class="inline-flex items-center justify-center w-16 h-16 bg-(--btn-regular-bg) rounded-full mb-6 border border-(--line-divider)">
+						<Icon is:inline name="material-symbols:music-note" class="text-[2rem] text-(--btn-content) animate-spin" />
+					</div>
+					<h2 class="text-xl font-semibold text-black/80 dark:text-white/80 mb-3">
+						{i18n(I18nKey.musicLoading)}
+					</h2>
+					<p class="text-black/60 dark:text-white/60">
+						{i18n(I18nKey.musicLoadingHint)}
 					</p>
 				</div>
 
-				{!isConfigured ? (
+				<div id="emptyState" class="hidden text-center py-16">
+					<div class="inline-flex items-center justify-center w-16 h-16 bg-(--btn-regular-bg) rounded-full mb-6 border border-(--line-divider)">
+						<Icon is:inline name="material-symbols:airwave-rounded" class="text-[2rem] text-(--btn-content)" />
+					</div>
+					<h2 class="text-xl font-semibold text-black/80 dark:text-white/80 mb-3">
+						{i18n(I18nKey.musicNoPlaylists)}
+					</h2>
+				</div>
+
+				<div id="myPlaylistsSection" class="hidden">
+					<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-3 flex items-center gap-2">
+						<Icon is:inline name="material-symbols:folder-open-rounded" class="text-base text-(--primary)" />
+						{i18n(I18nKey.musicMyPlaylists)}
+					</h3>
+					<div id="myPlaylistsContainer" class="space-y-3"></div>
+				</div>
+
+				<div id="subscribedPlaylistsSection" class="hidden mt-8">
+					<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-3 flex items-center gap-2">
+						<Icon is:inline name="material-symbols:star" class="text-base text-pink-500" />
+						{i18n(I18nKey.musicSubscribedPlaylists)}
+					</h3>
+					<div id="subscribedPlaylistsContainer" class="space-y-3"></div>
+				</div>
+
+				<div id="playlistModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+					<div class="relative w-full max-w-lg max-h-[90vh] overflow-hidden rounded-xl sm:rounded-2xl bg-(--card-bg) border border-(--line-divider) shadow-2xl animate-in">
+						<button id="modalCloseBtn" class="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70" aria-label="Close">
+							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+						<div class="flex flex-col md:flex-row">
+							<div class="relative w-full md:w-64 lg:w-72 shrink-0 h-48 sm:h-64 md:aspect-auto md:h-auto bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+								<img id="modalCover" src="" alt="" class="h-full w-full object-cover" />
+							</div>
+							<div class="flex-1 p-4 sm:p-6 overflow-y-auto max-h-[60vh] md:max-h-none custom-scrollbar">
+								<h2 id="modalTitle" class="mb-1 text-xl sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100"></h2>
+								<div class="mb-4 flex flex-wrap gap-2">
+									<span id="modalCreatorBadge" class="inline-flex items-center gap-1 rounded-lg bg-blue-500/10 border border-blue-500/20 px-3 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 hidden"></span>
+									<span id="modalTrackBadge" class="inline-flex items-center gap-1 rounded-lg bg-purple-500/10 border border-purple-500/20 px-3 py-1 text-xs font-bold text-purple-600 dark:text-purple-400"></span>
+									<span id="modalPlayBadge" class="inline-flex items-center gap-1 rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-1 text-xs font-bold text-green-600 dark:text-green-400"></span>
+								</div>
+								<div id="modalDescriptionContainer" class="mb-6 hidden">
+									<h3 class="mb-2 text-sm font-semibold text-neutral-700 dark:text-neutral-300">{i18n(I18nKey.musicPlaylistDesc)}</h3>
+									<p id="modalDescription" class="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed max-h-40 overflow-y-auto"></p>
+								</div>
+								<div class="flex gap-3">
+									<button id="modalPlayBtn" class="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-(--primary) px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-(--primary)/90 hover:shadow-lg">
+										<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+											<path d="M8 5v14l11-7z"/>
+										</svg>
+										{i18n(I18nKey.musicPlay)}
+									</button>
+									<a id="modalOfficialBtn" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 px-6 py-3 text-sm font-semibold text-neutral-700 dark:text-neutral-300 transition-all hover:bg-neutral-200 dark:hover:bg-neutral-700">
+										<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+										</svg>
+										{i18n(I18nKey.musicOfficialPage)}
+									</a>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</>
+		) : (
+			<>
+				{fetchFailed ? (
 					<div class="text-center py-16">
 						<div class="inline-flex items-center justify-center w-16 h-16 bg-(--btn-regular-bg) rounded-full mb-6 border border-(--line-divider)">
-							<Icon is:inline name="material-symbols:settings" class="text-[2rem] text-(--btn-content)" />
+							<Icon is:inline name="material-symbols:error-outline" class="text-[2rem] text-red-500" />
 						</div>
 						<h2 class="text-xl font-semibold text-black/80 dark:text-white/80 mb-3">
-							{i18n(I18nKey.musicNotConfigured)}
+							{i18n(I18nKey.musicFetchError)}
 						</h2>
 						<p class="text-black/60 dark:text-white/60 mb-4 max-w-md mx-auto">
-							{i18n(I18nKey.musicNotConfiguredDesc)}
+							{i18n(I18nKey.musicFetchErrorDesc)}
 						</p>
 					</div>
 				) : (
@@ -57,11 +358,11 @@ const isConfigured = !!NETEASE_USER_ID;
 							<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
 								<div class="flex items-center gap-2 sm:gap-3">
 									<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-(--primary)/10 flex items-center justify-center shrink-0">
-										<Icon is:inline name="material-symbols:music-note-rounded" class="text-[1rem] sm:text-[1.25rem] text-(--primary)" />
+										<Icon is:inline name="material-symbols:music-note" class="text-[1rem] sm:text-[1.25rem] text-(--primary)" />
 									</div>
 									<div class="min-w-0">
 										<div class="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicTotalPlaylists)}</div>
-										<div id="stats-playlists" class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">--</div>
+										<div class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">{staticPlaylists.myPlaylists.length}</div>
 									</div>
 								</div>
 							</div>
@@ -72,7 +373,9 @@ const isConfigured = !!NETEASE_USER_ID;
 									</div>
 									<div class="min-w-0">
 										<div class="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicTotalTracks)}</div>
-										<div id="stats-tracks" class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">--</div>
+										<div class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+											{staticPlaylists.myPlaylists.reduce((acc, p) => acc + (p.trackCount || p.tracks?.length || 0), 0)}
+										</div>
 									</div>
 								</div>
 							</div>
@@ -83,7 +386,7 @@ const isConfigured = !!NETEASE_USER_ID;
 									</div>
 									<div class="min-w-0">
 										<div class="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicTotalSubscribed)}</div>
-										<div id="stats-subscribed" class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">--</div>
+										<div class="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">{staticPlaylists.subscribedPlaylists.length}</div>
 									</div>
 								</div>
 							</div>
@@ -98,62 +401,6 @@ const isConfigured = !!NETEASE_USER_ID;
 									</div>
 								</div>
 							</div>
-						</div>
-
-						<div class="mb-4">
-							<div class="relative">
-								<svg class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-								</svg>
-								<input
-									type="text"
-									id="searchInput"
-									placeholder={i18n(I18nKey.musicSearch)}
-									class="w-full rounded-xl border border-(--line-divider) bg-(--card-bg) py-2.5 pl-10 pr-4 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 outline-none transition-colors focus:border-(--primary)"
-								/>
-							</div>
-						</div>
-
-						<div id="filterTabs" class="hidden border-b border-(--line-divider) mb-3">
-							<div class="overflow-x-auto">
-								<nav class="flex min-w-max space-x-8" aria-label="Tabs">
-									<button id="tab-all" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 active-tab">
-										{i18n(I18nKey.all)}
-									</button>
-									<button id="tab-mine" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 inactive-tab">
-										{i18n(I18nKey.musicMyPlaylists)}
-									</button>
-									<button id="tab-subscribed" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 inactive-tab">
-										{i18n(I18nKey.musicSubscribedPlaylists)}
-									</button>
-								</nav>
-							</div>
-						</div>
-
-						<div id="loadingState" class="flex flex-col items-center justify-center py-12 text-center">
-							<Icon is:inline name="material-symbols:refresh-rounded" class="text-5xl text-neutral-400 mb-4 animate-spin" aria-hidden="true" />
-							<p class="text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicLoading)}</p>
-							<p class="text-sm text-neutral-400 dark:text-neutral-500 mt-2">{i18n(I18nKey.musicLoadingHint)}</p>
-						</div>
-
-						<div id="emptyState" class="hidden flex flex-col items-center justify-center py-12 text-center">
-							<Icon is:inline name="material-symbols:airwave-rounded" class="text-5xl text-neutral-400 mb-4" aria-hidden="true" />
-							<p class="text-neutral-500 dark:text-neutral-400">{i18n(I18nKey.musicNoPlaylists)}</p>
-						</div>
-
-						<div id="myPlaylistsSection" class="hidden">
-							<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-3 flex items-center gap-2">
-								<Icon is:inline name="material-symbols:folder-open-rounded" class="text-base text-(--primary)" />
-								{i18n(I18nKey.musicMyPlaylists)}
-							</h3>
-							<div id="myPlaylistsContainer" class="space-y-3"></div>
-						</div>
-						<div id="subscribedPlaylistsSection" class="hidden mt-8">
-							<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-3 flex items-center gap-2">
-								<Icon is:inline name="material-symbols:star" class="text-base text-pink-500" />
-								{i18n(I18nKey.musicSubscribedPlaylists)}
-							</h3>
-							<div id="subscribedPlaylistsContainer" class="space-y-3"></div>
 						</div>
 
 						<input type="hidden" id="i18n-switched" value={i18n(I18nKey.musicPlaylistSwitched)} />
@@ -182,7 +429,7 @@ const isConfigured = !!NETEASE_USER_ID;
 											<p id="modalDescription" class="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed max-h-40 overflow-y-auto"></p>
 										</div>
 										<div class="flex gap-3">
-											<button id="modalPlayBtn" class="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-(--primary) px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-(--primary)/90 hover:shadow-lg" onclick="handleModalPlay()">
+											<button id="modalPlayBtn" class="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-(--primary) px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-(--primary)/90 hover:shadow-lg">
 												<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
 													<path d="M8 5v14l11-7z"/>
 												</svg>
@@ -199,45 +446,134 @@ const isConfigured = !!NETEASE_USER_ID;
 								</div>
 							</div>
 						</div>
+
+						{staticPlaylists.myPlaylists.length > 0 && (
+							<div>
+								<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-3 flex items-center gap-2">
+									<Icon is:inline name="material-symbols:folder-open-rounded" class="text-base text-(--primary)" />
+									{i18n(I18nKey.musicMyPlaylists)}
+								</h3>
+								<div class="space-y-3">
+									{staticPlaylists.myPlaylists.map(playlist => (
+										<div class="playlist-card card-base hover:border-(--primary)/30 hover:shadow-lg hover:shadow-(--primary)/5 transition-all duration-300 group">
+											<div class="flex gap-4 p-4">
+												<button class="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 focus:outline-none group/cover" onclick={`if(window.__fireflyMusic){window.__fireflyMusic.loadPlaylist('netease','playlist','${playlist.id}');showToast(document.getElementById('i18n-switched').value);}else{showToast(document.getElementById('i18n-not-loaded').value);}`}>
+													<img src={(playlist.coverImgUrl || playlist.cover || '') + (playlist.coverImgUrl || playlist.cover ? '?t=' + Date.now() : '')} alt={playlist.name} class="w-full h-full object-cover transition-transform duration-500 group-hover/cover:scale-110" loading="lazy" />
+													<div class="absolute inset-0 bg-black/20 opacity-0 group-hover/cover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+														<svg class="h-12 w-12 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
+															<path d="M8 5v14l11-7z"/>
+														</svg>
+													</div>
+												</button>
+												<div class="flex-1 min-w-0 flex flex-col cursor-pointer static-playlist-card" data-playlist-id={playlist.id} data-playlist-name={playlist.name} data-playlist-cover={playlist.coverImgUrl || playlist.cover || ''} data-playlist-desc={playlist.description || ''} data-playlist-creator={playlist.creator?.nickname || ''} data-playlist-tracks={playlist.trackCount || playlist.tracks?.length || 0} data-playlist-plays={playlist.playCount || 0}>
+													<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 truncate mb-1">{playlist.name}</h3>
+													<p class="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 mb-3 flex-1">{playlist.description || '暂无简介'}</p>
+													<div class="flex items-center gap-4 text-xs text-neutral-400">
+														<span class="flex items-center gap-1">
+															<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+															</svg>
+															{playlist.trackCount || playlist.tracks?.length || 0}
+														</span>
+														<span class="flex items-center gap-1">
+															<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+															</svg>
+															{(playlist.playCount || 0) >= 10000 ? ((playlist.playCount || 0) / 10000).toFixed(1) + '万' : (playlist.playCount || 0)}
+														</span>
+														<span class="flex items-center gap-1">
+															<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+															</svg>
+															{playlist.creator?.nickname || '未知'}
+														</span>
+													</div>
+												</div>
+											</div>
+										</div>
+									))}
+								</div>
+							</div>
+						)}
+
+						{staticPlaylists.subscribedPlaylists.length > 0 && (
+							<div class="mt-8">
+								<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-3 flex items-center gap-2">
+									<Icon is:inline name="material-symbols:star" class="text-base text-pink-500" />
+									{i18n(I18nKey.musicSubscribedPlaylists)}
+								</h3>
+								<div class="space-y-3">
+									{staticPlaylists.subscribedPlaylists.map(playlist => (
+										<div class="playlist-card card-base hover:border-(--primary)/30 hover:shadow-lg hover:shadow-(--primary)/5 transition-all duration-300 group">
+											<div class="flex gap-4 p-4">
+												<button class="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 focus:outline-none group/cover" onclick={`if(window.__fireflyMusic){window.__fireflyMusic.loadPlaylist('netease','playlist','${playlist.id}');showToast(document.getElementById('i18n-switched').value);}else{showToast(document.getElementById('i18n-not-loaded').value);}`}>
+													<img src={(playlist.coverImgUrl || playlist.cover || '') + (playlist.coverImgUrl || playlist.cover ? '?t=' + Date.now() : '')} alt={playlist.name} class="w-full h-full object-cover transition-transform duration-500 group-hover/cover:scale-110" loading="lazy" />
+													<div class="absolute inset-0 bg-black/20 opacity-0 group-hover/cover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+														<svg class="h-12 w-12 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
+															<path d="M8 5v14l11-7z"/>
+														</svg>
+													</div>
+												</button>
+												<div class="flex-1 min-w-0 flex flex-col cursor-pointer static-playlist-card" data-playlist-id={playlist.id} data-playlist-name={playlist.name} data-playlist-cover={playlist.coverImgUrl || playlist.cover || ''} data-playlist-desc={playlist.description || ''} data-playlist-creator={playlist.creator?.nickname || ''} data-playlist-tracks={playlist.trackCount || playlist.tracks?.length || 0} data-playlist-plays={playlist.playCount || 0}>
+													<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 truncate mb-1">{playlist.name}</h3>
+													<p class="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 mb-3 flex-1">{playlist.description || '暂无简介'}</p>
+													<div class="flex items-center gap-4 text-xs text-neutral-400">
+														<span class="flex items-center gap-1">
+															<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+															</svg>
+															{playlist.trackCount || playlist.tracks?.length || 0}
+														</span>
+														<span class="flex items-center gap-1">
+															<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+															</svg>
+															{(playlist.playCount || 0) >= 10000 ? ((playlist.playCount || 0) / 10000).toFixed(1) + '万' : (playlist.playCount || 0)}
+														</span>
+														<span class="flex items-center gap-1">
+															<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+															</svg>
+															{playlist.creator?.nickname || '未知'}
+														</span>
+													</div>
+												</div>
+											</div>
+										</div>
+									))}
+								</div>
+							</div>
+						)}
+
+						{staticPlaylists.myPlaylists.length === 0 && staticPlaylists.subscribedPlaylists.length === 0 && (
+							<div class="text-center py-16">
+								<div class="inline-flex items-center justify-center w-16 h-16 bg-(--btn-regular-bg) rounded-full mb-6 border border-(--line-divider)">
+									<Icon is:inline name="material-symbols:airwave-rounded" class="text-[2rem] text-(--btn-content)" />
+								</div>
+								<h2 class="text-xl font-semibold text-black/80 dark:text-white/80 mb-3">
+									{i18n(I18nKey.musicNoPlaylists)}
+								</h2>
+							</div>
+						)}
 					</>
 				)}
-			</div>
+			</>
+		)}
 		</div>
 	</div>
 </MainGridLayout>
 
-<script is:inline define:vars={{ userId: NETEASE_USER_ID }}>
+<script is:inline define:vars={{ userId: NETEASE_USER_ID, mode: musicConfig?.mode || 'dynamic' }}>
 (function () {
 	if (!userId) return;
+	const isDynamic = mode === 'dynamic';
 
-	const apis = [
-		`https://api.i-meto.com/meting/api?server=netease&type=user&id=${userId}`,
-		`https://meting.savan.link/api?server=netease&type=user&id=${userId}`,
-		`https://music-api.tr1ck.xyz/api?server=netease&type=user&id=${userId}`,
-		`https://apis.netstart.cn/music/user/playlist?uid=${userId}`,
-	];
-
-	const loadingState = document.getElementById('loadingState');
-	const emptyState = document.getElementById('emptyState');
-	const searchInput = document.getElementById('searchInput');
-	const filterTabs = document.getElementById('filterTabs');
-	const tabAll = document.getElementById('tab-all');
-	const tabMine = document.getElementById('tab-mine');
-	const tabSubscribed = document.getElementById('tab-subscribed');
-	const myPlaylistsSection = document.getElementById('myPlaylistsSection');
-	const myPlaylistsContainer = document.getElementById('myPlaylistsContainer');
-	const subscribedPlaylistsSection = document.getElementById('subscribedPlaylistsSection');
-	const subscribedPlaylistsContainer = document.getElementById('subscribedPlaylistsContainer');
-	const statsPlaylists = document.getElementById('stats-playlists');
-	const statsTracks = document.getElementById('stats-tracks');
-	const statsSubscribed = document.getElementById('stats-subscribed');
-	
-	let allDetailedMyPlaylists = [];
-	let allDetailedSubscribedPlaylists = [];
-	let currentFilter = 'all';
-	
-	let modal = document.getElementById('playlistModal');
-	document.body.appendChild(modal);
+	const modal = document.getElementById('playlistModal');
+	if (modal) {
+		document.body.appendChild(modal);
+	}
 	
 	const modalCover = document.getElementById('modalCover');
 	const modalTitle = document.getElementById('modalTitle');
@@ -249,6 +585,7 @@ const isConfigured = !!NETEASE_USER_ID;
 	const modalPlayBtn = document.getElementById('modalPlayBtn');
 	const modalOfficialBtn = document.getElementById('modalOfficialBtn');
 	const modalCloseBtn = document.getElementById('modalCloseBtn');
+	
 	let musicToast = document.getElementById('musicToast');
 	if (!musicToast) {
 		musicToast = document.createElement('div');
@@ -299,25 +636,16 @@ const isConfigured = !!NETEASE_USER_ID;
 		}, 2500);
 	}
 	
-	modal.addEventListener('click', function(event) {
-		if (event.target === event.currentTarget) {
-			closeModal();
+	function formatPlays(count) {
+		if (!count) return '0';
+		if (count >= 10000) {
+			return (count / 10000).toFixed(1) + "万";
 		}
-	});
-	
-	modalCloseBtn.addEventListener('click', closeModal);
-	
-	modalPlayBtn.addEventListener('click', function() {
-		if (currentPlaylistId && window.__fireflyMusic) {
-			window.__fireflyMusic.loadPlaylist('netease', 'playlist', currentPlaylistId);
-			showToast(document.getElementById('i18n-switched').value);
-		} else {
-			showToast(document.getElementById('i18n-not-loaded').value);
-		}
-		closeModal();
-	});
+		return count;
+	}
 	
 	function openModal(playlist) {
+		if (!modal) return;
 		currentPlaylistId = playlist.id;
 		modalCover.src = playlist.coverImgUrl || playlist.cover || '';
 		modalTitle.textContent = playlist.name;
@@ -345,24 +673,98 @@ const isConfigured = !!NETEASE_USER_ID;
 		modal.classList.remove('hidden');
 	}
 	
+	function openModalStatic(playlist) {
+		openModal(playlist);
+	}
+	
+	window.openModalStatic = openModalStatic;
+	
 	function closeModal() {
+		if (!modal) return;
 		modal.classList.add('hidden');
 		currentPlaylistId = null;
 	}
 	
-	
-	
-	document.addEventListener('keydown', function(event) {
-		if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
-			closeModal();
+	if (modal) {
+		modal.addEventListener('click', function(event) {
+			if (event.target === event.currentTarget) {
+				closeModal();
+			}
+		});
+		
+		if (modalCloseBtn) {
+			modalCloseBtn.addEventListener('click', closeModal);
 		}
-	});
+		
+		if (modalPlayBtn) {
+			modalPlayBtn.addEventListener('click', function() {
+				if (currentPlaylistId && window.__fireflyMusic) {
+					window.__fireflyMusic.loadPlaylist('netease', 'playlist', currentPlaylistId);
+					showToast(document.getElementById('i18n-switched').value);
+				} else {
+					showToast(document.getElementById('i18n-not-loaded').value);
+				}
+				closeModal();
+			});
+		}
+		
+		document.addEventListener('keydown', function(event) {
+			if (event.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+				closeModal();
+			}
+		});
+	}
 	
+	if (!isDynamic) {
+		document.addEventListener('DOMContentLoaded', function() {
+			const staticCards = document.querySelectorAll('.static-playlist-card');
+			staticCards.forEach(function(card) {
+				card.addEventListener('click', function() {
+					const playlist = {
+						id: card.getAttribute('data-playlist-id'),
+						name: card.getAttribute('data-playlist-name'),
+						coverImgUrl: card.getAttribute('data-playlist-cover'),
+						description: card.getAttribute('data-playlist-desc'),
+						creator: { nickname: card.getAttribute('data-playlist-creator') },
+						trackCount: parseInt(card.getAttribute('data-playlist-tracks') || '0'),
+						playCount: parseInt(card.getAttribute('data-playlist-plays') || '0')
+					};
+					openModalStatic(playlist);
+				});
+			});
+		});
+		return;
+	}
+
+	const apis = [
+		`https://apis.netstart.cn/music/user/playlist?uid=${userId}`,
+		`https://api.i-meto.com/meting/api?server=netease&type=playlist&id=${userId}`,
+	];
+
+	const loadingState = document.getElementById('loadingState');
+	const emptyState = document.getElementById('emptyState');
+	const searchInput = document.getElementById('searchInput');
+	const filterTabs = document.getElementById('filterTabs');
+	const tabAll = document.getElementById('tab-all');
+	const tabMine = document.getElementById('tab-mine');
+	const tabSubscribed = document.getElementById('tab-subscribed');
+	const myPlaylistsSection = document.getElementById('myPlaylistsSection');
+	const myPlaylistsContainer = document.getElementById('myPlaylistsContainer');
+	const subscribedPlaylistsSection = document.getElementById('subscribedPlaylistsSection');
+	const subscribedPlaylistsContainer = document.getElementById('subscribedPlaylistsContainer');
+	const statsPlaylists = document.getElementById('stats-playlists');
+	const statsTracks = document.getElementById('stats-tracks');
+	const statsSubscribed = document.getElementById('stats-subscribed');
+	
+	let allDetailedMyPlaylists = [];
+	let allDetailedSubscribedPlaylists = [];
+	let currentFilter = 'all';
+
 	function handleSearch(e) {
 		const query = e.target.value.toLowerCase().trim();
 		filterPlaylists(query);
 	}
-	
+
 	function setFilter(filter) {
 		currentFilter = filter;
 		
@@ -386,7 +788,7 @@ const isConfigured = !!NETEASE_USER_ID;
 		const query = searchInput.value.toLowerCase().trim();
 		filterPlaylists(query);
 	}
-	
+
 	function filterPlaylists(query) {
 		let myPlaylists = allDetailedMyPlaylists;
 		let subscribedPlaylists = allDetailedSubscribedPlaylists;
@@ -413,7 +815,7 @@ const isConfigured = !!NETEASE_USER_ID;
 		
 		displayPlaylists(filteredMy, filteredSubscribed);
 	}
-	
+
 	function displayPlaylists(myPlaylists, subscribedPlaylists) {
 		myPlaylistsContainer.innerHTML = '';
 		subscribedPlaylistsContainer.innerHTML = '';
@@ -449,9 +851,9 @@ const isConfigured = !!NETEASE_USER_ID;
 			subscribedPlaylistsSection.classList.add('hidden');
 		}
 	}
-	
+
 	searchInput.addEventListener('input', handleSearch);
-	
+
 	tabAll.addEventListener('click', () => setFilter('all'));
 	tabMine.addEventListener('click', () => setFilter('mine'));
 	tabSubscribed.addEventListener('click', () => setFilter('subscribed'));
@@ -513,8 +915,6 @@ const isConfigured = !!NETEASE_USER_ID;
 		const timestamp = Date.now();
 		const detailApis = [
 			`https://api.i-meto.com/meting/api?server=netease&type=playlist&id=${playlistId}&limit=1000`,
-			`https://meting.savan.link/api?server=netease&type=playlist&id=${playlistId}&limit=1000`,
-			`https://music-api.tr1ck.xyz/api?server=netease&type=playlist&id=${playlistId}&limit=1000`,
 		];
 		for (const url of detailApis) {
 			try {
@@ -543,13 +943,6 @@ const isConfigured = !!NETEASE_USER_ID;
 			}
 		}
 		return null;
-	}
-
-	function formatPlays(count) {
-		if (count >= 10000) {
-			return (count / 10000).toFixed(1) + "万";
-		}
-		return count;
 	}
 
 	function createSVG(iconName, className) {
@@ -611,111 +1004,123 @@ const isConfigured = !!NETEASE_USER_ID;
 		img.src = coverUrl ? coverUrl + (coverUrl.includes('?') ? '&' : '?') + 't=' + Date.now() : '';
 		img.alt = playlist.name;
 		img.className = 'w-full h-full object-cover transition-transform duration-500 group-hover/cover:scale-110';
-		img.loading = 'lazy';
-		button.appendChild(img);
+				img.loading = 'lazy';
+				button.appendChild(img);
 
-		const overlay = document.createElement('div');
-		overlay.className = 'absolute inset-0 bg-black/20 opacity-0 group-hover/cover:opacity-100 transition-opacity duration-300 flex items-center justify-center';
-		button.appendChild(overlay);
+				const overlay = document.createElement('div');
+				overlay.className = 'absolute inset-0 bg-black/20 opacity-0 group-hover/cover:opacity-100 transition-opacity duration-300 flex items-center justify-center';
+				button.appendChild(overlay);
 
-		const playIcon = createSVG('play', 'text-3xl text-white drop-shadow-lg');
-		playIcon.setAttribute('width', '48');
-		playIcon.setAttribute('height', '48');
-		overlay.appendChild(playIcon);
+				const playIcon = createSVG('play', 'text-3xl text-white drop-shadow-lg');
+				playIcon.setAttribute('width', '48');
+				playIcon.setAttribute('height', '48');
+				overlay.appendChild(playIcon);
 
-		const infoDiv = document.createElement('div');
-		infoDiv.className = 'flex-1 min-w-0 flex flex-col cursor-pointer hover:text-[var(--primary)] transition-colors';
-		infoDiv.onclick = function() {
-			openModal(playlist);
-		};
-		flexDiv.appendChild(infoDiv);
+				const infoDiv = document.createElement('div');
+				infoDiv.className = 'flex-1 min-w-0 flex flex-col cursor-pointer hover:text-[var(--primary)] transition-colors';
+				infoDiv.onclick = function() {
+					openModal(playlist);
+				};
+				flexDiv.appendChild(infoDiv);
 
-		const title = document.createElement('h3');
-		title.className = 'text-lg font-bold text-neutral-900 dark:text-neutral-100 truncate mb-1';
-		title.textContent = playlist.name;
-		infoDiv.appendChild(title);
+				const title = document.createElement('h3');
+				title.className = 'text-lg font-bold text-neutral-900 dark:text-neutral-100 truncate mb-1';
+				title.textContent = playlist.name;
+				infoDiv.appendChild(title);
 
-		const desc = document.createElement('p');
-		desc.className = 'text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 mb-3 flex-1';
-		desc.textContent = description || '暂无简介';
-		infoDiv.appendChild(desc);
+				const desc = document.createElement('p');
+				desc.className = 'text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 mb-3 flex-1';
+				desc.textContent = description || '暂无简介';
+				infoDiv.appendChild(desc);
 
-		const metaDiv = document.createElement('div');
-		metaDiv.className = 'flex items-center gap-4 text-xs text-neutral-400';
-		infoDiv.appendChild(metaDiv);
+				const metaDiv = document.createElement('div');
+				metaDiv.className = 'flex items-center gap-4 text-xs text-neutral-400';
+				infoDiv.appendChild(metaDiv);
 
-		const trackSpan = document.createElement('span');
-		trackSpan.className = 'flex items-center gap-1';
-		const trackIcon = createSVG('music', 'text-base');
-		trackSpan.appendChild(trackIcon);
-		trackSpan.appendChild(document.createTextNode(playlist.trackCount + ' 首'));
-		metaDiv.appendChild(trackSpan);
+				const trackSpan = document.createElement('span');
+				trackSpan.className = 'flex items-center gap-1';
+				const trackIcon = createSVG('music', 'text-base');
+				trackSpan.appendChild(trackIcon);
+				trackSpan.appendChild(document.createTextNode(playlist.trackCount + ' 首'));
+				metaDiv.appendChild(trackSpan);
 
-		const playSpan = document.createElement('span');
-		playSpan.className = 'flex items-center gap-1';
-		const playCountIcon = createSVG('play', 'text-base');
-		playSpan.appendChild(playCountIcon);
-		playSpan.appendChild(document.createTextNode(formatPlays(playlist.playCount) + ' 次播放'));
-		metaDiv.appendChild(playSpan);
+				const playSpan = document.createElement('span');
+				playSpan.className = 'flex items-center gap-1';
+				const playCountIcon = createSVG('play', 'text-base');
+				playSpan.appendChild(playCountIcon);
+				playSpan.appendChild(document.createTextNode(formatPlays(playlist.playCount) + ' 次播放'));
+				metaDiv.appendChild(playSpan);
 
-		if (creator) {
-			const creatorSpan = document.createElement('span');
-			creatorSpan.className = 'flex items-center gap-1';
-			const creatorIcon = createSVG('account', 'text-base');
-			creatorSpan.appendChild(creatorIcon);
-			creatorSpan.appendChild(document.createTextNode(creator));
-			metaDiv.appendChild(creatorSpan);
-		}
+				if (creator) {
+					const creatorSpan = document.createElement('span');
+					creatorSpan.className = 'flex items-center gap-1';
+					const creatorIcon = createSVG('account', 'text-base');
+					creatorSpan.appendChild(creatorIcon);
+					creatorSpan.appendChild(document.createTextNode(creator));
+					metaDiv.appendChild(creatorSpan);
+				}
 
-		return card;
-	}
+				return card;
+			}
 
-	fetchPlaylists().then(async (result) => {
-		if (!result) {
-			loadingState.classList.add('hidden');
-			emptyState.classList.remove('hidden');
-			return;
-		}
+			fetchPlaylists().then(async (result) => {
+				if (!result) {
+					loadingState.classList.add('hidden');
+					emptyState.classList.remove('hidden');
+					return;
+				}
 
-		const { myPlaylists = [], subscribedPlaylists = [] } = result;
-		const allPlaylists = [...myPlaylists, ...subscribedPlaylists];
-		
-		if (allPlaylists.length === 0) {
-			loadingState.classList.add('hidden');
-			emptyState.classList.remove('hidden');
-			return;
-		}
+				const { myPlaylists = [], subscribedPlaylists = [] } = result;
+				const allPlaylists = [...myPlaylists, ...subscribedPlaylists];
+				
+				if (allPlaylists.length === 0) {
+					loadingState.classList.add('hidden');
+					emptyState.classList.remove('hidden');
+					return;
+				}
 
-		allDetailedMyPlaylists = myPlaylists.length > 0 ? await Promise.all(
-			myPlaylists.map(async (playlist) => {
-				const detail = await fetchPlaylistDetail(playlist.id);
-				return detail || playlist;
-			})
-		) : [];
-		
-		allDetailedSubscribedPlaylists = subscribedPlaylists.length > 0 ? await Promise.all(
-			subscribedPlaylists.map(async (playlist) => {
-				const detail = await fetchPlaylistDetail(playlist.id);
-				return detail || playlist;
-			})
-		) : [];
-		
-		const totalTracks = [...allDetailedMyPlaylists, ...allDetailedSubscribedPlaylists].reduce((sum, p) => sum + (p.trackCount || p.tracks?.length || 0), 0);
-		
-		statsPlaylists.textContent = allDetailedMyPlaylists.length;
-		statsTracks.textContent = totalTracks;
-		statsSubscribed.textContent = allDetailedSubscribedPlaylists.length;
+				allDetailedMyPlaylists = myPlaylists.length > 0 ? await Promise.all(
+					myPlaylists.map(async (playlist) => {
+						const detail = await fetchPlaylistDetail(playlist.id);
+						return detail || playlist;
+					})
+				) : [];
+				
+				allDetailedSubscribedPlaylists = subscribedPlaylists.length > 0 ? await Promise.all(
+					subscribedPlaylists.map(async (playlist) => {
+						const detail = await fetchPlaylistDetail(playlist.id);
+						return detail || playlist;
+					})
+				) : [];
+				
+				const totalTracks = [...allDetailedMyPlaylists, ...allDetailedSubscribedPlaylists].reduce((sum, p) => sum + (p.trackCount || p.tracks?.length || 0), 0);
+				
+				statsPlaylists.textContent = allDetailedMyPlaylists.length;
+				statsTracks.textContent = totalTracks;
+				statsSubscribed.textContent = allDetailedSubscribedPlaylists.length;
 
-		loadingState.classList.add('hidden');
-		displayPlaylists(allDetailedMyPlaylists, allDetailedSubscribedPlaylists);
-	}).catch(() => {
-		loadingState.classList.add('hidden');
-		emptyState.classList.remove('hidden');
-	});
-})();
-</script>
+				loadingState.classList.add('hidden');
+				displayPlaylists(allDetailedMyPlaylists, allDetailedSubscribedPlaylists);
+				
+				const updateTimeEl = document.getElementById('updateTime');
+				if (updateTimeEl) {
+					const now = new Date();
+					const timeStr = now.toLocaleString('zh-CN', {
+						month: '2-digit',
+						day: '2-digit',
+						hour: '2-digit',
+						minute: '2-digit'
+					});
+					updateTimeEl.innerHTML = '| 更新时间 ' + timeStr;
+				}
+			}).catch(() => {
+				loadingState.classList.add('hidden');
+				emptyState.classList.remove('hidden');
+			});
+		})();
+	</script>
 
-<style>
+	<style>
 @keyframes animate-in {
 	from {
 		opacity: 0;
@@ -745,6 +1150,6 @@ const isConfigured = !!NETEASE_USER_ID;
 	border-bottom-color: #d1d5db;
 }
 .dark .inactive-tab:hover {
-	color: #e5e7eb;
+        color: #e5e7eb;
 }
 </style>

@@ -151,6 +151,7 @@ export type SiteConfig = {
 	// 音乐配置（网易云音乐）
 	music?: {
 		userId?: string; // 网易云音乐用户ID
+		mode?: "static" | "dynamic"; // 数据模式：static=构建时获取，dynamic=客户端实时获取
 	};
 
 	// 分页配置

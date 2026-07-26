@@ -64,6 +64,17 @@ export const zh_CN: Translation = {
 	[Key.musicNoResults]: "没有找到匹配的歌单",
 	[Key.musicPlaylistSwitched]: "已切换播放列表",
 	[Key.musicPlayerNotLoaded]: "播放器未加载",
+	[Key.musicStaticMode]: "静态模式",
+	[Key.musicDynamicMode]: "动态模式",
+	[Key.musicBuildTime]: "构建时间",
+	[Key.musicLoading]: "正在加载歌单...",
+	[Key.musicFetchError]: "获取数据失败",
+	[Key.musicFetchErrorDesc]: "构建时获取歌单数据失败，请检查网络连接或稍后重试",
+	[Key.musicSearchPlaceholder]: "搜索歌单...",
+	[Key.musicTabAll]: "全部",
+	[Key.musicTabMine]: "我的",
+	[Key.musicTabSubscribed]: "收藏",
+	[Key.musicUpdateTime]: "更新时间",
 
 	// 公告栏
 	[Key.announcement]: "公告",

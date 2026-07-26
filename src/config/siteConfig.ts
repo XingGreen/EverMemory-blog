@@ -33,7 +33,7 @@ export const siteConfig: SiteConfig = {
 	// 主题色
 	themeColor: {
 		// 主题色的默认色相，范围从 0 到 360。例如：红色：0，青色：200，蓝绿色：250，粉色：345
-		hue: 135,
+		hue: 275,
 		// 是否对访问者隐藏主题色选择器
 		fixed: false,
 		// 默认模式："light" 亮色，"dark" 暗色，"system" 跟随系统
@@ -202,6 +202,10 @@ export const siteConfig: SiteConfig = {
 	music: {
 		// 网易云音乐用户ID,用来给music页面配置，当前仅支持网易云
 		userId: "9010085648",
+		// 数据模式：static=构建时获取，dynamic=客户端实时获取
+		// static 模式在构建时获取数据并静态渲染，部署后数据不更新
+		// dynamic 模式在浏览器中实时请求 API，始终显示最新数据
+		mode: "dynamic",
 	},
 
 	// 分页配置
