@@ -48,6 +48,10 @@ const apis = [
 	];
 
 async function fetchPlaylists(userId: string) {
+	if (!userId) {
+		return { myPlaylists: [], subscribedPlaylists: [] };
+	}
+	const userIdStr = userId.toString();
 	for (const url of apis) {
 		try {
 			const response = await fetch(url, {
@@ -63,7 +67,7 @@ async function fetchPlaylists(userId: string) {
 					return {
 						myPlaylists: (data.playlist as Playlist[]).filter(p => {
 							const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-							return creatorId === userId.toString();
+							return creatorId === userIdStr;
 						}),
 						subscribedPlaylists: data.subscribedPlaylist as Playlist[]
 					};
@@ -71,11 +75,11 @@ async function fetchPlaylists(userId: string) {
 				return {
 					myPlaylists: (data.playlist as Playlist[]).filter(p => {
 						const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-						return creatorId === userId.toString();
+						return creatorId === userIdStr;
 					}),
 					subscribedPlaylists: (data.playlist as Playlist[]).filter(p => {
 						const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-						return creatorId !== userId.toString();
+						return creatorId !== userIdStr;
 					})
 				};
 			}
@@ -136,11 +140,13 @@ if (!isConfigured) {
 		staticPlaylists = {
 			myPlaylists: allPlaylists.filter(p => {
 				const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-				return creatorId === NETEASE_USER_ID.toString();
+				const userIdStr = NETEASE_USER_ID?.toString();
+				return userIdStr && creatorId === userIdStr;
 			}),
 			subscribedPlaylists: allPlaylists.filter(p => {
 				const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-				return creatorId !== NETEASE_USER_ID.toString();
+				const userIdStr = NETEASE_USER_ID?.toString();
+				return userIdStr && creatorId !== userIdStr;
 			})
 		};
 	} catch (error) {
@@ -859,6 +865,10 @@ if (!isConfigured) {
 	tabSubscribed.addEventListener('click', () => setFilter('subscribed'));
 
 	async function fetchPlaylists() {
+		if (!userId) {
+			return null;
+		}
+		const userIdStr = userId.toString();
 		const timestamp = Date.now();
 		for (const url of apis) {
 			try {
@@ -876,7 +886,7 @@ if (!isConfigured) {
 						return {
 							myPlaylists: data.playlist.filter(p => {
 								const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-								return creatorId === userId.toString();
+								return creatorId === userIdStr;
 							}),
 							subscribedPlaylists: data.subscribedPlaylist
 						};
@@ -884,11 +894,11 @@ if (!isConfigured) {
 					return {
 						myPlaylists: data.playlist.filter(p => {
 							const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-							return creatorId === userId.toString();
+							return creatorId === userIdStr;
 						}),
 						subscribedPlaylists: data.playlist.filter(p => {
 							const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-							return creatorId !== userId.toString();
+							return creatorId !== userIdStr;
 						})
 					};
 				}
@@ -896,11 +906,11 @@ if (!isConfigured) {
 					return {
 						myPlaylists: data.filter(p => {
 							const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-							return creatorId === userId.toString();
+							return creatorId === userIdStr;
 						}),
 						subscribedPlaylists: data.filter(p => {
 							const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-							return creatorId !== userId.toString();
+							return creatorId !== userIdStr;
 						})
 					};
 				}
