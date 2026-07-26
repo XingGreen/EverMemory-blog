@@ -62,6 +62,7 @@ declare global {
 			seekToTime: (time: number) => void;
 			playTrackByIndex: (index: number) => void;
 			loadTrack: (index: number, autoPlay: boolean) => void;
+			loadPlaylist: (server: string, type: string, id: string) => void;
 		};
 	}
 

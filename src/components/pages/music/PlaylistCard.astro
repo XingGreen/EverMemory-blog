@@ -18,19 +18,11 @@ function formatNumber(num: number): string {
     }
     return num.toString();
 }
-
-function handleClick(e: Event) {
-    e.preventDefault();
-    const mgr = window.__fireflyMusic;
-    if (mgr) {
-        mgr.loadPlaylist("netease", "playlist", id);
-    }
-}
 ---
 
 <div 
     class="playlist-card card-base cursor-pointer hover:border-(--primary)/30 hover:shadow-lg hover:shadow-(--primary)/5 transition-all duration-300 group"
-    onclick={handleClick}
+    data-playlist-id={id}
 >
     <div class="flex gap-4 p-4">
         <div class="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
@@ -67,3 +59,17 @@ function handleClick(e: Event) {
         </div>
     </div>
 </div>
+
+<script is:inline>
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.playlist-card');
+    cards.forEach(function(card) {
+        card.addEventListener('click', function() {
+            const playlistId = card.getAttribute('data-playlist-id');
+            if (playlistId && window.__fireflyMusic && window.__fireflyMusic.loadPlaylist) {
+                window.__fireflyMusic.loadPlaylist('netease', 'playlist', playlistId);
+            }
+        });
+    });
+});
+</script>
