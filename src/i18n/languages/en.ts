@@ -64,6 +64,17 @@ export const en: Translation = {
 	[Key.musicNoResults]: "No matching playlists found",
 	[Key.musicPlaylistSwitched]: "Playlist switched",
 	[Key.musicPlayerNotLoaded]: "Player not loaded",
+	[Key.musicStaticMode]: "Static Mode",
+	[Key.musicDynamicMode]: "Dynamic Mode",
+	[Key.musicBuildTime]: "Build Time",
+	[Key.musicLoading]: "Loading playlists...",
+	[Key.musicFetchError]: "Failed to fetch data",
+	[Key.musicFetchErrorDesc]: "Failed to fetch playlist data during build. Please check your network connection or try again later",
+	[Key.musicSearchPlaceholder]: "Search playlists...",
+	[Key.musicTabAll]: "All",
+	[Key.musicTabMine]: "Mine",
+	[Key.musicTabSubscribed]: "Subscribed",
+	[Key.musicUpdateTime]: "Update Time",
 
 	// Announcement
 	[Key.announcement]: "Announcement",

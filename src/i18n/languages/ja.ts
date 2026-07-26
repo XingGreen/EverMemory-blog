@@ -9,7 +9,7 @@ export const ja: Translation = {
 	[Key.searchNoResults]: "結果が見つかりません。",
 	[Key.searchTypeSomething]: "検索キーワードを入力してください。",
 	[Key.searchLoading]: "検索中...",
-	[Key.searchSummary]: "摘要",
+	[Key.searchSummary]: "要約",
 	[Key.searchContent]: "内容",
 	[Key.searchViewMore]: "さらに結果を表示 ({count} 件)",
 	[Key.other]: "その他",
@@ -64,6 +64,17 @@ export const ja: Translation = {
 	[Key.musicNoResults]: "一致するプレイリストが見つかりません",
 	[Key.musicPlaylistSwitched]: "プレイリストを切り替えました",
 	[Key.musicPlayerNotLoaded]: "プレイヤーが読み込まれていません",
+	[Key.musicStaticMode]: "静的モード",
+	[Key.musicDynamicMode]: "動的モード",
+	[Key.musicBuildTime]: "ビルド時間",
+	[Key.musicLoading]: "プレイリストを読み込み中...",
+	[Key.musicFetchError]: "データの取得に失敗しました",
+	[Key.musicFetchErrorDesc]: "ビルド中にプレイリストデータの取得に失敗しました。ネットワーク接続を確認するか、後で再試行してください",
+	[Key.musicSearchPlaceholder]: "プレイリストを検索...",
+	[Key.musicTabAll]: "すべて",
+	[Key.musicTabMine]: "マイ",
+	[Key.musicTabSubscribed]: "購読中",
+	[Key.musicUpdateTime]: "更新時間",
 
 	// お知らせ
 	[Key.announcement]: "お知らせ",
@@ -234,7 +245,7 @@ export const ja: Translation = {
 	// RSSページ
 	[Key.rss]: "RSSフィード",
 	[Key.rssDescription]: "最新の更新を購読する",
-	[Key.rssSubtitle]: "RSSで購読して、最新の記事と更新を第一时间で取得する",
+	[Key.rssSubtitle]: "RSSで購読して、最新の記事と更新をすぐに取得する",
 	[Key.rssLink]: "RSSリンク",
 	[Key.rssCopyToReader]: "RSSリンクをリーダーにコピー",
 	[Key.rssCopyLink]: "リンクをコピー",
@@ -243,7 +254,7 @@ export const ja: Translation = {
 	[Key.rssWhatIsRSSDescription]:
 		"RSS（Really Simple Syndication）は、頻繁に更新されるコンテンツを公開するための標準形式です。RSSを使用すると：",
 	[Key.rssBenefit1]:
-		"手動で訪問することなく、最新のウェブサイトコンテンツを及时に取得",
+		"手動で訪問することなく、最新のウェブサイトコンテンツをすぐに取得",
 	[Key.rssBenefit2]: "1か所で複数のウェブサイトの購読を管理",
 	[Key.rssBenefit3]: "重要な更新や記事を見逃すことを回避",
 	[Key.rssBenefit4]: "広告なしのクリーンな読書体験を楽しむ",
