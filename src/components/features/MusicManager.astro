@@ -452,5 +452,11 @@ const managerConfigStr = JSON.stringify({
             init();
         }
     };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 })();
 </script>
