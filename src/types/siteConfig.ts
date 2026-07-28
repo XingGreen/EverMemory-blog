@@ -75,6 +75,7 @@ export type SiteConfig = {
 		menuAlign?: "left" | "center"; // 导航菜单对齐方式（仅桌面端菜单）
 		followTheme?: boolean; // 导航栏图标和标题是否跟随主题色
 		stickyNavbar?: boolean; // 导航栏是否固定在顶部始终可见
+		mode?: "attached" | "detached"; // 导航栏模式：attached=紧贴模式，detached=分离模式
 	};
 
 	// 页面开关配置

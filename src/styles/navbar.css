@@ -311,6 +311,54 @@ body.wallpaper-transparent #navbar-wrapper #navbar[data-full-width="true"] > div
 }
 
 /* ============================================
+ * 分离模式 (Detached Mode)
+ * 导航栏上部距离页面边缘有间隔，添加顶部圆角
+ * ============================================ */
+.navbar-detached {
+    top: 1rem !important;
+}
+
+.navbar-detached #navbar-wrapper {
+    padding-top: 0;
+}
+
+.navbar-detached #navbar > div {
+    border-radius: 0.75rem !important;
+}
+
+body.navbar-detached #navbar > div,
+body.navbar-detached #wallpaper-wrapper~* #navbar > div,
+body.navbar-detached:has(#wallpaper-wrapper) #navbar > div,
+body.navbar-detached #wallpaper-wrapper~* #navbar[data-transparent-mode="semi"] > div,
+body.navbar-detached:has(#wallpaper-wrapper) #navbar[data-transparent-mode="semi"] > div,
+body.navbar-detached #wallpaper-wrapper~* #navbar[data-transparent-mode="semifull"] > div,
+body.navbar-detached:has(#wallpaper-wrapper) #navbar[data-transparent-mode="semifull"] > div,
+body.navbar-detached #wallpaper-wrapper~* #navbar[data-transparent-mode="semifull"].scrolled > div,
+body.navbar-detached:has(#wallpaper-wrapper) #navbar[data-transparent-mode="semifull"].scrolled > div {
+    border-radius: 0.75rem !important;
+}
+
+/* 移动端分离模式保持顶部间隔 */
+@media (max-width: 767px) {
+    .navbar-detached {
+        top: 0.75rem !important;
+    }
+
+    .navbar-detached #navbar-wrapper {
+        padding-top: 0;
+    }
+
+    .navbar-detached #navbar > div,
+    body.navbar-detached #navbar > div,
+    body.navbar-detached #wallpaper-wrapper~* #navbar[data-transparent-mode="semi"][data-is-home="true"] > div,
+    body.navbar-detached:has(#wallpaper-wrapper) #navbar[data-transparent-mode="semi"][data-is-home="true"] > div,
+    body.navbar-detached #wallpaper-wrapper~* #navbar[data-transparent-mode="semifull"][data-is-home="true"] > div,
+    body.navbar-detached:has(#wallpaper-wrapper) #navbar[data-transparent-mode="semifull"][data-is-home="true"] > div {
+        border-radius: 0.5rem !important;
+    }
+}
+
+/* ============================================
  * 小于1280px时隐藏导航栏菜单图标
  * ============================================ */
 @media (max-width: 1279px) {

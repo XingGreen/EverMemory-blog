@@ -45,6 +45,7 @@ const navbarTitle = siteConfig.navbar.title || siteConfig.title;
 const navbarWidthFull = siteConfig.navbar.widthFull ?? false;
 const navbarMenuAlign = siteConfig.navbar.menuAlign ?? "center";
 const isNavbarMenuCentered = navbarMenuAlign === "center";
+const navbarMode = siteConfig.navbar.mode ?? "attached";
 
 // 检查是否为首页
 const isHomePageCheck = isHomePage(Astro.url.pathname);
@@ -103,7 +104,7 @@ if (isLocalSrcLogo) {
 	}
 }
 ---
-<div id="navbar" class="z-50" style={`--navbar-glass-blur: ${navbarBlur}px;`} data-transparent-mode={navbarTransparentMode} data-enable-blur={String(navbarEnableBlur)} data-is-home={isHomePageCheck} data-full-width={navbarWidthFull}>
+<div id="navbar" class="z-50" style={`--navbar-glass-blur: ${navbarBlur}px;`} data-transparent-mode={navbarTransparentMode} data-enable-blur={String(navbarEnableBlur)} data-is-home={isHomePageCheck} data-full-width={navbarWidthFull} data-mode={navbarMode}>
     <div class:list={[
         className,
         "overflow-visible! h-18 px-4"

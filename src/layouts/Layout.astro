@@ -561,6 +561,7 @@ const siteLang = lang.replace("_", "-");
         "sticky-navbar": siteConfig.navbar.stickyNavbar ?? false,
         "enable-card-border": siteConfig.card?.border,
         "card-follow-theme-hue": siteConfig.card?.followTheme,
+        "navbar-detached": siteConfig.navbar.mode === "detached",
       },
     ]}
   >
@@ -663,6 +664,11 @@ const siteLang = lang.replace("_", "-");
       height: 4.5rem !important;
     }
 
+    body.sticky-navbar #top-row.navbar-detached {
+      top: 1rem !important;
+      height: 5.5rem !important;
+    }
+
     body.sticky-navbar #navbar-wrapper {
       position: static !important;
       opacity: 1 !important;
@@ -684,6 +690,19 @@ const siteLang = lang.replace("_", "-");
     body.sticky-navbar.no-banner-layout #left-sidebar-sticky,
     body.sticky-navbar.no-banner-layout #right-sidebar-sticky {
       top: 5.5rem !important;
+    }
+
+    /* 分离模式下侧边栏需要额外下移 */
+    html[data-wallpaper-mode="none"] body.sticky-navbar.navbar-detached #sidebar-sticky,
+    html[data-wallpaper-mode="none"] body.sticky-navbar.navbar-detached #left-sidebar-sticky,
+    html[data-wallpaper-mode="none"] body.sticky-navbar.navbar-detached #right-sidebar-sticky,
+    html[data-wallpaper-mode="overlay"] body.sticky-navbar.navbar-detached #sidebar-sticky,
+    html[data-wallpaper-mode="overlay"] body.sticky-navbar.navbar-detached #left-sidebar-sticky,
+    html[data-wallpaper-mode="overlay"] body.sticky-navbar.navbar-detached #right-sidebar-sticky,
+    body.sticky-navbar.no-banner-layout.navbar-detached #sidebar-sticky,
+    body.sticky-navbar.no-banner-layout.navbar-detached #left-sidebar-sticky,
+    body.sticky-navbar.no-banner-layout.navbar-detached #right-sidebar-sticky {
+      top: 6.5rem !important;
     }
   }
 
@@ -717,6 +736,18 @@ const siteLang = lang.replace("_", "-");
     body.sticky-navbar #top-row {
       height: 4.5rem !important;
     }
+
+    body.sticky-navbar.navbar-detached #top-row {
+      top: 0.75rem !important;
+      height: 5.25rem !important;
+    }
+  }
+
+  /* 分离模式下主内容区域需要下移 */
+  body.sticky-navbar.navbar-detached.no-banner-layout .w-full.z-30.pointer-events-none,
+  html[data-wallpaper-mode="none"] body.sticky-navbar.navbar-detached .w-full.z-30.pointer-events-none,
+  html[data-wallpaper-mode="overlay"] body.sticky-navbar.navbar-detached .w-full.z-30.pointer-events-none {
+    padding-top: 1rem !important;
   }
 </style>
 
