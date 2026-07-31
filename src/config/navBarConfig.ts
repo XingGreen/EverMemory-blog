@@ -119,6 +119,13 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 	// 	icon: "material-symbols:docs",
 	// });
 
+	links.push({
+		name: "控制台",
+	 	url: "/admin/",
+	 	external: false,
+	 	icon: "material-symbols:dashboard",
+	});
+
 	return { links } as NavBarConfig;
 };
 
