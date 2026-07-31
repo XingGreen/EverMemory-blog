@@ -1,0 +1,27 @@
+---
+import AdminDashboard from "@/components/admin/AdminDashboard.svelte";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import { siteConfig } from "@/config";
+
+const title = "管理后台";
+const description = `管理后台 - ${siteConfig.title}`;
+---
+
+<MainGridLayout title={title} description={description}>
+	<div class="admin-container">
+		<AdminDashboard client:load />
+	</div>
+</MainGridLayout>
+
+<style is:global>
+	.admin-container {
+		padding: 1.5rem;
+		min-height: calc(100vh - 200px);
+	}
+
+	@media (max-width: 768px) {
+		.admin-container {
+			padding: 1rem;
+		}
+	}
+</style>
