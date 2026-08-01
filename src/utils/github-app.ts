@@ -323,6 +323,62 @@ export async function deleteFileFromGitHub(
 	console.log(`[GitHub Delete] Successfully deleted: ${filePath}`);
 }
 
+// ==================== 本地文件同步功能 ====================
+
+function resolveLocalPath(relativePath: string): string {
+	return path.resolve(process.cwd(), relativePath);
+}
+
+/**
+ * 保存文件到本地文件系统
+ */
+export function saveFileLocally(relativePath: string, content: string): boolean {
+	try {
+		const fullPath = resolveLocalPath(relativePath);
+		const dir = path.dirname(fullPath);
+
+		// 确保目录存在
+		if (!fs.existsSync(dir)) {
+			fs.mkdirSync(dir, { recursive: true });
+			console.log(`[Local Save] Created directory: ${dir}`);
+		}
+
+		fs.writeFileSync(fullPath, content, "utf-8");
+		console.log(`[Local Save] Successfully saved: ${relativePath}`);
+		return true;
+	} catch (error) {
+		console.log(
+			`[Local Save] Failed to save ${relativePath}:`,
+			error instanceof Error ? error.message : error,
+		);
+		return false;
+	}
+}
+
+/**
+ * 从本地文件系统删除文件
+ */
+export function deleteFileLocally(relativePath: string): boolean {
+	try {
+		const fullPath = resolveLocalPath(relativePath);
+
+		if (!fs.existsSync(fullPath)) {
+			console.log(`[Local Delete] File does not exist, skipping: ${relativePath}`);
+			return true; // 文件不存在也算删除成功
+		}
+
+		fs.unlinkSync(fullPath);
+		console.log(`[Local Delete] Successfully deleted: ${relativePath}`);
+		return true;
+	} catch (error) {
+		console.log(
+			`[Local Delete] Failed to delete ${relativePath}:`,
+			error instanceof Error ? error.message : error,
+		);
+		return false;
+	}
+}
+
 export function getConfig() {
 	return {
 		appId: GITHUB_APP_ID,

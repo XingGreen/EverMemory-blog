@@ -1,4 +1,4 @@
-import { saveFileToGitHub } from "@/utils/github-app";
+import { saveFileToGitHub, saveFileLocally } from "@/utils/github-app";
 import { requireAuth } from "@/utils/auth";
 
 export const prerender = false;
@@ -37,13 +37,17 @@ export async function POST({ request }) {
 
 		const commitMessage = `update post: ${title || slug} via admin dashboard`;
 
-		const success = await saveFileToGitHub(filePath, fullContent, commitMessage);
+		// 1. 先保存到本地文件系统（优先本地，保证开发体验）
+		const localSuccess = saveFileLocally(filePath, fullContent);
 
-		if (success) {
+		// 2. 再保存到 GitHub
+		const githubSuccess = await saveFileToGitHub(filePath, fullContent, commitMessage);
+
+		if (localSuccess || githubSuccess) {
 			return new Response(
 				JSON.stringify({
 					success: true,
-					message: "保存成功",
+					message: githubSuccess ? "保存成功（已同步到 GitHub）" : "保存成功（仅本地保存）",
 					filePath,
 				}),
 				{ status: 200, headers: { "Content-Type": "application/json" } },
@@ -51,7 +55,7 @@ export async function POST({ request }) {
 		}
 
 		return new Response(
-			JSON.stringify({ success: false, message: "保存失败" }),
+			JSON.stringify({ success: false, message: "保存失败（本地和 GitHub 均失败）" }),
 			{ status: 500, headers: { "Content-Type": "application/json" } },
 		);
 	} catch (error) {

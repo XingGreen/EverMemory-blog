@@ -79,6 +79,7 @@
     "wrangler": "^4.102.0"
   },
   "devDependencies": {
+    "@astrojs/node": "^11.0.3",
     "@astrojs/ts-plugin": "^1.10.9",
     "@biomejs/biome": "2.5.0",
     "@iconify-json/mdi": "^1.2.3",
