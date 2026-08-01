@@ -154,6 +154,41 @@ export function setAuthCookie(token: string, headers: Headers): void {
 export function clearAuthCookie(headers: Headers): void {
   headers.set(
     "Set-Cookie",
-    "admin_session=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT"
+    `admin_session=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
   );
+}
+
+/**
+ * 验证管理员密码
+ * 环境变量 ADMIN_PASSWORD 存储 SHA256(password) 的 hex 字符串
+ * 使用 timingSafeEqual 防止时序攻击
+ */
+export function verifyAdminPassword(password: string): boolean {
+  try {
+    if (!password) return false;
+
+    const storedHash = import.meta.env.ADMIN_PASSWORD;
+    if (!storedHash) {
+      console.error("[Auth] ADMIN_PASSWORD 环境变量未配置，无法验证管理员密码");
+      return false;
+    }
+
+    const inputHash = crypto.createHash("sha256").update(password).digest("hex");
+
+    if (inputHash.length !== storedHash.length) {
+      return false;
+    }
+
+    const inputBuf = Buffer.from(inputHash, "hex");
+    const storedBuf = Buffer.from(storedHash, "hex");
+
+    if (inputBuf.length !== storedBuf.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(inputBuf, storedBuf);
+  } catch (error) {
+    console.error("[Auth] 管理员密码验证异常:", error instanceof Error ? error.message : error);
+    return false;
+  }
 }

@@ -1,23 +1,17 @@
 <script lang="ts">
 	import Icon from "@/components/common/Icon.svelte";
 
-	let { onVerify }: { onVerify: (key: string, success: boolean) => void } = $props();
+	let { onVerify }: { onVerify: (success: boolean) => void } = $props();
 
-	let privateKey = $state("");
+	let password = $state("");
 	let isSubmitting = $state(false);
 	let error = $state("");
-	let isDragging = $state(false);
 
 	async function handleSubmit() {
-		if (!privateKey.trim()) {
-			error = "请输入或上传私钥";
+		if (!password.trim()) {
+			error = "请输入管理密码";
 			return;
 		}
-
-		const cleanKey = privateKey
-			.replace(/\r\n/g, "\n")
-			.replace(/\r/g, "\n")
-			.trim();
 
 		isSubmitting = true;
 		error = "";
@@ -26,57 +20,28 @@
 			const response = await fetch("/api/admin/verify/", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ privateKey: cleanKey }),
+				body: JSON.stringify({ password }),
 			});
 
 			const data = await response.json();
 
 			if (response.ok && data.success) {
-				onVerify(cleanKey, true);
+				onVerify(true);
 			} else {
 				error = data.message || "验证失败";
-				onVerify(cleanKey, false);
+				onVerify(false);
 			}
 		} catch {
 			error = "网络请求失败";
-			onVerify(cleanKey, false);
+			onVerify(false);
 		} finally {
 			isSubmitting = false;
 		}
 	}
 
-	function handleFileUpload(e: Event) {
-		const input = e.target as HTMLInputElement;
-		const file = input.files?.[0];
-		if (file) {
-			const reader = new FileReader();
-			reader.onload = (evt) => {
-				privateKey = evt.target?.result as string;
-				error = "";
-			};
-			reader.readAsText(file);
-		}
-	}
-
-	function handleDrop(e: DragEvent) {
-		e.preventDefault();
-		isDragging = false;
-		const file = e.dataTransfer?.files[0];
-		if (file) {
-			const reader = new FileReader();
-			reader.onload = (evt) => {
-				privateKey = evt.target?.result as string;
-				error = "";
-			};
-			reader.readAsText(file);
-		}
-	}
-
-	function handlePaste(e: ClipboardEvent) {
-		const text = e.clipboardData?.getData("text");
-		if (text) {
-			privateKey = text;
-			error = "";
+	function handleKeyDown(e: KeyboardEvent) {
+		if (e.key === "Enter" && !isSubmitting) {
+			handleSubmit();
 		}
 	}
 </script>
@@ -88,51 +53,24 @@
 				<Icon icon="material-symbols:lock-outline" class="lock-icon" />
 			</div>
 			<h1>管理后台验证</h1>
-			<p class="description">请输入或上传你的 GitHub App 私钥以访问管理后台</p>
+			<p class="description">请输入管理密码以访问管理后台</p>
 		</div>
 
 		<div class="verify-form">
-			<div
-				class={`upload-area ${isDragging ? "dragging" : ""}`}
-				onDragenter={(e) => {
-					e.preventDefault();
-					isDragging = true;
-				}}
-				onDragleave={() => {
-					isDragging = false;
-				}}
-				onDragover={(e) => {
-					e.preventDefault();
-				}}
-				onDrop={handleDrop}
-			>
+			<div class="password-input-wrapper">
 				<input
-					type="file"
-					accept=".pem,.key,.txt"
-					onchange={handleFileUpload}
-					class="file-input"
-					id="keyFile"
+					type="password"
+					bind:value={password}
+					onkeydown={handleKeyDown}
+					placeholder="管理密码"
+					class="password-input"
+				autocomplete="current-password"
 				/>
-				<label for="keyFile" class="upload-label">
-					<Icon icon="material-symbols:folder-open-rounded" class="upload-icon" />
-					<span class="upload-text">点击上传或拖拽私钥文件</span>
-					<span class="upload-hint">支持 .pem, .key, .txt 格式</span>
-				</label>
-			</div>
-
-			<div class="key-input-wrapper">
-				<textarea
-					bind:value={privateKey}
-					placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"
-					onpaste={handlePaste}
-					class="key-textarea"
-					rows={8}
-				></textarea>
-				{#if privateKey}
+				{#if password}
 					<button
 						class="clear-btn"
 						onclick={() => {
-							privateKey = "";
+							password = "";
 							error = "";
 						}}
 						aria-label="清除"
@@ -153,7 +91,7 @@
 				class="submit-btn"
 				class:loading={isSubmitting}
 				onclick={handleSubmit}
-				disabled={isSubmitting || !privateKey.trim()}
+				disabled={isSubmitting || !password.trim()}
 			>
 				{#if isSubmitting}
 					<span class="spinner"></span>
@@ -166,8 +104,8 @@
 			<div class="security-notice">
 				<Icon icon="material-symbols:shield-lock" class="text-lg" />
 				<p>
-					你的私钥仅存储在本地浏览器会话中（sessionStorage），
-					不会上传到任何服务器。验证通过后即可管理博客文章。
+					管理密码仅在验证时传输，通过后使用 HttpOnly Cookie 维持会话。
+					GitHub App 私钥仅存在于服务端，不会经过浏览器。
 				</p>
 			</div>
 		</div>
@@ -185,7 +123,7 @@
 	.verify-card {
 		padding: 2rem;
 		width: 100%;
-		max-width: 520px;
+		max-width: 420px;
 	}
 
 	.verify-header {
@@ -227,74 +165,32 @@
 		gap: 1rem;
 	}
 
-	.upload-area {
-		border: 2px dashed var(--line-divider);
-		border-radius: var(--radius-md);
-		padding: 1.25rem;
-		text-align: center;
-		transition: all 0.2s;
-		cursor: pointer;
-	}
-
-	.upload-area.dragging {
-		border-color: var(--primary);
-		background: var(--btn-regular-bg);
-	}
-
-	.file-input {
-		display: none;
-	}
-
-	.upload-label {
-		cursor: pointer;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.375rem;
-	}
-
-	.upload-icon {
-		font-size: 1.5rem;
-		color: var(--content-meta);
-	}
-
-	.upload-text {
-		font-weight: 500;
-		color: var(--deep-text);
-	}
-
-	.upload-hint {
-		font-size: 0.75rem;
-		color: var(--content-meta);
-	}
-
-	.key-input-wrapper {
+	.password-input-wrapper {
 		position: relative;
 	}
 
-	.key-textarea {
+	.password-input {
 		width: 100%;
-		padding: 0.75rem;
+		padding: 0.75rem 2.5rem 0.75rem 0.75rem;
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-md);
-		font-family: "Monaco", "Consolas", monospace;
-		font-size: 0.75rem;
-		line-height: 1.5;
-		resize: vertical;
+		font-size: 0.9375rem;
 		transition: border-color 0.2s;
 		background: var(--card-bg);
 		color: var(--deep-text);
+		font-family: inherit;
 	}
 
-	.key-textarea:focus {
+	.password-input:focus {
 		outline: none;
 		border-color: var(--primary);
 	}
 
 	.clear-btn {
 		position: absolute;
-		top: 0.375rem;
-		right: 0.375rem;
+		top: 50%;
+		right: 0.5rem;
+		transform: translateY(-50%);
 		width: 22px;
 		height: 22px;
 		border: none;
