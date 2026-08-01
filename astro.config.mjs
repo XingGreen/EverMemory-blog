@@ -16,6 +16,8 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/contrib/mhchem.mjs"; // 加载 mhchem 扩展
 import cloudflare from "@astrojs/cloudflare";
 import mdx from "@astrojs/mdx";
+import node from "@astrojs/node";
+import vercel from "@astrojs/vercel";
 import { pluginCollapsible } from "expressive-code-collapsible"; /* Collapsible */
 import { pluginLanguageBadge } from "expressive-code-language-badge"; /* Language Badge */
 import rehypeCallouts from "rehype-callouts";
@@ -50,7 +52,9 @@ const adapter = process.env.CF_WORKERS
 	? cloudflare({
 			prerenderEnvironment: "node",
 		})
-	: undefined;
+	: process.env.VERCEL
+		? vercel()
+		: node({ mode: "standalone" });
 
 // https://astro.build/config
 export default defineConfig({
