@@ -44,7 +44,8 @@ export const zh_CN: Translation = {
 	[Key.musicAudioPlayer]: "音频播放器",
 	[Key.musicDescription]: "查看我的网易云音乐歌单，点击歌单即可切换播放列表",
 	[Key.musicNotConfigured]: "未配置音乐",
-	[Key.musicNotConfiguredDesc]: "请在配置文件中设置网易云音乐用户ID，即可展示您的歌单列表",
+	[Key.musicNotConfiguredDesc]:
+		"请在配置文件中设置网易云音乐用户ID，即可展示您的歌单列表",
 	[Key.musicTotalPlaylists]: "歌单总数",
 	[Key.musicTotalTracks]: "歌曲总数",
 	[Key.musicSource]: "数据来源",
@@ -328,7 +329,7 @@ export const zh_CN: Translation = {
 	[Key.sponsorButton]: "支持与分享",
 	[Key.sponsorButtonText]:
 		"如果这篇文章对你有帮助，欢迎分享给更多人或打赏支持！",
-		
+
 	[Key.shareOnSocial]: "文章分享",
 	[Key.shareOnSocialDescription]: "如果这篇文章对你有帮助，欢迎分享给更多人！",
 

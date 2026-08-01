@@ -1,5 +1,9 @@
+import {
+	clearAuthCookie,
+	generateSessionToken,
+	setAuthCookie,
+} from "@/utils/auth";
 import { verifyPrivateKey } from "@/utils/github-app";
-import { generateSessionToken, setAuthCookie, clearAuthCookie } from "@/utils/auth";
 
 export const prerender = false;
 
@@ -10,21 +14,22 @@ export async function POST({ request }) {
 		let privateKey = body.privateKey;
 
 		if (!privateKey) {
-			console.log(`[Admin Verify] Failed: missing private key`);
+			console.log("[Admin Verify] Failed: missing private key");
 			return new Response(
 				JSON.stringify({ success: false, message: "请提供私钥" }),
 				{ status: 400, headers: { "Content-Type": "application/json" } },
 			);
 		}
 
-		privateKey = privateKey
-			.replace(/\r\n/g, "\n")
-			.replace(/\r/g, "\n")
-			.trim();
+		privateKey = privateKey.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
 
-		console.log(`[Admin Verify] Private key received, length: ${privateKey.length}`);
+		console.log(
+			`[Admin Verify] Private key received, length: ${privateKey.length}`,
+		);
 		const isValid = await verifyPrivateKey(privateKey);
-		console.log(`[Admin Verify] Verification result: ${isValid ? "SUCCESS" : "FAILED"}`);
+		console.log(
+			`[Admin Verify] Verification result: ${isValid ? "SUCCESS" : "FAILED"}`,
+		);
 
 		if (isValid) {
 			const token = generateSessionToken();
@@ -48,7 +53,10 @@ export async function POST({ request }) {
 			{ status: 401, headers: failHeaders },
 		);
 	} catch (error) {
-		console.error(`[Admin Verify] Exception:`, error instanceof Error ? error.stack : error);
+		console.error(
+			"[Admin Verify] Exception:",
+			error instanceof Error ? error.stack : error,
+		);
 		const failHeaders = new Headers({ "Content-Type": "application/json" });
 		clearAuthCookie(failHeaders);
 
@@ -67,8 +75,8 @@ export async function DELETE() {
 	const headers = new Headers({ "Content-Type": "application/json" });
 	clearAuthCookie(headers);
 
-	return new Response(
-		JSON.stringify({ success: true, message: "已退出" }),
-		{ status: 200, headers },
-	);
+	return new Response(JSON.stringify({ success: true, message: "已退出" }), {
+		status: 200,
+		headers,
+	});
 }

@@ -42,9 +42,11 @@ export const en: Translation = {
 	[Key.musicCover]: "Cover",
 	[Key.musicNoCover]: "No cover available",
 	[Key.musicAudioPlayer]: "Audio Player",
-	[Key.musicDescription]: "View my NetEase Cloud Music playlists, click to switch playback",
+	[Key.musicDescription]:
+		"View my NetEase Cloud Music playlists, click to switch playback",
 	[Key.musicNotConfigured]: "Music Not Configured",
-	[Key.musicNotConfiguredDesc]: "Please set your NetEase Cloud Music user ID in the configuration file to display your playlists",
+	[Key.musicNotConfiguredDesc]:
+		"Please set your NetEase Cloud Music user ID in the configuration file to display your playlists",
 	[Key.musicTotalPlaylists]: "Total Playlists",
 	[Key.musicTotalTracks]: "Total Tracks",
 	[Key.musicSource]: "Data Source",
@@ -56,7 +58,8 @@ export const en: Translation = {
 	[Key.musicOfficialPage]: "Official Page",
 	[Key.musicTrackList]: "Track List",
 	[Key.musicNoTracks]: "No tracks",
-	[Key.musicLoadingHint]: "If content doesn't load for a long time, please refresh manually",
+	[Key.musicLoadingHint]:
+		"If content doesn't load for a long time, please refresh manually",
 	[Key.musicMyPlaylists]: "My Playlists",
 	[Key.musicSubscribedPlaylists]: "Subscribed Playlists",
 	[Key.musicPlaylistDesc]: "Description",
@@ -69,7 +72,8 @@ export const en: Translation = {
 	[Key.musicBuildTime]: "Build Time",
 	[Key.musicLoading]: "Loading playlists...",
 	[Key.musicFetchError]: "Failed to fetch data",
-	[Key.musicFetchErrorDesc]: "Failed to fetch playlist data during build. Please check your network connection or try again later",
+	[Key.musicFetchErrorDesc]:
+		"Failed to fetch playlist data during build. Please check your network connection or try again later",
 	[Key.musicSearchPlaceholder]: "Search playlists...",
 	[Key.musicTabAll]: "All",
 	[Key.musicTabMine]: "Mine",
@@ -414,7 +418,8 @@ export const en: Translation = {
 	[Key.searchAlbums]: "Search albums...",
 
 	[Key.app]: "Apps",
-	[Key.appDescription]: "Some useful apps and tools I recommend, hope they help you.",
+	[Key.appDescription]:
+		"Some useful apps and tools I recommend, hope they help you.",
 	[Key.searchApp]: "Search apps...",
 	[Key.appNoItems]: "No apps yet",
 	[Key.appVisitSite]: "Website",

@@ -42,9 +42,11 @@ export const ja: Translation = {
 	[Key.musicCover]: "カバー",
 	[Key.musicNoCover]: "カバーなし",
 	[Key.musicAudioPlayer]: "オーディオプレーヤー",
-	[Key.musicDescription]: "私のネットイーズクラウドミュージックのプレイリストを見る",
+	[Key.musicDescription]:
+		"私のネットイーズクラウドミュージックのプレイリストを見る",
 	[Key.musicNotConfigured]: "音楽が設定されていません",
-	[Key.musicNotConfiguredDesc]: "設定ファイルにネットイーズクラウドミュージックのユーザーIDを設定してください",
+	[Key.musicNotConfiguredDesc]:
+		"設定ファイルにネットイーズクラウドミュージックのユーザーIDを設定してください",
 	[Key.musicTotalPlaylists]: "プレイリスト総数",
 	[Key.musicTotalTracks]: "トラック総数",
 	[Key.musicSource]: "データソース",
@@ -69,7 +71,8 @@ export const ja: Translation = {
 	[Key.musicBuildTime]: "ビルド時間",
 	[Key.musicLoading]: "プレイリストを読み込み中...",
 	[Key.musicFetchError]: "データの取得に失敗しました",
-	[Key.musicFetchErrorDesc]: "ビルド中にプレイリストデータの取得に失敗しました。ネットワーク接続を確認するか、後で再試行してください",
+	[Key.musicFetchErrorDesc]:
+		"ビルド中にプレイリストデータの取得に失敗しました。ネットワーク接続を確認するか、後で再試行してください",
 	[Key.musicSearchPlaceholder]: "プレイリストを検索...",
 	[Key.musicTabAll]: "すべて",
 	[Key.musicTabMine]: "マイ",
