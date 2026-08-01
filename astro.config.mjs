@@ -53,7 +53,11 @@ const adapter = process.env.CF_WORKERS
 			prerenderEnvironment: "node",
 		})
 	: process.env.VERCEL
-		? vercel()
+		? vercel({
+			webAnalytics: {
+				enabled: true,
+			},
+		})
 		: node({ mode: "standalone" });
 
 // https://astro.build/config
