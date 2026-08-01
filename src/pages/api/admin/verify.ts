@@ -1,5 +1,4 @@
-import { verifyPrivateKey } from "@/utils/github-app";
-import { generateSessionToken, setAuthCookie, clearAuthCookie } from "@/utils/auth";
+import { verifyAdminPassword, generateSessionToken, setAuthCookie, clearAuthCookie } from "@/utils/auth";
 
 export const prerender = false;
 
@@ -7,23 +6,18 @@ export async function POST({ request }) {
 	try {
 		const text = await request.text();
 		const body = JSON.parse(text);
-		let privateKey = body.privateKey;
+		const { password } = body;
 
-		if (!privateKey) {
-			console.log(`[Admin Verify] Failed: missing private key`);
+		if (!password) {
+			console.log(`[Admin Verify] Failed: missing password`);
 			return new Response(
-				JSON.stringify({ success: false, message: "请提供私钥" }),
+				JSON.stringify({ success: false, message: "请输入管理密码" }),
 				{ status: 400, headers: { "Content-Type": "application/json" } },
 			);
 		}
 
-		privateKey = privateKey
-			.replace(/\r\n/g, "\n")
-			.replace(/\r/g, "\n")
-			.trim();
-
-		console.log(`[Admin Verify] Private key received, length: ${privateKey.length}`);
-		const isValid = await verifyPrivateKey(privateKey);
+		console.log(`[Admin Verify] Password received, length: ${password.length}`);
+		const isValid = verifyAdminPassword(password);
 		console.log(`[Admin Verify] Verification result: ${isValid ? "SUCCESS" : "FAILED"}`);
 
 		if (isValid) {
@@ -44,7 +38,7 @@ export async function POST({ request }) {
 		clearAuthCookie(failHeaders);
 
 		return new Response(
-			JSON.stringify({ success: false, message: "私钥无效" }),
+			JSON.stringify({ success: false, message: "管理密码错误" }),
 			{ status: 401, headers: failHeaders },
 		);
 	} catch (error) {

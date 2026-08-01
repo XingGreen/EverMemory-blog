@@ -25,7 +25,6 @@
 	type ViewMode = "list" | "edit" | "create";
 
 	let isVerified = $state(false);
-	let privateKey = $state("");
 	let posts = $state<Post[]>([]);
 	let isLoading = $state(true);
 	let error = $state("");
@@ -37,10 +36,8 @@
 
 	onMount(() => {
 		const stored = sessionStorage.getItem("admin_verified");
-		const storedKey = sessionStorage.getItem("admin_private_key");
-		if (stored === "true" && storedKey) {
+		if (stored === "true") {
 			isVerified = true;
-			privateKey = storedKey;
 			loadPosts();
 		}
 	});
@@ -63,24 +60,20 @@
 		}
 	}
 
-	function handleVerify(key: string, success: boolean) {
+	function handleVerify(success: boolean) {
 		if (success) {
 			isVerified = true;
-			privateKey = key;
 			sessionStorage.setItem("admin_verified", "true");
-			sessionStorage.setItem("admin_private_key", key);
 			loadPosts();
 			showToast("验证成功", "success");
 		} else {
-			showToast("私钥验证失败", "error");
+			showToast("密码验证失败", "error");
 		}
 	}
 
 	function handleLogout() {
 		isVerified = false;
-		privateKey = "";
 		sessionStorage.removeItem("admin_verified");
-		sessionStorage.removeItem("admin_private_key");
 		showToast("已退出", "success");
 	}
 

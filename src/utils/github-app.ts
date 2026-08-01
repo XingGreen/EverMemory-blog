@@ -60,48 +60,6 @@ export function getPrivateKey(): string {
 	);
 }
 
-function normalizeKey(key: string): string {
-	return key
-		.replace(/\r\n/g, "\n")
-		.replace(/\r/g, "\n")
-		.trim();
-}
-
-export async function verifyPrivateKey(privateKeyContent: string): Promise<boolean> {
-	try {
-		if (!privateKeyContent || !privateKeyContent.includes("PRIVATE KEY")) {
-			return false;
-		}
-
-		const key = crypto.createPrivateKey(privateKeyContent);
-		if (key.type !== "private" || key.asymmetricKeyType !== "rsa") {
-			return false;
-		}
-
-		const normalizedInput = normalizeKey(privateKeyContent);
-		const storedKey = getPrivateKey();
-		const normalizedStored = normalizeKey(storedKey);
-
-		const inputFingerprint = crypto.createHash("sha256").update(normalizedInput).digest();
-		const storedFingerprint = crypto.createHash("sha256").update(normalizedStored).digest();
-
-		if (inputFingerprint.length !== storedFingerprint.length) {
-			return false;
-		}
-
-		return crypto.timingSafeEqual(inputFingerprint, storedFingerprint);
-	} catch (error) {
-		const msg = error instanceof Error ? error.message : String(error);
-		// 区分"服务端未配置私钥"和"用户提交的私钥无效"
-		if (msg.includes("私钥未找到")) {
-			console.error("[Verify] 服务端私钥未配置:", msg);
-		} else {
-			console.error("[Verify] 私钥验证异常:", msg);
-		}
-		return false;
-	}
-}
-
 function createJwt(privateKey: string, appId: string): string {
 	const header = { alg: "RS256", typ: "JWT" };
 	const now = Math.floor(Date.now() / 1000);
