@@ -1,7 +1,38 @@
 import crypto from "node:crypto";
 
-const JWT_SECRET = import.meta.env.ADMIN_JWT_SECRET || "firefly-admin-secret-key-change-in-production";
 const JWT_EXPIRY_HOURS = 1;
+
+let cachedSecret: string | null = null;
+
+/**
+ * 获取 JWT 签名密钥
+ * - 优先读取 ADMIN_JWT_SECRET 环境变量
+ * - 生产环境未配置时抛错，防止使用可预测的默认密钥导致令牌被伪造
+ * - 开发环境未配置时生成临时随机密钥（进程重启后失效）并打印警告
+ */
+function getJwtSecret(): string {
+  if (cachedSecret) return cachedSecret;
+
+  const envSecret = import.meta.env.ADMIN_JWT_SECRET;
+  if (envSecret) {
+    cachedSecret = envSecret;
+    return envSecret;
+  }
+
+  if (import.meta.env.PROD) {
+    const msg =
+      "ADMIN_JWT_SECRET 环境变量未设置。请参考 .env.example 配置一个足够随机的密钥后再启动生产服务。";
+    console.error(`[Auth] ${msg}`);
+    throw new Error(msg);
+  }
+
+  // 仅开发环境：生成临时随机密钥（进程重启后失效）
+  cachedSecret = crypto.randomBytes(32).toString("hex");
+  console.warn(
+    "[Auth] ADMIN_JWT_SECRET 未配置，已生成临时开发密钥。会话将在进程重启后失效，请尽快在 .env.local 中配置 ADMIN_JWT_SECRET。",
+  );
+  return cachedSecret;
+}
 
 interface JwtPayload {
   sub: string;
@@ -32,7 +63,7 @@ export function generateSessionToken(): string {
   const signInput = `${headerB64}.${payloadB64}`;
 
   const signature = crypto
-    .createHmac("sha256", JWT_SECRET)
+    .createHmac("sha256", getJwtSecret())
     .update(signInput)
     .digest("base64")
     .replace(/\+/g, "-")
@@ -53,7 +84,7 @@ export function verifySessionToken(token: string): boolean {
     const signInput = `${headerB64}.${payloadB64}`;
 
     const expectedSignature = crypto
-      .createHmac("sha256", JWT_SECRET)
+      .createHmac("sha256", getJwtSecret())
       .update(signInput)
       .digest("base64")
       .replace(/\+/g, "-")

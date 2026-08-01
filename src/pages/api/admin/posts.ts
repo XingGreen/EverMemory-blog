@@ -38,11 +38,11 @@ export async function GET({ request }) {
 			headers: { "Content-Type": "application/json" },
 		});
 	} catch (error) {
+		console.error("[Admin Posts] Exception:", error instanceof Error ? error.stack : error);
 		return new Response(
 			JSON.stringify({
 				success: false,
 				message: "获取文章列表失败",
-				error: error instanceof Error ? error.message : String(error),
 			}),
 			{ status: 500, headers: { "Content-Type": "application/json" } },
 		);
