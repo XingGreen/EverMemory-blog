@@ -56,7 +56,6 @@ export async function POST({ request }) {
 			JSON.stringify({
 				success: false,
 				message: "验证失败",
-				error: error instanceof Error ? error.message : String(error),
 			}),
 			{ status: 500, headers: failHeaders },
 		);

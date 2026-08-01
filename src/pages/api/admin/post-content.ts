@@ -2,6 +2,7 @@ import { getCollection } from "astro:content";
 import fs from "node:fs";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
+import { isValidPostSlug } from "@/utils/github-app";
 
 export const prerender = false;
 
@@ -17,6 +18,13 @@ export async function GET({ request, url }) {
 		if (!slug) {
 			return new Response(
 				JSON.stringify({ success: false, message: "缺少文章标识" }),
+				{ status: 400, headers: { "Content-Type": "application/json" } },
+			);
+		}
+
+		if (!isValidPostSlug(slug)) {
+			return new Response(
+				JSON.stringify({ success: false, message: "文章标识不合法" }),
 				{ status: 400, headers: { "Content-Type": "application/json" } },
 			);
 		}
@@ -65,11 +73,11 @@ export async function GET({ request, url }) {
 			{ status: 404, headers: { "Content-Type": "application/json" } },
 		);
 	} catch (error) {
+		console.error("[Admin PostContent] Exception:", error instanceof Error ? error.stack : error);
 		return new Response(
 			JSON.stringify({
 				success: false,
 				message: "获取文章内容失败",
-				error: error instanceof Error ? error.message : String(error),
 			}),
 			{ status: 500, headers: { "Content-Type": "application/json" } },
 		);

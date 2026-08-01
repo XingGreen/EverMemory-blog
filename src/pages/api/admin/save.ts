@@ -1,4 +1,4 @@
-import { saveFileToGitHub, saveFileLocally } from "@/utils/github-app";
+import { saveFileToGitHub, saveFileLocally, isValidPostSlug } from "@/utils/github-app";
 import { requireAuth } from "@/utils/auth";
 
 export const prerender = false;
@@ -16,6 +16,13 @@ export async function POST({ request }) {
 		if (!slug || !content) {
 			return new Response(
 				JSON.stringify({ success: false, message: "缺少必要参数" }),
+				{ status: 400, headers: { "Content-Type": "application/json" } },
+			);
+		}
+
+		if (!isValidPostSlug(slug)) {
+			return new Response(
+				JSON.stringify({ success: false, message: "文章标识不合法" }),
 				{ status: 400, headers: { "Content-Type": "application/json" } },
 			);
 		}
@@ -59,11 +66,11 @@ export async function POST({ request }) {
 			{ status: 500, headers: { "Content-Type": "application/json" } },
 		);
 	} catch (error) {
+		console.error("[Admin Save] Exception:", error instanceof Error ? error.stack : error);
 		return new Response(
 			JSON.stringify({
 				success: false,
 				message: "保存失败",
-				error: error instanceof Error ? error.message : String(error),
 			}),
 			{ status: 500, headers: { "Content-Type": "application/json" } },
 		);

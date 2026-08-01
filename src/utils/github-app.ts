@@ -2,19 +2,46 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-const GITHUB_APP_ID = import.meta.env.GITHUB_APP_ID || "4423412";
+const GITHUB_APP_ID = import.meta.env.GITHUB_APP_ID || "";
 const GITHUB_OWNER = import.meta.env.GITHUB_OWNER || "";
 const GITHUB_REPO = import.meta.env.GITHUB_REPO || "";
 const GITHUB_BRANCH = import.meta.env.GITHUB_BRANCH || "main";
-const GITHUB_INSTALLATION_ID = import.meta.env.GITHUB_INSTALLATION_ID || "149804847";
+const GITHUB_INSTALLATION_ID = import.meta.env.GITHUB_INSTALLATION_ID || "";
 
 let privateKeyCache: string | null = null;
+
+// Token 缓存：GitHub installation token 有效期 1 小时，避免频繁请求 API
+let tokenCache: { token: string; expiresAt: number } | null = null;
+const TOKEN_SAFETY_MARGIN_MS = 5 * 60 * 1000; // 提前 5 分钟过期，避免边界情况
 
 export function getPrivateKey(): string {
 	if (privateKeyCache) {
 		return privateKeyCache;
 	}
 
+	// 1. 优先从环境变量读取（Vercel 等生产环境）
+	//    支持纯文本或 Base64 编码（避免环境变量中的换行符问题）
+	const envKey = import.meta.env.GITHUB_PRIVATE_KEY;
+	if (envKey) {
+		// 如果以 -----BEGIN 开头，当作纯文本
+		if (envKey.includes("-----BEGIN")) {
+			privateKeyCache = envKey;
+			return envKey;
+		}
+		// 否则尝试 Base64 解码
+		try {
+			const decoded = Buffer.from(envKey, "base64").toString("utf-8");
+			if (decoded.includes("-----BEGIN")) {
+				privateKeyCache = decoded;
+				return decoded;
+			}
+			console.error("[GitHub Key] GITHUB_PRIVATE_KEY Base64 解码后不包含有效 PEM 头，尝试文件读取");
+		} catch {
+			console.error("[GitHub Key] GITHUB_PRIVATE_KEY Base64 解码失败，尝试文件读取");
+		}
+	}
+
+	// 2. 回退到文件系统读取（本地开发）
 	const possiblePaths = [
 		path.resolve(process.cwd(), ".key/emblog-ghapp.2026-07-29.private-key.pem"),
 		path.resolve(process.cwd(), ".keys/emblog-ghapp.2026-07-29.private-key.pem"),
@@ -28,7 +55,9 @@ export function getPrivateKey(): string {
 		}
 	}
 
-	throw new Error("GitHub App 私钥文件未找到");
+	throw new Error(
+		"GitHub App 私钥未找到。请在环境变量 GITHUB_PRIVATE_KEY 中配置（纯文本或 Base64 编码），或将私钥文件放在 .key/ 目录下。",
+	);
 }
 
 function normalizeKey(key: string): string {
@@ -62,7 +91,13 @@ export async function verifyPrivateKey(privateKeyContent: string): Promise<boole
 
 		return crypto.timingSafeEqual(inputFingerprint, storedFingerprint);
 	} catch (error) {
-		console.error("Private key verification failed:", error instanceof Error ? error.message : error);
+		const msg = error instanceof Error ? error.message : String(error);
+		// 区分"服务端未配置私钥"和"用户提交的私钥无效"
+		if (msg.includes("私钥未找到")) {
+			console.error("[Verify] 服务端私钥未配置:", msg);
+		} else {
+			console.error("[Verify] 私钥验证异常:", msg);
+		}
 		return false;
 	}
 }
@@ -94,9 +129,9 @@ function createJwt(privateKey: string, appId: string): string {
 	return `${signInput}.${signature}`;
 }
 
-async function getInstallationTokenFromGitHub(jwt: string, installationId: string): Promise<string> {
+async function getInstallationTokenFromGitHub(jwt: string, installationId: string): Promise<{ token: string; expiresAt: number }> {
 	console.log(`[GitHub Token] Requesting installation token for app: ${GITHUB_APP_ID}, installation: ${installationId}`);
-	
+
 	const response = await fetch(
 		`https://api.github.com/app/installations/${installationId}/access_tokens`,
 		{
@@ -117,17 +152,27 @@ async function getInstallationTokenFromGitHub(jwt: string, installationId: strin
 
 	console.log(`[GitHub Token] Successfully obtained installation token`);
 	const data = await response.json();
-	return data.token;
+	// GitHub 返回 expires_at 为 ISO 字符串，转为时间戳
+	const expiresAt = data.expires_at ? new Date(data.expires_at).getTime() : Date.now() + 50 * 60 * 1000;
+	return { token: data.token, expiresAt };
 }
 
 export async function getInstallationToken(): Promise<string> {
+	// 1. 检查缓存：token 未过期则直接复用
+	if (tokenCache && Date.now() < tokenCache.expiresAt - TOKEN_SAFETY_MARGIN_MS) {
+		console.log(`[GitHub Token] Using cached token, expires in ${Math.round((tokenCache.expiresAt - Date.now()) / 1000)}s`);
+		return tokenCache.token;
+	}
+
 	try {
 		console.log(`[GitHub Token] Initializing token request...`);
 		const privateKey = getPrivateKey();
 		console.log(`[GitHub Token] Private key loaded, creating JWT...`);
 		const jwt = createJwt(privateKey, GITHUB_APP_ID);
 		console.log(`[GitHub Token] JWT created, requesting installation token...`);
-		return await getInstallationTokenFromGitHub(jwt, GITHUB_INSTALLATION_ID);
+		const result = await getInstallationTokenFromGitHub(jwt, GITHUB_INSTALLATION_ID);
+		tokenCache = result;
+		return result.token;
 	} catch (error) {
 		console.error(`[GitHub Token] Exception:`, error instanceof Error ? error.message : error);
 		throw error;
@@ -179,6 +224,7 @@ export async function getFileFromGitHub(filePath: string): Promise<string | null
 				headers: {
 					Authorization: `Bearer ${token}`,
 					Accept: "application/vnd.github.v3.raw",
+					"User-Agent": "Firefly-Blog",
 				},
 			},
 		);
@@ -377,6 +423,14 @@ export function deleteFileLocally(relativePath: string): boolean {
 		);
 		return false;
 	}
+}
+
+/**
+ * 验证文章 slug 是否合法，防止路径穿越
+ * 仅允许字母、数字、连字符、下划线，禁止路径分隔符或 ".."
+ */
+export function isValidPostSlug(slug: unknown): boolean {
+	return typeof slug === "string" && /^[A-Za-z0-9_-]+$/.test(slug);
 }
 
 export function getConfig() {
