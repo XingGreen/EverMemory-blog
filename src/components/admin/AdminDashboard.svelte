@@ -1,158 +1,166 @@
 <script lang="ts">
-	import { onMount } from "svelte";
-	import Icon from "@/components/common/Icon.svelte";
-	import VerifyScreen from "./VerifyScreen.svelte";
-	import PostList from "./PostList.svelte";
-	import PostEditor from "./PostEditor.svelte";
-	import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
+import { onMount } from "svelte";
+import Icon from "@/components/common/Icon.svelte";
+import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
+import PostEditor from "./PostEditor.svelte";
+import PostList from "./PostList.svelte";
+import VerifyScreen from "./VerifyScreen.svelte";
 
-	type Post = {
-		id: string;
-		slug: string;
-		title: string;
-		author: string;
-		category: string;
-		tags: string[];
-		published: string;
-		updated: string | null;
-		draft: boolean;
-		description: string;
-		image: string;
-		pinned: boolean;
-		filePath: string;
-	};
+type Post = {
+	id: string;
+	slug: string;
+	title: string;
+	author: string;
+	category: string;
+	tags: string[];
+	published: string;
+	updated: string | null;
+	draft: boolean;
+	description: string;
+	image: string;
+	pinned: boolean;
+	filePath: string;
+};
 
-	type ViewMode = "list" | "edit" | "create";
+type ViewMode = "list" | "edit" | "create";
 
-	let isVerified = $state(false);
-	let privateKey = $state("");
-	let posts = $state<Post[]>([]);
-	let isLoading = $state(true);
-	let error = $state("");
-	let viewMode = $state<ViewMode>("list");
-	let editingPost = $state<Post | null>(null);
-	let showDeleteModal = $state(false);
-	let deletingPost = $state<Post | null>(null);
-	let toast = $state<{ message: string; type: "success" | "error" } | null>(null);
+let isVerified = $state(false);
+let privateKey = $state("");
+let posts = $state<Post[]>([]);
+let isLoading = $state(true);
+let error = $state("");
+let viewMode = $state<ViewMode>("list");
+let editingPost = $state<Post | null>(null);
+let showDeleteModal = $state(false);
+let deletingPost = $state<Post | null>(null);
+let toast = $state<{ message: string; type: "success" | "error" } | null>(null);
 
-	onMount(() => {
-		const stored = sessionStorage.getItem("admin_verified");
-		const storedKey = sessionStorage.getItem("admin_private_key");
-		if (stored === "true" && storedKey) {
-			isVerified = true;
-			privateKey = storedKey;
-			loadPosts();
-		}
-	});
-
-	async function loadPosts() {
-		isLoading = true;
-		error = "";
-		try {
-			const response = await fetch("/api/admin/posts/");
-			const data = await response.json();
-			if (data.success) {
-				posts = data.posts;
-			} else {
-				error = data.message || "获取文章列表失败";
-			}
-		} catch {
-			error = "网络请求失败";
-		} finally {
-			isLoading = false;
-		}
-	}
-
-	function handleVerify(key: string, success: boolean) {
-		if (success) {
-			isVerified = true;
-			privateKey = key;
-			sessionStorage.setItem("admin_verified", "true");
-			sessionStorage.setItem("admin_private_key", key);
-			loadPosts();
-			showToast("验证成功", "success");
-		} else {
-			showToast("私钥验证失败", "error");
-		}
-	}
-
-	function handleLogout() {
-		isVerified = false;
-		privateKey = "";
-		sessionStorage.removeItem("admin_verified");
-		sessionStorage.removeItem("admin_private_key");
-		showToast("已退出", "success");
-	}
-
-	function handleEditPost(post: Post) {
-		editingPost = post;
-		viewMode = "edit";
-	}
-
-	function handleCreatePost() {
-		editingPost = null;
-		viewMode = "create";
-	}
-
-	function handleSaveSuccess() {
-		viewMode = "list";
-		editingPost = null;
+onMount(() => {
+	const stored = sessionStorage.getItem("admin_verified");
+	const storedKey = sessionStorage.getItem("admin_private_key");
+	if (stored === "true" && storedKey) {
+		isVerified = true;
+		privateKey = storedKey;
 		loadPosts();
-		showToast("保存成功", "success");
 	}
+});
 
-	function handleCancelEdit() {
-		viewMode = "list";
-		editingPost = null;
-	}
-
-	function handleDeleteClick(post: Post) {
-		deletingPost = post;
-		showDeleteModal = true;
-	}
-
-	async function handleConfirmDelete() {
-		if (!deletingPost) return;
-
-		try {
-			const response = await fetch("/api/admin/delete/", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					slug: deletingPost.slug,
-					title: deletingPost.title,
-				}),
-			});
-			const data = await response.json();
-			if (data.success) {
-				showToast("删除成功", "success");
-				loadPosts();
-			} else {
-				console.error("[Admin] 删除失败:", data.message);
-				showToast(data.message || "删除失败", "error", 10000);
-			}
-		} catch (err) {
-			console.error("[Admin] 删除请求异常:", err);
-			showToast(`删除请求失败: ${err instanceof Error ? err.message : String(err)}`, "error", 10000);
-		} finally {
-			showDeleteModal = false;
-			deletingPost = null;
+async function loadPosts() {
+	isLoading = true;
+	error = "";
+	try {
+		const response = await fetch("/api/admin/posts/");
+		const data = await response.json();
+		if (data.success) {
+			posts = data.posts;
+		} else {
+			error = data.message || "获取文章列表失败";
 		}
+	} catch {
+		error = "网络请求失败";
+	} finally {
+		isLoading = false;
 	}
+}
 
-	function showToast(message: string, type: "success" | "error", duration = 3000) {
-		toast = { message, type };
-		if (type === "error") {
-			console.error("[Toast] Error:", message);
+function handleVerify(key: string, success: boolean) {
+	if (success) {
+		isVerified = true;
+		privateKey = key;
+		sessionStorage.setItem("admin_verified", "true");
+		sessionStorage.setItem("admin_private_key", key);
+		loadPosts();
+		showToast("验证成功", "success");
+	} else {
+		showToast("私钥验证失败", "error");
+	}
+}
+
+function handleLogout() {
+	isVerified = false;
+	privateKey = "";
+	sessionStorage.removeItem("admin_verified");
+	sessionStorage.removeItem("admin_private_key");
+	showToast("已退出", "success");
+}
+
+function handleEditPost(post: Post) {
+	editingPost = post;
+	viewMode = "edit";
+}
+
+function handleCreatePost() {
+	editingPost = null;
+	viewMode = "create";
+}
+
+function handleSaveSuccess() {
+	viewMode = "list";
+	editingPost = null;
+	loadPosts();
+	showToast("保存成功", "success");
+}
+
+function handleCancelEdit() {
+	viewMode = "list";
+	editingPost = null;
+}
+
+function handleDeleteClick(post: Post) {
+	deletingPost = post;
+	showDeleteModal = true;
+}
+
+async function handleConfirmDelete() {
+	if (!deletingPost) return;
+
+	try {
+		const response = await fetch("/api/admin/delete/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				slug: deletingPost.slug,
+				title: deletingPost.title,
+			}),
+		});
+		const data = await response.json();
+		if (data.success) {
+			showToast("删除成功", "success");
+			loadPosts();
+		} else {
+			console.error("[Admin] 删除失败:", data.message);
+			showToast(data.message || "删除失败", "error", 10000);
 		}
-		setTimeout(() => {
-			toast = null;
-		}, duration);
+	} catch (err) {
+		console.error("[Admin] 删除请求异常:", err);
+		showToast(
+			`删除请求失败: ${err instanceof Error ? err.message : String(err)}`,
+			"error",
+			10000,
+		);
+	} finally {
+		showDeleteModal = false;
+		deletingPost = null;
 	}
+}
 
-	function closeToast() {
+function showToast(
+	message: string,
+	type: "success" | "error",
+	duration = 3000,
+) {
+	toast = { message, type };
+	if (type === "error") {
+		console.error("[Toast] Error:", message);
+	}
+	setTimeout(() => {
 		toast = null;
-	}
+	}, duration);
+}
+
+function closeToast() {
+	toast = null;
+}
 </script>
 
 {#if !isVerified}

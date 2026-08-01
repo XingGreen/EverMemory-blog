@@ -44,7 +44,8 @@ export const ru: Translation = {
 	[Key.musicAudioPlayer]: "Аудиоплеер",
 	[Key.musicDescription]: "Посмотреть мои плейлисты NetEase Cloud Music",
 	[Key.musicNotConfigured]: "Музыка не настроена",
-	[Key.musicNotConfiguredDesc]: "Пожалуйста, установите ID пользователя NetEase Cloud Music в файле конфигурации",
+	[Key.musicNotConfiguredDesc]:
+		"Пожалуйста, установите ID пользователя NetEase Cloud Music в файле конфигурации",
 	[Key.musicTotalPlaylists]: "Всего плейлистов",
 	[Key.musicTotalTracks]: "Всего треков",
 	[Key.musicSource]: "Источник данных",
@@ -56,7 +57,8 @@ export const ru: Translation = {
 	[Key.musicOfficialPage]: "Официальная страница",
 	[Key.musicTrackList]: "Список треков",
 	[Key.musicNoTracks]: "Нет треков",
-	[Key.musicLoadingHint]: "Если контент не загружается долгое время, обновите вручную",
+	[Key.musicLoadingHint]:
+		"Если контент не загружается долгое время, обновите вручную",
 	[Key.musicMyPlaylists]: "Мои плейлисты",
 	[Key.musicSubscribedPlaylists]: "Подписанные плейлисты",
 	[Key.musicPlaylistDesc]: "Описание",
@@ -69,7 +71,8 @@ export const ru: Translation = {
 	[Key.musicBuildTime]: "Время сборки",
 	[Key.musicLoading]: "Загрузка плейлистов...",
 	[Key.musicFetchError]: "Ошибка получения данных",
-	[Key.musicFetchErrorDesc]: "Ошибка получения данных плейлиста во время сборки. Проверьте подключение к сети или повторите попытку позже",
+	[Key.musicFetchErrorDesc]:
+		"Ошибка получения данных плейлиста во время сборки. Проверьте подключение к сети или повторите попытку позже",
 	[Key.musicSearchPlaceholder]: "Поиск плейлистов...",
 	[Key.musicTabAll]: "Все",
 	[Key.musicTabMine]: "Мои",

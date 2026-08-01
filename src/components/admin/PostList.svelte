@@ -1,56 +1,56 @@
 <script lang="ts">
-	import Icon from "@/components/common/Icon.svelte";
+import Icon from "@/components/common/Icon.svelte";
 
-	let {
-		posts,
-		isLoading,
-		error,
-		onEdit,
-		onDelete,
-		onRefresh,
-	}: {
-		posts: any[];
-		isLoading: boolean;
-		error: string;
-		onEdit: (post: any) => void;
-		onDelete: (post: any) => void;
-		onRefresh: () => void;
-	} = $props();
+let {
+	posts,
+	isLoading,
+	error,
+	onEdit,
+	onDelete,
+	onRefresh,
+}: {
+	posts: any[];
+	isLoading: boolean;
+	error: string;
+	onEdit: (post: any) => void;
+	onDelete: (post: any) => void;
+	onRefresh: () => void;
+} = $props();
 
-	let searchTerm = $state("");
-	let statusFilter = $state<"all" | "published" | "draft">("all");
+let searchTerm = $state("");
+let statusFilter = $state<"all" | "published" | "draft">("all");
 
-	const filteredPosts = $derived.by(() => {
-		let result = [...posts];
+const filteredPosts = $derived.by(() => {
+	let result = [...posts];
 
-		if (searchTerm) {
-			const term = searchTerm.toLowerCase();
-			result = result.filter(
-				(post) =>
-					post.title.toLowerCase().includes(term) ||
-					post.author.toLowerCase().includes(term) ||
-					post.category.toLowerCase().includes(term) ||
-					post.tags.some((tag: string) => tag.toLowerCase().includes(term)),
-			);
-		}
-
-		if (statusFilter === "published") {
-			result = result.filter((post) => !post.draft);
-		} else if (statusFilter === "draft") {
-			result = result.filter((post) => post.draft);
-		}
-
-		return result;
-	});
-
-	function formatDate(dateStr: string): string {
-		const date = new Date(dateStr);
-		return date.toLocaleDateString("zh-CN", {
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
+	if (searchTerm) {
+		const term = searchTerm.toLowerCase();
+		result = result.filter(
+			(post) =>
+				post.title.toLowerCase().includes(term) ||
+				post.author.toLowerCase().includes(term) ||
+				post.category.toLowerCase().includes(term) ||
+				post.tags.some((tag: string) => tag.toLowerCase().includes(term)),
+		);
 	}
+
+	if (statusFilter === "published") {
+		result = result.filter((post) => !post.draft);
+	} else if (statusFilter === "draft") {
+		result = result.filter((post) => post.draft);
+	}
+
+	return result;
+});
+
+function formatDate(dateStr: string): string {
+	const date = new Date(dateStr);
+	return date.toLocaleDateString("zh-CN", {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+	});
+}
 </script>
 
 <div class="card-base post-list-container">

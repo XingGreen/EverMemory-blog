@@ -1,34 +1,38 @@
 <script lang="ts">
-	import Icon from "@/components/common/Icon.svelte";
+import Icon from "@/components/common/Icon.svelte";
 
-	let { title, onConfirm, onCancel }: {
-		title: string;
-		onConfirm: () => void;
-		onCancel: () => void;
-	} = $props();
+let {
+	title,
+	onConfirm,
+	onCancel,
+}: {
+	title: string;
+	onConfirm: () => void;
+	onCancel: () => void;
+} = $props();
 
-	let confirmText = $state("");
-	let isSubmitting = $state(false);
-	let shakeError = $state(false);
+let confirmText = $state("");
+let isSubmitting = $state(false);
+let shakeError = $state(false);
 
-	function handleConfirm() {
-		if (confirmText !== title) {
-			shakeError = true;
-			setTimeout(() => {
-				shakeError = false;
-			}, 500);
-			return;
-		}
-
-		isSubmitting = true;
-		onConfirm();
+function handleConfirm() {
+	if (confirmText !== title) {
+		shakeError = true;
+		setTimeout(() => {
+			shakeError = false;
+		}, 500);
+		return;
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === "Escape") {
-			onCancel();
-		}
+	isSubmitting = true;
+	onConfirm();
+}
+
+function handleKeydown(e: KeyboardEvent) {
+	if (e.key === "Escape") {
+		onCancel();
 	}
+}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

@@ -1,5 +1,5 @@
-import { deleteFileFromGitHub, deleteFileLocally } from "@/utils/github-app";
 import { requireAuth } from "@/utils/auth";
+import { deleteFileFromGitHub, deleteFileLocally } from "@/utils/github-app";
 
 export const prerender = false;
 
@@ -21,7 +21,7 @@ export async function POST({ request }) {
 		}
 
 		console.log(`[Admin Delete] Slug: ${slug}`);
-		
+
 		const filePath = `src/content/posts/${slug}.md`;
 		const commitMessage = `delete post: ${title || slug} via admin dashboard`;
 
@@ -34,7 +34,9 @@ export async function POST({ request }) {
 			await deleteFileFromGitHub(filePath, commitMessage);
 		} catch (err) {
 			githubError = err instanceof Error ? err.message : String(err);
-			console.log(`[Admin Delete] GitHub delete failed (but local was deleted): ${githubError}`);
+			console.log(
+				`[Admin Delete] GitHub delete failed (but local was deleted): ${githubError}`,
+			);
 		}
 
 		// 只要本地删除成功就算成功（GitHub 失败时给出提示）
@@ -61,7 +63,9 @@ export async function POST({ request }) {
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		console.log(`[Admin Delete] Exception: ${errorMessage}`);
-		console.log(`[Admin Delete] Stack: ${error instanceof Error ? error.stack : "no stack"}`);
+		console.log(
+			`[Admin Delete] Stack: ${error instanceof Error ? error.stack : "no stack"}`,
+		);
 		return new Response(
 			JSON.stringify({
 				success: false,

@@ -1,152 +1,158 @@
 <script lang="ts">
-	import { onMount } from "svelte";
-	import Icon from "@/components/common/Icon.svelte";
+import { onMount } from "svelte";
+import Icon from "@/components/common/Icon.svelte";
 
-	let {
-		post,
-		mode,
-		onSave,
-		onCancel,
-		onError,
-	}: {
-		post: any;
-		mode: "edit" | "create";
-		onSave: () => void;
-		onCancel: () => void;
-		onError: (msg: string) => void;
-	} = $props();
+let {
+	post,
+	mode,
+	onSave,
+	onCancel,
+	onError,
+}: {
+	post: any;
+	mode: "edit" | "create";
+	onSave: () => void;
+	onCancel: () => void;
+	onError: (msg: string) => void;
+} = $props();
 
-	let title = $state("");
-	let author = $state("");
-	let category = $state("");
-	let description = $state("");
-	let content = $state("");
-	let slug = $state("");
-	let published = $state("");
-	let isDraft = $state(false);
-	let tagInput = $state("");
-	let tags = $state<string[]>([]);
-	let isSaving = $state(false);
-	let activeTab = $state<"editor" | "preview">("editor");
-	let isLoadingContent = $state(false);
+let title = $state("");
+let author = $state("");
+let category = $state("");
+let description = $state("");
+let content = $state("");
+let slug = $state("");
+let published = $state("");
+let isDraft = $state(false);
+let tagInput = $state("");
+let tags = $state<string[]>([]);
+let isSaving = $state(false);
+let activeTab = $state<"editor" | "preview">("editor");
+let isLoadingContent = $state(false);
 
-	$effect(() => {
-		title = post?.title || "";
-		author = post?.author || "";
-		category = post?.category || "";
-		description = post?.description || "";
-		slug = post?.slug || "";
-		published = post?.published ? formatDate(post.published) : new Date().toISOString().split("T")[0];
-		isDraft = post?.draft || false;
-		tags = [...(post?.tags || [])];
-		isLoadingContent = mode === "edit";
-	});
+$effect(() => {
+	title = post?.title || "";
+	author = post?.author || "";
+	category = post?.category || "";
+	description = post?.description || "";
+	slug = post?.slug || "";
+	published = post?.published
+		? formatDate(post.published)
+		: new Date().toISOString().split("T")[0];
+	isDraft = post?.draft || false;
+	tags = [...(post?.tags || [])];
+	isLoadingContent = mode === "edit";
+});
 
-	function formatDate(dateStr: string): string {
-		return new Date(dateStr).toISOString().split("T")[0];
+function formatDate(dateStr: string): string {
+	return new Date(dateStr).toISOString().split("T")[0];
+}
+
+function generateSlug(title: string): string {
+	if (mode === "create" && !slug && title) {
+		slug = title
+			.toLowerCase()
+			.replace(/[^\w\u4e00-\u9fa5]+/g, "-")
+			.replace(/^-+|-+$/g, "")
+			.substring(0, 100);
 	}
+}
 
-	function generateSlug(title: string): string {
-		if (mode === "create" && !slug && title) {
-			slug = title
-				.toLowerCase()
-				.replace(/[^\w\u4e00-\u9fa5]+/g, "-")
-				.replace(/^-+|-+$/g, "")
-				.substring(0, 100);
-		}
+$effect(() => {
+	if (mode === "create" && !slug && title) {
+		generateSlug(title);
 	}
+});
 
-	$effect(() => {
-		if (mode === "create" && !slug && title) {
-			generateSlug(title);
-		}
-	});
-
-	async function loadContent() {
-		if (mode === "edit" && post?.slug) {
-			isLoadingContent = true;
-			try {
-				const response = await fetch(`/api/admin/post-content/?slug=${post.slug}`);
-				const data = await response.json();
-				if (data.success && data.content) {
-					content = data.content;
-				} else {
-					content = "";
-				}
-			} catch {
-				content = "";
-			} finally {
-				isLoadingContent = false;
-			}
-		}
-	}
-
-	onMount(loadContent);
-
-	function addTag() {
-		const tag = tagInput.trim();
-		if (tag && !tags.includes(tag)) {
-			tags = [...tags, tag];
-			tagInput = "";
-		}
-	}
-
-	function removeTag(index: number) {
-		tags = tags.filter((_, i) => i !== index);
-	}
-
-	function handleTagKeydown(e: KeyboardEvent) {
-		if (e.key === "Enter" || e.key === ",") {
-			e.preventDefault();
-			addTag();
-		}
-	}
-
-	async function handleSave() {
-		if (!title.trim()) {
-			onError("请输入文章标题");
-			return;
-		}
-
-		if (!slug.trim()) {
-			onError("请输入文章标识（URL slug）");
-			return;
-		}
-
-		isSaving = true;
-
+async function loadContent() {
+	if (mode === "edit" && post?.slug) {
+		isLoadingContent = true;
 		try {
-			const response = await fetch("/api/admin/save/", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					slug,
-					title,
-					author,
-					category,
-					tags,
-					published,
-					description,
-					draft: isDraft,
-					content,
-				}),
-			});
-
+			const response = await fetch(
+				`/api/admin/post-content/?slug=${post.slug}`,
+			);
 			const data = await response.json();
-
-			if (response.ok && data.success) {
-				onSave();
+			if (data.success && data.content) {
+				content = data.content;
 			} else {
-				console.error("[Editor] 保存失败:", data.message);
-				onError(data.message || "保存失败");
+				content = "";
 			}
-		} catch (err) {
-			console.error("[Editor] 保存请求异常:", err);
-			onError(`保存请求失败: ${err instanceof Error ? err.message : String(err)}`);
+		} catch {
+			content = "";
 		} finally {
-			isSaving = false;
+			isLoadingContent = false;
 		}
 	}
+}
+
+onMount(loadContent);
+
+function addTag() {
+	const tag = tagInput.trim();
+	if (tag && !tags.includes(tag)) {
+		tags = [...tags, tag];
+		tagInput = "";
+	}
+}
+
+function removeTag(index: number) {
+	tags = tags.filter((_, i) => i !== index);
+}
+
+function handleTagKeydown(e: KeyboardEvent) {
+	if (e.key === "Enter" || e.key === ",") {
+		e.preventDefault();
+		addTag();
+	}
+}
+
+async function handleSave() {
+	if (!title.trim()) {
+		onError("请输入文章标题");
+		return;
+	}
+
+	if (!slug.trim()) {
+		onError("请输入文章标识（URL slug）");
+		return;
+	}
+
+	isSaving = true;
+
+	try {
+		const response = await fetch("/api/admin/save/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				slug,
+				title,
+				author,
+				category,
+				tags,
+				published,
+				description,
+				draft: isDraft,
+				content,
+			}),
+		});
+
+		const data = await response.json();
+
+		if (response.ok && data.success) {
+			onSave();
+		} else {
+			console.error("[Editor] 保存失败:", data.message);
+			onError(data.message || "保存失败");
+		}
+	} catch (err) {
+		console.error("[Editor] 保存请求异常:", err);
+		onError(
+			`保存请求失败: ${err instanceof Error ? err.message : String(err)}`,
+		);
+	} finally {
+		isSaving = false;
+	}
+}
 </script>
 
 <div class="editor-container">

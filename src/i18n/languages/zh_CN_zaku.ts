@@ -45,7 +45,8 @@ export const zaku: Translation = {
 	[Key.musicAudioPlayer]: "音频播放器",
 	[Key.musicDescription]: "本小姐的网易云音乐歌单，点击就能切换播放啦",
 	[Key.musicNotConfigured]: "音乐还没配置呢，笨蛋",
-	[Key.musicNotConfiguredDesc]: "在配置文件里设置网易云音乐用户ID啦，不然怎么看本小姐的歌单",
+	[Key.musicNotConfiguredDesc]:
+		"在配置文件里设置网易云音乐用户ID啦，不然怎么看本小姐的歌单",
 	[Key.musicTotalPlaylists]: "歌单总数",
 	[Key.musicTotalTracks]: "歌曲总数",
 	[Key.musicSource]: "数据来源",
@@ -85,8 +86,7 @@ export const zaku: Translation = {
 	[Key.commentSection]: "杂鱼留言区",
 	[Key.commentSubtitle]: "快说你的蠢想法，让本小姐乐呵乐呵",
 	[Key.commentNotConfigured]: "评论功能还没开，杂鱼没法留言咯",
-	[Key.guestbookCommentHint]:
-		"配置文件没开留言功能，杂鱼只能干看着~",
+	[Key.guestbookCommentHint]: "配置文件没开留言功能，杂鱼只能干看着~",
 	[Key.friends]: "友链杂鱼们",
 	[Key.friendsDescription]: "都是本小姐认识的家伙，随便逛逛呗",
 	[Key.searchFriends]: "搜其他杂鱼主页…",
@@ -160,8 +160,7 @@ export const zaku: Translation = {
 	[Key.bangumiEmpty]: "无任何收藏内容",
 	[Key.bangumiEmptyReason]: "大概率用户名输错、网络拉胯或是API限制啦~杂鱼~",
 	[Key.bangumiFetchError]: "Bangumi数据拉取失败咯",
-	[Key.bangumiFetchErrorDesc]:
-		"构建时拿不到番组数据，这个页面看不了啦杂鱼",
+	[Key.bangumiFetchErrorDesc]: "构建时拿不到番组数据，这个页面看不了啦杂鱼",
 	[Key.bangumiUsername]: "Bangumi用户名",
 	[Key.bangumiApi]: "API接口",
 	[Key.bangumiConfigTip]: "喂杂鱼!!去页面配置填好正确Bangumi账号啦",
@@ -247,8 +246,7 @@ export const zaku: Translation = {
 	[Key.rssCopyLink]: "复制这条链接",
 	[Key.rssLatestPosts]: "最新写的文章",
 	[Key.rssWhatIsRSS]: "RSS是啥玩意?!",
-	[Key.rssWhatIsRSSDescription]:
-		"RSS是专门同步更新内容的格式,杂鱼用它可以：",
+	[Key.rssWhatIsRSSDescription]: "RSS是专门同步更新内容的格式,杂鱼用它可以：",
 	[Key.rssBenefit1]: "不用刷网站就能第一时间看更新",
 	[Key.rssBenefit2]: "一个软件收纳一堆站点订阅",
 	[Key.rssBenefit3]: "不会漏掉本小姐任何新文章",
@@ -327,8 +325,7 @@ export const zaku: Translation = {
 	[Key.scanToSponsor]: "扫码投喂本小姐",
 	[Key.sponsorGoTo]: "跳去打赏页面",
 	[Key.sponsorButton]: "支持+分享",
-	[Key.sponsorButtonText]:
-		"这篇文章有用就分享出去，或是给本小姐打赏咯杂鱼！",
+	[Key.sponsorButtonText]: "这篇文章有用就分享出去，或是给本小姐打赏咯杂鱼！",
 
 	[Key.shareOnSocial]: "文章分享",
 	[Key.shareOnSocialDescription]: "觉得不错就分享给别的杂鱼看看啦",
@@ -426,7 +423,7 @@ export const zaku: Translation = {
 	[Key.passwordSubmit]: "解锁查看",
 	[Key.passwordError]: "密码错咯，杂鱼记不住吗？重新输！",
 	[Key.passwordProtectedRss]: "本文加密上锁，去网站本体才能看哦杂鱼",
-	
+
 	// 背景视频播放器
 	[Key.videoPlay]: "播放背景视频",
 	[Key.videoPause]: "暂停背景视频",

@@ -1,84 +1,85 @@
 <script lang="ts">
-	import Icon from "@/components/common/Icon.svelte";
+import Icon from "@/components/common/Icon.svelte";
 
-	let { onVerify }: { onVerify: (key: string, success: boolean) => void } = $props();
+let { onVerify }: { onVerify: (key: string, success: boolean) => void } =
+	$props();
 
-	let privateKey = $state("");
-	let isSubmitting = $state(false);
-	let error = $state("");
-	let isDragging = $state(false);
+let privateKey = $state("");
+let isSubmitting = $state(false);
+let error = $state("");
+let isDragging = $state(false);
 
-	async function handleSubmit() {
-		if (!privateKey.trim()) {
-			error = "请输入或上传私钥";
-			return;
-		}
+async function handleSubmit() {
+	if (!privateKey.trim()) {
+		error = "请输入或上传私钥";
+		return;
+	}
 
-		const cleanKey = privateKey
-			.replace(/\r\n/g, "\n")
-			.replace(/\r/g, "\n")
-			.trim();
+	const cleanKey = privateKey
+		.replace(/\r\n/g, "\n")
+		.replace(/\r/g, "\n")
+		.trim();
 
-		isSubmitting = true;
-		error = "";
+	isSubmitting = true;
+	error = "";
 
-		try {
-			const response = await fetch("/api/admin/verify/", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ privateKey: cleanKey }),
-			});
+	try {
+		const response = await fetch("/api/admin/verify/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ privateKey: cleanKey }),
+		});
 
-			const data = await response.json();
+		const data = await response.json();
 
-			if (response.ok && data.success) {
-				onVerify(cleanKey, true);
-			} else {
-				error = data.message || "验证失败";
-				onVerify(cleanKey, false);
-			}
-		} catch {
-			error = "网络请求失败";
+		if (response.ok && data.success) {
+			onVerify(cleanKey, true);
+		} else {
+			error = data.message || "验证失败";
 			onVerify(cleanKey, false);
-		} finally {
-			isSubmitting = false;
 		}
+	} catch {
+		error = "网络请求失败";
+		onVerify(cleanKey, false);
+	} finally {
+		isSubmitting = false;
 	}
+}
 
-	function handleFileUpload(e: Event) {
-		const input = e.target as HTMLInputElement;
-		const file = input.files?.[0];
-		if (file) {
-			const reader = new FileReader();
-			reader.onload = (evt) => {
-				privateKey = evt.target?.result as string;
-				error = "";
-			};
-			reader.readAsText(file);
-		}
-	}
-
-	function handleDrop(e: DragEvent) {
-		e.preventDefault();
-		isDragging = false;
-		const file = e.dataTransfer?.files[0];
-		if (file) {
-			const reader = new FileReader();
-			reader.onload = (evt) => {
-				privateKey = evt.target?.result as string;
-				error = "";
-			};
-			reader.readAsText(file);
-		}
-	}
-
-	function handlePaste(e: ClipboardEvent) {
-		const text = e.clipboardData?.getData("text");
-		if (text) {
-			privateKey = text;
+function handleFileUpload(e: Event) {
+	const input = e.target as HTMLInputElement;
+	const file = input.files?.[0];
+	if (file) {
+		const reader = new FileReader();
+		reader.onload = (evt) => {
+			privateKey = evt.target?.result as string;
 			error = "";
-		}
+		};
+		reader.readAsText(file);
 	}
+}
+
+function handleDrop(e: DragEvent) {
+	e.preventDefault();
+	isDragging = false;
+	const file = e.dataTransfer?.files[0];
+	if (file) {
+		const reader = new FileReader();
+		reader.onload = (evt) => {
+			privateKey = evt.target?.result as string;
+			error = "";
+		};
+		reader.readAsText(file);
+	}
+}
+
+function handlePaste(e: ClipboardEvent) {
+	const text = e.clipboardData?.getData("text");
+	if (text) {
+		privateKey = text;
+		error = "";
+	}
+}
 </script>
 
 <div class="verify-wrapper">

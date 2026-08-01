@@ -1,5 +1,5 @@
-import { saveFileToGitHub, saveFileLocally } from "@/utils/github-app";
 import { requireAuth } from "@/utils/auth";
+import { saveFileLocally, saveFileToGitHub } from "@/utils/github-app";
 
 export const prerender = false;
 
@@ -11,7 +11,18 @@ export async function POST({ request }) {
 
 	try {
 		const body = await request.json();
-		const { slug, content, title, author, category, tags, published, description, image, draft } = body;
+		const {
+			slug,
+			content,
+			title,
+			author,
+			category,
+			tags,
+			published,
+			description,
+			image,
+			draft,
+		} = body;
 
 		if (!slug || !content) {
 			return new Response(
@@ -41,13 +52,19 @@ export async function POST({ request }) {
 		const localSuccess = saveFileLocally(filePath, fullContent);
 
 		// 2. 再保存到 GitHub
-		const githubSuccess = await saveFileToGitHub(filePath, fullContent, commitMessage);
+		const githubSuccess = await saveFileToGitHub(
+			filePath,
+			fullContent,
+			commitMessage,
+		);
 
 		if (localSuccess || githubSuccess) {
 			return new Response(
 				JSON.stringify({
 					success: true,
-					message: githubSuccess ? "保存成功（已同步到 GitHub）" : "保存成功（仅本地保存）",
+					message: githubSuccess
+						? "保存成功（已同步到 GitHub）"
+						: "保存成功（仅本地保存）",
 					filePath,
 				}),
 				{ status: 200, headers: { "Content-Type": "application/json" } },
@@ -55,7 +72,10 @@ export async function POST({ request }) {
 		}
 
 		return new Response(
-			JSON.stringify({ success: false, message: "保存失败（本地和 GitHub 均失败）" }),
+			JSON.stringify({
+				success: false,
+				message: "保存失败（本地和 GitHub 均失败）",
+			}),
 			{ status: 500, headers: { "Content-Type": "application/json" } },
 		);
 	} catch (error) {
@@ -90,10 +110,11 @@ function buildFrontmatter(data: {
 		lines.push(`tags: [${tagsStr}]`);
 	}
 	if (data.published) lines.push(`published: ${data.published}`);
-	if (data.description) lines.push(`description: "${escapeYaml(data.description)}"`);
+	if (data.description)
+		lines.push(`description: "${escapeYaml(data.description)}"`);
 	if (data.image) lines.push(`image: "${escapeYaml(data.image)}"`);
 	if (data.draft !== undefined) lines.push(`draft: ${data.draft}`);
-	lines.push(`pinned: false`);
+	lines.push("pinned: false");
 
 	return lines.join("\n");
 }
