@@ -192,3 +192,28 @@ export function verifyAdminPassword(password: string): boolean {
     return false;
   }
 }
+
+/**
+ * 验证管理员用户名
+ * 环境变量 ADMIN_USERNAME 默认为 "admin"
+ * 使用 timingSafeEqual 防止时序攻击
+ */
+export function verifyAdminUsername(username: string): boolean {
+  try {
+    if (!username) return false;
+
+    const storedUsername = import.meta.env.ADMIN_USERNAME || "admin";
+
+    const inputBuf = Buffer.from(username);
+    const storedBuf = Buffer.from(storedUsername);
+
+    if (inputBuf.length !== storedBuf.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(inputBuf, storedBuf);
+  } catch (error) {
+    console.error("[Auth] 管理员用户名验证异常:", error instanceof Error ? error.message : error);
+    return false;
+  }
+}

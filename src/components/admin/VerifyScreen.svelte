@@ -1,17 +1,35 @@
 <script lang="ts">
 	import Icon from "@/components/common/Icon.svelte";
 
-	let { onVerify }: { onVerify: (success: boolean) => void } = $props();
+	let { onVerify, avatarUrl = "" }: { onVerify: (success: boolean) => void; avatarUrl?: string } = $props();
 
+	let username = $state("");
 	let password = $state("");
+	let privateKey = $state("");
 	let isSubmitting = $state(false);
 	let error = $state("");
+	let isDragging = $state(false);
+
+	// 浮动 label 状态
+	let usernameFocused = $state(false);
+	let passwordFocused = $state(false);
+	let keyFocused = $state(false);
 
 	async function handleSubmit() {
-		if (!password.trim()) {
-			error = "请输入管理密码";
+		const missing: string[] = [];
+		if (!username.trim()) missing.push("用户名");
+		if (!password.trim()) missing.push("密码");
+		if (!privateKey.trim()) missing.push("私钥");
+
+		if (missing.length > 0) {
+			error = `请填写: ${missing.join("、")}`;
 			return;
 		}
+
+		const cleanKey = privateKey
+			.replace(/\r\n/g, "\n")
+			.replace(/\r/g, "\n")
+			.trim();
 
 		isSubmitting = true;
 		error = "";
@@ -20,7 +38,7 @@
 			const response = await fetch("/api/admin/verify/", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ password }),
+				body: JSON.stringify({ username, password, privateKey: cleanKey }),
 			});
 
 			const data = await response.json();
@@ -44,40 +62,132 @@
 			handleSubmit();
 		}
 	}
+
+	function handleFileUpload(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const file = input.files?.[0];
+		if (file) {
+			const reader = new FileReader();
+			reader.onload = (evt) => {
+				privateKey = evt.target?.result as string;
+				error = "";
+			};
+			reader.readAsText(file);
+		}
+	}
+
+	function handleDrop(e: DragEvent) {
+		e.preventDefault();
+		isDragging = false;
+		const file = e.dataTransfer?.files[0];
+		if (file) {
+			const reader = new FileReader();
+			reader.onload = (evt) => {
+				privateKey = evt.target?.result as string;
+				error = "";
+			};
+			reader.readAsText(file);
+		}
+	}
 </script>
 
 <div class="verify-wrapper">
 	<div class="verify-card card-base">
 		<div class="verify-header">
-			<div class="lock-icon-wrapper">
-				<Icon icon="material-symbols:lock-outline" class="lock-icon" />
+			<div class="avatar-wrapper">
+				{#if avatarUrl}
+					<img src={avatarUrl} alt="管理员头像" class="avatar-img" />
+				{:else}
+					<Icon icon="material-symbols:person-rounded" class="avatar-icon" />
+				{/if}
 			</div>
-			<h1>管理后台验证</h1>
-			<p class="description">请输入管理密码以访问管理后台</p>
+			<h1>管理员登录</h1>
+			<p class="subtitle">欢迎回来，请输入你的登录凭证</p>
 		</div>
 
 		<div class="verify-form">
-			<div class="password-input-wrapper">
+			<!-- 用户名 -->
+			<div class="field" class:focused={usernameFocused} class:filled={username.trim()}>
+				<input
+					type="text"
+					bind:value={username}
+					onfocus={() => (usernameFocused = true)}
+					onblur={() => (usernameFocused = false)}
+					onkeydown={handleKeyDown}
+					placeholder=" "
+					autocomplete="username"
+				/>
+				<label>用户名</label>
+			</div>
+
+			<!-- 密码 -->
+			<div class="field" class:focused={passwordFocused} class:filled={password.trim()}>
 				<input
 					type="password"
 					bind:value={password}
+					onfocus={() => (passwordFocused = true)}
+					onblur={() => (passwordFocused = false)}
 					onkeydown={handleKeyDown}
-					placeholder="管理密码"
-					class="password-input"
-				autocomplete="current-password"
+					placeholder=" "
+					autocomplete="current-password"
 				/>
-				{#if password}
-					<button
-						class="clear-btn"
-						onclick={() => {
-							password = "";
-							error = "";
-						}}
-						aria-label="清除"
-					>
-						<Icon icon="material-symbols:close" class="text-sm" />
-					</button>
-				{/if}
+				<label>密码</label>
+			</div>
+
+			<!-- 私钥 -->
+			<div class="key-section">
+				<div class="key-actions">
+					<label for="keyFile" class="upload-btn">
+						<Icon icon="material-symbols:upload" class="text-sm" />
+						上传私钥文件
+					</label>
+					<input
+						type="file"
+						accept=".pem,.key,.txt"
+						onchange={handleFileUpload}
+						class="file-input"
+						id="keyFile"
+					/>
+					<span class="key-hint">支持 .pem / .key 格式，或直接粘贴</span>
+				</div>
+
+				<div
+					class={`key-field ${isDragging ? "dragging" : ""}`}
+					class:focused={keyFocused}
+					class:filled={privateKey.trim()}
+					onDragenter={(e) => {
+						e.preventDefault();
+						isDragging = true;
+					}}
+					onDragleave={() => {
+						isDragging = false;
+					}}
+					onDragover={(e) => {
+						e.preventDefault();
+					}}
+					onDrop={handleDrop}
+				>
+					<textarea
+						bind:value={privateKey}
+						onfocus={() => (keyFocused = true)}
+						onblur={() => (keyFocused = false)}
+						placeholder=" "
+						rows={5}
+					></textarea>
+					<label class={privateKey.trim() || keyFocused ? "float" : ""}>GitHub App 私钥</label>
+					{#if privateKey}
+						<button
+							class="clear-btn"
+							onclick={() => {
+								privateKey = "";
+								error = "";
+							}}
+							aria-label="清除私钥"
+						>
+							<Icon icon="material-symbols:close" class="text-sm" />
+						</button>
+					{/if}
+				</div>
 			</div>
 
 			{#if error}
@@ -91,23 +201,15 @@
 				class="submit-btn"
 				class:loading={isSubmitting}
 				onclick={handleSubmit}
-				disabled={isSubmitting || !password.trim()}
+				disabled={isSubmitting || !username.trim() || !password.trim() || !privateKey.trim()}
 			>
 				{#if isSubmitting}
 					<span class="spinner"></span>
-					验证中...
+					登录中...
 				{:else}
-					验证并进入后台
+					登录
 				{/if}
 			</button>
-
-			<div class="security-notice">
-				<Icon icon="material-symbols:shield-lock" class="text-lg" />
-				<p>
-					管理密码仅在验证时传输，通过后使用 HttpOnly Cookie 维持会话。
-					GitHub App 私钥仅存在于服务端，不会经过浏览器。
-				</p>
-			</div>
 		</div>
 	</div>
 </div>
@@ -121,17 +223,17 @@
 	}
 
 	.verify-card {
-		padding: 2rem;
+		padding: 2.5rem 2rem;
 		width: 100%;
-		max-width: 420px;
+		max-width: 400px;
 	}
 
 	.verify-header {
 		text-align: center;
-		margin-bottom: 1.5rem;
+		margin-bottom: 2rem;
 	}
 
-	.lock-icon-wrapper {
+	.avatar-wrapper {
 		width: 4rem;
 		height: 4rem;
 		margin: 0 auto 1rem;
@@ -140,11 +242,19 @@
 		justify-content: center;
 		background: var(--primary);
 		color: white;
-		border-radius: var(--radius-lg);
+		border-radius: 50%;
+		overflow: hidden;
 	}
 
-	.lock-icon {
-		font-size: 1.75rem;
+	.avatar-img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		border-radius: 50%;
+	}
+
+	.avatar-icon {
+		font-size: 2rem;
 	}
 
 	.verify-header h1 {
@@ -154,24 +264,25 @@
 		margin-bottom: 0.375rem;
 	}
 
-	.description {
+	.subtitle {
 		color: var(--content-meta);
-		font-size: 0.875rem;
+		font-size: 0.8125rem;
 	}
 
 	.verify-form {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 1.25rem;
 	}
 
-	.password-input-wrapper {
+	/* ── 浮动 label 输入框 ── */
+	.field {
 		position: relative;
 	}
 
-	.password-input {
+	.field input {
 		width: 100%;
-		padding: 0.75rem 2.5rem 0.75rem 0.75rem;
+		padding: 1rem 0.75rem 0.5rem;
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-md);
 		font-size: 0.9375rem;
@@ -181,18 +292,157 @@
 		font-family: inherit;
 	}
 
-	.password-input:focus {
+	.field input:focus {
 		outline: none;
 		border-color: var(--primary);
+		border-width: 2px;
+		padding: calc(1rem - 1px) calc(0.75rem - 1px) calc(0.5rem - 1px);
+	}
+
+	.field label {
+		position: absolute;
+		left: 0.75rem;
+		top: 50%;
+		transform: translateY(-50%);
+		font-size: 0.9375rem;
+		color: var(--content-meta);
+		pointer-events: none;
+		transition: all 0.18s ease;
+	}
+
+	.field.focused label,
+	.field.filled label {
+		top: 0;
+		transform: translateY(-50%) scale(0.8);
+		color: var(--primary);
+		background: var(--card-bg);
+		padding: 0 0.25rem;
+	}
+
+	/* 浏览器自动填充时，label 也需要上浮（bind:value 可能还没同步） */
+	.field input:-webkit-autofill ~ label {
+		top: 0;
+		transform: translateY(-50%) scale(0.8);
+		color: var(--primary);
+		background: var(--card-bg);
+		padding: 0 0.25rem;
+	}
+
+	.field.focused input {
+		border-color: var(--primary);
+	}
+
+	/* 覆盖浏览器自动填充的黄色背景 */
+	.field input:-webkit-autofill {
+		-webkit-text-fill-color: var(--deep-text);
+		-webkit-box-shadow: 0 0 0 1000px var(--card-bg) inset;
+		transition: background-color 9999s ease-in-out 0s;
+	}
+
+	/* ── 私钥区域 ── */
+	.key-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.key-actions {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+	}
+
+	.upload-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.375rem 0.75rem;
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-sm);
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: var(--deep-text);
+		cursor: pointer;
+		transition: all 0.15s;
+		background: var(--btn-regular-bg);
+	}
+
+	.upload-btn:hover {
+		background: var(--btn-regular-bg-hover);
+		border-color: var(--primary);
+		color: var(--primary);
+	}
+
+	.file-input {
+		display: none;
+	}
+
+	.key-hint {
+		font-size: 0.6875rem;
+		color: var(--content-meta);
+	}
+
+	.key-field {
+		position: relative;
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-md);
+		transition: border-color 0.2s;
+		background: var(--card-bg);
+	}
+
+	.key-field.dragging {
+		border-color: var(--primary);
+		background: var(--btn-regular-bg);
+	}
+
+	.key-field:focus-within {
+		border-color: var(--primary);
+		border-width: 2px;
+	}
+
+	.key-field textarea {
+		width: 100%;
+		padding: 1.25rem 2.25rem 0.5rem 0.625rem;
+		border: none;
+		border-radius: var(--radius-md);
+		font-family: "Monaco", "Consolas", monospace;
+		font-size: 0.6875rem;
+		line-height: 1.5;
+		resize: vertical;
+		background: transparent;
+		color: var(--deep-text);
+	}
+
+	.key-field textarea:focus {
+		outline: none;
+	}
+
+	.key-field label {
+		position: absolute;
+		left: 0.625rem;
+		top: 0.625rem;
+		font-size: 0.75rem;
+		color: var(--content-meta);
+		pointer-events: none;
+		transition: all 0.18s ease;
+	}
+
+	.key-field label.float {
+		top: 0;
+		transform: translateY(-50%) scale(0.85);
+		color: var(--primary);
+		background: var(--card-bg);
+		padding: 0 0.25rem;
+		left: 0.5rem;
 	}
 
 	.clear-btn {
 		position: absolute;
-		top: 50%;
+		top: 0.5rem;
 		right: 0.5rem;
-		transform: translateY(-50%);
-		width: 22px;
-		height: 22px;
+		width: 20px;
+		height: 20px;
 		border: none;
 		border-radius: var(--radius-sm);
 		background: var(--line-divider);
@@ -207,6 +457,7 @@
 		background: var(--btn-regular-bg-hover);
 	}
 
+	/* ── 错误提示 ── */
 	.error-message {
 		display: flex;
 		align-items: center;
@@ -216,9 +467,10 @@
 		border: 1px solid rgba(239, 68, 68, 0.3);
 		border-radius: var(--radius-sm);
 		color: #ef4444;
-		font-size: 0.875rem;
+		font-size: 0.8125rem;
 	}
 
+	/* ── 登录按钮 ── */
 	.submit-btn {
 		padding: 0.75rem;
 		border: none;
@@ -234,6 +486,7 @@
 		justify-content: center;
 		gap: 0.5rem;
 		font-family: inherit;
+		margin-top: 0.25rem;
 	}
 
 	.submit-btn:hover:not(:disabled) {
@@ -264,16 +517,5 @@
 		to {
 			transform: rotate(360deg);
 		}
-	}
-
-	.security-notice {
-		display: flex;
-		gap: 0.625rem;
-		padding: 0.625rem 0.75rem;
-		background: var(--btn-regular-bg);
-		border-radius: var(--radius-sm);
-		font-size: 0.75rem;
-		color: var(--content-meta);
-		line-height: 1.5;
 	}
 </style>

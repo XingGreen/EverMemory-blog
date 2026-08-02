@@ -24,6 +24,8 @@
 
 	type ViewMode = "list" | "edit" | "create";
 
+	let { avatarUrl = "" }: { avatarUrl?: string } = $props();
+
 	let isVerified = $state(false);
 	let posts = $state<Post[]>([]);
 	let isLoading = $state(true);
@@ -33,8 +35,13 @@
 	let showDeleteModal = $state(false);
 	let deletingPost = $state<Post | null>(null);
 	let toast = $state<{ message: string; type: "success" | "error" } | null>(null);
+	let isSyncing = $state(false);
 
 	onMount(() => {
+		// Svelte 水合完成，移除 Astro 预渲染的骨架
+		const skeleton = document.getElementById("admin-skeleton");
+		if (skeleton) skeleton.remove();
+
 		const stored = sessionStorage.getItem("admin_verified");
 		if (stored === "true") {
 			isVerified = true;
@@ -57,6 +64,35 @@
 			error = "网络请求失败";
 		} finally {
 			isLoading = false;
+		}
+	}
+
+	async function handleSync() {
+		isSyncing = true;
+		showToast("正在从 GitHub 同步文章...", "success", 5000);
+		try {
+			const response = await fetch("/api/admin/sync/", { method: "POST" });
+			const data = await response.json();
+			if (data.success) {
+				// 同步成功后刷新本地文章列表
+				await loadPosts();
+				const stats = data.stats;
+				let detail = "";
+				if (stats) {
+					detail = `（GitHub 共 ${stats.githubTotal} 篇，本地 ${stats.localTotal} 篇）`;
+				}
+				showToast(`${data.message}${detail}`, "success", 6000);
+				// 如有本地独有文章，额外提示
+				if (stats?.orphanedFiles?.length > 0) {
+					console.log("[Sync] 本地独有文章（GitHub 不存在）:", stats.orphanedFiles);
+				}
+			} else {
+				showToast(data.message || "同步失败", "error", 10000);
+			}
+		} catch (err) {
+			showToast(`同步请求失败: ${err instanceof Error ? err.message : String(err)}`, "error", 10000);
+		} finally {
+			isSyncing = false;
 		}
 	}
 
@@ -149,7 +185,7 @@
 </script>
 
 {#if !isVerified}
-	<VerifyScreen onVerify={handleVerify} />
+	<VerifyScreen onVerify={handleVerify} {avatarUrl} />
 {:else}
 	<div class="admin-wrapper">
 		<div class="card-base admin-header">
@@ -187,6 +223,8 @@
 					onEdit={handleEditPost}
 					onDelete={handleDeleteClick}
 					onRefresh={loadPosts}
+					onSync={handleSync}
+					{isSyncing}
 				/>
 			{:else if viewMode === "edit" && editingPost}
 				<PostEditor

@@ -8,6 +8,8 @@
 		onEdit,
 		onDelete,
 		onRefresh,
+		onSync,
+		isSyncing = false,
 	}: {
 		posts: any[];
 		isLoading: boolean;
@@ -15,6 +17,8 @@
 		onEdit: (post: any) => void;
 		onDelete: (post: any) => void;
 		onRefresh: () => void;
+		onSync?: () => void;
+		isSyncing?: boolean;
 	} = $props();
 
 	let searchTerm = $state("");
@@ -53,87 +57,96 @@
 	}
 </script>
 
-<div class="card-base post-list-container">
+<div class="md3-list-container card-base">
+	<!-- 工具栏 -->
 	<div class="toolbar">
-		<div class="search-box">
-			<Icon icon="material-symbols:search" class="search-icon" />
+		<div class="search-bar">
+			<Icon icon="material-symbols:search" class="leading-icon" />
 			<input
 				type="text"
 				bind:value={searchTerm}
-				placeholder="搜索文章标题、作者、分类或标签..."
+				placeholder="搜索文章..."
 				class="search-input"
 			/>
 			{#if searchTerm}
-				<button
-					class="clear-search"
-					onclick={() => {
-						searchTerm = "";
-					}}
-					aria-label="清除搜索"
-				>
-					<Icon icon="material-symbols:close" class="text-sm" />
+				<button class="trailing-icon-btn" onclick={() => (searchTerm = "")} aria-label="清除">
+					<Icon icon="material-symbols:close" />
 				</button>
 			{/if}
 		</div>
 
-		<div class="filter-tabs">
-			<button
-				class="tab"
-				class:active={statusFilter === "all"}
-				onclick={() => {
-					statusFilter = "all";
-				}}
-			>
-				全部 ({posts.length})
+		<div class="filter-chips">
+			<button class="chip" class:selected={statusFilter === "all"} onclick={() => (statusFilter = "all")}>
+				{#if statusFilter === "all"}
+					<Icon icon="material-symbols:check" class="chip-check" />
+				{/if}
+				<span class="chip-label">全部</span>
+				<span class="chip-count">{posts.length}</span>
 			</button>
 			<button
-				class="tab"
-				class:active={statusFilter === "published"}
-				onclick={() => {
-					statusFilter = "published";
-				}}
+				class="chip"
+				class:selected={statusFilter === "published"}
+				onclick={() => (statusFilter = "published")}
 			>
-				已发布 ({posts.filter((p) => !p.draft).length})
+				{#if statusFilter === "published"}
+					<Icon icon="material-symbols:check" class="chip-check" />
+				{/if}
+				<span class="chip-label">已发布</span>
+				<span class="chip-count">{posts.filter((p) => !p.draft).length}</span>
 			</button>
 			<button
-				class="tab"
-				class:active={statusFilter === "draft"}
-				onclick={() => {
-					statusFilter = "draft";
-				}}
+				class="chip"
+				class:selected={statusFilter === "draft"}
+				onclick={() => (statusFilter = "draft")}
 			>
-				草稿 ({posts.filter((p) => p.draft).length})
+				{#if statusFilter === "draft"}
+					<Icon icon="material-symbols:check" class="chip-check" />
+				{/if}
+				<span class="chip-label">草稿</span>
+				<span class="chip-count">{posts.filter((p) => p.draft).length}</span>
 			</button>
 		</div>
 
-		<button class="refresh-btn" onclick={onRefresh} disabled={isLoading}>
+		<button class="icon-text-btn" onclick={onRefresh} disabled={isLoading || isSyncing}>
 			{#if isLoading}
 				<span class="spinner"></span>
 			{:else}
-				<Icon icon="material-symbols:update-rounded" class="text-sm" />
+				<Icon icon="material-symbols:update-rounded" />
 			{/if}
 			刷新
 		</button>
+
+		{#if onSync}
+			<button class="icon-text-btn sync-btn" onclick={onSync} disabled={isLoading || isSyncing}>
+				{#if isSyncing}
+					<span class="spinner"></span>
+				{:else}
+					<Icon icon="material-symbols:cloud-sync-outline-rounded" />
+				{/if}
+				同步
+			</button>
+		{/if}
 	</div>
 
+	<!-- 列表内容 -->
 	{#if isLoading}
-		<div class="loading-state">
-			<div class="loader"></div>
-			<p>加载文章列表...</p>
+		<div class="state-container">
+			<div class="circular-progress"></div>
+			<p class="state-text">加载中...</p>
 		</div>
 	{:else if error}
-		<div class="error-state">
-			<Icon icon="material-symbols:error-outline" class="error-icon" />
-			<p>{error}</p>
-			<button class="retry-btn" onclick={onRefresh}>重试</button>
+		<div class="state-container">
+			<Icon icon="material-symbols:error-outline" class="state-icon error" />
+			<p class="state-text">{error}</p>
+			<button class="filled-btn" onclick={onRefresh}>重试</button>
 		</div>
 	{:else if filteredPosts.length === 0}
-		<div class="empty-state">
-			<Icon icon="material-symbols:folder-open" class="empty-icon" />
-			<p>暂无文章</p>
+		<div class="state-container">
+			<Icon icon="material-symbols:folder-open" class="state-icon" />
+			<p class="state-text">{searchTerm || statusFilter !== "all" ? "无匹配文章" : "暂无文章"}</p>
 			{#if searchTerm || statusFilter !== "all"}
 				<button
-					class="clear-filter-btn"
+					class="text-btn"
 					onclick={() => {
 						searchTerm = "";
 						statusFilter = "all";
@@ -144,350 +157,437 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="table-wrapper">
-			<table class="posts-table">
-				<thead>
-					<tr>
-						<th class="col-title">标题</th>
-						<th class="col-author">作者</th>
-						<th class="col-category">分类</th>
-						<th class="col-date">发布日期</th>
-						<th class="col-status">状态</th>
-						<th class="col-actions">操作</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each filteredPosts as post (post.id)}
-						<tr>
-							<td class="col-title">
-								<div class="title-cell">
-									<div class="title-row">
-										{#if post.pinned}
-											<Icon icon="material-symbols:pinboard" class="pinned-badge" title="置顶" />
-										{/if}
-										<span class="title-text">{post.title}</span>
-									</div>
-									{#if post.tags && post.tags.length > 0}
-										<div class="tags">
-											{#each post.tags.slice(0, 3) as tag}
-												<span class="tag">{tag}</span>
-											{/each}
-											{#if post.tags.length > 3}
-												<span class="tag more">+{post.tags.length - 3}</span>
-											{/if}
-										</div>
+		<!-- 分类栏 + 列表 -->
+		<div class="md3-table">
+			<!-- 分类栏（表头） -->
+			<div class="header-row">
+				<div class="col col-title">标题</div>
+				<div class="col col-author">作者</div>
+				<div class="col col-category">分类</div>
+				<div class="col col-date">发布日期</div>
+				<div class="col col-status">状态</div>
+				<div class="col col-actions">操作</div>
+			</div>
+
+			<!-- 列表项 -->
+			<div class="md3-list" role="list">
+				{#each filteredPosts as post (post.id)}
+					<div class="list-item" role="listitem" tabindex="0">
+						<!-- 标题 -->
+						<div class="col col-title">
+							<div class="title-cell">
+								<div class="title-row">
+									{#if post.pinned}
+										<Icon icon="material-symbols:pinboard" class="pin-icon" />
 									{/if}
+									<span class="title">{post.title}</span>
 								</div>
-							</td>
-							<td class="col-author">
-								{post.author || ""}
-							</td>
-							<td class="col-category">
-								{post.category || ""}
-							</td>
-							<td class="col-date">
-								<span class="date-text">{formatDate(post.published)}</span>
-							</td>
-							<td class="col-status">
-								{#if post.draft}
-									<span class="status-badge draft">草稿</span>
-								{:else}
-									<span class="status-badge published">已发布</span>
+								{#if post.tags && post.tags.length > 0}
+									<div class="tags">
+										{#each post.tags.slice(0, 3) as tag}
+											<span class="tag">{tag}</span>
+										{/each}
+										{#if post.tags.length > 3}
+											<span class="tag-more">+{post.tags.length - 3}</span>
+										{/if}
+									</div>
 								{/if}
-							</td>
-							<td class="col-actions">
-								<div class="action-buttons">
-									<a
-										class="action-btn view"
-										href={`/posts/${post.slug}`}
-										target="_blank"
-										title="查看"
-									>
-										<Icon icon="material-symbols:visibility-outline-rounded" class="text-sm" />
-									</a>
-									<button
-										class="action-btn edit"
-										onclick={() => {
-											onEdit(post);
-										}}
-										title="编辑"
-									>
-										<Icon icon="material-symbols:ink-pen-outline-rounded" class="text-sm" />
-									</button>
-									<button
-										class="action-btn delete"
-										onclick={() => {
-											onDelete(post);
-										}}
-										title="删除"
-									>
-										<Icon icon="material-symbols:close" class="text-sm" />
-									</button>
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+							</div>
+						</div>
+
+						<!-- 作者 -->
+						<div class="col col-author">
+							<span class="text-meta">{post.author || "—"}</span>
+						</div>
+
+						<!-- 分类 -->
+						<div class="col col-category">
+							<span class="text-meta">{post.category || "—"}</span>
+						</div>
+
+						<!-- 发布日期 -->
+						<div class="col col-date">
+							<span class="text-meta">{post.published ? formatDate(post.published) : "—"}</span>
+						</div>
+
+						<!-- 状态 -->
+						<div class="col col-status">
+							<span class="status-chip" data-draft={post.draft}>
+								{post.draft ? "草稿" : "已发布"}
+							</span>
+						</div>
+
+						<!-- 操作（文字按钮） -->
+						<div class="col col-actions">
+							<div class="text-actions">
+								<a class="text-action view" href={`/posts/${post.slug}`} target="_blank">
+									查看
+								</a>
+								<span class="sep">|</span>
+								<button class="text-action edit" onclick={() => onEdit(post)}>
+									编辑
+								</button>
+								<span class="sep">|</span>
+								<button class="text-action delete" onclick={() => onDelete(post)}>
+									删除
+								</button>
+							</div>
+						</div>
+					</div>
+				{/each}
+			</div>
 		</div>
 
-		<div class="table-footer">
-			<p>共 {filteredPosts.length} 篇文章</p>
+		<div class="list-footer">
+			<span>共 {filteredPosts.length} 篇</span>
 		</div>
 	{/if}
 </div>
 
 <style>
-	.post-list-container {
-		padding: 1.5rem;
+	.md3-list-container {
+		--md-on-surface: var(--deep-text);
+		--md-on-surface-variant: var(--content-meta);
+		--md-outline: var(--line-divider);
+		--md-primary: var(--primary);
+		--md-primary-container: color-mix(in srgb, var(--primary) 18%, var(--card-bg));
+		--md-on-primary-container: var(--primary);
+		--md-surface-container-high: color-mix(in srgb, var(--primary) 6%, var(--card-bg));
+		--md-state-layer-hover: color-mix(in srgb, var(--deep-text) 6%, transparent);
+
+		padding: 1rem;
+		border-radius: var(--radius-large);
 	}
 
+	/* ── 工具栏 ── */
 	.toolbar {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		margin-bottom: 1.25rem;
 		flex-wrap: wrap;
+		margin-bottom: 0.75rem;
 	}
 
-	.search-box {
+	.search-bar {
 		flex: 1;
 		min-width: 200px;
-		position: relative;
 		display: flex;
 		align-items: center;
+		height: 48px;
+		padding: 0 0.5rem 0 1rem;
+		background: var(--md-surface-container-high);
+		border-radius: 28px;
+		transition: background 0.2s;
 	}
 
-	:global(.search-icon) {
-		position: absolute;
-		left: 0.75rem;
-		font-size: 1rem;
-		color: var(--content-meta);
-		pointer-events: none;
+	.search-bar:focus-within {
+		background: color-mix(in srgb, var(--primary) 12%, var(--card-bg));
+		outline: 2px solid var(--md-primary);
+		outline-offset: -2px;
+	}
+
+	:global(.leading-icon) {
+		font-size: 1.25rem;
+		color: var(--md-on-surface-variant);
+		flex-shrink: 0;
 	}
 
 	.search-input {
-		width: 100%;
-		padding: 0.5rem 2.25rem 0.5rem 2.25rem;
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-md);
-		font-size: 0.875rem;
-		transition: border-color 0.2s;
-		background: var(--card-bg);
-		color: var(--deep-text);
+		flex: 1;
+		border: none;
+		background: transparent;
+		font-size: 0.9375rem;
+		color: var(--md-on-surface);
+		padding: 0 0.5rem;
 	}
 
 	.search-input:focus {
 		outline: none;
-		border-color: var(--primary);
 	}
 
-	.clear-search {
-		position: absolute;
-		right: 0.375rem;
-		width: 20px;
-		height: 20px;
+	.search-input::placeholder {
+		color: var(--md-on-surface-variant);
+	}
+
+	.trailing-icon-btn {
+		width: 40px;
+		height: 40px;
 		border: none;
-		border-radius: var(--radius-sm);
-		background: var(--btn-regular-bg);
-		color: var(--content-meta);
+		border-radius: 50%;
+		background: transparent;
+		color: var(--md-on-surface-variant);
 		cursor: pointer;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		transition: all 0.15s;
+		transition: background 0.15s;
 	}
 
-	.clear-search:hover {
-		background: var(--btn-regular-bg-hover);
-		color: var(--deep-text);
+	.trailing-icon-btn:hover {
+		background: var(--md-state-layer-hover);
 	}
 
-	.filter-tabs {
+	/* MD3 FilterChip */
+	.filter-chips {
 		display: flex;
-		gap: 0.25rem;
+		gap: 0.5rem;
 	}
 
-	.tab {
-		padding: 0.375rem 0.75rem;
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-md);
-		background: var(--card-bg);
-		color: var(--content-meta);
-		font-size: 0.8rem;
-		cursor: pointer;
-		transition: all 0.15s;
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		height: 32px;
+		padding: 0 1rem;
+		border: 1px solid var(--md-outline);
+		border-radius: 8px;
+		background: transparent;
+		color: var(--md-on-surface-variant);
+		font-size: 0.8125rem;
 		font-weight: 500;
-	}
-
-	.tab:hover {
-		background: var(--btn-plain-bg-hover);
-		color: var(--deep-text);
-	}
-
-	.tab.active {
-		background: var(--primary);
-		color: white;
-		border-color: var(--primary);
-	}
-
-	.refresh-btn {
-		padding: 0.375rem 0.75rem;
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-md);
-		background: var(--card-bg);
-		color: var(--content-meta);
-		font-size: 0.8rem;
 		cursor: pointer;
+		transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+		overflow: hidden;
+		position: relative;
+	}
+
+	.chip::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		background: var(--md-state-layer-hover);
+		opacity: 0;
+		transition: opacity 0.15s;
+		pointer-events: none;
+	}
+
+	.chip:hover::after {
+		opacity: 1;
+	}
+
+	.chip:focus-visible {
+		outline: none;
+	}
+
+	.chip.selected {
+		background: var(--md-primary-container);
+		border-color: transparent;
+		color: var(--md-on-primary-container);
+		padding-left: 0.5rem;
+	}
+
+	.chip.selected::after {
+		background: color-mix(in srgb, var(--md-primary) 12%, transparent);
+	}
+
+	:global(.chip-check) {
+		font-size: 1.125rem;
+		flex-shrink: 0;
+	}
+
+	.chip-label {
+		line-height: 1;
+	}
+
+	.chip-count {
+		font-size: 0.6875rem;
+		opacity: 0.7;
+		line-height: 1;
+	}
+
+	.icon-text-btn {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
-		transition: all 0.15s;
+		gap: 0.375rem;
+		height: 40px;
+		padding: 0 1rem;
+		border: none;
+		border-radius: 20px;
+		background: transparent;
+		color: var(--md-primary);
+		font-size: 0.875rem;
 		font-weight: 500;
+		cursor: pointer;
+		transition: background 0.15s;
 	}
 
-	.refresh-btn:hover:not(:disabled) {
-		background: var(--btn-plain-bg-hover);
-		color: var(--deep-text);
+	.icon-text-btn:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--primary) 8%, transparent);
 	}
 
-	.refresh-btn:disabled {
+	.icon-text-btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
 
 	.spinner {
-		width: 14px;
-		height: 14px;
-		border: 2px solid var(--line-divider);
-		border-top-color: var(--primary);
+		width: 16px;
+		height: 16px;
+		border: 2px solid color-mix(in srgb, var(--md-primary) 30%, transparent);
+		border-top-color: var(--md-primary);
 		border-radius: 50%;
 		animation: spin 0.8s linear infinite;
 	}
 
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.loading-state,
-	.error-state,
-	.empty-state {
+	/* ── 状态容器 ── */
+	.state-container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.75rem;
+		padding: 3rem 1rem;
 		text-align: center;
-		padding: 2rem 1rem;
 	}
 
-	.loader {
-		width: 36px;
-		height: 36px;
-		border: 3px solid var(--line-divider);
-		border-top-color: var(--primary);
-		border-radius: 50%;
-		margin: 0 auto 0.75rem;
-		animation: spin 0.8s linear infinite;
+	.state-icon {
+		font-size: 3rem;
+		color: var(--md-on-surface-variant);
 	}
 
-	.loading-state p,
-	.error-state p,
-	.empty-state p {
-		color: var(--content-meta);
-		font-size: 0.875rem;
-	}
-
-	:global(.error-icon),
-	:global(.empty-icon) {
-		font-size: 2.5rem;
-		display: block;
-		margin: 0 auto 0.75rem;
-		color: var(--content-meta);
-	}
-
-	:global(.error-icon) {
+	:global(.state-icon.error) {
 		color: #ef4444;
 	}
 
-	.retry-btn,
-	.clear-filter-btn {
-		margin-top: 0.75rem;
-		padding: 0.5rem 1rem;
-		border: none;
-		border-radius: var(--radius-md);
-		background: var(--primary);
-		color: white;
-		font-size: 0.8rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.15s;
-	}
-
-	.retry-btn:hover,
-	.clear-filter-btn:hover {
-		opacity: 0.9;
-		transform: translateY(-1px);
-	}
-
-	.table-wrapper {
-		overflow-x: auto;
-	}
-
-	.posts-table {
-		width: 100%;
-		border-collapse: collapse;
+	.state-text {
+		color: var(--md-on-surface-variant);
 		font-size: 0.875rem;
 	}
 
-	.posts-table thead {
-		background: var(--btn-regular-bg);
+	.circular-progress {
+		width: 36px;
+		height: 36px;
+		border: 3px solid var(--md-outline);
+		border-top-color: var(--md-primary);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
 	}
 
-	.posts-table th {
-		padding: 0.625rem 0.875rem;
-		text-align: left;
+	.filled-btn {
+		padding: 0.5rem 1.5rem;
+		border: none;
+		border-radius: 20px;
+		background: var(--md-primary);
+		color: white;
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: filter 0.15s;
+	}
+
+	.filled-btn:hover {
+		filter: brightness(1.08);
+	}
+
+	.text-btn {
+		padding: 0.5rem 1rem;
+		border: none;
+		background: transparent;
+		color: var(--md-primary);
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+	}
+
+	.text-btn:hover {
+		background: color-mix(in srgb, var(--primary) 8%, transparent);
+		border-radius: 20px;
+	}
+
+	/* ── 分类栏 + 列表 ── */
+	.md3-table {
+		border-radius: var(--radius-large);
+		overflow: hidden;
+		border: 1px solid var(--md-outline);
+	}
+
+	/* 表头行 */
+	.header-row {
+		display: grid;
+		grid-template-columns: 2.5fr 1fr 1fr 1.2fr 0.9fr 1.5fr;
+		align-items: center;
+		padding: 0.75rem 1rem;
+		background: var(--md-primary-container);
+		color: var(--md-on-primary-container);
+		font-size: 0.8125rem;
 		font-weight: 600;
-		color: var(--deep-text);
-		font-size: 0.8rem;
 	}
 
-	.posts-table td {
-		padding: 0.75rem 0.875rem;
-		border-bottom: 1px solid var(--line-divider);
-		color: var(--deep-text);
+	.header-row .col {
+		padding: 0 0.25rem;
 	}
 
-	.posts-table tbody tr:hover {
-		background: var(--btn-plain-bg-hover);
+	/* 列表项 */
+	.md3-list {
+		display: flex;
+		flex-direction: column;
 	}
 
+	.list-item {
+		display: grid;
+		grid-template-columns: 2.5fr 1fr 1fr 1.2fr 0.9fr 1.5fr;
+		align-items: center;
+		padding: 0.75rem 1rem;
+		min-height: 56px;
+		transition: background 0.15s;
+		cursor: default;
+		position: relative;
+	}
+
+	.list-item:not(:last-child)::after {
+		content: "";
+		position: absolute;
+		bottom: 0;
+		left: 1rem;
+		right: 1rem;
+		height: 1px;
+		background: var(--md-outline);
+	}
+
+	.list-item:hover {
+		background: var(--md-state-layer-hover);
+	}
+
+	.list-item:focus-visible {
+		outline: none;
+		background: color-mix(in srgb, var(--primary) 10%, transparent);
+	}
+
+	.col {
+		padding: 0 0.25rem;
+		min-width: 0;
+	}
+
+	/* 标题列 */
 	.col-title {
-		min-width: 180px;
-		max-width: 300px;
+		min-width: 0;
 	}
 
 	.title-cell {
 		display: flex;
 		flex-direction: column;
-		gap: 0.375rem;
+		gap: 0.25rem;
 	}
 
 	.title-row {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
+		gap: 0.375rem;
 	}
 
-	.title-text {
+	.pin-icon {
+		font-size: 0.875rem;
+		color: var(--md-primary);
+		flex-shrink: 0;
+	}
+
+	.title {
+		font-size: 0.9375rem;
 		font-weight: 500;
-		color: var(--deep-text);
+		color: var(--md-on-surface);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-	}
-
-	:global(.pinned-badge) {
-		color: var(--primary);
-		font-size: 0.875rem;
-		flex-shrink: 0;
 	}
 
 	.tags {
@@ -497,120 +597,135 @@
 	}
 
 	.tag {
-		padding: 0.125rem 0.5rem;
-		background: var(--btn-regular-bg);
-		border-radius: var(--radius-sm);
-		font-size: 0.7rem;
-		color: var(--content-meta);
+		padding: 0.0625rem 0.5rem;
+		background: var(--md-surface-container-high);
+		border-radius: 4px;
+		font-size: 0.6875rem;
+		color: var(--md-on-surface-variant);
 	}
 
-	.tag.more {
-		background: transparent;
-		color: var(--content-meta);
+	.tag-more {
+		font-size: 0.6875rem;
+		color: var(--md-on-surface-variant);
+		align-self: center;
 	}
 
-	.date-text {
-		color: var(--content-meta);
-		font-size: 0.8rem;
+	/* 元信息文本 */
+	.text-meta {
+		font-size: 0.8125rem;
+		color: var(--md-on-surface-variant);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
-	.status-badge {
-		display: inline-block;
+	/* 状态徽章 */
+	.status-chip {
+		display: inline-flex;
+		align-items: center;
 		padding: 0.125rem 0.625rem;
-		border-radius: var(--radius-full);
+		border-radius: 8px;
 		font-size: 0.75rem;
 		font-weight: 500;
 	}
 
-	.status-badge.published {
+	.status-chip[data-draft="false"] {
 		background: color-mix(in srgb, #22c55e 15%, transparent);
 		color: #22c55e;
 	}
 
-	.status-badge.draft {
+	.status-chip[data-draft="true"] {
 		background: color-mix(in srgb, #f59e0b 15%, transparent);
 		color: #f59e0b;
 	}
 
-	.action-buttons {
-		display: flex;
-		gap: 0.25rem;
-	}
-
-	.action-btn {
-		width: 28px;
-		height: 28px;
-		border: none;
-		border-radius: var(--radius-md);
-		cursor: pointer;
+	/* 操作列 - 文字按钮 */
+	.text-actions {
 		display: flex;
 		align-items: center;
-		justify-content: center;
-		text-decoration: none;
-		transition: all 0.15s;
+		gap: 0.375rem;
 	}
 
-	.action-btn.view {
-		background: color-mix(in srgb, #3b82f6 15%, transparent);
+	.text-action {
+		border: none;
+		background: transparent;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		cursor: pointer;
+		padding: 0.25rem 0.375rem;
+		border-radius: 6px;
+		transition: all 0.15s;
+		text-decoration: none;
+		font-family: inherit;
+	}
+
+	.text-action.view {
 		color: #3b82f6;
 	}
 
-	.action-btn.view:hover {
-		background: #3b82f6;
-		color: white;
+	.text-action.view:hover {
+		background: color-mix(in srgb, #3b82f6 12%, transparent);
 	}
 
-	.action-btn.edit {
-		background: color-mix(in srgb, var(--primary) 15%, transparent);
-		color: var(--primary);
+	.text-action.edit {
+		color: var(--md-primary);
 	}
 
-	.action-btn.edit:hover {
-		background: var(--primary);
-		color: white;
+	.text-action.edit:hover {
+		background: color-mix(in srgb, var(--primary) 12%, transparent);
 	}
 
-	.action-btn.delete {
-		background: color-mix(in srgb, #ef4444 15%, transparent);
+	.text-action.delete {
 		color: #ef4444;
 	}
 
-	.action-btn.delete:hover {
-		background: #ef4444;
-		color: white;
+	.text-action.delete:hover {
+		background: color-mix(in srgb, #ef4444 12%, transparent);
 	}
 
-	.table-footer {
-		margin-top: 0.75rem;
-		padding-top: 0.75rem;
-		border-top: 1px solid var(--line-divider);
+	.sep {
+		color: var(--md-outline);
+		font-size: 0.75rem;
+		user-select: none;
+	}
+
+	/* Footer */
+	.list-footer {
+		padding: 0.75rem 1rem 0;
 		text-align: right;
-		color: var(--content-meta);
-		font-size: 0.8rem;
+		color: var(--md-on-surface-variant);
+		font-size: 0.75rem;
 	}
 
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	/* 响应式 */
 	@media (max-width: 768px) {
 		.toolbar {
 			flex-direction: column;
 			align-items: stretch;
 		}
 
-		.filter-tabs {
+		.filter-chips {
+			overflow-x: auto;
+			padding-bottom: 0.25rem;
+		}
+
+		.md3-table {
 			overflow-x: auto;
 		}
 
-		.posts-table {
-			font-size: 0.8rem;
+		.header-row,
+		.list-item {
+			min-width: 700px;
 		}
 
-		.posts-table th,
-		.posts-table td {
-			padding: 0.5rem;
-		}
-
-		.col-author,
-		.col-date {
-			display: none;
+		.header-row {
+			font-size: 0.75rem;
 		}
 	}
 </style>
