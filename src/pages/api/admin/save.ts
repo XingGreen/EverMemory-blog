@@ -11,7 +11,12 @@ export async function POST({ request }) {
 
 	try {
 		const body = await request.json();
-		const { slug, content, title, author, category, tags, published, description, image, draft } = body;
+		const {
+			slug, content, title, author, category, tags,
+			published, updated, description, image, lang,
+			licenseName, licenseUrl, sourceLink, comment,
+			password, passwordHint, draft, pinned,
+		} = body;
 
 		if (!slug || !content) {
 			return new Response(
@@ -30,14 +35,10 @@ export async function POST({ request }) {
 		const filePath = `src/content/posts/${slug}.md`;
 
 		const frontmatter = buildFrontmatter({
-			title,
-			author,
-			category,
-			tags,
-			published,
-			description,
-			image,
-			draft,
+			title, author, category, tags,
+			published, updated, description, image, lang,
+			licenseName, licenseUrl, sourceLink, comment,
+			password, passwordHint, draft, pinned,
 		});
 
 		const fullContent = `---\n${frontmatter}\n---\n\n${content}`;
@@ -83,24 +84,41 @@ function buildFrontmatter(data: {
 	category?: string;
 	tags?: string[];
 	published?: string;
+	updated?: string;
 	description?: string;
 	image?: string;
+	lang?: string;
+	licenseName?: string;
+	licenseUrl?: string;
+	sourceLink?: string;
+	comment?: boolean;
+	password?: string;
+	passwordHint?: string;
 	draft?: boolean;
+	pinned?: boolean;
 }): string {
 	const lines: string[] = [];
 
 	if (data.title) lines.push(`title: "${escapeYaml(data.title)}"`);
-	if (data.author) lines.push(`author: "${escapeYaml(data.author)}"`);
-	if (data.category) lines.push(`category: "${escapeYaml(data.category)}"`);
+	if (data.published) lines.push(`published: ${data.published}`);
+	if (data.updated) lines.push(`updated: ${data.updated}`);
+	if (data.description) lines.push(`description: "${escapeYaml(data.description)}"`);
+	if (data.image) lines.push(`image: "${escapeYaml(data.image)}"`);
 	if (data.tags && data.tags.length > 0) {
 		const tagsStr = data.tags.map((t) => `"${escapeYaml(t)}"`).join(", ");
 		lines.push(`tags: [${tagsStr}]`);
 	}
-	if (data.published) lines.push(`published: ${data.published}`);
-	if (data.description) lines.push(`description: "${escapeYaml(data.description)}"`);
-	if (data.image) lines.push(`image: "${escapeYaml(data.image)}"`);
+	if (data.category) lines.push(`category: "${escapeYaml(data.category)}"`);
+	if (data.lang) lines.push(`lang: "${escapeYaml(data.lang)}"`);
+	if (data.author) lines.push(`author: "${escapeYaml(data.author)}"`);
+	if (data.licenseName) lines.push(`licenseName: "${escapeYaml(data.licenseName)}"`);
+	if (data.licenseUrl) lines.push(`licenseUrl: "${escapeYaml(data.licenseUrl)}"`);
+	if (data.sourceLink) lines.push(`sourceLink: "${escapeYaml(data.sourceLink)}"`);
 	if (data.draft !== undefined) lines.push(`draft: ${data.draft}`);
-	lines.push(`pinned: false`);
+	lines.push(`pinned: ${data.pinned ?? false}`);
+	if (data.comment !== undefined) lines.push(`comment: ${data.comment}`);
+	if (data.password) lines.push(`password: "${escapeYaml(data.password)}"`);
+	if (data.passwordHint) lines.push(`passwordHint: "${escapeYaml(data.passwordHint)}"`);
 
 	return lines.join("\n");
 }

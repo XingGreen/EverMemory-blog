@@ -60,6 +60,51 @@ export function getPrivateKey(): string {
 	);
 }
 
+function normalizeKey(key: string): string {
+	return key
+		.replace(/\r\n/g, "\n")
+		.replace(/\r/g, "\n")
+		.trim();
+}
+
+/**
+ * 验证用户提交的私钥是否与服务端配置的私钥匹配
+ * 使用 SHA256 指纹 + timingSafeEqual 防止时序攻击
+ */
+export async function verifyPrivateKey(privateKeyContent: string): Promise<boolean> {
+	try {
+		if (!privateKeyContent || !privateKeyContent.includes("PRIVATE KEY")) {
+			return false;
+		}
+
+		const key = crypto.createPrivateKey(privateKeyContent);
+		if (key.type !== "private" || key.asymmetricKeyType !== "rsa") {
+			return false;
+		}
+
+		const normalizedInput = normalizeKey(privateKeyContent);
+		const storedKey = getPrivateKey();
+		const normalizedStored = normalizeKey(storedKey);
+
+		const inputFingerprint = crypto.createHash("sha256").update(normalizedInput).digest();
+		const storedFingerprint = crypto.createHash("sha256").update(normalizedStored).digest();
+
+		if (inputFingerprint.length !== storedFingerprint.length) {
+			return false;
+		}
+
+		return crypto.timingSafeEqual(inputFingerprint, storedFingerprint);
+	} catch (error) {
+		const msg = error instanceof Error ? error.message : String(error);
+		if (msg.includes("私钥未找到")) {
+			console.error("[Verify] 服务端私钥未配置:", msg);
+		} else {
+			console.error("[Verify] 私钥验证异常:", msg);
+		}
+		return false;
+	}
+}
+
 function createJwt(privateKey: string, appId: string): string {
 	const header = { alg: "RS256", typ: "JWT" };
 	const now = Math.floor(Date.now() / 1000);
@@ -195,6 +240,63 @@ export async function getFileFromGitHub(filePath: string): Promise<string | null
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * 列出 GitHub 仓库中指定目录下的文件
+ */
+export async function listFilesFromGitHub(directoryPath: string): Promise<Array<{ name: string; path: string; type: string }>> {
+	const token = await getInstallationToken();
+	const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${directoryPath}?ref=${GITHUB_BRANCH}`;
+
+	console.log(`[GitHub List] Listing: ${directoryPath}`);
+
+	const response = await fetchWithRetry(url, {
+		headers: {
+			Authorization: `Bearer ${token}`,
+			Accept: "application/vnd.github.v3+json",
+			"User-Agent": "Firefly-Blog",
+		},
+	});
+
+	if (!response.ok) {
+		const errorText = await response.text();
+		console.error(`[GitHub List] Failed: ${response.status}`, errorText);
+		throw new Error(`Failed to list directory: HTTP ${response.status}`);
+	}
+
+	const data = await response.json();
+
+	if (!Array.isArray(data)) {
+		// 可能是单个文件
+		return [{ name: data.name, path: data.path, type: data.type }];
+	}
+
+	return data.map((item: { name: string; path: string; type: string }) => ({
+		name: item.name,
+		path: item.path,
+		type: item.type,
+	}));
+}
+
+/**
+ * 递归获取目录下所有 .md 文件
+ */
+export async function listAllMarkdownFiles(directoryPath: string): Promise<string[]> {
+	const items = await listFilesFromGitHub(directoryPath);
+	const mdFiles: string[] = [];
+
+	for (const item of items) {
+		if (item.type === "file" && item.name.endsWith(".md")) {
+			mdFiles.push(item.path);
+		} else if (item.type === "dir") {
+			// 递归获取子目录
+			const subFiles = await listAllMarkdownFiles(item.path);
+			mdFiles.push(...subFiles);
+		}
+	}
+
+	return mdFiles;
 }
 
 export async function saveFileToGitHub(
