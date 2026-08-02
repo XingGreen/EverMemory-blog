@@ -1,5 +1,4 @@
 import { verifyAdminUsername, verifyAdminPassword, generateSessionToken, setAuthCookie, clearAuthCookie } from "@/utils/auth";
-import { verifyPrivateKey } from "@/utils/github-app";
 
 export const prerender = false;
 
@@ -7,13 +6,12 @@ export async function POST({ request }) {
 	try {
 		const text = await request.text();
 		const body = JSON.parse(text);
-		const { username, password, privateKey } = body;
+		const { username, password } = body;
 
 		// 参数完整性检查
 		const missing: string[] = [];
 		if (!username) missing.push("用户名");
 		if (!password) missing.push("密码");
-		if (!privateKey) missing.push("私钥");
 
 		if (missing.length > 0) {
 			console.log(`[Admin Verify] Failed: missing ${missing.join(", ")}`);
@@ -23,16 +21,16 @@ export async function POST({ request }) {
 			);
 		}
 
-		console.log(`[Admin Verify] Username: ${username}, password length: ${password.length}, key length: ${privateKey.length}`);
+		console.log(`[Admin Verify] Username: ${username}, password length: ${password.length}`);
 
-		// 三重验证：用户名 + 密码 + 私钥，全部通过才签发会话
+		// 双重验证：用户名 + 密码，全部通过才签发会话
+		// 私钥由服务端环境变量持有，用于 GitHub API 操作，前端不传输
 		const usernameOk = verifyAdminUsername(username);
 		const passwordOk = verifyAdminPassword(password);
-		const privateKeyOk = await verifyPrivateKey(privateKey);
 
-		console.log(`[Admin Verify] Results: username=${usernameOk}, password=${passwordOk}, privateKey=${privateKeyOk}`);
+		console.log(`[Admin Verify] Results: username=${usernameOk}, password=${passwordOk}`);
 
-		if (usernameOk && passwordOk && privateKeyOk) {
+		if (usernameOk && passwordOk) {
 			const token = generateSessionToken();
 			const headers = new Headers({ "Content-Type": "application/json" });
 			setAuthCookie(token, headers);
@@ -51,7 +49,7 @@ export async function POST({ request }) {
 		clearAuthCookie(failHeaders);
 
 		return new Response(
-			JSON.stringify({ success: false, message: "用户名、密码或私钥错误" }),
+			JSON.stringify({ success: false, message: "用户名或密码错误" }),
 			{ status: 401, headers: failHeaders },
 		);
 	} catch (error) {
