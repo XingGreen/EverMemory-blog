@@ -1,0 +1,112 @@
+{
+  "title": "EverMemory's Blog [API-OK]",
+  "subtitle": "",
+  "site_url": "https://blog.evermemory.dpdns.org",
+  "description": "EverMemory's blog 是一款基于 Firefly 开发的清新美观且现代化个人博客主题模板，专为技术爱好者和内容创作者设计。该主题融合了现代 Web 技术栈，提供了丰富的功能模块和高度可定制的界面，让您能够轻松打造出专业且美观的个人博客网站。",
+  "keywords": [
+    "EverMemory",
+    "Firefly",
+    "Fuwari",
+    "Astro",
+    "ACGN",
+    "博客",
+    "技术博客",
+    "静态博客"
+  ],
+  "themeColor": {
+    "hue": 275,
+    "fixed": false,
+    "defaultMode": "system"
+  },
+  "pageWidth": 100,
+  "card": {
+    "border": true,
+    "followTheme": true
+  },
+  "favicon": [
+    {
+      "src": "/favicon/favicon.ico"
+    }
+  ],
+  "navbar": {
+    "logo": {
+      "type": "image",
+      "value": "assets/images/Forget-me-not.png",
+      "alt": "🍀"
+    },
+    "title": "EverMemory's Blog",
+    "widthFull": false,
+    "menuAlign": "center",
+    "followTheme": false,
+    "stickyNavbar": true,
+    "mode": "detached"
+  },
+  "siteStartDate": "2026-01-18",
+  "timezone": "Asia/Shanghai",
+  "pages": {
+    "friends": true,
+    "sponsor": false,
+    "guestbook": false,
+    "bangumi": false,
+    "gallery": false,
+    "anime": false,
+    "app": true,
+    "music": true
+  },
+  "categoryBar": true,
+  "foldArticle": true,
+  "postListLayout": {
+    "defaultMode": "list",
+    "mobileDefaultMode": "list",
+    "showTags": true,
+    "descriptionLines": 2,
+    "allowSwitch": true,
+    "grid": {
+      "masonry": true,
+      "columnWidth": 320
+    }
+  },
+  "post": {
+    "rehypeCallouts": {
+      "theme": "github",
+      "enablePythonMarkdownAdmonitions": false
+    },
+    "showLastModified": true,
+    "outdatedThreshold": 30,
+    "sharePoster": true,
+    "generateOgImages": false
+  },
+  "bangumi": {
+    "userId": "1143164",
+    "mode": "dynamic",
+    "apiUrl": "https://bgmapi.anibt.net",
+    "subjectBaseUrl": "https://bgmmi.anibt.net/subject/",
+    "categoryOrder": [
+      "anime",
+      "book",
+      "music",
+      "game"
+    ]
+  },
+  "anime": {
+    "bilibili": {
+      "uid": "38932988"
+    }
+  },
+  "music": {
+    "userId": "9010085648",
+    "mode": "dynamic"
+  },
+  "pagination": {
+    "postsPerPage": 6
+  },
+  "imageOptimization": {
+    "formats": "both",
+    "quality": 70,
+    "noReferrerDomains": [
+      "*.hdslb.com",
+      "*.bilibili.com"
+    ]
+  },
+  "lang": "zh_CN"
+}
