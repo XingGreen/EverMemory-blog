@@ -37,6 +37,7 @@ yarn.lock
 
 # ide
 .idea
+.vscode/
 *.iml
 .claude
 

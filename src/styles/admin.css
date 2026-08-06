@@ -1,0 +1,98 @@
+/* Admin dashboard design tokens — Minimal white/gray with frontend purple accent, scoped to .admin-shell */
+.admin-shell {
+  --primary: oklch(0.70 0.14 275);
+  --primary-foreground: #ffffff;
+  --destructive: oklch(0.5482 0.225 29.2339);
+  --destructive-foreground: #ffffff;
+  --success: #16a34a;
+  --warning: #d97706;
+
+  --page-bg: oklch(0.97 0.005 275);
+  --card-bg: #ffffff;
+  --admin-sidebar-bg: oklch(0.95 0.01 275);
+
+  --deep-text: #0f172a;
+  --content-meta: #64748b;
+
+  --btn-regular-bg: oklch(0.95 0.02 275);
+  --btn-regular-bg-hover: oklch(0.92 0.035 275);
+  --btn-regular-bg-active: oklch(0.88 0.05 275);
+  --btn-plain-bg-hover: oklch(0.96 0.015 275);
+  --btn-plain-bg-active: oklch(0.98 0.01 275);
+  --btn-card-bg-hover: oklch(0.98 0.008 275);
+  --btn-card-bg-active: oklch(0.95 0.015 275);
+
+  --line-divider: #e2e8f0;
+  --line-color: #cbd5e1;
+  --input-border: color-mix(in srgb, var(--content-meta) 28%, var(--line-divider));
+  --meta-divider: rgba(15, 23, 42, 0.2);
+  --muted: oklch(0.95 0.01 275);
+  --selection-bg: oklch(0.90 0.05 275);
+  --float-panel-bg: #ffffff;
+
+  --radius-large: 1.25rem;
+  --radius-3xl: 1.125rem;
+  --radius-2xl: 0.875rem;
+  --radius-xl: 0.75rem;
+  --radius-lg: 0.625rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.375rem;
+
+  --shadow-card: 0px 4px 10px 0px hsl(270 20% 30% / 0.06),
+    0px 1px 2px -1px hsl(270 20% 30% / 0.06);
+  --shadow-card-hover: 0px 8px 18px 0px hsl(270 20% 30% / 0.1),
+    0px 2px 4px -1px hsl(270 20% 30% / 0.08);
+  --shadow-button: 0px 4px 12px hsl(270 60% 40% / 0.22);
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: "Georgia", serif;
+  --font-mono: "JetBrains Mono", "Monaco", "Consolas", monospace;
+
+  font-family: var(--font-sans);
+}
+
+.dark .admin-shell {
+  --primary: oklch(0.75 0.14 275);
+  --primary-foreground: #ffffff;
+  --destructive: oklch(0.6375 0.2489 20.732);
+  --destructive-foreground: #ffffff;
+  --success: #4ade80;
+  --warning: #fbbf24;
+
+  --page-bg: oklch(0.10 0.012 275);
+  --card-bg: oklch(0.17 0.015 275);
+  --admin-sidebar-bg: oklch(0.08 0.01 275);
+
+  --deep-text: #f1f5f9;
+  --content-meta: #94a3b8;
+
+  --btn-regular-bg: oklch(0.28 0.035 275);
+  --btn-regular-bg-hover: oklch(0.35 0.04 275);
+  --btn-regular-bg-active: oklch(0.42 0.045 275);
+  --btn-plain-bg-hover: oklch(0.25 0.03 275);
+  --btn-plain-bg-active: oklch(0.20 0.025 275);
+  --btn-card-bg-hover: oklch(0.25 0.03 275);
+  --btn-card-bg-active: oklch(0.30 0.035 275);
+
+  --line-divider: oklch(0.22 0.02 275);
+  --line-color: oklch(0.28 0.02 275);
+  --input-border: color-mix(in srgb, var(--content-meta) 35%, var(--line-color));
+  --meta-divider: rgba(255, 255, 255, 0.2);
+  --muted: oklch(0.22 0.015 275);
+  --selection-bg: oklch(0.35 0.08 275);
+  --float-panel-bg: oklch(0.17 0.015 275);
+
+  --shadow-card: 0px 4px 10px 0px hsl(0 0% 0% / 0.22),
+    0px 1px 2px -1px hsl(0 0% 0% / 0.2);
+  --shadow-card-hover: 0px 8px 18px 0px hsl(0 0% 0% / 0.32),
+    0px 2px 4px -1px hsl(0 0% 0% / 0.26);
+  --shadow-button: 0px 4px 12px hsl(270 60% 30% / 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

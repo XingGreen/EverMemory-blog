@@ -121,7 +121,7 @@
 				{#if isSyncing}
 					<span class="spinner"></span>
 				{:else}
-					<Icon icon="material-symbols:cloud-sync-outline-rounded" />
+					<Icon icon="material-symbols:cloud" />
 				{/if}
 				同步
 			</button>
@@ -250,12 +250,12 @@
 		--md-on-surface-variant: var(--content-meta);
 		--md-outline: var(--line-divider);
 		--md-primary: var(--primary);
-		--md-primary-container: color-mix(in srgb, var(--primary) 18%, var(--card-bg));
+		--md-primary-container: color-mix(in srgb, var(--primary) 14%, var(--card-bg));
 		--md-on-primary-container: var(--primary);
 		--md-surface-container-high: color-mix(in srgb, var(--primary) 6%, var(--card-bg));
-		--md-state-layer-hover: color-mix(in srgb, var(--deep-text) 6%, transparent);
+		--md-state-layer-hover: color-mix(in srgb, var(--deep-text) 5%, transparent);
 
-		padding: 1rem;
+		padding: 1.25rem;
 		border-radius: var(--radius-large);
 	}
 
@@ -340,7 +340,7 @@
 		height: 32px;
 		padding: 0 1rem;
 		border: 1px solid var(--md-outline);
-		border-radius: 8px;
+		border-radius: var(--radius-lg);
 		background: transparent;
 		color: var(--md-on-surface-variant);
 		font-size: 0.8125rem;
@@ -349,6 +349,11 @@
 		transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
 		overflow: hidden;
 		position: relative;
+	}
+
+	.chip:focus-visible {
+		outline: 2px solid var(--md-primary);
+		outline-offset: 2px;
 	}
 
 	.chip::after {
@@ -630,13 +635,13 @@
 	}
 
 	.status-chip[data-draft="false"] {
-		background: color-mix(in srgb, #22c55e 15%, transparent);
-		color: #22c55e;
+		background: color-mix(in srgb, var(--success) 15%, transparent);
+		color: var(--success);
 	}
 
 	.status-chip[data-draft="true"] {
-		background: color-mix(in srgb, #f59e0b 15%, transparent);
-		color: #f59e0b;
+		background: color-mix(in srgb, var(--warning) 15%, transparent);
+		color: var(--warning);
 	}
 
 	/* 操作列 - 文字按钮 */

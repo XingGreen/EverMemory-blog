@@ -132,10 +132,10 @@
 	.modal-content {
 		background: var(--card-bg);
 		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-3xl);
+		border-radius: var(--radius-large);
 		width: 90%;
 		max-width: 480px;
-		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+		box-shadow: var(--shadow-card-hover);
 		overflow: hidden;
 		animation: slideIn 0.3s ease-out;
 		position: relative;
@@ -217,7 +217,7 @@
 
 	.confirm-input {
 		padding: 0.625rem 0.875rem;
-		border: 1px solid var(--line-divider);
+		border: 1px solid var(--input-border);
 		border-radius: var(--radius-md);
 		font-size: 0.875rem;
 		transition: all 0.15s;
@@ -313,14 +313,16 @@
 	}
 
 	.btn-delete.enabled {
-		background: #ef4444;
-		color: white;
+		background: var(--destructive);
+		color: var(--destructive-foreground);
 		cursor: pointer;
+		border-radius: var(--radius-large);
+		box-shadow: 0 4px 12px color-mix(in srgb, var(--destructive) 40%, transparent);
 	}
 
 	.btn-delete.enabled:hover:not(:disabled) {
+		filter: brightness(1.05);
 		transform: translateY(-1px);
-		box-shadow: 0 4px 12px color-mix(in srgb, #ef4444 40%, transparent);
 	}
 
 	.btn-delete:disabled {

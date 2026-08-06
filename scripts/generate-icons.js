@@ -33,7 +33,7 @@ const iconSetCache = new Map();
 /**
  * 递归获取目录下所有文件
  */
-function getAllFiles(dir, extensions = [".svelte", ".astro"]) {
+function getAllFiles(dir, extensions = [".svelte", ".astro", ".ts", ".js"]) {
 	const files = [];
 
 	function walk(currentDir) {
@@ -67,6 +67,8 @@ function extractIconNames(content) {
 	const patterns = [
 		// icon="xxx:yyy" 或 icon='xxx:yyy'
 		/icon=["']([a-z0-9-]+:[a-z0-9-]+)["']/gi,
+		// icon: "xxx:yyy" 或 icon: 'xxx:yyy' (TS/JS 配置对象)
+		/icon\s*:\s*["']([a-z0-9-]+:[a-z0-9-]+)["']/gi,
 		// icon={`xxx:yyy`}
 		/icon=\{[`"']([a-z0-9-]+:[a-z0-9-]+)[`"']\}/gi,
 		// name="xxx:yyy" (Astro 组件)

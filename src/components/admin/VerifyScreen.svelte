@@ -133,7 +133,9 @@
 	.verify-card {
 		padding: 2.5rem 2rem;
 		width: 100%;
-		max-width: 400px;
+		max-width: 420px;
+		box-shadow: var(--shadow-card);
+		border-radius: var(--radius-large);
 	}
 
 	.verify-header {
@@ -142,16 +144,17 @@
 	}
 
 	.avatar-wrapper {
-		width: 4rem;
-		height: 4rem;
+		width: 4.5rem;
+		height: 4.5rem;
 		margin: 0 auto 1rem;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		background: var(--primary);
-		color: white;
+		color: var(--primary-foreground);
 		border-radius: 50%;
 		overflow: hidden;
+		box-shadow: var(--shadow-button);
 	}
 
 	.avatar-img {
@@ -191,7 +194,7 @@
 	.field input {
 		width: 100%;
 		padding: 1rem 0.75rem 0.5rem;
-		border: 1px solid var(--line-divider);
+		border: 1px solid var(--input-border);
 		border-radius: var(--radius-md);
 		font-size: 0.9375rem;
 		transition: border-color 0.2s;
@@ -262,11 +265,11 @@
 
 	/* ── 登录按钮 ── */
 	.submit-btn {
-		padding: 0.75rem;
+		padding: 0.875rem;
 		border: none;
-		border-radius: var(--radius-md);
+		border-radius: var(--radius-large);
 		background: var(--primary);
-		color: white;
+		color: var(--primary-foreground);
 		font-size: 0.9375rem;
 		font-weight: 600;
 		cursor: pointer;
@@ -277,10 +280,11 @@
 		gap: 0.5rem;
 		font-family: inherit;
 		margin-top: 0.25rem;
+		box-shadow: var(--shadow-button);
 	}
 
 	.submit-btn:hover:not(:disabled) {
-		opacity: 0.9;
+		filter: brightness(1.05);
 		transform: translateY(-1px);
 	}
 

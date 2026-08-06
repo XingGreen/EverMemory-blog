@@ -482,6 +482,7 @@
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-large);
 		overflow: hidden;
+		box-shadow: var(--shadow-card);
 	}
 
 	.editor-header {
@@ -527,12 +528,14 @@
 
 	.btn-save {
 		background: var(--primary);
-		color: white;
+		color: var(--primary-foreground);
+		border-radius: var(--radius-large);
+		box-shadow: var(--shadow-button);
 	}
 
 	.btn-save:hover:not(:disabled) {
+		filter: brightness(1.05);
 		transform: translateY(-1px);
-		box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 40%, transparent);
 	}
 
 	.btn-save:disabled {
@@ -620,7 +623,7 @@
 	.form-textarea,
 	.content-editor {
 		padding: 0.625rem 0.875rem;
-		border: 1px solid var(--line-divider);
+		border: 1px solid var(--input-border);
 		border-radius: var(--radius-md);
 		font-size: 0.875rem;
 		font-family: inherit;
