@@ -1,0 +1,31 @@
+---
+// 后台专用独立布局
+// 与前台 MainGridLayout 不同：不含横向导航栏、小组件、页脚、悬浮控件、壁纸等前台元素
+import Layout from "./Layout.astro";
+import "@/styles/admin.css";
+
+interface Props {
+	title?: string;
+	description?: string;
+	lang?: string;
+}
+
+const { title, description, lang } = Astro.props;
+---
+
+<Layout title={title} description={description} lang={lang} excludeFrontendEffects>
+	<!-- 后台独立布局：
+	不提供 swup 容器（#swup-container 等），使后台页面完全不参与前台 SPA 导航，
+	保证后台内部 hash 路由、前进/后退均交由浏览器原生处理。 -->
+	<div class="admin-shell">
+		<slot />
+	</div>
+</Layout>
+
+<style>
+	.admin-shell {
+		min-height: 100vh;
+		width: 100%;
+		background: var(--page-bg);
+	}
+</style>

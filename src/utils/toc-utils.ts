@@ -186,6 +186,7 @@ export class TOCManager {
           data-heading-id="${heading.id}"
 		  aria-label="${escapedHeadingText}"
 		  title="${escapedHeadingText}"
+          style="pointer-events: none;"
         >
 			  <div class="toc-badge ${depth === this.minDepth ? "toc-badge-index" : ""}">
             ${badgeContent}

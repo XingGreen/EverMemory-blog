@@ -40,9 +40,18 @@ interface Props {
 	lang?: string;
 	setOGTypeArticle?: boolean;
 	postSlug?: string;
+	// 后台等独立布局可传入 true，排除樱花特效、背景音乐等前台装饰元素
+	excludeFrontendEffects?: boolean;
 }
 
-let { title, description, lang, setOGTypeArticle, postSlug } = Astro.props;
+let {
+	title,
+	description,
+	lang,
+	setOGTypeArticle,
+	postSlug,
+	excludeFrontendEffects = false,
+} = Astro.props;
 
 // apply a class to the body element to decide the height of the banner, only used for initial page load
 // Swup can update the body for each page visit, but it's after the page transition, causing a delay for banner height change
@@ -573,13 +582,13 @@ const siteLang = lang.replace("_", "-");
     <!-- 页面顶部渐变高光效果 - 只在full和semifull模式下显示 -->
     {shouldShowTopHighlight && <div class="top-gradient-highlight" />}
     <ConfigCarrier />
-    <MusicManager />
+    {!excludeFrontendEffects && <MusicManager />}
     <slot />
 
 
 
     <!-- Sakura Effect -->
-    <SakuraEffect />
+    {!excludeFrontendEffects && <SakuraEffect />}
 
     <!-- Fancybox Manager -->
     <FancyboxManager />
@@ -1399,6 +1408,38 @@ function disableAnimation() {
   }
 
   document.addEventListener("astro:page-load", scheduleContentOverflowEnhancements);
+
+  // 后台（/admin）采用独立布局，与前台外壳结构完全不同。
+  // 若站内导航走 swup（SPA），只会替换内容容器而残留对方页面外壳，导致布局错乱。
+  // 因此在捕获阶段拦截点击：只要涉及后台页面就跳过 swup，改为浏览器整页加载。
+  const adminNavPath = (pathname: string) =>
+    pathname === "/admin" || pathname.startsWith("/admin/");
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest("a[href]") as HTMLAnchorElement | null;
+      if (!anchor) return;
+      if (anchor.getAttribute("target") && anchor.target !== "_self") return;
+      let targetPath: string;
+      try {
+        targetPath = new URL(anchor.href, window.location.href).pathname;
+      } catch {
+        return;
+      }
+      const currentPath = window.location.pathname;
+      if (!adminNavPath(currentPath) && !adminNavPath(targetPath)) return;
+      // 同站内 hash 路由（如 #/dashboard/…、#login）不改 pathname，交给浏览器处理
+      if (currentPath === targetPath) return;
+      event.preventDefault();
+      event.stopPropagation();
+      window.location.href = anchor.href; // 整页加载，绕过 swup
+    },
+    true
+  );
   document.addEventListener("password:decrypted", () => {
     setTimeout(scheduleContentOverflowEnhancements, 200);
   });
