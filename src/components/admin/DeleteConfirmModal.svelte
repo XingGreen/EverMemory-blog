@@ -1,5 +1,7 @@
 <script lang="ts">
 	import Icon from "@/components/common/Icon.svelte";
+	import I18nKey from "@/i18n/i18nKey";
+	import { i18n } from "@/i18n/translation";
 
 	let { title, onConfirm, onCancel }: {
 		title: string;
@@ -53,39 +55,39 @@
 	>
 		<div class="modal-header">
 			<Icon icon="material-symbols:warning-rounded" class="modal-icon" />
-			<h2 id="confirm-title">确认删除</h2>
+			<h2 id="confirm-title">{i18n(I18nKey.deleteTitle)}</h2>
 		</div>
 
 		<div class="modal-body">
 			<p id="confirm-description" class="warning-text">
-				你即将删除文章 <strong>"{title}"</strong>。此操作不可撤销。
+				{@html i18n(I18nKey.deleteBody).replace("{title}", title)}
 			</p>
 
 			<div class="confirm-instructions">
-				<p>请在下方输入文章标题以确认删除：</p>
+				<p>{i18n(I18nKey.deleteInstruction)}</p>
 				<code>{title}</code>
 			</div>
 
 			<input
 				type="text"
 				bind:value={confirmText}
-				placeholder="输入文章标题确认删除"
+				placeholder={i18n(I18nKey.deletePlaceholder)}
 				class={`confirm-input ${shakeError ? "shake" : ""} ${confirmText === title ? "matched" : ""}`}
 			/>
 
 			{#if confirmText && confirmText !== title}
-				<p class="hint-text">标题不匹配，请仔细核对</p>
+				<p class="hint-text">{i18n(I18nKey.deleteHint)}</p>
 			{:else if confirmText === title}
 				<p class="success-text">
 					<Icon icon="material-symbols:check" class="text-sm" />
-					标题已确认，可以删除
+					{i18n(I18nKey.deleteMatched)}
 				</p>
 			{/if}
 		</div>
 
 		<div class="modal-footer">
 			<button class="btn btn-cancel" onclick={onCancel} disabled={isSubmitting}>
-				取消
+				{i18n(I18nKey.deleteCancel)}
 			</button>
 			<button
 				class={`btn btn-delete ${confirmText === title ? "enabled" : ""}`}
@@ -94,10 +96,10 @@
 			>
 				{#if isSubmitting}
 					<span class="spinner"></span>
-					删除中...
+					{i18n(I18nKey.deleteDeleting)}
 				{:else}
 					<Icon icon="material-symbols:close" class="text-sm" />
-					确认删除
+					{i18n(I18nKey.deleteConfirm)}
 				{/if}
 			</button>
 		</div>

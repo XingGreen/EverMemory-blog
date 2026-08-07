@@ -1,7 +1,9 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
-import { CONFIG_ITEMS, getConfigItem } from "@/utils/admin-settings";
+import { CONFIG_ITEMS, getConfigDescKey, getConfigItem, getConfigLabelKey } from "@/utils/admin-settings";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
 import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
 import PostEditor from "./PostEditor.svelte";
 import PostList from "./PostList.svelte";
@@ -56,6 +58,11 @@ let showDeleteModal = $state(false);
 let deletingPost = $state<Post | null>(null);
 let toast = $state<{ message: string; type: "success" | "error" } | null>(null);
 let isSyncing = $state(false);
+// 网站配置详情页状态（操作按钮提升到页头，由父级统一管理）
+let settingsData = $state<Record<string, any> | null>(null);
+let settingsError = $state("");
+let settingsLoading = $state(false);
+let settingsSaving = $state(false);
 // 侧边栏状态
 let postsSubOpen = $state(true); // 文章管理子菜单是否展开
 let settingsSubOpen = $state(true); // 网站配置子菜单是否展开
@@ -86,10 +93,10 @@ const stats = $derived({
 
 const greeting = $derived.by(() => {
 	const hour = new Date().getHours();
-	if (hour < 6) return "夜深了";
-	if (hour < 12) return "早上好";
-	if (hour < 18) return "下午好";
-	return "晚上好";
+	if (hour < 6) return i18n(I18nKey.greetingNight);
+	if (hour < 12) return i18n(I18nKey.greetingMorning);
+	if (hour < 18) return i18n(I18nKey.greetingAfternoon);
+	return i18n(I18nKey.greetingEvening);
 });
 
 const currentDate = $derived(
@@ -192,21 +199,21 @@ onMount(() => {
 // 顶部标题随页面联动
 const headerInfo = $derived.by(() => {
 	if (activePage === "dashboard") {
-		return { title: "控制面板", subtitle: "博客数据概览" };
+		return { title: i18n(I18nKey.adminDashboard), subtitle: i18n(I18nKey.dashboardHomeDesc) };
 	}
 	if (activePage === "settings") {
 		const item = settingsSection ? getConfigItem(settingsSection) : undefined;
 		return item
-			? { title: item.label, subtitle: item.description }
-			: { title: "网站配置", subtitle: "选择配置项进行在线编辑" };
+			? { title: i18n(getConfigLabelKey(item.key)), subtitle: i18n(getConfigDescKey(item.key)) }
+			: { title: i18n(I18nKey.adminSettings), subtitle: i18n(I18nKey.settingsSelectHint) };
 	}
 	if (viewMode === "edit" && editingPost) {
-		return { title: "编辑文章", subtitle: editingPost.title };
+		return { title: i18n(I18nKey.adminEditPost), subtitle: editingPost.title };
 	}
 	if (viewMode === "create") {
-		return { title: "新建文章", subtitle: "撰写一篇新文章" };
+		return { title: i18n(I18nKey.adminNewPost), subtitle: i18n(I18nKey.postsManageDesc) };
 	}
-	return { title: "文章管理", subtitle: "管理你的博客文章" };
+	return { title: i18n(I18nKey.adminPosts), subtitle: i18n(I18nKey.postsManageDesc) };
 });
 
 const headerIcon = $derived(
@@ -233,6 +240,58 @@ async function loadPosts() {
 		error = "网络请求失败";
 	} finally {
 		isLoading = false;
+	}
+}
+
+// 进入网站配置子页时加载对应配置文件（key 变化时重新加载）
+$effect(() => {
+	if (activePage === "settings" && settingsSection && getConfigItem(settingsSection)) {
+		loadSettings(settingsSection);
+	}
+});
+
+async function loadSettings(key: string) {
+	settingsLoading = true;
+	settingsError = "";
+	try {
+		const res = await fetch(`/api/admin/configs/${key}/`);
+		const json = await res.json();
+		if (json.success) {
+			settingsData = json.data;
+		} else {
+			settingsError = json.message || "读取配置失败";
+		}
+	} catch (err) {
+		settingsError = err instanceof Error ? err.message : "网络请求失败";
+	} finally {
+		settingsLoading = false;
+	}
+}
+
+async function saveSettings() {
+	const key = settingsSection;
+	if (!key || !settingsData) return;
+	settingsSaving = true;
+	try {
+		const res = await fetch(`/api/admin/configs/${key}/`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ data: settingsData }),
+		});
+		const json = await res.json();
+		if (json.success) {
+			showToast(json.message || "保存成功", "success");
+		} else {
+			showToast(json.message || "保存失败", "error", 10000);
+		}
+	} catch (err) {
+		showToast(
+			`保存请求失败: ${err instanceof Error ? err.message : String(err)}`,
+			"error",
+			10000,
+		);
+	} finally {
+		settingsSaving = false;
 	}
 }
 
@@ -417,7 +476,7 @@ function formatDate(dateStr: string | null): string {
 		</div>
 		<h2>{title}</h2>
 		<p>{desc}</p>
-		<span class="placeholder-badge">页面建设中</span>
+		<span class="placeholder-badge">{i18n(I18nKey.placeholderBadge)}</span>
 	</div>
 {/snippet}
 
@@ -439,15 +498,15 @@ function formatDate(dateStr: string | null): string {
 		<div class="welcome-content">
 			<div class="welcome-greeting">
 				<Icon icon="material-symbols:waving-hand-outline" class="welcome-icon" />
-				<span>{greeting}，欢迎回到后台</span>
+				<span>{i18n(I18nKey.welcomeGreeting).replace("{greeting}", greeting)}</span>
 			</div>
-			<h2>今天想写点什么？</h2>
+			<h2>{i18n(I18nKey.welcomeTitle)}</h2>
 			<p>{currentDate}</p>
 		</div>
 		<div class="welcome-actions">
 			<button class="welcome-btn primary" onclick={goCreatePost}>
 				<Icon icon="material-symbols:edit-square-outline" />
-				<span>新建文章</span>
+				<span>{i18n(I18nKey.adminNewPost)}</span>
 			</button>
 		</div>
 	</div>
@@ -455,31 +514,31 @@ function formatDate(dateStr: string | null): string {
 
 {#snippet quickActions()}
 	<div class="card-base quick-actions">
-		<h2>快捷操作</h2>
+		<h2>{i18n(I18nKey.quickActions)}</h2>
 		<div class="actions-grid">
 			<button class="action-card" onclick={goCreatePost}>
 				<div class="action-icon-wrap write">
 					<Icon icon="material-symbols:edit-calendar-outline-rounded" class="action-icon" />
 				</div>
-				<span>新建文章</span>
+				<span>{i18n(I18nKey.adminNewPost)}</span>
 			</button>
 			<button class="action-card" onclick={goPostList}>
 				<div class="action-icon-wrap list">
 					<Icon icon="material-symbols:format-list-bulleted" class="action-icon" />
 				</div>
-				<span>文章列表</span>
+				<span>{i18n(I18nKey.adminPostList)}</span>
 			</button>
 			<button class="action-card" onclick={() => goSettings()}>
 				<div class="action-icon-wrap settings">
 					<Icon icon="material-symbols:settings" class="action-icon" />
 				</div>
-				<span>网站配置</span>
+				<span>{i18n(I18nKey.adminSettings)}</span>
 			</button>
 			<button class="action-card" onclick={handleSync} disabled={isSyncing}>
 				<div class="action-icon-wrap sync" class:syncing={isSyncing}>
 					<Icon icon="material-symbols:cloud" class="action-icon" />
 				</div>
-				<span>{isSyncing ? "同步中…" : "同步文章"}</span>
+				<span>{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}</span>
 			</button>
 		</div>
 	</div>
@@ -488,13 +547,13 @@ function formatDate(dateStr: string | null): string {
 {#snippet recentPostsSection()}
 	<div class="card-base dashboard-section recent-posts">
 		<div class="section-header">
-			<h2>最近文章</h2>
-			<button class="section-link" onclick={goPostList}>查看全部</button>
+			<h2>{i18n(I18nKey.recentPostsTitle)}</h2>
+			<button class="section-link" onclick={goPostList}>{i18n(I18nKey.viewAll)}</button>
 		</div>
 		{#if recentPosts.length === 0}
 			<div class="empty-state">
 				<Icon icon="material-symbols:article-outline" class="empty-icon" />
-				<p>还没有文章，开始创作吧</p>
+				<p>{i18n(I18nKey.noRecentPosts)}</p>
 			</div>
 		{:else}
 			<div class="post-list">
@@ -504,7 +563,9 @@ function formatDate(dateStr: string | null): string {
 						<div class="post-info">
 							<span class="post-title">{post.title}</span>
 							<span class="post-meta"
-								>{post.draft ? "草稿" : "已发布"} · {formatDate(post.updated ?? post.published)}</span
+								>{i18n(I18nKey.postMetaStatus)
+									.replace("{status}", post.draft ? i18n(I18nKey.postDraft) : i18n(I18nKey.postPublished))
+									.replace("{date}", formatDate(post.updated ?? post.published))}</span
 							>
 						</div>
 						<Icon icon="material-symbols:chevron-right" class="post-arrow" />
@@ -518,7 +579,7 @@ function formatDate(dateStr: string | null): string {
 {#snippet contentOverview()}
 	<div class="card-base dashboard-section content-overview">
 		<div class="section-header">
-			<h2>内容概览</h2>
+			<h2>{i18n(I18nKey.contentOverviewTitle)}</h2>
 		</div>
 		<div class="overview-chart">
 			<div class="chart-ring">
@@ -535,23 +596,23 @@ function formatDate(dateStr: string | null): string {
 				</svg>
 				<div class="ring-label">
 					<span class="ring-value">{publishRate}%</span>
-					<span class="ring-caption">已发布</span>
+					<span class="ring-caption">{i18n(I18nKey.postPublished)}</span>
 				</div>
 			</div>
 			<div class="chart-legend">
 				<div class="legend-item">
 					<span class="legend-dot published"></span>
-					<span class="legend-label">已发布</span>
+					<span class="legend-label">{i18n(I18nKey.postPublished)}</span>
 					<span class="legend-count">{stats.published}</span>
 				</div>
 				<div class="legend-item">
 					<span class="legend-dot draft"></span>
-					<span class="legend-label">草稿</span>
+					<span class="legend-label">{i18n(I18nKey.postDraft)}</span>
 					<span class="legend-count">{stats.drafts}</span>
 				</div>
 				<div class="legend-item">
 					<span class="legend-dot pinned"></span>
-					<span class="legend-label">置顶</span>
+					<span class="legend-label">{i18n(I18nKey.pinned)}</span>
 					<span class="legend-count">{stats.pinned}</span>
 				</div>
 			</div>
@@ -562,14 +623,14 @@ function formatDate(dateStr: string | null): string {
 {#snippet systemStatus()}
 	<div class="card-base dashboard-section system-status">
 		<div class="section-header">
-			<h2>系统状态</h2>
+			<h2>{i18n(I18nKey.systemStatus)}</h2>
 		</div>
 		<div class="status-list">
 			<div class="status-item">
 				<Icon icon="material-symbols:check-circle-outline" class="status-icon healthy" />
 				<div class="status-info">
-					<span class="status-label">后台服务</span>
-					<span class="status-value">运行正常</span>
+					<span class="status-label">{i18n(I18nKey.statusAdminService)}</span>
+					<span class="status-value">{i18n(I18nKey.statusRunning)}</span>
 				</div>
 			</div>
 			<div class="status-item">
@@ -578,15 +639,15 @@ function formatDate(dateStr: string | null): string {
 					class="status-icon {isSyncing ? 'syncing' : 'healthy'}"
 				/>
 				<div class="status-info">
-					<span class="status-label">GitHub 同步</span>
-					<span class="status-value">{isSyncing ? "同步中..." : "已就绪"}</span>
+					<span class="status-label">{i18n(I18nKey.statusGithubSync)}</span>
+					<span class="status-value">{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.statusReady)}</span>
 				</div>
 			</div>
 			<div class="status-item">
 				<Icon icon="material-symbols:article-outline" class="status-icon info" />
 				<div class="status-info">
-					<span class="status-label">文章总数</span>
-					<span class="status-value">{stats.total} 篇</span>
+					<span class="status-label">{i18n(I18nKey.dashboardTotalPosts)}</span>
+					<span class="status-value">{i18n(I18nKey.dashboardUnit).replace("{count}", String(stats.total))}</span>
 				</div>
 			</div>
 		</div>
@@ -598,10 +659,10 @@ function formatDate(dateStr: string | null): string {
 		{@render welcomeBanner()}
 
 		<div class="stats-grid">
-			{@render statCard("文章总数", stats.total, "material-symbols:article-outline", "primary")}
-			{@render statCard("已发布", stats.published, "material-symbols:check", "success")}
-			{@render statCard("草稿箱", stats.drafts, "material-symbols:folder-open-rounded", "warning")}
-			{@render statCard("置顶", stats.pinned, "material-symbols:pinboard", "accent")}
+			{@render statCard(i18n(I18nKey.dashboardTotalPosts), stats.total, "material-symbols:article-outline", "primary")}
+			{@render statCard(i18n(I18nKey.postPublished), stats.published, "material-symbols:check", "success")}
+			{@render statCard(i18n(I18nKey.dashboardDraftBox), stats.drafts, "material-symbols:folder-open-rounded", "warning")}
+			{@render statCard(i18n(I18nKey.pinned), stats.pinned, "material-symbols:pinboard", "accent")}
 		</div>
 
 		<div class="dashboard-grid">
@@ -632,7 +693,7 @@ function formatDate(dateStr: string | null): string {
 				<div class="brand-icon">
 					<Icon icon="material-symbols:apps" class="text-lg" />
 				</div>
-				<span>控制面板</span>
+				<span>{i18n(I18nKey.adminDashboard)}</span>
 			</div>
 
 			<nav class="sidebar-nav">
@@ -643,7 +704,7 @@ function formatDate(dateStr: string | null): string {
 					onclick={goDashboard}
 				>
 					<Icon icon="material-symbols:home-outline-rounded" />
-					<span>首页</span>
+					<span>{i18n(I18nKey.adminHome)}</span>
 				</button>
 
 				<!-- 文章管理（二级菜单） -->
@@ -655,7 +716,7 @@ function formatDate(dateStr: string | null): string {
 						aria-expanded={postsSubOpen}
 					>
 						<Icon icon="material-symbols:article-outline" />
-						<span>文章管理</span>
+						<span>{i18n(I18nKey.adminPosts)}</span>
 						<Icon
 							icon={postsSubOpen ? "material-symbols:keyboard-arrow-up-rounded" : "material-symbols:keyboard-arrow-down-rounded"}
 							class="nav-arrow"
@@ -669,7 +730,7 @@ function formatDate(dateStr: string | null): string {
 								onclick={goPostList}
 							>
 								<Icon icon="material-symbols:format-list-bulleted" />
-								<span>文章列表</span>
+								<span>{i18n(I18nKey.adminPostList)}</span>
 							</button>
 							<button
 								class="nav-item sub"
@@ -677,7 +738,7 @@ function formatDate(dateStr: string | null): string {
 								onclick={goCreatePost}
 							>
 								<Icon icon="material-symbols:edit-calendar-outline-rounded" />
-								<span>新建文章</span>
+								<span>{i18n(I18nKey.adminNewPost)}</span>
 							</button>
 						</div>
 					{/if}
@@ -692,7 +753,7 @@ function formatDate(dateStr: string | null): string {
 						aria-expanded={settingsSubOpen}
 					>
 						<Icon icon="material-symbols:settings" />
-						<span>网站配置</span>
+						<span>{i18n(I18nKey.adminSettings)}</span>
 						<Icon
 							icon={settingsSubOpen ? "material-symbols:keyboard-arrow-up-rounded" : "material-symbols:keyboard-arrow-down-rounded"}
 							class="nav-arrow"
@@ -706,7 +767,7 @@ function formatDate(dateStr: string | null): string {
 								onclick={() => goSettings()}
 							>
 								<Icon icon="material-symbols:apps" />
-								<span>配置概览</span>
+								<span>{i18n(I18nKey.adminSettingsOverview)}</span>
 							</button>
 							{#each CONFIG_ITEMS as item}
 								<button
@@ -715,7 +776,7 @@ function formatDate(dateStr: string | null): string {
 									onclick={() => goSettings(item.key)}
 								>
 									<Icon icon={item.icon} />
-									<span>{item.label}</span>
+									<span>{i18n(getConfigLabelKey(item.key))}</span>
 								</button>
 							{/each}
 						</div>
@@ -726,7 +787,7 @@ function formatDate(dateStr: string | null): string {
 			<div class="sidebar-footer">
 				<button class="nav-item" onclick={handleLogout}>
 					<Icon icon="material-symbols:arrow-back" />
-					<span>退出登录</span>
+					<span>{i18n(I18nKey.adminLogout)}</span>
 				</button>
 			</div>
 		</aside>
@@ -752,7 +813,17 @@ function formatDate(dateStr: string | null): string {
 					{#if activePage === "posts" && viewMode === "list"}
 						<button class="action-btn primary" onclick={goCreatePost}>
 							<Icon icon="material-symbols:edit-calendar-outline-rounded" class="text-sm" />
-							<span>新建文章</span>
+							<span>{i18n(I18nKey.adminNewPost)}</span>
+						</button>
+					{/if}
+					{#if activePage === "settings" && settingsSection && getConfigItem(settingsSection)}
+						<button class="action-btn" onclick={() => loadSettings(settingsSection)} disabled={settingsLoading}>
+							<Icon icon="material-symbols:refresh" class="text-sm" />
+							<span>{i18n(I18nKey.configReload)}</span>
+						</button>
+						<button class="action-btn primary" onclick={saveSettings} disabled={settingsSaving || settingsLoading}>
+							<Icon icon="material-symbols:save-outline" class="text-sm" />
+							<span>{settingsSaving ? i18n(I18nKey.configSaving) : i18n(I18nKey.configSave)}</span>
 						</button>
 					{/if}
 				</div>
@@ -793,9 +864,14 @@ function formatDate(dateStr: string | null): string {
 				{:else if activePage === "settings"}
 					{#if settingsSection}
 						{#if getConfigItem(settingsSection)}
-							<SettingsEditor item={getConfigItem(settingsSection)!} onToast={showToast} />
+							<SettingsEditor
+								item={getConfigItem(settingsSection)!}
+								data={settingsData}
+								error={settingsError}
+								isLoading={settingsLoading}
+							/>
 						{:else}
-							{@render placeholder("网站配置", "未知的配置项。", "material-symbols:settings")}
+							{@render placeholder(i18n(I18nKey.adminSettings), i18n(I18nKey.configSectionUnknown), "material-symbols:settings")}
 						{/if}
 					{:else}
 						<SettingsOverview onNavigate={(key) => goSettings(key)} />

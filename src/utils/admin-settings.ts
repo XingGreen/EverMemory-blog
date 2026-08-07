@@ -1,6 +1,7 @@
 // 后台「网站配置」可在线编辑的配置文件清单（目前前 5 个）
 // 纯数据模块：可同时被浏览器端（Svelte 组件）与服务端（API / 脚本）共享，
 // 因此不要在此文件中引入任何 node 或浏览器运行时依赖。
+import I18nKey from "@/i18n/i18nKey";
 
 export type AdminConfigItem = {
 	key: string;
@@ -68,4 +69,29 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 
 export function getConfigItem(key: string): AdminConfigItem | undefined {
 	return CONFIG_ITEMS.find((item) => item.key === key);
+}
+
+// 配置项 key → 国际化 key 映射（用于后台标题 / 描述，语言随 siteConfig.lang 切换）
+const CONFIG_LABEL_KEYS: Record<string, I18nKey> = {
+	site: I18nKey.configSite,
+	profile: I18nKey.configProfile,
+	navbar: I18nKey.configNavbar,
+	footer: I18nKey.configFooter,
+	sidebar: I18nKey.configSidebar,
+};
+
+const CONFIG_DESC_KEYS: Record<string, I18nKey> = {
+	site: I18nKey.configSiteDesc,
+	profile: I18nKey.configProfileDesc,
+	navbar: I18nKey.configNavbarDesc,
+	footer: I18nKey.configFooterDesc,
+	sidebar: I18nKey.configSidebarDesc,
+};
+
+export function getConfigLabelKey(key: string): I18nKey {
+	return CONFIG_LABEL_KEYS[key] ?? I18nKey.configSite;
+}
+
+export function getConfigDescKey(key: string): I18nKey {
+	return CONFIG_DESC_KEYS[key] ?? I18nKey.configSiteDesc;
 }

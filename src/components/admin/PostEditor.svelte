@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import Icon from "@/components/common/Icon.svelte";
+	import I18nKey from "@/i18n/i18nKey";
+	import { i18n } from "@/i18n/translation";
 
 	let {
 		post,
@@ -129,12 +131,12 @@
 
 	async function handleSave() {
 		if (!title.trim()) {
-			onError("请输入文章标题");
+			onError(i18n(I18nKey.postTitleRequired));
 			return;
 		}
 
 		if (!slug.trim()) {
-			onError("请输入文章标识（URL slug）");
+			onError(i18n(I18nKey.postSlugRequired));
 			return;
 		}
 
@@ -173,10 +175,11 @@
 				onSave();
 			} else {
 				console.error("[Editor] 保存失败:", data.message);
-				onError(data.message || "保存失败");
+				onError(data.message || i18n(I18nKey.postSaveFailed));
 			}
 		} catch (err) {
 			console.error("[Editor] 保存请求异常:", err);
+			// TODO i18n
 			onError(`保存请求失败: ${err instanceof Error ? err.message : String(err)}`);
 		} finally {
 			isSaving = false;
@@ -184,13 +187,13 @@
 	}
 
 	// Markdown 渲染：调用服务端 API，使用与主站相同的渲染管线
-	let renderedHtml = $state("<p class='empty-preview'>暂无内容预览</p>");
+	let renderedHtml = $state(`<p class='empty-preview'>${i18n(I18nKey.postPreviewEmpty)}</p>`);
 	let renderTimer: ReturnType<typeof setTimeout> | null = null;
 	let renderVersion = 0;
 
 	async function fetchPreview(mdContent: string) {
 		if (!mdContent.trim()) {
-			renderedHtml = "<p class='empty-preview'>暂无内容预览</p>";
+			renderedHtml = `<p class='empty-preview'>${i18n(I18nKey.postPreviewEmpty)}</p>`;
 			return;
 		}
 
@@ -209,7 +212,7 @@
 			}
 		} catch {
 			if (currentVersion === renderVersion) {
-				renderedHtml = "<p class='empty-preview'>渲染失败</p>";
+				renderedHtml = `<p class='empty-preview'>${i18n(I18nKey.postPreviewFailed)}</p>`;
 			}
 		}
 	}
@@ -223,19 +226,19 @@
 
 <div class="editor-container">
 	<div class="editor-header">
-		<h2>{mode === "edit" ? "编辑文章" : "新建文章"}</h2>
+		<h2>{mode === "edit" ? i18n(I18nKey.adminEditPost) : i18n(I18nKey.adminNewPost)}</h2>
 		<div class="header-actions">
 			<button class="btn btn-cancel" onclick={onCancel}>
 				<Icon icon="material-symbols:arrow-back" class="text-sm" />
-				取消
+				{i18n(I18nKey.postCancel)}
 			</button>
 			<button class="btn btn-save" onclick={handleSave} disabled={isSaving}>
 				{#if isSaving}
 					<span class="spinner"></span>
-					保存中...
+					{i18n(I18nKey.postSaving)}
 				{:else}
 					<Icon icon="material-symbols:download" class="text-sm" />
-					保存文章
+					{i18n(I18nKey.postSave)}
 				{/if}
 			</button>
 		</div>
@@ -244,28 +247,28 @@
 	{#if isLoadingContent}
 		<div class="loading-state">
 			<div class="loader"></div>
-			<p>加载文章内容...</p>
+			<p>{i18n(I18nKey.postLoadingContent)}</p>
 		</div>
 	{:else}
 		<div class="editor-body">
 			<div class="form-section">
-					<h3>基本信息</h3>
+					<h3>{i18n(I18nKey.postBasicInfo)}</h3>
 					<div class="form-grid">
 						<div class="form-group">
 							<label>
-								标题 *
-								<input type="text" bind:value={title} placeholder="文章标题" class="form-input" />
+								{i18n(I18nKey.postTitle)} *
+								<input type="text" bind:value={title} placeholder={i18n(I18nKey.postTitlePlaceholder)} class="form-input" />
 							</label>
 						</div>
 
 						<div class="form-group">
 							<label>
-								URL 标识 *
+								{i18n(I18nKey.postSlug)} *
 								<input
 									type="text"
 									bind:value={slug}
 									oninput={handleSlugInput}
-									placeholder="用于 URL 的标识，如 my-post"
+									placeholder={i18n(I18nKey.postSlugPlaceholder)}
 									class="form-input"
 								/>
 							</label>
@@ -273,36 +276,36 @@
 
 						<div class="form-group">
 							<label>
-								作者
-								<input type="text" bind:value={author} placeholder="作者名称" class="form-input" />
+								{i18n(I18nKey.postAuthor)}
+								<input type="text" bind:value={author} placeholder={i18n(I18nKey.postAuthorPlaceholder)} class="form-input" />
 							</label>
 						</div>
 
 						<div class="form-group">
 							<label>
-								分类
-								<input type="text" bind:value={category} placeholder="文章分类" class="form-input" />
+								{i18n(I18nKey.postCategory)}
+								<input type="text" bind:value={category} placeholder={i18n(I18nKey.postCategoryPlaceholder)} class="form-input" />
 							</label>
 						</div>
 
 						<div class="form-group">
 							<label>
-								发布日期
+								{i18n(I18nKey.postPubDate)}
 								<input type="date" bind:value={published} class="form-input" />
 							</label>
 						</div>
 
 						<div class="form-group">
 							<label>
-								更新日期
+								{i18n(I18nKey.postUpdateDate)}
 								<input type="date" bind:value={updated} class="form-input" />
 							</label>
 						</div>
 
 						<div class="form-group">
 							<label>
-								语言代码
-								<input type="text" bind:value={lang} placeholder="如 zh-CN（可选）" class="form-input" />
+								{i18n(I18nKey.postLang)}
+								<input type="text" bind:value={lang} placeholder={i18n(I18nKey.postLangPlaceholder)} class="form-input" />
 							</label>
 						</div>
 
@@ -312,7 +315,7 @@
 								<span class="switch-track">
 									<span class="switch-thumb"></span>
 								</span>
-								<span class="switch-label">草稿</span>
+								<span class="switch-label">{i18n(I18nKey.postDraft)}</span>
 							</label>
 
 							<label class="md3-switch">
@@ -320,7 +323,7 @@
 								<span class="switch-track">
 									<span class="switch-thumb"></span>
 								</span>
-								<span class="switch-label">置顶</span>
+								<span class="switch-label">{i18n(I18nKey.postPinned)}</span>
 							</label>
 
 							<label class="md3-switch">
@@ -328,23 +331,23 @@
 								<span class="switch-track">
 									<span class="switch-thumb"></span>
 								</span>
-								<span class="switch-label">评论</span>
+								<span class="switch-label">{i18n(I18nKey.postComments)}</span>
 							</label>
 						</div>
 
 						<div class="form-group full-width">
 							<label>
-								封面图
-								<input type="text" bind:value={image} placeholder="封面图路径（网络URL、/public路径或相对路径）" class="form-input" />
+								{i18n(I18nKey.postCover)}
+								<input type="text" bind:value={image} placeholder={i18n(I18nKey.postCoverPlaceholder)} class="form-input" />
 							</label>
 						</div>
 
 						<div class="form-group full-width">
 							<label>
-								摘要描述
+								{i18n(I18nKey.postSummary)}
 								<textarea
 									bind:value={description}
-									placeholder="文章的简要描述（用于SEO和摘要显示）"
+									placeholder={i18n(I18nKey.postSummaryPlaceholder)}
 									class="form-textarea"
 									rows={2}
 								></textarea>
@@ -353,7 +356,7 @@
 
 						<div class="form-group full-width">
 							<label>
-								标签
+								{i18n(I18nKey.postTags)}
 								<div class="tags-input-wrapper">
 									<div class="tags-list">
 										{#each tags as tag, i}
@@ -362,7 +365,7 @@
 												<button
 													class="tag-remove"
 													onclick={() => removeTag(i)}
-													aria-label="移除标签"
+													aria-label={i18n(I18nKey.postTagRemove)}
 												>
 													<Icon icon="material-symbols:close" class="text-xs" />
 												</button>
@@ -372,7 +375,7 @@
 									<input
 										type="text"
 										bind:value={tagInput}
-										placeholder="输入标签后按回车添加"
+										placeholder={i18n(I18nKey.postTagPlaceholder)}
 										class="form-input tag-input"
 										onkeydown={handleTagKeydown}
 									/>
@@ -384,26 +387,26 @@
 
 				<!-- 密码保护 -->
 				<div class="form-section">
-					<h3>密码保护</h3>
+					<h3>{i18n(I18nKey.postPasswordSection)}</h3>
 					<div class="form-grid">
 						<div class="form-group">
 							<label>
-								文章密码
+								{i18n(I18nKey.postPassword)}
 								<input
 									type="text"
 									bind:value={password}
-									placeholder="设置后文章内容将被加密（可选）"
+									placeholder={i18n(I18nKey.postPasswordPlaceholder)}
 									class="form-input"
 								/>
 							</label>
 						</div>
 						<div class="form-group">
 							<label>
-								密码提示
+								{i18n(I18nKey.postPasswordHint)}
 								<input
 									type="text"
 									bind:value={passwordHint}
-									placeholder="显示在密码输入框上方（可选）"
+									placeholder={i18n(I18nKey.postPasswordHintPlaceholder)}
 									class="form-input"
 								/>
 							</label>
@@ -413,31 +416,31 @@
 
 				<!-- 许可证与来源 -->
 				<div class="form-section">
-					<h3>许可证与来源</h3>
+					<h3>{i18n(I18nKey.postLicenseSection)}</h3>
 					<div class="form-grid">
 						<div class="form-group">
 							<label>
-								许可证名称
-								<input type="text" bind:value={licenseName} placeholder="如 CC BY-NC-SA 4.0（可选）" class="form-input" />
+								{i18n(I18nKey.postLicenseName)}
+								<input type="text" bind:value={licenseName} placeholder={i18n(I18nKey.postLicenseNamePlaceholder)} class="form-input" />
 							</label>
 						</div>
 						<div class="form-group">
 							<label>
-								许可证链接
-								<input type="text" bind:value={licenseUrl} placeholder="许可证完整 URL（可选）" class="form-input" />
+								{i18n(I18nKey.postLicenseUrl)}
+								<input type="text" bind:value={licenseUrl} placeholder={i18n(I18nKey.postLicenseUrlPlaceholder)} class="form-input" />
 							</label>
 						</div>
 						<div class="form-group full-width">
 							<label>
-								来源链接
-								<input type="text" bind:value={sourceLink} placeholder="文章内容的来源或参考链接（可选）" class="form-input" />
+								{i18n(I18nKey.postSourceLink)}
+								<input type="text" bind:value={sourceLink} placeholder={i18n(I18nKey.postSourceLinkPlaceholder)} class="form-input" />
 							</label>
 						</div>
 					</div>
 				</div>
 
 			<div class="form-section">
-				<h3>文章内容</h3>
+				<h3>{i18n(I18nKey.postContentSection)}</h3>
 
 				<div class="tabs">
 					<button
@@ -447,7 +450,7 @@
 						}}
 					>
 						<Icon icon="material-symbols:ink-pen-outline-rounded" class="text-sm" />
-						编辑
+						{i18n(I18nKey.postTabEdit)}
 					</button>
 					<button
 						class={`tab ${activeTab === "preview" ? "active" : ""}`}
@@ -456,14 +459,14 @@
 						}}
 					>
 						<Icon icon="material-symbols:visibility-outline-rounded" class="text-sm" />
-						预览
+						{i18n(I18nKey.postTabPreview)}
 					</button>
 				</div>
 
 				{#if activeTab === "editor"}
 						<textarea
 							bind:value={content}
-							placeholder="在这里编写 Markdown 格式的文章内容..."
+							placeholder={i18n(I18nKey.postContentPlaceholder)}
 							class="content-editor"
 						></textarea>
 					{:else}
