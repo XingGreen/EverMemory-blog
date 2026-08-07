@@ -1,14 +1,16 @@
 <script lang="ts">
 	import Icon from "@/components/common/Icon.svelte";
-	import { CONFIG_ITEMS } from "@/utils/admin-settings";
+	import { CONFIG_ITEMS, getConfigDescKey, getConfigLabelKey } from "@/utils/admin-settings";
+	import I18nKey from "@/i18n/i18nKey";
+	import { i18n } from "@/i18n/translation";
 
 	let { onNavigate }: { onNavigate: (key: string) => void } = $props();
 </script>
 
 <div class="settings-overview">
 	<div class="card-base overview-intro">
-		<h2>网站配置</h2>
-		<p>选择下方配置项进行在线编辑，保存后写入对应配置文件并自动同步到 GitHub。</p>
+		<h2>{i18n(I18nKey.adminSettings)}</h2>
+		<p>{i18n(I18nKey.settingsOverviewDesc)}</p>
 	</div>
 	<div class="config-grid">
 		{#each CONFIG_ITEMS as item}
@@ -17,8 +19,8 @@
 					<Icon icon={item.icon} class="text-xl" />
 				</div>
 				<div class="config-info">
-					<h3>{item.label}</h3>
-					<p>{item.description}</p>
+					<h3>{i18n(getConfigLabelKey(item.key))}</h3>
+					<p>{i18n(getConfigDescKey(item.key))}</p>
 				</div>
 				<span class="config-file">{item.file}</span>
 				<Icon icon="material-symbols:chevron-right" class="config-arrow" />

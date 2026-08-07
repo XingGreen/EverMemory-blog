@@ -1,5 +1,7 @@
 <script lang="ts">
 	import Icon from "@/components/common/Icon.svelte";
+	import I18nKey from "@/i18n/i18nKey";
+	import { i18n } from "@/i18n/translation";
 
 	let { onVerify, avatarUrl = "" }: { onVerify: (success: boolean) => void; avatarUrl?: string } = $props();
 
@@ -14,11 +16,11 @@
 
 	async function handleSubmit() {
 		const missing: string[] = [];
-		if (!username.trim()) missing.push("用户名");
-		if (!password.trim()) missing.push("密码");
+		if (!username.trim()) missing.push(i18n(I18nKey.verifyUsername));
+		if (!password.trim()) missing.push(i18n(I18nKey.verifyPassword));
 
 		if (missing.length > 0) {
-			error = `请填写: ${missing.join("、")}`;
+			error = i18n(I18nKey.errorFillRequired).replace("{fields}", missing.join("、"));
 			return;
 		}
 
@@ -60,13 +62,13 @@
 		<div class="verify-header">
 			<div class="avatar-wrapper">
 				{#if avatarUrl}
-					<img src={avatarUrl} alt="管理员头像" class="avatar-img" />
+					<img src={avatarUrl} alt={i18n(I18nKey.verifyAvatarAlt)} class="avatar-img" />
 				{:else}
 					<Icon icon="material-symbols:person-rounded" class="avatar-icon" />
 				{/if}
 			</div>
-			<h1>管理员登录</h1>
-			<p class="subtitle">欢迎回来，请输入你的登录凭证</p>
+			<h1>{i18n(I18nKey.verifyTitle)}</h1>
+			<p class="subtitle">{i18n(I18nKey.verifySubtitle)}</p>
 		</div>
 
 		<div class="verify-form">
@@ -81,7 +83,7 @@
 					placeholder=" "
 					autocomplete="username"
 				/>
-				<label>用户名</label>
+				<label>{i18n(I18nKey.verifyUsername)}</label>
 			</div>
 
 			<!-- 密码 -->
@@ -95,7 +97,7 @@
 					placeholder=" "
 					autocomplete="current-password"
 				/>
-				<label>密码</label>
+				<label>{i18n(I18nKey.verifyPassword)}</label>
 			</div>
 
 			{#if error}
@@ -113,9 +115,9 @@
 			>
 				{#if isSubmitting}
 					<span class="spinner"></span>
-					登录中...
+					{i18n(I18nKey.verifyLoggingIn)}
 				{:else}
-					登录
+					{i18n(I18nKey.verifyLogin)}
 				{/if}
 			</button>
 		</div>

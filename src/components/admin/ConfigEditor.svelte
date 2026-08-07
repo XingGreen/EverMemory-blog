@@ -10,6 +10,10 @@
 		| JsonValue[]
 		| { [k: string]: JsonValue };
 
+	import I18nKey from "@/i18n/i18nKey";
+	import { i18n } from "@/i18n/translation";
+	import { configFieldLabel } from "@/config/configFieldLabels";
+
 	let { data }: { data: Record<string, JsonValue> } = $props();
 
 	function isObject(v: JsonValue | undefined): v is Record<string, JsonValue> {
@@ -38,10 +42,7 @@
 		}
 	}
 
-	// 把 camelCase 键转成可读标签：themeColor -> theme color
-	function labelOf(key: string): string {
-		return key.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
-	}
+	
 </script>
 
 {#snippet renderScalar(value: JsonValue, onUpdate: (v: JsonValue) => void)}
@@ -54,7 +55,7 @@
 			aria-pressed={value}
 		>
 			<span class="toggle-dot"></span>
-			{value ? "开启" : "关闭"}
+			{value ? i18n(I18nKey.configOn) : i18n(I18nKey.configOff)}
 		</button>
 	{:else if typeof value === "number"}
 		<input
@@ -83,7 +84,7 @@
 			/>
 		{/if}
 	{:else}
-		<span class="null-value">（空值）</span>
+		<span class="null-value">{i18n(I18nKey.configNullValue)}</span>
 	{/if}
 {/snippet}
 
@@ -101,12 +102,12 @@
 				<button
 					class="icon-btn remove-btn"
 					type="button"
-					title="删除该项"
+					title={i18n(I18nKey.configDeleteItem)}
 					onclick={() => removeItem(arr, i)}
 				>✕</button>
 			</div>
 		{/each}
-		<button class="add-btn" type="button" onclick={() => addItem(arr)}>＋ 添加</button>
+		<button class="add-btn" type="button" onclick={() => addItem(arr)}>{i18n(I18nKey.configAdd)}</button>
 	</div>
 {/snippet}
 
@@ -115,16 +116,16 @@
 		{#each Object.keys(obj) as key (key)}
 			{@const v = obj[key]}
 			<div class="field-row">
-				<div class="field-label" title={key}>{labelOf(key)}</div>
+				<div class="field-label" title={key}>{configFieldLabel(key)}</div>
 				<div class="field-control">
 					{#if isObject(v)}
 						<div class="sub-card">
-							<div class="sub-card-title">{labelOf(key)}</div>
+							<div class="sub-card-title">{configFieldLabel(key)}</div>
 							{@render renderObject(v, depth + 1)}
 						</div>
 					{:else if Array.isArray(v)}
 						<div class="array-card">
-							<div class="sub-card-title">{labelOf(key)}</div>
+							<div class="sub-card-title">{configFieldLabel(key)}</div>
 							{@render renderArray(v as JsonValue[], depth + 1)}
 						</div>
 					{:else}

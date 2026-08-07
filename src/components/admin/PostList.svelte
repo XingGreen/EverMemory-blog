@@ -1,5 +1,7 @@
 <script lang="ts">
 	import Icon from "@/components/common/Icon.svelte";
+	import I18nKey from "@/i18n/i18nKey";
+	import { i18n } from "@/i18n/translation";
 
 	let {
 		posts,
@@ -65,11 +67,11 @@
 			<input
 				type="text"
 				bind:value={searchTerm}
-				placeholder="搜索文章..."
+				placeholder={i18n(I18nKey.postSearchPlaceholder)}
 				class="search-input"
 			/>
 			{#if searchTerm}
-				<button class="trailing-icon-btn" onclick={() => (searchTerm = "")} aria-label="清除">
+				<button class="trailing-icon-btn" onclick={() => (searchTerm = "")} aria-label={i18n(I18nKey.postSearchClear)}>
 					<Icon icon="material-symbols:close" />
 				</button>
 			{/if}
@@ -80,7 +82,7 @@
 				{#if statusFilter === "all"}
 					<Icon icon="material-symbols:check" class="chip-check" />
 				{/if}
-				<span class="chip-label">全部</span>
+				<span class="chip-label">{i18n(I18nKey.postAll)}</span>
 				<span class="chip-count">{posts.length}</span>
 			</button>
 			<button
@@ -91,7 +93,7 @@
 				{#if statusFilter === "published"}
 					<Icon icon="material-symbols:check" class="chip-check" />
 				{/if}
-				<span class="chip-label">已发布</span>
+				<span class="chip-label">{i18n(I18nKey.postPublished)}</span>
 				<span class="chip-count">{posts.filter((p) => !p.draft).length}</span>
 			</button>
 			<button
@@ -102,7 +104,7 @@
 				{#if statusFilter === "draft"}
 					<Icon icon="material-symbols:check" class="chip-check" />
 				{/if}
-				<span class="chip-label">草稿</span>
+				<span class="chip-label">{i18n(I18nKey.postDraft)}</span>
 				<span class="chip-count">{posts.filter((p) => p.draft).length}</span>
 			</button>
 		</div>
@@ -113,7 +115,7 @@
 			{:else}
 				<Icon icon="material-symbols:update-rounded" />
 			{/if}
-			刷新
+			{i18n(I18nKey.postRefresh)}
 		</button>
 
 		{#if onSync}
@@ -123,7 +125,7 @@
 				{:else}
 					<Icon icon="material-symbols:cloud" />
 				{/if}
-				同步
+				{i18n(I18nKey.postSync)}
 			</button>
 		{/if}
 	</div>
@@ -132,18 +134,18 @@
 	{#if isLoading}
 		<div class="state-container">
 			<div class="circular-progress"></div>
-			<p class="state-text">加载中...</p>
+			<p class="state-text">{i18n(I18nKey.postLoading)}</p>
 		</div>
 	{:else if error}
 		<div class="state-container">
 			<Icon icon="material-symbols:error-outline" class="state-icon error" />
 			<p class="state-text">{error}</p>
-			<button class="filled-btn" onclick={onRefresh}>重试</button>
+			<button class="filled-btn" onclick={onRefresh}>{i18n(I18nKey.postRetry)}</button>
 		</div>
 	{:else if filteredPosts.length === 0}
 		<div class="state-container">
 			<Icon icon="material-symbols:folder-open" class="state-icon" />
-			<p class="state-text">{searchTerm || statusFilter !== "all" ? "无匹配文章" : "暂无文章"}</p>
+			<p class="state-text">{searchTerm || statusFilter !== "all" ? i18n(I18nKey.postNoMatch) : i18n(I18nKey.postNoPosts)}</p>
 			{#if searchTerm || statusFilter !== "all"}
 				<button
 					class="text-btn"
@@ -152,7 +154,7 @@
 						statusFilter = "all";
 					}}
 				>
-					清除筛选
+					{i18n(I18nKey.postClearFilter)}
 				</button>
 			{/if}
 		</div>
@@ -161,12 +163,12 @@
 		<div class="md3-table">
 			<!-- 分类栏（表头） -->
 			<div class="header-row">
-				<div class="col col-title">标题</div>
-				<div class="col col-author">作者</div>
-				<div class="col col-category">分类</div>
-				<div class="col col-date">发布日期</div>
-				<div class="col col-status">状态</div>
-				<div class="col col-actions">操作</div>
+				<div class="col col-title">{i18n(I18nKey.postColTitle)}</div>
+				<div class="col col-author">{i18n(I18nKey.postColAuthor)}</div>
+				<div class="col col-category">{i18n(I18nKey.postColCategory)}</div>
+				<div class="col col-date">{i18n(I18nKey.postColDate)}</div>
+				<div class="col col-status">{i18n(I18nKey.postColStatus)}</div>
+				<div class="col col-actions">{i18n(I18nKey.postColActions)}</div>
 			</div>
 
 			<!-- 列表项 -->
@@ -213,7 +215,7 @@
 						<!-- 状态 -->
 						<div class="col col-status">
 							<span class="status-chip" data-draft={post.draft}>
-								{post.draft ? "草稿" : "已发布"}
+								{post.draft ? i18n(I18nKey.postDraft) : i18n(I18nKey.postPublished)}
 							</span>
 						</div>
 
@@ -221,15 +223,15 @@
 						<div class="col col-actions">
 							<div class="text-actions">
 								<a class="text-action view" href={`/posts/${post.slug}`} target="_blank">
-									查看
+									{i18n(I18nKey.postView)}
 								</a>
 								<span class="sep">|</span>
 								<button class="text-action edit" onclick={() => onEdit(post)}>
-									编辑
+									{i18n(I18nKey.postEdit)}
 								</button>
 								<span class="sep">|</span>
 								<button class="text-action delete" onclick={() => onDelete(post)}>
-									删除
+									{i18n(I18nKey.postDelete)}
 								</button>
 							</div>
 						</div>
@@ -239,7 +241,7 @@
 		</div>
 
 		<div class="list-footer">
-			<span>共 {filteredPosts.length} 篇</span>
+			<span>{i18n(I18nKey.postListCount).replace("{count}", String(filteredPosts.length))}</span>
 		</div>
 	{/if}
 </div>
