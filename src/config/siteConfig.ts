@@ -50,6 +50,9 @@ export const siteConfig: SiteConfig = {
 			// 图标文件路径
 			src: "/favicon/favicon.ico",
 		},
+		{
+			src: "/favicon/favicon-light-128.png",
+		},
 	],
 	// 导航栏配置
 	navbar: {
