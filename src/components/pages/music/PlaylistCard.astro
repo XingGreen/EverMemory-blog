@@ -2,21 +2,21 @@
 import { Icon } from "astro-icon/components";
 
 interface Props {
-    id: string;
-    name: string;
-    cover: string;
-    description: string;
-    songCount: number;
-    playCount: number;
+	id: string;
+	name: string;
+	cover: string;
+	description: string;
+	songCount: number;
+	playCount: number;
 }
 
 const { id, name, cover, description, songCount, playCount } = Astro.props;
 
 function formatNumber(num: number): string {
-    if (num >= 10000) {
-        return (num / 10000).toFixed(1) + "万";
-    }
-    return num.toString();
+	if (num >= 10000) {
+		return (num / 10000).toFixed(1) + "万";
+	}
+	return num.toString();
 }
 ---
 

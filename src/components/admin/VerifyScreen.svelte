@@ -1,64 +1,108 @@
 <script lang="ts">
-	import Icon from "@/components/common/Icon.svelte";
-	import I18nKey from "@/i18n/i18nKey";
-	import { i18n } from "@/i18n/translation";
+import Icon from "@/components/common/Icon.svelte";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
+import { onMount } from "svelte";
+import { DARK_MODE, LIGHT_MODE } from "@/constants/constants";
+import { setTheme } from "@/utils/setting-utils";
 
-	let { onVerify, avatarUrl = "" }: { onVerify: (success: boolean) => void; avatarUrl?: string } = $props();
+let {
+	onVerify,
+	avatarUrl = "",
+}: { onVerify: (success: boolean) => void; avatarUrl?: string } = $props();
 
-	let username = $state("");
-	let password = $state("");
-	let isSubmitting = $state(false);
-	let error = $state("");
+let username = $state("");
+let password = $state("");
+let isSubmitting = $state(false);
+let error = $state("");
 
-	// 浮动 label 状态
-	let usernameFocused = $state(false);
-	let passwordFocused = $state(false);
+// 深浅模式切换
+let isDark = $state(false);
+onMount(() => {
+	isDark = document.documentElement.classList.contains("dark");
+});
+function toggleTheme() {
+	isDark = !isDark;
+	setTheme(isDark ? DARK_MODE : LIGHT_MODE);
+}
 
-	async function handleSubmit() {
-		const missing: string[] = [];
-		if (!username.trim()) missing.push(i18n(I18nKey.verifyUsername));
-		if (!password.trim()) missing.push(i18n(I18nKey.verifyPassword));
+// 浮动 label 状态
+let usernameFocused = $state(false);
+let passwordFocused = $state(false);
 
-		if (missing.length > 0) {
-			error = i18n(I18nKey.errorFillRequired).replace("{fields}", missing.join("、"));
-			return;
-		}
+async function handleSubmit() {
+	const missing: string[] = [];
+	if (!username.trim()) missing.push(i18n(I18nKey.verifyUsername));
+	if (!password.trim()) missing.push(i18n(I18nKey.verifyPassword));
 
-		isSubmitting = true;
-		error = "";
+	if (missing.length > 0) {
+		error = i18n(I18nKey.errorFillRequired).replace(
+			"{fields}",
+			missing.join("、"),
+		);
+		return;
+	}
 
-		try {
-			const response = await fetch("/api/admin/verify/", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ username, password }),
-			});
+	isSubmitting = true;
+	error = "";
 
-			const data = await response.json();
+	try {
+		const response = await fetch("/api/admin/verify/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ username, password }),
+		});
 
-			if (response.ok && data.success) {
-				onVerify(true);
-			} else {
-				error = data.message || "验证失败";
-				onVerify(false);
-			}
-		} catch {
-			error = "网络请求失败";
+		const data = await response.json();
+
+		if (response.ok && data.success) {
+			onVerify(true);
+		} else {
+			error = data.message || "验证失败";
 			onVerify(false);
-		} finally {
-			isSubmitting = false;
 		}
+	} catch {
+		error = "网络请求失败";
+		onVerify(false);
+	} finally {
+		isSubmitting = false;
 	}
+}
 
-	function handleKeyDown(e: KeyboardEvent) {
-		if (e.key === "Enter" && !isSubmitting) {
-			handleSubmit();
-		}
+function handleKeyDown(e: KeyboardEvent) {
+	if (e.key === "Enter" && !isSubmitting) {
+		handleSubmit();
 	}
+}
 </script>
 
 <div class="verify-wrapper">
 	<div class="verify-card card-base">
+		<!-- 右上角：返回首页 + 深浅模式切换 -->
+		<div class="top-actions">
+			<a
+				class="action-btn"
+				href="/"
+				title={i18n(I18nKey.adminHome)}
+				aria-label={i18n(I18nKey.adminHome)}
+			>
+				<Icon icon="material-symbols:home-outline-rounded" size="md" />
+			</a>
+			<button
+				class="action-btn"
+				type="button"
+				title={isDark ? i18n(I18nKey.lightMode) : i18n(I18nKey.darkMode)}
+				aria-label={isDark ? i18n(I18nKey.lightMode) : i18n(I18nKey.darkMode)}
+				onclick={toggleTheme}
+			>
+				{#if isDark}
+					<Icon icon="material-symbols:wb-sunny-outline-rounded" size="md" />
+				{:else}
+					<Icon icon="material-symbols:dark-mode-outline-rounded" size="md" />
+				{/if}
+			</button>
+		</div>
+
 		<div class="verify-header">
 			<div class="avatar-wrapper">
 				{#if avatarUrl}
@@ -133,11 +177,42 @@
 	}
 
 	.verify-card {
+		position: relative;
 		padding: 2.5rem 2rem;
 		width: 100%;
 		max-width: 420px;
 		box-shadow: var(--shadow-card);
 		border-radius: var(--radius-large);
+	}
+
+	/* ── 右上角操作按钮：返回首页 + 深浅切换 ── */
+	.top-actions {
+		position: absolute;
+		top: 0.75rem;
+		right: 0.75rem;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.action-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.25rem;
+		height: 2.25rem;
+		border: 1px solid var(--line-divider);
+		border-radius: 50%;
+		background: var(--btn-regular-bg);
+		color: var(--content-meta);
+		cursor: pointer;
+		text-decoration: none;
+		transition: all 0.2s;
+	}
+
+	.action-btn:hover {
+		color: var(--primary);
+		border-color: var(--primary);
 	}
 
 	.verify-header {

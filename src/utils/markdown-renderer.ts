@@ -1,20 +1,22 @@
 import { unified } from "@astrojs/markdown-remark";
-import remarkMath from "remark-math";
-import remarkDirective from "remark-directive";
-import remarkSectionize from "remark-sectionize";
-import remarkAdmonitionToBlockquoteCallout from "remark-admonition-to-blockquote-callout";
-import rehypeKatex from "rehype-katex";
-import rehypeCallouts from "rehype-callouts";
-import rehypeSlug from "rehype-slug";
-import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import katex from "katex";
+import rehypeAutolinkHeadings from "rehype-autolink-headings";
+import rehypeCallouts from "rehype-callouts";
+import rehypeKatex from "rehype-katex";
+import rehypeSlug from "rehype-slug";
+import remarkAdmonitionToBlockquoteCallout from "remark-admonition-to-blockquote-callout";
+import remarkDirective from "remark-directive";
+import remarkMath from "remark-math";
+import remarkSectionize from "remark-sectionize";
 import { siteConfig } from "@/config";
-import { parseDirectiveNode } from "@/plugins/remark-directive-rehype.js";
 import rehypeExternalLinks from "@/plugins/rehype-external-links.mjs";
 import rehypeFigure from "@/plugins/rehype-figure.mjs";
+import { parseDirectiveNode } from "@/plugins/remark-directive-rehype.js";
 
 let processorInstance: ReturnType<typeof unified> | null = null;
-let rendererPromise: Promise<Awaited<ReturnType<ReturnType<typeof unified>["createRenderer"]>>> | null = null;
+let rendererPromise: Promise<
+	Awaited<ReturnType<ReturnType<typeof unified>["createRenderer"]>>
+> | null = null;
 
 /**
  * 获取与 Astro 配置一致的 Markdown 处理器
@@ -24,7 +26,8 @@ function getProcessor() {
 	if (!processorInstance) {
 		processorInstance = unified({
 			remarkPlugins: [
-				...(siteConfig.post.rehypeCallouts.enablePythonMarkdownAdmonitions !== false
+				...(siteConfig.post.rehypeCallouts.enablePythonMarkdownAdmonitions !==
+				false
 					? [remarkAdmonitionToBlockquoteCallout]
 					: []),
 				remarkMath,

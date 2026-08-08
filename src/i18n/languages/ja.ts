@@ -42,9 +42,11 @@ export const ja: Translation = {
 	[Key.musicCover]: "カバー",
 	[Key.musicNoCover]: "カバーなし",
 	[Key.musicAudioPlayer]: "オーディオプレーヤー",
-	[Key.musicDescription]: "私のネットイーズクラウドミュージックのプレイリストを見る",
+	[Key.musicDescription]:
+		"私のネットイーズクラウドミュージックのプレイリストを見る",
 	[Key.musicNotConfigured]: "音楽が設定されていません",
-	[Key.musicNotConfiguredDesc]: "設定ファイルにネットイーズクラウドミュージックのユーザーIDを設定してください",
+	[Key.musicNotConfiguredDesc]:
+		"設定ファイルにネットイーズクラウドミュージックのユーザーIDを設定してください",
 	[Key.musicTotalPlaylists]: "プレイリスト総数",
 	[Key.musicTotalTracks]: "トラック総数",
 	[Key.musicSource]: "データソース",
@@ -69,7 +71,8 @@ export const ja: Translation = {
 	[Key.musicBuildTime]: "ビルド時間",
 	[Key.musicLoading]: "プレイリストを読み込み中...",
 	[Key.musicFetchError]: "データの取得に失敗しました",
-	[Key.musicFetchErrorDesc]: "ビルド中にプレイリストデータの取得に失敗しました。ネットワーク接続を確認するか、後で再試行してください",
+	[Key.musicFetchErrorDesc]:
+		"ビルド中にプレイリストデータの取得に失敗しました。ネットワーク接続を確認するか、後で再試行してください",
 	[Key.musicSearchPlaceholder]: "プレイリストを検索...",
 	[Key.musicTabAll]: "すべて",
 	[Key.musicTabMine]: "マイ",
@@ -515,15 +518,13 @@ export const ja: Translation = {
 	[Key.postCoverPlaceholder]:
 		"カバー画像のパス（ネットURL、/publicパス、または相対パス）",
 	[Key.postSummary]: "概要",
-	[Key.postSummaryPlaceholder]:
-		"記事の簡単な説明（SEOおよび要約表示用）",
+	[Key.postSummaryPlaceholder]: "記事の簡単な説明（SEOおよび要約表示用）",
 	[Key.postTags]: "タグ",
 	[Key.postTagRemove]: "タグを削除",
 	[Key.postTagPlaceholder]: "タグを入力して Enter キーで追加",
 	[Key.postPasswordSection]: "パスワード保護",
 	[Key.postPassword]: "記事のパスワード",
-	[Key.postPasswordPlaceholder]:
-		"設定すると記事の内容が暗号化されます（任意）",
+	[Key.postPasswordPlaceholder]: "設定すると記事の内容が暗号化されます（任意）",
 	[Key.postPasswordHint]: "パスワードのヒント",
 	[Key.postPasswordHintPlaceholder]:
 		"パスワード入力欄の上に表示されます（任意）",
@@ -533,20 +534,18 @@ export const ja: Translation = {
 	[Key.postLicenseUrl]: "ライセンスリンク",
 	[Key.postLicenseUrlPlaceholder]: "ライセンスの完全な URL（任意）",
 	[Key.postSourceLink]: "出典リンク",
-	[Key.postSourceLinkPlaceholder]:
-		"記事内容の出典または参考リンク（任意）",
+	[Key.postSourceLinkPlaceholder]: "記事内容の出典または参考リンク（任意）",
 	[Key.postContentSection]: "記事内容",
 	[Key.postTabEdit]: "編集",
 	[Key.postTabPreview]: "プレビュー",
-	[Key.postContentPlaceholder]:
-		"ここで Markdown 形式の記事内容を作成します...",
+	[Key.postContentPlaceholder]: "ここで Markdown 形式の記事内容を作成します...",
 	[Key.postPreviewEmpty]: "プレビューできる内容がありません",
 	[Key.postPreviewFailed]: "レンダリングに失敗しました",
 	[Key.postSaveFailed]: "保存に失敗しました",
 
 	[Key.deleteTitle]: "削除の確認",
 	[Key.deleteBody]:
-		"記事 <strong>\"{title}\"</strong> を削除しようとしています。この操作は取り消せません。",
+		'記事 <strong>"{title}"</strong> を削除しようとしています。この操作は取り消せません。',
 	[Key.deleteInstruction]:
 		"削除を確認するには、下の欄に記事タイトルを入力してください：",
 	[Key.deletePlaceholder]: "記事タイトルを入力して削除を確認",
@@ -564,8 +563,7 @@ export const ja: Translation = {
 	[Key.configSaving]: "保存中…",
 	[Key.configLoading]: "読み込み中…",
 	[Key.configLoadFailed]: "読み込みに失敗しました: {message}",
-	[Key.configFile]:
-		"設定ファイル: {file}（エクスポート: {exportName}）",
+	[Key.configFile]: "設定ファイル: {file}（エクスポート: {exportName}）",
 	[Key.configSectionUnknown]: "未知の設定項目です。",
 	[Key.configAdd]: "＋ 追加",
 	[Key.configOn]: "オン",
@@ -581,10 +579,48 @@ export const ja: Translation = {
 	[Key.configSiteDesc]:
 		"サイトタイトル、説明、テーマカラー、ページのオン/オフ、記事リストのレイアウトなどの基本情報",
 	[Key.configProfileDesc]: "アバター、ニックネーム、自己紹介とSNSリンク",
-	[Key.configNavbarDesc]: "上部ナビゲーションバーのメニューリンクとサブメニュー",
+	[Key.configNavbarDesc]:
+		"上部ナビゲーションバーのメニューリンクとサブメニュー",
 	[Key.configFooterDesc]: "フッター表示のオン/オフなどの設定",
 	[Key.configSidebarDesc]:
 		"サイドバーのレイアウト、ウィジェットのオン/オフと並び順",
+	[Key.configFooterHtml]: "フッターカスタムHTML",
+	[Key.configFooterHtmlDesc]: "フッター下部に挿入するカスタムHTML（ICP番号、認証バッジなど）",
+	[Key.configMusic]: "音楽",
+	[Key.configMusicDesc]: "ミュージックプレイヤー設定（NetEase クラウドミュージックなど）",
+	[Key.configFriends]: "フレンド",
+	[Key.configFriendsDesc]: "フレンドページ設定とリンクリスト（内容は src/content/spec/friends.md を参照）",
+	[Key.configComment]: "コメント",
+	[Key.configCommentDesc]: "コメントシステムの種類と各プロバイダー設定",
+	[Key.configFont]: "フォント",
+	[Key.configFontDesc]: "サイトフォントの選択と部分的な上書き",
+	[Key.configWallpaper]: "壁紙",
+	[Key.configWallpaperDesc]: "背景壁紙のモードと壁紙リストの設定",
+	[Key.configAnnouncement]: "お知らせ",
+	[Key.configAnnouncementDesc]: "お知らせのタイトルと内容",
+	[Key.configAnalytics]: "アナリティクス",
+	[Key.configAnalyticsDesc]: "サイト分析（Google Analytics / Clarity / Umami など）",
+	[Key.configGallery]: "ギャラリー",
+	[Key.configGalleryDesc]: "アルバムリストとギャラリー画像の設定",
+	[Key.configApp]: "ソフトウェア",
+	[Key.configAppDesc]: "おすすめソフトウェアページとおすすめリスト",
+	[Key.configSponsor]: "サポート",
+	[Key.configSponsorDesc]: "サポートページ設定（タイトル、説明、リンク）",
+	[Key.configLicense]: "ライセンス",
+	[Key.configLicenseDesc]: "記事ライセンスの名称、リンク、表示スイッチ",
+	[Key.configCoverImage]: "カバー画像",
+	[Key.configCoverImageDesc]: "記事カバー画像（固定/ランダム）設定",
+	[Key.configEffects]: "エフェクト",
+	[Key.configEffectsDesc]: "ページエフェクト（桜など）のスイッチとパラメータ",
+	[Key.configPlantuml]: "PlantUML",
+	[Key.configPlantumlDesc]: "PlantUML 図レンダリングと明暗テーマ",
+	[Key.configCodeTheme]: "コードテーマ",
+	[Key.configCodeThemeDesc]:
+		"expressive-code ハイライトテーマ（変更後はサーバー再起動が必要）",
+	[Key.configPioSpine]: "マスコット（Spine）",
+	[Key.configPioSpineDesc]: "Spine マスコットのスイッチとモデル設定",
+	[Key.configPioLive2d]: "マスコット（Live2D）",
+	[Key.configPioLive2dDesc]: "Live2D マスコットのスイッチとモデル設定",
 
 	// 控制面板仪表盘
 	[Key.adminHome]: "ホーム",

@@ -30,7 +30,9 @@ export async function GET({ request }) {
 			}))
 			.sort((a, b) => {
 				if (a.draft !== b.draft) return a.draft ? 1 : -1;
-				return new Date(b.published).getTime() - new Date(a.published).getTime();
+				return (
+					new Date(b.published).getTime() - new Date(a.published).getTime()
+				);
 			});
 
 		return new Response(JSON.stringify({ success: true, posts: postsData }), {
@@ -38,7 +40,10 @@ export async function GET({ request }) {
 			headers: { "Content-Type": "application/json" },
 		});
 	} catch (error) {
-		console.error("[Admin Posts] Exception:", error instanceof Error ? error.stack : error);
+		console.error(
+			"[Admin Posts] Exception:",
+			error instanceof Error ? error.stack : error,
+		);
 		return new Response(
 			JSON.stringify({
 				success: false,

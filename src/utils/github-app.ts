@@ -35,16 +35,23 @@ export function getPrivateKey(): string {
 				privateKeyCache = decoded;
 				return decoded;
 			}
-			console.error("[GitHub Key] GITHUB_PRIVATE_KEY Base64 解码后不包含有效 PEM 头，尝试文件读取");
+			console.error(
+				"[GitHub Key] GITHUB_PRIVATE_KEY Base64 解码后不包含有效 PEM 头，尝试文件读取",
+			);
 		} catch {
-			console.error("[GitHub Key] GITHUB_PRIVATE_KEY Base64 解码失败，尝试文件读取");
+			console.error(
+				"[GitHub Key] GITHUB_PRIVATE_KEY Base64 解码失败，尝试文件读取",
+			);
 		}
 	}
 
 	// 2. 回退到文件系统读取（本地开发）
 	const possiblePaths = [
 		path.resolve(process.cwd(), ".key/emblog-ghapp.2026-07-29.private-key.pem"),
-		path.resolve(process.cwd(), ".keys/emblog-ghapp.2026-07-29.private-key.pem"),
+		path.resolve(
+			process.cwd(),
+			".keys/emblog-ghapp.2026-07-29.private-key.pem",
+		),
 		import.meta.env.GITHUB_PRIVATE_KEY_PATH || "",
 	];
 
@@ -61,17 +68,16 @@ export function getPrivateKey(): string {
 }
 
 function normalizeKey(key: string): string {
-	return key
-		.replace(/\r\n/g, "\n")
-		.replace(/\r/g, "\n")
-		.trim();
+	return key.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
 }
 
 /**
  * 验证用户提交的私钥是否与服务端配置的私钥匹配
  * 使用 SHA256 指纹 + timingSafeEqual 防止时序攻击
  */
-export async function verifyPrivateKey(privateKeyContent: string): Promise<boolean> {
+export async function verifyPrivateKey(
+	privateKeyContent: string,
+): Promise<boolean> {
 	try {
 		if (!privateKeyContent || !privateKeyContent.includes("PRIVATE KEY")) {
 			return false;
@@ -86,8 +92,14 @@ export async function verifyPrivateKey(privateKeyContent: string): Promise<boole
 		const storedKey = getPrivateKey();
 		const normalizedStored = normalizeKey(storedKey);
 
-		const inputFingerprint = crypto.createHash("sha256").update(normalizedInput).digest();
-		const storedFingerprint = crypto.createHash("sha256").update(normalizedStored).digest();
+		const inputFingerprint = crypto
+			.createHash("sha256")
+			.update(normalizedInput)
+			.digest();
+		const storedFingerprint = crypto
+			.createHash("sha256")
+			.update(normalizedStored)
+			.digest();
 
 		if (inputFingerprint.length !== storedFingerprint.length) {
 			return false;
@@ -125,15 +137,21 @@ function createJwt(privateKey: string, appId: string): string {
 	const sign = crypto.createSign("RSA-SHA256");
 	sign.update(signInput);
 	sign.end();
-	const signature = sign.sign(privateKey, "base64")
+	const signature = sign
+		.sign(privateKey, "base64")
 		.replace(/\+/g, "-")
 		.replace(/\//g, "_")
 		.replace(/=/g, "");
 	return `${signInput}.${signature}`;
 }
 
-async function getInstallationTokenFromGitHub(jwt: string, installationId: string): Promise<{ token: string; expiresAt: number }> {
-	console.log(`[GitHub Token] Requesting installation token for app: ${GITHUB_APP_ID}, installation: ${installationId}`);
+async function getInstallationTokenFromGitHub(
+	jwt: string,
+	installationId: string,
+): Promise<{ token: string; expiresAt: number }> {
+	console.log(
+		`[GitHub Token] Requesting installation token for app: ${GITHUB_APP_ID}, installation: ${installationId}`,
+	);
 
 	const response = await fetch(
 		`https://api.github.com/app/installations/${installationId}/access_tokens`,
@@ -150,75 +168,102 @@ async function getInstallationTokenFromGitHub(jwt: string, installationId: strin
 	if (!response.ok) {
 		const errorText = await response.text();
 		console.error(`[GitHub Token] Failed: ${response.status}`, errorText);
-		throw new Error(`Failed to get installation token: ${response.status} - ${errorText}`);
+		throw new Error(
+			`Failed to get installation token: ${response.status} - ${errorText}`,
+		);
 	}
 
-	console.log(`[GitHub Token] Successfully obtained installation token`);
+	console.log("[GitHub Token] Successfully obtained installation token");
 	const data = await response.json();
 	// GitHub 返回 expires_at 为 ISO 字符串，转为时间戳
-	const expiresAt = data.expires_at ? new Date(data.expires_at).getTime() : Date.now() + 50 * 60 * 1000;
+	const expiresAt = data.expires_at
+		? new Date(data.expires_at).getTime()
+		: Date.now() + 50 * 60 * 1000;
 	return { token: data.token, expiresAt };
 }
 
 export async function getInstallationToken(): Promise<string> {
 	// 1. 检查缓存：token 未过期则直接复用
-	if (tokenCache && Date.now() < tokenCache.expiresAt - TOKEN_SAFETY_MARGIN_MS) {
-		console.log(`[GitHub Token] Using cached token, expires in ${Math.round((tokenCache.expiresAt - Date.now()) / 1000)}s`);
+	if (
+		tokenCache &&
+		Date.now() < tokenCache.expiresAt - TOKEN_SAFETY_MARGIN_MS
+	) {
+		console.log(
+			`[GitHub Token] Using cached token, expires in ${Math.round((tokenCache.expiresAt - Date.now()) / 1000)}s`,
+		);
 		return tokenCache.token;
 	}
 
 	try {
-		console.log(`[GitHub Token] Initializing token request...`);
+		console.log("[GitHub Token] Initializing token request...");
 		const privateKey = getPrivateKey();
-		console.log(`[GitHub Token] Private key loaded, creating JWT...`);
+		console.log("[GitHub Token] Private key loaded, creating JWT...");
 		const jwt = createJwt(privateKey, GITHUB_APP_ID);
-		console.log(`[GitHub Token] JWT created, requesting installation token...`);
-		const result = await getInstallationTokenFromGitHub(jwt, GITHUB_INSTALLATION_ID);
+		console.log("[GitHub Token] JWT created, requesting installation token...");
+		const result = await getInstallationTokenFromGitHub(
+			jwt,
+			GITHUB_INSTALLATION_ID,
+		);
 		tokenCache = result;
 		return result.token;
 	} catch (error) {
-		console.error(`[GitHub Token] Exception:`, error instanceof Error ? error.message : error);
+		console.error(
+			"[GitHub Token] Exception:",
+			error instanceof Error ? error.message : error,
+		);
 		throw error;
 	}
 }
 
-async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+async function fetchWithRetry(
+	url: string,
+	options: RequestInit,
+	maxRetries = 3,
+): Promise<Response> {
 	let lastError: Error | null = null;
-	
+
 	for (let attempt = 1; attempt <= maxRetries; attempt++) {
 		try {
-			console.log(`[GitHub Fetch] Attempt ${attempt}/${maxRetries}: ${options.method || "GET"} ${url}`);
-			
+			console.log(
+				`[GitHub Fetch] Attempt ${attempt}/${maxRetries}: ${options.method || "GET"} ${url}`,
+			);
+
 			const controller = new AbortController();
 			const timeoutId = setTimeout(() => controller.abort(), 30000);
-			
+
 			const response = await fetch(url, {
 				...options,
 				signal: controller.signal,
 			});
-			
+
 			clearTimeout(timeoutId);
-			
-			console.log(`[GitHub Fetch] Attempt ${attempt} SUCCESS: status=${response.status}`);
+
+			console.log(
+				`[GitHub Fetch] Attempt ${attempt} SUCCESS: status=${response.status}`,
+			);
 			return response;
 		} catch (error) {
 			lastError = error instanceof Error ? error : new Error(String(error));
-			console.log(`[GitHub Fetch] Attempt ${attempt} FAILED: ${lastError.message}`);
+			console.log(
+				`[GitHub Fetch] Attempt ${attempt} FAILED: ${lastError.message}`,
+			);
 			console.log(`[GitHub Fetch] Error stack: ${lastError.stack}`);
-			
+
 			if (attempt < maxRetries) {
 				const delay = attempt * 2000;
 				console.log(`[GitHub Fetch] Retrying in ${delay}ms...`);
-				await new Promise(resolve => setTimeout(resolve, delay));
+				await new Promise((resolve) => setTimeout(resolve, delay));
 			}
 		}
 	}
-	
+
 	console.log(`[GitHub Fetch] All ${maxRetries} attempts failed`);
 	throw lastError || new Error("Unknown fetch error");
 }
 
-export async function getFileFromGitHub(filePath: string): Promise<string | null> {
+export async function getFileFromGitHub(
+	filePath: string,
+): Promise<string | null> {
 	try {
 		const token = await getInstallationToken();
 		const response = await fetch(
@@ -245,7 +290,9 @@ export async function getFileFromGitHub(filePath: string): Promise<string | null
 /**
  * 列出 GitHub 仓库中指定目录下的文件
  */
-export async function listFilesFromGitHub(directoryPath: string): Promise<Array<{ name: string; path: string; type: string }>> {
+export async function listFilesFromGitHub(
+	directoryPath: string,
+): Promise<Array<{ name: string; path: string; type: string }>> {
 	const token = await getInstallationToken();
 	const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${directoryPath}?ref=${GITHUB_BRANCH}`;
 
@@ -282,7 +329,9 @@ export async function listFilesFromGitHub(directoryPath: string): Promise<Array<
 /**
  * 递归获取目录下所有 .md 文件
  */
-export async function listAllMarkdownFiles(directoryPath: string): Promise<string[]> {
+export async function listAllMarkdownFiles(
+	directoryPath: string,
+): Promise<string[]> {
 	const items = await listFilesFromGitHub(directoryPath);
 	const mdFiles: string[] = [];
 
@@ -309,7 +358,9 @@ export async function saveFileToGitHub(
 		const repoUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`;
 
 		console.log(`[GitHub Save] Attempting to save: ${filePath}`);
-		console.log(`[GitHub Save] Repo: ${GITHUB_OWNER}/${GITHUB_REPO}, Branch: ${GITHUB_BRANCH}`);
+		console.log(
+			`[GitHub Save] Repo: ${GITHUB_OWNER}/${GITHUB_REPO}, Branch: ${GITHUB_BRANCH}`,
+		);
 
 		const getResponse = await fetchWithRetry(
 			`${repoUrl}?ref=${GITHUB_BRANCH}`,
@@ -329,9 +380,12 @@ export async function saveFileToGitHub(
 			console.log(`[GitHub Save] Existing file SHA: ${sha}`);
 		} else if (getResponse.status !== 404) {
 			const errorText = await getResponse.text();
-			console.error(`[GitHub Save] Failed to get file info: ${getResponse.status}`, errorText);
+			console.error(
+				`[GitHub Save] Failed to get file info: ${getResponse.status}`,
+				errorText,
+			);
 		} else {
-			console.log(`[GitHub Save] File does not exist, will create new`);
+			console.log("[GitHub Save] File does not exist, will create new");
 		}
 
 		const body = {
@@ -341,30 +395,33 @@ export async function saveFileToGitHub(
 			...(sha ? { sha } : {}),
 		};
 
-		const response = await fetchWithRetry(
-			repoUrl,
-			{
-				method: "PUT",
-				headers: {
-					Authorization: `Bearer ${token}`,
-					Accept: "application/vnd.github.v3+json",
-					"Content-Type": "application/json",
-					"User-Agent": "Firefly-Blog",
-				},
-				body: JSON.stringify(body),
+		const response = await fetchWithRetry(repoUrl, {
+			method: "PUT",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				Accept: "application/vnd.github.v3+json",
+				"Content-Type": "application/json",
+				"User-Agent": "Firefly-Blog",
 			},
-		);
+			body: JSON.stringify(body),
+		});
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			console.error(`[GitHub Save] Failed to save file: ${response.status}`, errorText);
+			console.error(
+				`[GitHub Save] Failed to save file: ${response.status}`,
+				errorText,
+			);
 		} else {
 			console.log(`[GitHub Save] Successfully saved: ${filePath}`);
 		}
 
 		return response.ok;
 	} catch (error) {
-		console.error(`[GitHub Save] Exception:`, error instanceof Error ? error.message : error);
+		console.error(
+			"[GitHub Save] Exception:",
+			error instanceof Error ? error.message : error,
+		);
 		return false;
 	}
 }
@@ -377,53 +434,61 @@ export async function deleteFileFromGitHub(
 	const repoUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`;
 
 	console.log(`[GitHub Delete] Attempting to delete: ${filePath}`);
-	console.log(`[GitHub Delete] Repo: ${GITHUB_OWNER}/${GITHUB_REPO}, Branch: ${GITHUB_BRANCH}`);
-
-	const getResponse = await fetchWithRetry(
-		`${repoUrl}?ref=${GITHUB_BRANCH}`,
-		{
-			headers: {
-				Authorization: `Bearer ${token}`,
-				Accept: "application/vnd.github.v3+json",
-				"User-Agent": "Firefly-Blog",
-			},
-		},
+	console.log(
+		`[GitHub Delete] Repo: ${GITHUB_OWNER}/${GITHUB_REPO}, Branch: ${GITHUB_BRANCH}`,
 	);
+
+	const getResponse = await fetchWithRetry(`${repoUrl}?ref=${GITHUB_BRANCH}`, {
+		headers: {
+			Authorization: `Bearer ${token}`,
+			Accept: "application/vnd.github.v3+json",
+			"User-Agent": "Firefly-Blog",
+		},
+	});
 
 	if (!getResponse.ok) {
 		const errorText = await getResponse.text();
-		console.log(`[GitHub Delete] Failed to get file SHA: ${getResponse.status}`, errorText);
+		console.log(
+			`[GitHub Delete] Failed to get file SHA: ${getResponse.status}`,
+			errorText,
+		);
 		if (getResponse.status === 404) {
-			throw new Error("文件在 GitHub 仓库中不存在（可能仅在本地存在，尚未提交到远程仓库）");
+			throw new Error(
+				"文件在 GitHub 仓库中不存在（可能仅在本地存在，尚未提交到远程仓库）",
+			);
 		}
-		throw new Error(`Failed to get file info: HTTP ${getResponse.status} - ${errorText}`);
+		throw new Error(
+			`Failed to get file info: HTTP ${getResponse.status} - ${errorText}`,
+		);
 	}
 
 	const data = await getResponse.json();
 	console.log(`[GitHub Delete] File SHA: ${data.sha}`);
 
-	const response = await fetchWithRetry(
-		repoUrl,
-		{
-			method: "DELETE",
-			headers: {
-				Authorization: `Bearer ${token}`,
-				Accept: "application/vnd.github.v3+json",
-				"Content-Type": "application/json",
-				"User-Agent": "Firefly-Blog",
-			},
-			body: JSON.stringify({
-				message: commitMessage,
-				sha: data.sha,
-				branch: GITHUB_BRANCH,
-			}),
+	const response = await fetchWithRetry(repoUrl, {
+		method: "DELETE",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			Accept: "application/vnd.github.v3+json",
+			"Content-Type": "application/json",
+			"User-Agent": "Firefly-Blog",
 		},
-	);
+		body: JSON.stringify({
+			message: commitMessage,
+			sha: data.sha,
+			branch: GITHUB_BRANCH,
+		}),
+	});
 
 	if (!response.ok) {
 		const errorText = await response.text();
-		console.log(`[GitHub Delete] Failed to delete file: ${response.status}`, errorText);
-		throw new Error(`Failed to delete file: HTTP ${response.status} - ${errorText}`);
+		console.log(
+			`[GitHub Delete] Failed to delete file: ${response.status}`,
+			errorText,
+		);
+		throw new Error(
+			`Failed to delete file: HTTP ${response.status} - ${errorText}`,
+		);
 	}
 
 	console.log(`[GitHub Delete] Successfully deleted: ${filePath}`);
@@ -438,7 +503,10 @@ function resolveLocalPath(relativePath: string): string {
 /**
  * 保存文件到本地文件系统
  */
-export function saveFileLocally(relativePath: string, content: string): boolean {
+export function saveFileLocally(
+	relativePath: string,
+	content: string,
+): boolean {
 	try {
 		const fullPath = resolveLocalPath(relativePath);
 		const dir = path.dirname(fullPath);
@@ -469,7 +537,9 @@ export function deleteFileLocally(relativePath: string): boolean {
 		const fullPath = resolveLocalPath(relativePath);
 
 		if (!fs.existsSync(fullPath)) {
-			console.log(`[Local Delete] File does not exist, skipping: ${relativePath}`);
+			console.log(
+				`[Local Delete] File does not exist, skipping: ${relativePath}`,
+			);
 			return true; // 文件不存在也算删除成功
 		}
 

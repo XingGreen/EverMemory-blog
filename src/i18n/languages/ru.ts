@@ -44,7 +44,8 @@ export const ru: Translation = {
 	[Key.musicAudioPlayer]: "Аудиоплеер",
 	[Key.musicDescription]: "Посмотреть мои плейлисты NetEase Cloud Music",
 	[Key.musicNotConfigured]: "Музыка не настроена",
-	[Key.musicNotConfiguredDesc]: "Пожалуйста, установите ID пользователя NetEase Cloud Music в файле конфигурации",
+	[Key.musicNotConfiguredDesc]:
+		"Пожалуйста, установите ID пользователя NetEase Cloud Music в файле конфигурации",
 	[Key.musicTotalPlaylists]: "Всего плейлистов",
 	[Key.musicTotalTracks]: "Всего треков",
 	[Key.musicSource]: "Источник данных",
@@ -56,7 +57,8 @@ export const ru: Translation = {
 	[Key.musicOfficialPage]: "Официальная страница",
 	[Key.musicTrackList]: "Список треков",
 	[Key.musicNoTracks]: "Нет треков",
-	[Key.musicLoadingHint]: "Если контент не загружается долгое время, обновите вручную",
+	[Key.musicLoadingHint]:
+		"Если контент не загружается долгое время, обновите вручную",
 	[Key.musicMyPlaylists]: "Мои плейлисты",
 	[Key.musicSubscribedPlaylists]: "Подписанные плейлисты",
 	[Key.musicPlaylistDesc]: "Описание",
@@ -69,7 +71,8 @@ export const ru: Translation = {
 	[Key.musicBuildTime]: "Время сборки",
 	[Key.musicLoading]: "Загрузка плейлистов...",
 	[Key.musicFetchError]: "Ошибка получения данных",
-	[Key.musicFetchErrorDesc]: "Ошибка получения данных плейлиста во время сборки. Проверьте подключение к сети или повторите попытку позже",
+	[Key.musicFetchErrorDesc]:
+		"Ошибка получения данных плейлиста во время сборки. Проверьте подключение к сети или повторите попытку позже",
 	[Key.musicSearchPlaceholder]: "Поиск плейлистов...",
 	[Key.musicTabAll]: "Все",
 	[Key.musicTabMine]: "Мои",
@@ -515,9 +518,11 @@ export const ru: Translation = {
 	[Key.postPinned]: "Закрепить",
 	[Key.postComments]: "Комментарии",
 	[Key.postCover]: "Обложка",
-	[Key.postCoverPlaceholder]: "Путь к обложке (URL, путь в /public или относительный путь)",
+	[Key.postCoverPlaceholder]:
+		"Путь к обложке (URL, путь в /public или относительный путь)",
 	[Key.postSummary]: "Краткое описание",
-	[Key.postSummaryPlaceholder]: "Краткое описание статьи (для SEO и отображения выдержки)",
+	[Key.postSummaryPlaceholder]:
+		"Краткое описание статьи (для SEO и отображения выдержки)",
 	[Key.postTags]: "Теги",
 	[Key.postTagRemove]: "Удалить тег",
 	[Key.postTagPlaceholder]: "Введите тег и нажмите Enter, чтобы добавить",
@@ -547,8 +552,9 @@ export const ru: Translation = {
 
 	[Key.deleteTitle]: "Подтверждение удаления",
 	[Key.deleteBody]:
-		"Вы собираетесь удалить статью <strong>\"{title}\"</strong>. Это действие необратимо.",
-	[Key.deleteInstruction]: "Введите название статьи ниже, чтобы подтвердить удаление:",
+		'Вы собираетесь удалить статью <strong>"{title}"</strong>. Это действие необратимо.',
+	[Key.deleteInstruction]:
+		"Введите название статьи ниже, чтобы подтвердить удаление:",
 	[Key.deletePlaceholder]: "Введите название статьи для подтверждения удаления",
 	[Key.deleteHint]: "Название не совпадает, проверьте внимательнее",
 	[Key.deleteMatched]: "Название подтверждено, можно удалять",
@@ -558,7 +564,8 @@ export const ru: Translation = {
 
 	[Key.settingsOverviewDesc]:
 		"Выберите пункт конфигурации ниже для онлайн-редактирования. После сохранения данные записываются в соответствующий файл конфигурации и автоматически синхронизируются с GitHub.",
-	[Key.settingsSelectHint]: "Выберите пункт конфигурации для онлайн-редактирования",
+	[Key.settingsSelectHint]:
+		"Выберите пункт конфигурации для онлайн-редактирования",
 	[Key.configReload]: "Перезагрузить",
 	[Key.configSave]: "Сохранить конфигурацию",
 	[Key.configSaving]: "Сохранение...",
@@ -581,8 +588,50 @@ export const ru: Translation = {
 		"Заголовок сайта, описание, цвет темы, переключатели страниц, макет списка статей и другие базовые сведения",
 	[Key.configProfileDesc]: "Аватар, имя, подпись и ссылки на соцсети",
 	[Key.configNavbarDesc]: "Ссылки меню и подменю верхней панели навигации",
-	[Key.configFooterDesc]: "Переключатели отображения в подвале и другие настройки",
-	[Key.configSidebarDesc]: "Макет боковой панели, переключатели виджетов и порядок",
+	[Key.configFooterDesc]:
+		"Переключатели отображения в подвале и другие настройки",
+	[Key.configSidebarDesc]:
+		"Макет боковой панели, переключатели виджетов и порядок",
+	[Key.configFooterHtml]: "Пользовательский HTML футера",
+	[Key.configFooterHtmlDesc]:
+		"Пользовательский HTML, вставляемый в нижнюю часть футера (номер регистрации, бейджи и т.д.)",
+	[Key.configMusic]: "Музыка",
+	[Key.configMusicDesc]: "Настройки музыкального плеера (NetEase и др.)",
+	[Key.configFriends]: "Друзья",
+	[Key.configFriendsDesc]:
+		"Настройки страницы друзей и список ссылок (наполнение — src/content/spec/friends.md)",
+	[Key.configComment]: "Комментарии",
+	[Key.configCommentDesc]: "Тип системы комментариев и настройки провайдеров",
+	[Key.configFont]: "Шрифты",
+	[Key.configFontDesc]: "Выбор шрифтов и локальные переопределения",
+	[Key.configWallpaper]: "Обои",
+	[Key.configWallpaperDesc]: "Режим фоновых обоев и список обоев",
+	[Key.configAnnouncement]: "Объявление",
+	[Key.configAnnouncementDesc]: "Заголовок и содержимое объявления",
+	[Key.configAnalytics]: "Аналитика",
+	[Key.configAnalyticsDesc]: "Аналитика сайта (Google Analytics, Clarity, Umami и др.)",
+	[Key.configGallery]: "Галерея",
+	[Key.configGalleryDesc]: "Список альбомов и изображения галереи",
+	[Key.configApp]: "Приложения",
+	[Key.configAppDesc]: "Страница рекомендаций приложений и список рекомендуемых приложений",
+	[Key.configSponsor]: "Поддержка",
+	[Key.configSponsorDesc]: "Настройки страницы поддержки (заголовок, описание и ссылки)",
+	[Key.configLicense]: "Лицензия",
+	[Key.configLicenseDesc]:
+		"Название лицензии статей, ссылка и переключатель отображения",
+	[Key.configCoverImage]: "Обложка",
+	[Key.configCoverImageDesc]: "Настройки обложек статей (фиксированная или случайная)",
+	[Key.configEffects]: "Эффекты",
+	[Key.configEffectsDesc]: "Переключатели и параметры эффектов страницы (сакура и др.)",
+	[Key.configPlantuml]: "PlantUML",
+	[Key.configPlantumlDesc]: "Рендеринг диаграмм PlantUML и светлая/тёмная темы",
+	[Key.configCodeTheme]: "Тема кода",
+	[Key.configCodeThemeDesc]:
+		"Тема подсветки expressive-code (после изменения нужен перезапуск сервера)",
+	[Key.configPioSpine]: "Талисман (Spine)",
+	[Key.configPioSpineDesc]: "Переключатель и модель талисмана Spine",
+	[Key.configPioLive2d]: "Талисман (Live2D)",
+	[Key.configPioLive2dDesc]: "Переключатель и модель талисмана Live2D",
 
 	// Панель управления — приборная панель
 	[Key.adminHome]: "Главная",

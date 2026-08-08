@@ -1,36 +1,40 @@
 <script lang="ts">
-	import Icon from "@/components/common/Icon.svelte";
-	import I18nKey from "@/i18n/i18nKey";
-	import { i18n } from "@/i18n/translation";
+import Icon from "@/components/common/Icon.svelte";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
 
-	let { title, onConfirm, onCancel }: {
-		title: string;
-		onConfirm: () => void;
-		onCancel: () => void;
-	} = $props();
+let {
+	title,
+	onConfirm,
+	onCancel,
+}: {
+	title: string;
+	onConfirm: () => void;
+	onCancel: () => void;
+} = $props();
 
-	let confirmText = $state("");
-	let isSubmitting = $state(false);
-	let shakeError = $state(false);
+let confirmText = $state("");
+let isSubmitting = $state(false);
+let shakeError = $state(false);
 
-	function handleConfirm() {
-		if (confirmText !== title) {
-			shakeError = true;
-			setTimeout(() => {
-				shakeError = false;
-			}, 500);
-			return;
-		}
-
-		isSubmitting = true;
-		onConfirm();
+function handleConfirm() {
+	if (confirmText !== title) {
+		shakeError = true;
+		setTimeout(() => {
+			shakeError = false;
+		}, 500);
+		return;
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === "Escape") {
-			onCancel();
-		}
+	isSubmitting = true;
+	onConfirm();
+}
+
+function handleKeydown(e: KeyboardEvent) {
+	if (e.key === "Escape") {
+		onCancel();
 	}
+}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

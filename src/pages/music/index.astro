@@ -42,10 +42,10 @@ interface Playlist {
 }
 
 const apis = [
-		`https://apis.netstart.cn/music/user/playlist?uid=${NETEASE_USER_ID}`,
-		`https://music.163.com/api/user/playlist/?uid=${NETEASE_USER_ID}`,
-		`https://api.i-meto.com/meting/api?server=netease&type=playlist&id=${NETEASE_USER_ID}`,
-	];
+	`https://apis.netstart.cn/music/user/playlist?uid=${NETEASE_USER_ID}`,
+	`https://music.163.com/api/user/playlist/?uid=${NETEASE_USER_ID}`,
+	`https://api.i-meto.com/meting/api?server=netease&type=playlist&id=${NETEASE_USER_ID}`,
+];
 
 async function fetchPlaylists(userId: string) {
 	if (!userId) {
@@ -56,8 +56,9 @@ async function fetchPlaylists(userId: string) {
 		try {
 			const response = await fetch(url, {
 				headers: {
-					"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-					"Referer": "https://music.163.com/",
+					"User-Agent":
+						"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+					Referer: "https://music.163.com/",
 				},
 			});
 			const data = await response.json();
@@ -65,22 +66,25 @@ async function fetchPlaylists(userId: string) {
 			if (data.code === 200 && data.playlist) {
 				if (data.subscribedPlaylist && Array.isArray(data.subscribedPlaylist)) {
 					return {
-						myPlaylists: (data.playlist as Playlist[]).filter(p => {
-							const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
+						myPlaylists: (data.playlist as Playlist[]).filter((p) => {
+							const creatorId =
+								p.creator?.userId?.toString() || p.creator?.id?.toString();
 							return creatorId === userIdStr;
 						}),
-						subscribedPlaylists: data.subscribedPlaylist as Playlist[]
+						subscribedPlaylists: data.subscribedPlaylist as Playlist[],
 					};
 				}
 				return {
-					myPlaylists: (data.playlist as Playlist[]).filter(p => {
-						const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
+					myPlaylists: (data.playlist as Playlist[]).filter((p) => {
+						const creatorId =
+							p.creator?.userId?.toString() || p.creator?.id?.toString();
 						return creatorId === userIdStr;
 					}),
-					subscribedPlaylists: (data.playlist as Playlist[]).filter(p => {
-						const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
+					subscribedPlaylists: (data.playlist as Playlist[]).filter((p) => {
+						const creatorId =
+							p.creator?.userId?.toString() || p.creator?.id?.toString();
 						return creatorId !== userIdStr;
-					})
+					}),
 				};
 			}
 		} catch (error) {
@@ -100,8 +104,9 @@ async function fetchPlaylistDetail(playlistId: string | number) {
 		try {
 			const response = await fetch(url, {
 				headers: {
-					"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-					"Referer": "https://music.163.com/",
+					"User-Agent":
+						"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+					Referer: "https://music.163.com/",
 				},
 			});
 			const data = await response.json();
@@ -115,7 +120,10 @@ async function fetchPlaylistDetail(playlistId: string | number) {
 	return null;
 }
 
-let staticPlaylists = { myPlaylists: [], subscribedPlaylists: [] } as { myPlaylists: Playlist[], subscribedPlaylists: Playlist[] };
+let staticPlaylists = { myPlaylists: [], subscribedPlaylists: [] } as {
+	myPlaylists: Playlist[];
+	subscribedPlaylists: Playlist[];
+};
 let fetchFailed = false;
 
 if (!isConfigured) {
@@ -127,7 +135,7 @@ if (!isConfigured) {
 		staticPlaylists = result;
 
 		const allPlaylists = [...result.myPlaylists, ...result.subscribedPlaylists];
-		const detailPromises = allPlaylists.map(p => fetchPlaylistDetail(p.id));
+		const detailPromises = allPlaylists.map((p) => fetchPlaylistDetail(p.id));
 		const details = await Promise.all(detailPromises);
 
 		details.forEach((detail, index) => {
@@ -138,16 +146,18 @@ if (!isConfigured) {
 		});
 
 		staticPlaylists = {
-			myPlaylists: allPlaylists.filter(p => {
-				const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
+			myPlaylists: allPlaylists.filter((p) => {
+				const creatorId =
+					p.creator?.userId?.toString() || p.creator?.id?.toString();
 				const userIdStr = NETEASE_USER_ID?.toString();
 				return userIdStr && creatorId === userIdStr;
 			}),
-			subscribedPlaylists: allPlaylists.filter(p => {
-				const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
+			subscribedPlaylists: allPlaylists.filter((p) => {
+				const creatorId =
+					p.creator?.userId?.toString() || p.creator?.id?.toString();
 				const userIdStr = NETEASE_USER_ID?.toString();
 				return userIdStr && creatorId !== userIdStr;
-			})
+			}),
 		};
 	} catch (error) {
 		console.error("[Music] 获取数据失败:", error);

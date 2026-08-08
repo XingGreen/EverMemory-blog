@@ -44,7 +44,8 @@ export const zh_TW: Translation = {
 	[Key.musicAudioPlayer]: "音頻播放器",
 	[Key.musicDescription]: "查看我的網易雲音樂歌單，點擊歌單即可切換播放列表",
 	[Key.musicNotConfigured]: "未配置音樂",
-	[Key.musicNotConfiguredDesc]: "請在配置文件中設置網易雲音樂用戶ID，即可展示您的歌單列表",
+	[Key.musicNotConfiguredDesc]:
+		"請在配置文件中設置網易雲音樂用戶ID，即可展示您的歌單列表",
 	[Key.musicTotalPlaylists]: "歌單總數",
 	[Key.musicTotalTracks]: "歌曲總數",
 	[Key.musicSource]: "數據來源",
@@ -455,7 +456,8 @@ export const zh_TW: Translation = {
 	[Key.errorFillRequired]: "請填寫: {fields}",
 
 	[Key.dashboardWelcome]: "部落格數據總覽",
-	[Key.dashboardHomeDesc]: "歡迎回來，這裡是部落格控制面板。功能開發中，敬請期待。",
+	[Key.dashboardHomeDesc]:
+		"歡迎回來，這裡是部落格控制面板。功能開發中，敬請期待。",
 	[Key.postsManageDesc]: "管理你的部落格文章",
 
 	[Key.postSearchPlaceholder]: "搜尋文章...",
@@ -530,7 +532,8 @@ export const zh_TW: Translation = {
 	[Key.postSaveFailed]: "儲存失敗",
 
 	[Key.deleteTitle]: "確認刪除",
-	[Key.deleteBody]: "你即將刪除文章 <strong>\"{title}\"</strong>。此操作不可撤銷。",
+	[Key.deleteBody]:
+		'你即將刪除文章 <strong>"{title}"</strong>。此操作不可撤銷。',
 	[Key.deleteInstruction]: "請在下方輸入文章標題以確認刪除：",
 	[Key.deletePlaceholder]: "輸入文章標題確認刪除",
 	[Key.deleteHint]: "標題不匹配，請仔細核對",
@@ -539,7 +542,8 @@ export const zh_TW: Translation = {
 	[Key.deleteDeleting]: "刪除中...",
 	[Key.deleteConfirm]: "確認刪除",
 
-	[Key.settingsOverviewDesc]: "選擇下方設定項進行線上編輯，儲存後寫入對應設定檔並自動同步到 GitHub。",
+	[Key.settingsOverviewDesc]:
+		"選擇下方設定項進行線上編輯，儲存後寫入對應設定檔並自動同步到 GitHub。",
 	[Key.settingsSelectHint]: "選擇設定項進行線上編輯",
 	[Key.configReload]: "重新載入",
 	[Key.configSave]: "儲存設定",
@@ -559,11 +563,48 @@ export const zh_TW: Translation = {
 	[Key.configNavbar]: "導覽列",
 	[Key.configFooter]: "頁尾",
 	[Key.configSidebar]: "側邊欄",
-	[Key.configSiteDesc]: "站點標題、描述、主題色、頁面開關、文章列表佈局等基礎資訊",
+	[Key.configSiteDesc]:
+		"站點標題、描述、主題色、頁面開關、文章列表佈局等基礎資訊",
 	[Key.configProfileDesc]: "頭像、暱稱、個人簽名與社交連結",
 	[Key.configNavbarDesc]: "頂部導覽列的選單連結與子選單",
 	[Key.configFooterDesc]: "頁尾顯示開關等設定",
 	[Key.configSidebarDesc]: "側邊欄佈局、小工具開關與排列順序",
+	[Key.configFooterHtml]: "頁尾自訂 HTML",
+	[Key.configFooterHtmlDesc]: "在頁尾底部注入的自訂 HTML（ICP 備案號、認證徽章等）",
+	[Key.configMusic]: "音樂",
+	[Key.configMusicDesc]: "音樂播放器設定（網易雲音樂等）",
+	[Key.configFriends]: "好友鏈",
+	[Key.configFriendsDesc]: "好友鏈頁面設定與連結清單（內容編輯見 src/content/spec/friends.md）",
+	[Key.configComment]: "評論",
+	[Key.configCommentDesc]: "評論系統類型與各提供商設定",
+	[Key.configFont]: "字型",
+	[Key.configFontDesc]: "網站字型選擇與局部覆蓋",
+	[Key.configWallpaper]: "背景壁紙",
+	[Key.configWallpaperDesc]: "背景壁紙模式與壁紙清單設定",
+	[Key.configAnnouncement]: "公告",
+	[Key.configAnnouncementDesc]: "公告標題與公告內容",
+	[Key.configAnalytics]: "統計",
+	[Key.configAnalyticsDesc]: "網站統計（Google Analytics、Clarity、Umami 等）",
+	[Key.configGallery]: "相簿",
+	[Key.configGalleryDesc]: "相簿清單與相簿圖片設定",
+	[Key.configApp]: "軟體推薦",
+	[Key.configAppDesc]: "軟體推薦頁面與推薦軟體清單",
+	[Key.configSponsor]: "贊助",
+	[Key.configSponsorDesc]: "贊助頁面設定（標題、描述與贊助連結）",
+	[Key.configLicense]: "授權",
+	[Key.configLicenseDesc]: "文章授權名稱、連結與顯示開關",
+	[Key.configCoverImage]: "封面圖",
+	[Key.configCoverImageDesc]: "文章封面圖（固定/隨機）設定",
+	[Key.configEffects]: "特效",
+	[Key.configEffectsDesc]: "頁面特效（櫻花等）開關與參數",
+	[Key.configPlantuml]: "PlantUML",
+	[Key.configPlantumlDesc]: "PlantUML 圖表渲染與明暗主題",
+	[Key.configCodeTheme]: "程式碼主題",
+	[Key.configCodeThemeDesc]: "expressive-code 程式碼高亮主題（修改後需重新啟動伺服器）",
+	[Key.configPioSpine]: "看板娘（Spine）",
+	[Key.configPioSpineDesc]: "Spine 看板娘開關與模型設定",
+	[Key.configPioLive2d]: "看板娘（Live2D）",
+	[Key.configPioLive2dDesc]: "Live2D 看板娘開關與模型設定",
 
 	// 控制面板儀表盤
 	[Key.adminHome]: "首頁",
@@ -591,4 +632,3 @@ export const zh_TW: Translation = {
 	[Key.placeholderBadge]: "頁面建置中",
 	[Key.postMetaStatus]: "{status} · {date}",
 };
-

@@ -1,7 +1,11 @@
-import { listAllMarkdownFiles, getFileFromGitHub, saveFileLocally } from "@/utils/github-app";
-import { requireAuth } from "@/utils/auth";
 import { getCollection } from "astro:content";
 import path from "node:path";
+import { requireAuth } from "@/utils/auth";
+import {
+	getFileFromGitHub,
+	listAllMarkdownFiles,
+	saveFileLocally,
+} from "@/utils/github-app";
 
 export const prerender = false;
 
@@ -25,7 +29,7 @@ export async function POST({ request }) {
 
 		// 3. 下载 GitHub 有但本地没有的文件
 		let downloaded = 0;
-		let downloadedFiles: string[] = [];
+		const downloadedFiles: string[] = [];
 		for (const filePath of githubFiles) {
 			// 从路径提取 slug（如 src/content/posts/hello.md → hello）
 			const slug = path.basename(filePath, ".md");
@@ -35,7 +39,10 @@ export async function POST({ request }) {
 				const content = await getFileFromGitHub(filePath);
 
 				if (content) {
-					const localPath = filePath.replace(/^src\/content\/posts\//, "src/content/posts/");
+					const localPath = filePath.replace(
+						/^src\/content\/posts\//,
+						"src/content/posts/",
+					);
 					saveFileLocally(localPath, content);
 					downloaded++;
 					downloadedFiles.push(slug);
@@ -45,16 +52,18 @@ export async function POST({ request }) {
 
 		// 4. 检测本地有但 GitHub 没有的文件（仅报告，不自动删除）
 		const githubSlugs = new Set(
-			githubFiles.map((f) => path.basename(f, ".md"))
+			githubFiles.map((f) => path.basename(f, ".md")),
 		);
-		let orphanedFiles: string[] = [];
+		const orphanedFiles: string[] = [];
 		for (const localSlug of localSlugs) {
 			if (!githubSlugs.has(localSlug)) {
 				orphanedFiles.push(localSlug);
 			}
 		}
 
-		console.log(`[Admin Sync] Downloaded: ${downloaded}, Orphaned: ${orphanedFiles.length}`);
+		console.log(
+			`[Admin Sync] Downloaded: ${downloaded}, Orphaned: ${orphanedFiles.length}`,
+		);
 
 		return new Response(
 			JSON.stringify({
@@ -72,7 +81,10 @@ export async function POST({ request }) {
 			{ status: 200, headers: { "Content-Type": "application/json" } },
 		);
 	} catch (error) {
-		console.error("[Admin Sync] Exception:", error instanceof Error ? error.stack : error);
+		console.error(
+			"[Admin Sync] Exception:",
+			error instanceof Error ? error.stack : error,
+		);
 		return new Response(
 			JSON.stringify({
 				success: false,

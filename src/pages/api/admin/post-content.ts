@@ -39,13 +39,19 @@ export async function GET({ request, url }) {
 			);
 		}
 
-		const filePath = path.resolve(process.cwd(), `src/content/posts/${slug}.md`);
+		const filePath = path.resolve(
+			process.cwd(),
+			`src/content/posts/${slug}.md`,
+		);
 
 		if (fs.existsSync(filePath)) {
 			const content = fs.readFileSync(filePath, "utf-8");
 
 			const frontmatterEnd = content.indexOf("---", 3);
-			const bodyContent = frontmatterEnd !== -1 ? content.slice(frontmatterEnd + 3).trim() : content;
+			const bodyContent =
+				frontmatterEnd !== -1
+					? content.slice(frontmatterEnd + 3).trim()
+					: content;
 
 			return new Response(
 				JSON.stringify({
@@ -73,7 +79,10 @@ export async function GET({ request, url }) {
 			{ status: 404, headers: { "Content-Type": "application/json" } },
 		);
 	} catch (error) {
-		console.error("[Admin PostContent] Exception:", error instanceof Error ? error.stack : error);
+		console.error(
+			"[Admin PostContent] Exception:",
+			error instanceof Error ? error.stack : error,
+		);
 		return new Response(
 			JSON.stringify({
 				success: false,

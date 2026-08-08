@@ -39,7 +39,7 @@ export const appConfig: AppConfig = {
 			platform: ["Android"],
 			priceType: "free",
 		},
-		{ 
+		{
 			name: "GKD",
 			description: "跳广告工具(需订阅规则)",
 			tags: ["系统工具"],
@@ -145,7 +145,16 @@ export const appConfig: AppConfig = {
 			visitUrl: "https://gopeed.com/",
 			sourceCode: "https://github.com/GopeedLab/gopeed",
 			icon: "https://ts1.tc.mm.bing.net/th/id/ODF.6YtYBdtRDTKubGiNpDxCQQ",
-			platform: ["Android", "Windows", "macOS", "Linux", "iOS", "Web", "Docker", "QNAP"],
+			platform: [
+				"Android",
+				"Windows",
+				"macOS",
+				"Linux",
+				"iOS",
+				"Web",
+				"Docker",
+				"QNAP",
+			],
 			priceType: "free",
 		},
 		{
@@ -176,7 +185,7 @@ export const appConfig: AppConfig = {
 			sourceCode: "",
 			icon: "https://ts2.tc.mm.bing.net/th/id/ODF.nmYI60Y00_N7lNZeN0iQFA",
 			platform: ["Android"],
-			priceType: "free"
+			priceType: "free",
 		},
 		{
 			name: "WakeUp课程表",
