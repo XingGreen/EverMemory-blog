@@ -1,227 +1,235 @@
 <script lang="ts">
-	import { onMount } from "svelte";
-	import Icon from "@/components/common/Icon.svelte";
-	import I18nKey from "@/i18n/i18nKey";
-	import { i18n } from "@/i18n/translation";
+import { onMount } from "svelte";
+import Icon from "@/components/common/Icon.svelte";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
 
-	let {
-		post,
-		mode,
-		onSave,
-		onCancel,
-		onError,
-	}: {
-		post: any;
-		mode: "edit" | "create";
-		onSave: () => void;
-		onCancel: () => void;
-		onError: (msg: string) => void;
-	} = $props();
+let {
+	post,
+	mode,
+	onSave,
+	onCancel,
+	onError,
+}: {
+	post: any;
+	mode: "edit" | "create";
+	onSave: () => void;
+	onCancel: () => void;
+	onError: (msg: string) => void;
+} = $props();
 
-	let title = $state("");
-	let author = $state("");
-	let category = $state("");
-	let description = $state("");
-	let content = $state("");
-	let slug = $state("");
-	let published = $state("");
-	let updated = $state("");
-	let isDraft = $state(false);
-	let isPinned = $state(false);
-	let image = $state("");
-	let lang = $state("");
-	let licenseName = $state("");
-	let licenseUrl = $state("");
-	let sourceLink = $state("");
-	let enableComment = $state(true);
-	let password = $state("");
-	let passwordHint = $state("");
-	let tagInput = $state("");
-	let tags = $state<string[]>([]);
-	let isSaving = $state(false);
-	let activeTab = $state<"editor" | "preview">("editor");
-	let isLoadingContent = $state(false);
-	// 标记用户是否手动编辑过 slug，防止自动生成覆盖用户输入
-	let slugTouched = $state(false);
+let title = $state("");
+let author = $state("");
+let category = $state("");
+let description = $state("");
+let content = $state("");
+let slug = $state("");
+let published = $state("");
+let updated = $state("");
+let isDraft = $state(false);
+let isPinned = $state(false);
+let image = $state("");
+let lang = $state("");
+let licenseName = $state("");
+let licenseUrl = $state("");
+let sourceLink = $state("");
+let enableComment = $state(true);
+let password = $state("");
+let passwordHint = $state("");
+let tagInput = $state("");
+let tags = $state<string[]>([]);
+let isSaving = $state(false);
+let activeTab = $state<"editor" | "preview">("editor");
+let isLoadingContent = $state(false);
+// 标记用户是否手动编辑过 slug，防止自动生成覆盖用户输入
+let slugTouched = $state(false);
 
-	$effect(() => {
-		title = post?.title || "";
-		author = post?.author || "";
-		category = post?.category || "";
-		description = post?.description || "";
-		slug = post?.slug || "";
-		published = post?.published ? formatDate(post.published) : new Date().toISOString().split("T")[0];
-		updated = post?.updated ? formatDate(post.updated) : "";
-		isDraft = post?.draft || false;
-		isPinned = post?.pinned || false;
-		image = post?.image || "";
-		lang = post?.lang || "";
-		licenseName = post?.licenseName || "";
-		licenseUrl = post?.licenseUrl || "";
-		sourceLink = post?.sourceLink || "";
-		enableComment = post?.comment !== undefined ? post.comment : true;
-		password = post?.password || "";
-		passwordHint = post?.passwordHint || "";
-		tags = [...(post?.tags || [])];
-		isLoadingContent = mode === "edit";
-	});
+$effect(() => {
+	title = post?.title || "";
+	author = post?.author || "";
+	category = post?.category || "";
+	description = post?.description || "";
+	slug = post?.slug || "";
+	published = post?.published
+		? formatDate(post.published)
+		: new Date().toISOString().split("T")[0];
+	updated = post?.updated ? formatDate(post.updated) : "";
+	isDraft = post?.draft || false;
+	isPinned = post?.pinned || false;
+	image = post?.image || "";
+	lang = post?.lang || "";
+	licenseName = post?.licenseName || "";
+	licenseUrl = post?.licenseUrl || "";
+	sourceLink = post?.sourceLink || "";
+	enableComment = post?.comment !== undefined ? post.comment : true;
+	password = post?.password || "";
+	passwordHint = post?.passwordHint || "";
+	tags = [...(post?.tags || [])];
+	isLoadingContent = mode === "edit";
+});
 
-	function formatDate(dateStr: string): string {
-		return new Date(dateStr).toISOString().split("T")[0];
+function formatDate(dateStr: string): string {
+	return new Date(dateStr).toISOString().split("T")[0];
+}
+
+function generateSlug(title: string): string {
+	return title
+		.toLowerCase()
+		.replace(/[^\w\u4e00-\u9fa5]+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.substring(0, 100);
+}
+
+$effect(() => {
+	// 仅在新建模式、用户未手动编辑过 slug、且 slug 为空时自动生成
+	if (mode === "create" && !slugTouched && !slug && title) {
+		slug = generateSlug(title);
 	}
+});
 
-	function generateSlug(title: string): string {
-		return title
-			.toLowerCase()
-			.replace(/[^\w\u4e00-\u9fa5]+/g, "-")
-			.replace(/^-+|-+$/g, "")
-			.substring(0, 100);
-	}
+function handleSlugInput() {
+	slugTouched = true;
+}
 
-	$effect(() => {
-		// 仅在新建模式、用户未手动编辑过 slug、且 slug 为空时自动生成
-		if (mode === "create" && !slugTouched && !slug && title) {
-			slug = generateSlug(title);
-		}
-	});
-
-	function handleSlugInput() {
-		slugTouched = true;
-	}
-
-	async function loadContent() {
-		if (mode === "edit" && post?.slug) {
-			isLoadingContent = true;
-			try {
-				const response = await fetch(`/api/admin/post-content/?slug=${post.slug}`);
-				const data = await response.json();
-				if (data.success && data.content) {
-					content = data.content;
-				} else {
-					content = "";
-				}
-			} catch {
-				content = "";
-			} finally {
-				isLoadingContent = false;
-			}
-		}
-	}
-
-	onMount(loadContent);
-
-	function addTag() {
-		const tag = tagInput.trim();
-		if (tag && !tags.includes(tag)) {
-			tags = [...tags, tag];
-			tagInput = "";
-		}
-	}
-
-	function removeTag(index: number) {
-		tags = tags.filter((_, i) => i !== index);
-	}
-
-	function handleTagKeydown(e: KeyboardEvent) {
-		if (e.key === "Enter" || e.key === ",") {
-			e.preventDefault();
-			addTag();
-		}
-	}
-
-	async function handleSave() {
-		if (!title.trim()) {
-			onError(i18n(I18nKey.postTitleRequired));
-			return;
-		}
-
-		if (!slug.trim()) {
-			onError(i18n(I18nKey.postSlugRequired));
-			return;
-		}
-
-		isSaving = true;
-
+async function loadContent() {
+	if (mode === "edit" && post?.slug) {
+		isLoadingContent = true;
 		try {
-			const response = await fetch("/api/admin/save/", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					slug,
-					title,
-					author,
-					category,
-					tags,
-					published,
-					updated,
-					description,
-					image,
-					lang,
-					licenseName,
-					licenseUrl,
-					sourceLink,
-					comment: enableComment,
-					password,
-					passwordHint,
-					draft: isDraft,
-					pinned: isPinned,
-					content,
-				}),
-			});
-
+			const response = await fetch(
+				`/api/admin/post-content/?slug=${post.slug}`,
+			);
 			const data = await response.json();
-
-			if (response.ok && data.success) {
-				onSave();
+			if (data.success && data.content) {
+				content = data.content;
 			} else {
-				console.error("[Editor] 保存失败:", data.message);
-				onError(data.message || i18n(I18nKey.postSaveFailed));
-			}
-		} catch (err) {
-			console.error("[Editor] 保存请求异常:", err);
-			// TODO i18n
-			onError(`保存请求失败: ${err instanceof Error ? err.message : String(err)}`);
-		} finally {
-			isSaving = false;
-		}
-	}
-
-	// Markdown 渲染：调用服务端 API，使用与主站相同的渲染管线
-	let renderedHtml = $state(`<p class='empty-preview'>${i18n(I18nKey.postPreviewEmpty)}</p>`);
-	let renderTimer: ReturnType<typeof setTimeout> | null = null;
-	let renderVersion = 0;
-
-	async function fetchPreview(mdContent: string) {
-		if (!mdContent.trim()) {
-			renderedHtml = `<p class='empty-preview'>${i18n(I18nKey.postPreviewEmpty)}</p>`;
-			return;
-		}
-
-		const currentVersion = ++renderVersion;
-		try {
-			const response = await fetch("/api/admin/preview/", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ content: mdContent }),
-			});
-			const data = await response.json();
-
-			// 防止旧请求覆盖新结果
-			if (currentVersion === renderVersion && response.ok && data.success) {
-				renderedHtml = data.html;
+				content = "";
 			}
 		} catch {
-			if (currentVersion === renderVersion) {
-				renderedHtml = `<p class='empty-preview'>${i18n(I18nKey.postPreviewFailed)}</p>`;
-			}
+			content = "";
+		} finally {
+			isLoadingContent = false;
 		}
 	}
+}
 
-	$effect(() => {
-		const mdContent = content;
-		if (renderTimer) clearTimeout(renderTimer);
-		renderTimer = setTimeout(() => fetchPreview(mdContent), 300);
-	});
+onMount(loadContent);
+
+function addTag() {
+	const tag = tagInput.trim();
+	if (tag && !tags.includes(tag)) {
+		tags = [...tags, tag];
+		tagInput = "";
+	}
+}
+
+function removeTag(index: number) {
+	tags = tags.filter((_, i) => i !== index);
+}
+
+function handleTagKeydown(e: KeyboardEvent) {
+	if (e.key === "Enter" || e.key === ",") {
+		e.preventDefault();
+		addTag();
+	}
+}
+
+async function handleSave() {
+	if (!title.trim()) {
+		onError(i18n(I18nKey.postTitleRequired));
+		return;
+	}
+
+	if (!slug.trim()) {
+		onError(i18n(I18nKey.postSlugRequired));
+		return;
+	}
+
+	isSaving = true;
+
+	try {
+		const response = await fetch("/api/admin/save/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				slug,
+				title,
+				author,
+				category,
+				tags,
+				published,
+				updated,
+				description,
+				image,
+				lang,
+				licenseName,
+				licenseUrl,
+				sourceLink,
+				comment: enableComment,
+				password,
+				passwordHint,
+				draft: isDraft,
+				pinned: isPinned,
+				content,
+			}),
+		});
+
+		const data = await response.json();
+
+		if (response.ok && data.success) {
+			onSave();
+		} else {
+			console.error("[Editor] 保存失败:", data.message);
+			onError(data.message || i18n(I18nKey.postSaveFailed));
+		}
+	} catch (err) {
+		console.error("[Editor] 保存请求异常:", err);
+		// TODO i18n
+		onError(
+			`保存请求失败: ${err instanceof Error ? err.message : String(err)}`,
+		);
+	} finally {
+		isSaving = false;
+	}
+}
+
+// Markdown 渲染：调用服务端 API，使用与主站相同的渲染管线
+let renderedHtml = $state(
+	`<p class='empty-preview'>${i18n(I18nKey.postPreviewEmpty)}</p>`,
+);
+let renderTimer: ReturnType<typeof setTimeout> | null = null;
+let renderVersion = 0;
+
+async function fetchPreview(mdContent: string) {
+	if (!mdContent.trim()) {
+		renderedHtml = `<p class='empty-preview'>${i18n(I18nKey.postPreviewEmpty)}</p>`;
+		return;
+	}
+
+	const currentVersion = ++renderVersion;
+	try {
+		const response = await fetch("/api/admin/preview/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ content: mdContent }),
+		});
+		const data = await response.json();
+
+		// 防止旧请求覆盖新结果
+		if (currentVersion === renderVersion && response.ok && data.success) {
+			renderedHtml = data.html;
+		}
+	} catch {
+		if (currentVersion === renderVersion) {
+			renderedHtml = `<p class='empty-preview'>${i18n(I18nKey.postPreviewFailed)}</p>`;
+		}
+	}
+}
+
+$effect(() => {
+	const mdContent = content;
+	if (renderTimer) clearTimeout(renderTimer);
+	renderTimer = setTimeout(() => fetchPreview(mdContent), 300);
+});
 </script>
 
 <div class="editor-container">

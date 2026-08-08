@@ -1,7 +1,7 @@
 ---
 import AdminDashboard from "@/components/admin/AdminDashboard.svelte";
-import AdminLayout from "@/layouts/AdminLayout.astro";
 import { profileConfig } from "@/config";
+import AdminLayout from "@/layouts/AdminLayout.astro";
 
 const title = "控制面板";
 const description = `控制面板 - ${profileConfig.name}`;
@@ -9,11 +9,14 @@ const description = `控制面板 - ${profileConfig.name}`;
 // 解析头像 URL：src 目录的图片需要在构建时用 import.meta.glob 解析为构建后路径
 let avatarUrl = profileConfig.avatar || "";
 if (avatarUrl && !avatarUrl.startsWith("http") && !avatarUrl.startsWith("/")) {
-	const images = import.meta.glob("/src/assets/images/*.{avif,webp,jpg,jpeg,png,gif,svg}", {
-		eager: true,
-		query: "?url",
-		import: "default",
-	});
+	const images = import.meta.glob(
+		"/src/assets/images/*.{avif,webp,jpg,jpeg,png,gif,svg}",
+		{
+			eager: true,
+			query: "?url",
+			import: "default",
+		},
+	);
 	avatarUrl = (images[`/src/${avatarUrl}`] as string) || avatarUrl;
 }
 ---

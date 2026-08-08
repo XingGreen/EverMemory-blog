@@ -1,9 +1,14 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
-import { CONFIG_ITEMS, getConfigDescKey, getConfigItem, getConfigLabelKey } from "@/utils/admin-settings";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import {
+	CONFIG_ITEMS,
+	getConfigDescKey,
+	getConfigItem,
+	getConfigLabelKey,
+} from "@/utils/admin-settings";
 import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
 import PostEditor from "./PostEditor.svelte";
 import PostList from "./PostList.svelte";
@@ -59,10 +64,12 @@ let deletingPost = $state<Post | null>(null);
 let toast = $state<{ message: string; type: "success" | "error" } | null>(null);
 let isSyncing = $state(false);
 // 网站配置详情页状态（操作按钮提升到页头，由父级统一管理）
-let settingsData = $state<Record<string, any> | null>(null);
+// json 配置为对象；html 等原始文本配置为字符串
+let settingsData = $state<Record<string, any> | string | null>(null);
 let settingsError = $state("");
 let settingsLoading = $state(false);
 let settingsSaving = $state(false);
+let settingsSearchTerm = $state("");
 // 侧边栏状态
 let postsSubOpen = $state(true); // 文章管理子菜单是否展开
 let settingsSubOpen = $state(true); // 网站配置子菜单是否展开
@@ -199,21 +206,36 @@ onMount(() => {
 // 顶部标题随页面联动
 const headerInfo = $derived.by(() => {
 	if (activePage === "dashboard") {
-		return { title: i18n(I18nKey.adminDashboard), subtitle: i18n(I18nKey.dashboardHomeDesc) };
+		return {
+			title: i18n(I18nKey.adminDashboard),
+			subtitle: i18n(I18nKey.dashboardHomeDesc),
+		};
 	}
 	if (activePage === "settings") {
 		const item = settingsSection ? getConfigItem(settingsSection) : undefined;
 		return item
-			? { title: i18n(getConfigLabelKey(item.key)), subtitle: i18n(getConfigDescKey(item.key)) }
-			: { title: i18n(I18nKey.adminSettings), subtitle: i18n(I18nKey.settingsSelectHint) };
+			? {
+					title: i18n(getConfigLabelKey(item.key)),
+					subtitle: i18n(getConfigDescKey(item.key)),
+				}
+			: {
+					title: i18n(I18nKey.adminSettings),
+					subtitle: i18n(I18nKey.settingsSelectHint),
+				};
 	}
 	if (viewMode === "edit" && editingPost) {
 		return { title: i18n(I18nKey.adminEditPost), subtitle: editingPost.title };
 	}
 	if (viewMode === "create") {
-		return { title: i18n(I18nKey.adminNewPost), subtitle: i18n(I18nKey.postsManageDesc) };
+		return {
+			title: i18n(I18nKey.adminNewPost),
+			subtitle: i18n(I18nKey.postsManageDesc),
+		};
 	}
-	return { title: i18n(I18nKey.adminPosts), subtitle: i18n(I18nKey.postsManageDesc) };
+	return {
+		title: i18n(I18nKey.adminPosts),
+		subtitle: i18n(I18nKey.postsManageDesc),
+	};
 });
 
 const headerIcon = $derived(
@@ -245,7 +267,11 @@ async function loadPosts() {
 
 // 进入网站配置子页时加载对应配置文件（key 变化时重新加载）
 $effect(() => {
-	if (activePage === "settings" && settingsSection && getConfigItem(settingsSection)) {
+	if (
+		activePage === "settings" &&
+		settingsSection &&
+		getConfigItem(settingsSection)
+	) {
 		loadSettings(settingsSection);
 	}
 });
@@ -270,7 +296,7 @@ async function loadSettings(key: string) {
 
 async function saveSettings() {
 	const key = settingsSection;
-	if (!key || !settingsData) return;
+	if (!key || settingsData === null) return;
 	settingsSaving = true;
 	try {
 		const res = await fetch(`/api/admin/configs/${key}/`, {
@@ -810,6 +836,23 @@ function formatDate(dateStr: string | null): string {
 					</div>
 				</div>
 				<div class="header-actions">
+					{#if activePage === "settings" && !settingsSection}
+						<div class="search-box" class:focused={settingsSearchTerm.length > 0}>
+							<Icon icon="material-symbols:search" class="search-icon" size="lg" />
+							<input
+								type="text"
+								bind:value={settingsSearchTerm}
+								placeholder="{i18n(I18nKey.search)}..."
+								class="search-input"
+								aria-label={i18n(I18nKey.search)}
+							/>
+							{#if settingsSearchTerm}
+								<button class="search-clear" onclick={() => (settingsSearchTerm = "")} aria-label="清除">
+									<Icon icon="material-symbols:close" size="sm" />
+								</button>
+							{/if}
+						</div>
+					{/if}
 					{#if activePage === "posts" && viewMode === "list"}
 						<button class="action-btn primary" onclick={goCreatePost}>
 							<Icon icon="material-symbols:edit-calendar-outline-rounded" class="text-sm" />
@@ -869,12 +912,17 @@ function formatDate(dateStr: string | null): string {
 								data={settingsData}
 								error={settingsError}
 								isLoading={settingsLoading}
+								onUpdate={(v) => (settingsData = v)}
 							/>
 						{:else}
 							{@render placeholder(i18n(I18nKey.adminSettings), i18n(I18nKey.configSectionUnknown), "material-symbols:settings")}
 						{/if}
 					{:else}
-						<SettingsOverview onNavigate={(key) => goSettings(key)} />
+						<SettingsOverview
+							onNavigate={(key) => goSettings(key)}
+							searchTerm={settingsSearchTerm}
+							onSearchChange={(value) => (settingsSearchTerm = value)}
+						/>
 					{/if}
 				{/if}
 			</div>
@@ -1138,6 +1186,80 @@ function formatDate(dateStr: string | null): string {
 		display: flex;
 		gap: 0.5rem;
 		flex-shrink: 0;
+		align-items: center;
+	}
+
+	.search-box {
+		position: relative;
+		display: flex;
+		align-items: center;
+		width: 100%;
+		max-width: 260px;
+		height: 40px;
+		padding: 0 0.625rem 0 0.875rem;
+		background: var(--page-bg);
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-full);
+		transition: border-color 0.2s ease, box-shadow 0.2s ease, max-width 0.2s ease;
+	}
+
+	.search-box:focus-within,
+	.search-box.focused {
+		border-color: var(--primary);
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+	}
+
+	.search-box:focus-within {
+		max-width: 300px;
+	}
+
+	:global(.search-icon) {
+		color: var(--content-meta);
+		flex-shrink: 0;
+		transition: color 0.2s ease;
+	}
+
+	.search-box:focus-within :global(.search-icon) {
+		color: var(--primary);
+	}
+
+	.search-input {
+		flex: 1;
+		border: none;
+		background: transparent;
+		font-size: 0.9375rem;
+		color: var(--deep-text);
+		padding: 0 0.5rem;
+		font-family: inherit;
+	}
+
+	.search-input:focus {
+		outline: none;
+	}
+
+	.search-input::placeholder {
+		color: var(--content-meta);
+		opacity: 0.8;
+	}
+
+	.search-clear {
+		width: 24px;
+		height: 24px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		border-radius: 50%;
+		background: var(--btn-regular-bg);
+		color: var(--content-meta);
+		cursor: pointer;
+		flex-shrink: 0;
+		transition: background 0.15s ease, color 0.15s ease;
+	}
+
+	.search-clear:hover {
+		background: var(--btn-regular-bg-hover);
+		color: var(--deep-text);
 	}
 
 	.action-btn {
@@ -1902,6 +2024,21 @@ function formatDate(dateStr: string | null): string {
 	@media (max-width: 768px) {
 		.admin-header {
 			padding: 1rem 1.25rem;
+			flex-wrap: wrap;
+		}
+
+		.header-actions {
+			width: 100%;
+			justify-content: flex-end;
+		}
+
+		.search-box {
+			max-width: none;
+			width: 100%;
+		}
+
+		.search-box:focus-within {
+			max-width: none;
 		}
 
 		.title-text h1 {

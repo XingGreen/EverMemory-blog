@@ -1,6 +1,6 @@
-import { siteConfig } from "./siteConfig";
 import { JAPANESE_LABELS } from "./configFieldLabels_ja";
 import { RUSSIAN_LABELS } from "./configFieldLabels_ru";
+import { siteConfig } from "./siteConfig";
 
 /**
  * 「网站配置」在线编辑器的字段名翻译。
@@ -157,8 +157,10 @@ function prettifyEnglishLabel(key: string): string {
 export function configFieldLabel(key: string): string {
 	const lang = (siteConfig.lang || "en").toLowerCase();
 
-	if (lang === "ja" || lang === "ja_jp") return JAPANESE_LABELS[key] || prettifyEnglishLabel(key);
-	if (lang === "ru" || lang === "ru_ru") return RUSSIAN_LABELS[key] || prettifyEnglishLabel(key);
+	if (lang === "ja" || lang === "ja_jp")
+		return JAPANESE_LABELS[key] || prettifyEnglishLabel(key);
+	if (lang === "ru" || lang === "ru_ru")
+		return RUSSIAN_LABELS[key] || prettifyEnglishLabel(key);
 	if (lang.startsWith("zh")) return ZH_LABELS[key] || prettifyEnglishLabel(key);
 
 	return prettifyEnglishLabel(key);

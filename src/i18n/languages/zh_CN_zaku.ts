@@ -45,7 +45,8 @@ export const zaku: Translation = {
 	[Key.musicAudioPlayer]: "音频播放器",
 	[Key.musicDescription]: "本小姐的网易云音乐歌单，点击就能切换播放啦",
 	[Key.musicNotConfigured]: "音乐还没配置呢，笨蛋",
-	[Key.musicNotConfiguredDesc]: "在配置文件里设置网易云音乐用户ID啦，不然怎么看本小姐的歌单",
+	[Key.musicNotConfiguredDesc]:
+		"在配置文件里设置网易云音乐用户ID啦，不然怎么看本小姐的歌单",
 	[Key.musicTotalPlaylists]: "歌单总数",
 	[Key.musicTotalTracks]: "歌曲总数",
 	[Key.musicSource]: "数据来源",
@@ -85,8 +86,7 @@ export const zaku: Translation = {
 	[Key.commentSection]: "杂鱼留言区",
 	[Key.commentSubtitle]: "快说你的蠢想法，让本小姐乐呵乐呵",
 	[Key.commentNotConfigured]: "评论功能还没开，杂鱼没法留言咯",
-	[Key.guestbookCommentHint]:
-		"配置文件没开留言功能，杂鱼只能干看着~",
+	[Key.guestbookCommentHint]: "配置文件没开留言功能，杂鱼只能干看着~",
 	[Key.friends]: "友链杂鱼们",
 	[Key.friendsDescription]: "都是本小姐认识的家伙，随便逛逛呗",
 	[Key.searchFriends]: "搜其他杂鱼主页…",
@@ -160,8 +160,7 @@ export const zaku: Translation = {
 	[Key.bangumiEmpty]: "无任何收藏内容",
 	[Key.bangumiEmptyReason]: "大概率用户名输错、网络拉胯或是API限制啦~杂鱼~",
 	[Key.bangumiFetchError]: "Bangumi数据拉取失败咯",
-	[Key.bangumiFetchErrorDesc]:
-		"构建时拿不到番组数据，这个页面看不了啦杂鱼",
+	[Key.bangumiFetchErrorDesc]: "构建时拿不到番组数据，这个页面看不了啦杂鱼",
 	[Key.bangumiUsername]: "Bangumi用户名",
 	[Key.bangumiApi]: "API接口",
 	[Key.bangumiConfigTip]: "喂杂鱼!!去页面配置填好正确Bangumi账号啦",
@@ -247,8 +246,7 @@ export const zaku: Translation = {
 	[Key.rssCopyLink]: "复制这条链接",
 	[Key.rssLatestPosts]: "最新写的文章",
 	[Key.rssWhatIsRSS]: "RSS是啥玩意?!",
-	[Key.rssWhatIsRSSDescription]:
-		"RSS是专门同步更新内容的格式,杂鱼用它可以：",
+	[Key.rssWhatIsRSSDescription]: "RSS是专门同步更新内容的格式,杂鱼用它可以：",
 	[Key.rssBenefit1]: "不用刷网站就能第一时间看更新",
 	[Key.rssBenefit2]: "一个软件收纳一堆站点订阅",
 	[Key.rssBenefit3]: "不会漏掉本小姐任何新文章",
@@ -327,8 +325,7 @@ export const zaku: Translation = {
 	[Key.scanToSponsor]: "扫码投喂本小姐",
 	[Key.sponsorGoTo]: "跳去打赏页面",
 	[Key.sponsorButton]: "支持+分享",
-	[Key.sponsorButtonText]:
-		"这篇文章有用就分享出去，或是给本小姐打赏咯杂鱼！",
+	[Key.sponsorButtonText]: "这篇文章有用就分享出去，或是给本小姐打赏咯杂鱼！",
 
 	[Key.shareOnSocial]: "文章分享",
 	[Key.shareOnSocialDescription]: "觉得不错就分享给别的杂鱼看看啦",
@@ -426,7 +423,7 @@ export const zaku: Translation = {
 	[Key.passwordSubmit]: "解锁查看",
 	[Key.passwordError]: "密码错咯，杂鱼记不住吗？重新输！",
 	[Key.passwordProtectedRss]: "本文加密上锁，去网站本体才能看哦杂鱼",
-	
+
 	// 背景视频播放器
 	[Key.videoPlay]: "播放背景视频",
 	[Key.videoPause]: "暂停背景视频",
@@ -454,7 +451,8 @@ export const zaku: Translation = {
 	[Key.errorFillRequired]: "请填写: {fields}",
 
 	[Key.dashboardWelcome]: "博客数据概览",
-	[Key.dashboardHomeDesc]: "欢迎回来，这里是博客控制面板。功能建设中，敬请期待。",
+	[Key.dashboardHomeDesc]:
+		"欢迎回来，这里是博客控制面板。功能建设中，敬请期待。",
 	[Key.postsManageDesc]: "管理你的博客文章",
 
 	[Key.postSearchPlaceholder]: "搜索文章...",
@@ -529,7 +527,8 @@ export const zaku: Translation = {
 	[Key.postSaveFailed]: "保存失败",
 
 	[Key.deleteTitle]: "确认删除",
-	[Key.deleteBody]: "你即将删除文章 <strong>\"{title}\"</strong>。此操作不可撤销。",
+	[Key.deleteBody]:
+		'你即将删除文章 <strong>"{title}"</strong>。此操作不可撤销。',
 	[Key.deleteInstruction]: "请在下方输入文章标题以确认删除：",
 	[Key.deletePlaceholder]: "输入文章标题确认删除",
 	[Key.deleteHint]: "标题不匹配，请仔细核对",
@@ -538,7 +537,8 @@ export const zaku: Translation = {
 	[Key.deleteDeleting]: "删除中...",
 	[Key.deleteConfirm]: "确认删除",
 
-	[Key.settingsOverviewDesc]: "选择下方配置项进行在线编辑，保存后写入对应配置文件并自动同步到 GitHub。",
+	[Key.settingsOverviewDesc]:
+		"选择下方配置项进行在线编辑，保存后写入对应配置文件并自动同步到 GitHub。",
 	[Key.settingsSelectHint]: "选择配置项进行在线编辑",
 	[Key.configReload]: "重新加载",
 	[Key.configSave]: "保存配置",
@@ -558,11 +558,48 @@ export const zaku: Translation = {
 	[Key.configNavbar]: "导航栏",
 	[Key.configFooter]: "页脚",
 	[Key.configSidebar]: "侧边栏",
-	[Key.configSiteDesc]: "站点标题、描述、主题色、页面开关、文章列表布局等基础信息",
+	[Key.configSiteDesc]:
+		"站点标题、描述、主题色、页面开关、文章列表布局等基础信息",
 	[Key.configProfileDesc]: "头像、昵称、个人签名与社交链接",
 	[Key.configNavbarDesc]: "顶部导航栏的菜单链接与子菜单",
 	[Key.configFooterDesc]: "页脚显示开关等配置",
 	[Key.configSidebarDesc]: "侧边栏布局、小组件开关与排列顺序",
+	[Key.configFooterHtml]: "页脚自定义内容",
+	[Key.configFooterHtmlDesc]: "页脚底部注入的自定义 HTML（备案号、认证徽章等）",
+	[Key.configMusic]: "音乐",
+	[Key.configMusicDesc]: "音乐播放器配置（网易云音乐等）",
+	[Key.configFriends]: "友链",
+	[Key.configFriendsDesc]: "友链页面配置与友情链接列表（内容编辑见 src/content/spec/friends.md）",
+	[Key.configComment]: "评论",
+	[Key.configCommentDesc]: "评论系统类型与各提供方配置",
+	[Key.configFont]: "字体",
+	[Key.configFontDesc]: "站点字体选择与局部覆盖",
+	[Key.configWallpaper]: "背景壁纸",
+	[Key.configWallpaperDesc]: "背景壁纸模式与壁纸列表配置",
+	[Key.configAnnouncement]: "公告",
+	[Key.configAnnouncementDesc]: "公告标题与公告内容",
+	[Key.configAnalytics]: "统计",
+	[Key.configAnalyticsDesc]: "网站统计（Google Analytics、Clarity、Umami 等）",
+	[Key.configGallery]: "相册",
+	[Key.configGalleryDesc]: "相册列表与图片配置",
+	[Key.configApp]: "软件推荐",
+	[Key.configAppDesc]: "软件推荐页面与推荐软件列表",
+	[Key.configSponsor]: "打赏",
+	[Key.configSponsorDesc]: "打赏页面配置（标题、描述与打赏链接）",
+	[Key.configLicense]: "许可证",
+	[Key.configLicenseDesc]: "文章许可证名称、链接与显示开关",
+	[Key.configCoverImage]: "封面图",
+	[Key.configCoverImageDesc]: "文章封面图（固定/随机图片）配置",
+	[Key.configEffects]: "特效",
+	[Key.configEffectsDesc]: "页面特效（樱花等）开关与参数",
+	[Key.configPlantuml]: "PlantUML",
+	[Key.configPlantumlDesc]: "PlantUML 图表渲染与明暗主题配置",
+	[Key.configCodeTheme]: "代码主题",
+	[Key.configCodeThemeDesc]: "expressive-code 代码高亮主题配置（修改后需重启服务）",
+	[Key.configPioSpine]: "看板娘（Spine）",
+	[Key.configPioSpineDesc]: "Spine 看板娘开关与模型配置",
+	[Key.configPioLive2d]: "看板娘（Live2D）",
+	[Key.configPioLive2dDesc]: "Live2D 看板娘开关与模型配置",
 
 	// 控制面板（仪表盘）
 	[Key.adminHome]: "首页",

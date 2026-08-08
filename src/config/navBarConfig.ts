@@ -77,7 +77,7 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 	});
 
 	// 自定义导航栏链接
-/*	links.push({
+	/*	links.push({
 		name: "Firefly链接",
 		url: "#",
 		icon: "material-symbols:link",
@@ -121,9 +121,9 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 
 	links.push({
 		name: "控制台",
-	 	url: "/admin/",
-	 	external: false,
-	 	icon: "material-symbols:dashboard",
+		url: "/admin/",
+		external: false,
+		icon: "material-symbols:dashboard",
 	});
 
 	return { links } as NavBarConfig;

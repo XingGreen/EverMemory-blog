@@ -24,8 +24,8 @@ const map: { [key: string]: Translation } = {
 	ja_jp: ja,
 	ru: ru,
 	ru_ru: ru,
-//	zaku: zaku,
-//	"zh_cn_zaku": zaku,
+	//	zaku: zaku,
+	//	"zh_cn_zaku": zaku,
 };
 
 export function getTranslation(lang: string): Translation {
