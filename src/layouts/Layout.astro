@@ -1432,7 +1432,7 @@ function disableAnimation() {
       }
       const currentPath = window.location.pathname;
       if (!adminNavPath(currentPath) && !adminNavPath(targetPath)) return;
-      // 同站内 hash 路由（如 #/dashboard/…、#login）不改 pathname，交给浏览器处理
+      // 后台为单页应用（History API 路由，无 hash），路径相同即不触发导航
       if (currentPath === targetPath) return;
       event.preventDefault();
       event.stopPropagation();

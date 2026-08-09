@@ -174,7 +174,7 @@ function formatDate(dateStr: string): string {
 			<!-- 列表项 -->
 			<div class="md3-list" role="list">
 				{#each filteredPosts as post (post.id)}
-					<div class="list-item" role="listitem" tabindex="0">
+					<div class="list-item" role="listitem">
 						<!-- 标题 -->
 						<div class="col col-title">
 							<div class="title-cell">

@@ -15,6 +15,8 @@ let username = $state("");
 let password = $state("");
 let isSubmitting = $state(false);
 let error = $state("");
+let rememberMe = $state(false);
+let showPassword = $state(false);
 
 // 深浅模式切换
 let isDark = $state(false);
@@ -50,7 +52,7 @@ async function handleSubmit() {
 		const response = await fetch("/api/admin/verify/", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ username, password }),
+			body: JSON.stringify({ username, password, rememberMe }),
 		});
 
 		const data = await response.json();
@@ -133,16 +135,35 @@ function handleKeyDown(e: KeyboardEvent) {
 			<!-- 密码 -->
 			<div class="field" class:focused={passwordFocused} class:filled={password.trim()}>
 				<input
-					type="password"
+					type={showPassword ? "text" : "password"}
 					bind:value={password}
 					onfocus={() => (passwordFocused = true)}
 					onblur={() => (passwordFocused = false)}
 					onkeydown={handleKeyDown}
 					placeholder=" "
 					autocomplete="current-password"
+					class="password-input"
 				/>
 				<label>{i18n(I18nKey.verifyPassword)}</label>
+				<button
+					type="button"
+					class="password-toggle"
+					title={showPassword ? i18n(I18nKey.verifyPasswordHide) : i18n(I18nKey.verifyPasswordShow)}
+					aria-label={showPassword ? i18n(I18nKey.verifyPasswordHide) : i18n(I18nKey.verifyPasswordShow)}
+					onclick={() => (showPassword = !showPassword)}
+				>
+					<Icon
+						icon={showPassword ? "material-symbols:visibility-off-outline-rounded" : "material-symbols:visibility-outline-rounded"}
+						size="sm"
+					/>
+				</button>
 			</div>
+
+			<!-- 记住我 -->
+			<label class="remember-row">
+				<input type="checkbox" bind:checked={rememberMe} />
+				<span>{i18n(I18nKey.verifyRememberMe)}</span>
+			</label>
 
 			{#if error}
 				<div class="error-message">
@@ -325,6 +346,55 @@ function handleKeyDown(e: KeyboardEvent) {
 		-webkit-text-fill-color: var(--deep-text);
 		-webkit-box-shadow: 0 0 0 1000px var(--card-bg) inset;
 		transition: background-color 9999s ease-in-out 0s;
+	}
+
+	/* ── 密码可见切换 ── */
+	/* 右侧为"显示密码"按钮留出空间（含聚焦加粗边框时保持一致） */
+	.password-input,
+	.field input.password-input:focus {
+		padding-right: 2.75rem;
+	}
+
+	.password-toggle {
+		position: absolute;
+		top: 50%;
+		right: 0.5rem;
+		transform: translateY(-50%);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		border: none;
+		border-radius: var(--radius-md);
+		background: transparent;
+		color: var(--content-meta);
+		cursor: pointer;
+		padding: 0;
+		transition: color 0.2s;
+	}
+
+	.password-toggle:hover {
+		color: var(--primary);
+	}
+
+	/* ── 记住我 ── */
+	.remember-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.875rem;
+		color: var(--content-meta);
+		cursor: pointer;
+		user-select: none;
+	}
+
+	.remember-row input[type="checkbox"] {
+		accent-color: var(--primary);
+		width: 1rem;
+		height: 1rem;
+		margin: 0;
+		cursor: pointer;
 	}
 
 	/* ── 错误提示 ── */

@@ -1,0 +1,30 @@
+---
+import AdminDashboard from "@/components/admin/AdminDashboard.svelte";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { profileConfig } from "@/config";
+import { resolveAvatarUrl } from "@/utils/avatar-url";
+
+const title = "控制面板";
+const description = `控制面板 - ${profileConfig.name}`;
+
+const avatarUrl = resolveAvatarUrl();
+---
+
+<AdminLayout title={title} description={description}>
+	<div class="admin-container">
+		<AdminDashboard client:load avatarUrl={avatarUrl} />
+	</div>
+</AdminLayout>
+
+<style is:global>
+	.admin-container {
+		padding: 1.5rem;
+		min-height: calc(100vh - 3rem);
+	}
+
+	@media (max-width: 768px) {
+		.admin-container {
+			padding: 1rem;
+		}
+	}
+</style>

@@ -1,6 +1,8 @@
 import {
 	clearAuthCookie,
 	generateSessionToken,
+	REMEMBER_MAX_AGE,
+	SESSION_MAX_AGE,
 	setAuthCookie,
 	verifyAdminPassword,
 	verifyAdminUsername,
@@ -12,7 +14,7 @@ export async function POST({ request }) {
 	try {
 		const text = await request.text();
 		const body = JSON.parse(text);
-		const { username, password } = body;
+		const { username, password, rememberMe } = body;
 
 		// 参数完整性检查
 		const missing: string[] = [];
@@ -44,9 +46,11 @@ export async function POST({ request }) {
 		);
 
 		if (usernameOk && passwordOk) {
-			const token = generateSessionToken();
+			// 勾选"记住我"：签发 7 天令牌并写入 7 天 Cookie；否则保持 1 小时会话
+			const maxAge = rememberMe ? REMEMBER_MAX_AGE : SESSION_MAX_AGE;
+			const token = generateSessionToken(maxAge);
 			const headers = new Headers({ "Content-Type": "application/json" });
-			setAuthCookie(token, headers);
+			setAuthCookie(token, headers, maxAge);
 
 			return new Response(
 				JSON.stringify({
@@ -86,4 +90,8 @@ export async function POST({ request }) {
 export async function DELETE() {
 	const headers = new Headers({ "Content-Type": "application/json" });
 	clearAuthCookie(headers);
+	return new Response(JSON.stringify({ success: true }), {
+		status: 200,
+		headers,
+	});
 }
