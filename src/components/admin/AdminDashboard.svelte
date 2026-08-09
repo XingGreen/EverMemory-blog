@@ -67,6 +67,18 @@ let showDeleteModal = $state(false);
 let deletingPost = $state<Post | null>(null);
 let toast = $state<{ message: string; type: "success" | "error" } | null>(null);
 let isSyncing = $state(false);
+// GitHub 连通性状态：idle=默认（未测试） / checking=测试中 / ok=连接正常 / fail=无法连接
+let githubStatus = $state<"idle" | "checking" | "ok" | "fail">("idle");
+// GitHub 状态图标映射（icon: 属性形式声明，供构建期图标扫描识别）
+const githubIconProps: Record<
+	"idle" | "checking" | "ok" | "fail",
+	{ icon: string }
+> = {
+	idle: { icon: "material-symbols:cloud-done-outline" },
+	checking: { icon: "material-symbols:sync" },
+	ok: { icon: "material-symbols:cloud-done-outline" },
+	fail: { icon: "material-symbols:cloud-off-outline" },
+};
 // 网站配置详情页状态（操作按钮提升到页头，由父级统一管理）
 // json 配置为对象；html 等原始文本配置为字符串
 let settingsData = $state<Record<string, any> | string | null>(null);
@@ -363,6 +375,29 @@ async function handleSync() {
 		);
 	} finally {
 		isSyncing = false;
+	}
+}
+
+async function testConnectivity() {
+	if (githubStatus === "checking") return;
+	githubStatus = "checking";
+	try {
+		const res = await fetch("/api/admin/github-ping/");
+		const data = await res.json();
+		if (data.success) {
+			githubStatus = "ok";
+			showToast(`GitHub 连接正常（${data.latency}ms）`, "success", 4000);
+		} else {
+			githubStatus = "fail";
+			showToast(data.message || "GitHub 连接失败", "error", 6000);
+		}
+	} catch (err) {
+		githubStatus = "fail";
+		showToast(
+			`请求失败: ${err instanceof Error ? err.message : String(err)}`,
+			"error",
+			6000,
+		);
 	}
 }
 
@@ -684,13 +719,33 @@ function formatDate(dateStr: string | null): string {
 			</div>
 			<div class="status-item">
 				<Icon
-					icon={isSyncing ? "material-symbols:sync" : "material-symbols:cloud-done-outline"}
-					class="status-icon {isSyncing ? 'syncing' : 'healthy'}"
+					{...githubIconProps[githubStatus]}
+					class="status-icon {githubStatus === 'checking' ? 'syncing' : githubStatus === 'fail' ? 'error' : 'healthy'}"
 				/>
 				<div class="status-info">
 					<span class="status-label">{i18n(I18nKey.statusGithubSync)}</span>
-					<span class="status-value">{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.statusReady)}</span>
+					<span class="status-value">
+						{isSyncing
+							? i18n(I18nKey.postSyncing)
+							: githubStatus === "checking"
+								? i18n(I18nKey.statusTesting)
+								: githubStatus === "ok"
+									? i18n(I18nKey.statusConnected)
+									: githubStatus === "fail"
+										? i18n(I18nKey.statusDisconnected)
+										: i18n(I18nKey.statusReady)}
+					</span>
 				</div>
+				<button
+					type="button"
+					class="connectivity-btn"
+					onclick={testConnectivity}
+					disabled={isSyncing || githubStatus === "checking"}
+				>
+					{githubStatus === "checking"
+						? i18n(I18nKey.statusTesting)
+						: i18n(I18nKey.statusTestConnectivity)}
+				</button>
 			</div>
 			<div class="status-item">
 				<Icon icon="material-symbols:article-outline" class="status-icon info" />
@@ -1876,6 +1931,10 @@ function formatDate(dateStr: string | null): string {
 		color: var(--primary);
 	}
 
+	:global(.status-icon.error) {
+		color: var(--destructive);
+	}
+
 	.status-info {
 		display: flex;
 		flex-direction: column;
@@ -1891,6 +1950,38 @@ function formatDate(dateStr: string | null): string {
 		font-size: 0.9375rem;
 		font-weight: 600;
 		color: var(--deep-text);
+	}
+
+	.connectivity-btn {
+		flex-shrink: 0;
+		margin-left: auto;
+		font-size: 0.75rem;
+		font-weight: 600;
+		line-height: 1;
+		padding: 0.375rem 0.75rem;
+		border-radius: 9999px;
+		background: var(--btn-regular-bg);
+		color: var(--deep-text);
+		border: 1px solid var(--line-divider);
+		cursor: pointer;
+		transition:
+			background 0.15s,
+			color 0.15s,
+			border-color 0.15s;
+	}
+
+	.connectivity-btn:hover:not(:disabled) {
+		background: var(--btn-regular-bg-hover);
+		border-color: var(--line-color);
+	}
+
+	.connectivity-btn:active:not(:disabled) {
+		transform: translateY(1px);
+	}
+
+	.connectivity-btn:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
 	}
 
 	@keyframes spin {

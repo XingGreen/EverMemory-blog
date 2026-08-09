@@ -644,10 +644,20 @@ enum I18nKey {
 	statusRunning = "statusRunning",
 	statusGithubSync = "statusGithubSync",
 	statusReady = "statusReady",
+	statusTestConnectivity = "statusTestConnectivity",
+	statusTesting = "statusTesting",
+	statusConnected = "statusConnected",
+	statusDisconnected = "statusDisconnected",
 	dashboardTotalPosts = "dashboardTotalPosts",
 	dashboardDraftBox = "dashboardDraftBox",
 	placeholderBadge = "placeholderBadge",
 	postMetaStatus = "postMetaStatus",
+	externalLinkTitle = "externalLinkTitle",
+	externalLinkSubtitle = "externalLinkSubtitle",
+	externalLinkAddressLabel = "externalLinkAddressLabel",
+	externalLinkWarning = "externalLinkWarning",
+	externalLinkCancel = "externalLinkCancel",
+	externalLinkConfirm = "externalLinkConfirm",
 }
 
 export default I18nKey;

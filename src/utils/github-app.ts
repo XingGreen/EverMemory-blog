@@ -572,3 +572,26 @@ export function getConfig() {
 		installationId: GITHUB_INSTALLATION_ID,
 	};
 }
+
+/**
+ * 测试 GitHub 连通性：绕过 token 缓存，每次都真实发起一次 GitHub API 请求，
+ * 确保网络断开时能如实反映。成功返回本次请求耗时(ms)，失败抛错。
+ */
+export async function testGitHubConnection(): Promise<number> {
+	const started = Date.now();
+
+	// 15s 超时，避免网络断开时请求长时间挂起
+	const timeout = new Promise<never>((_, reject) => {
+		setTimeout(() => reject(new Error("连接超时（15s）")), 15000);
+	});
+
+	await Promise.race([
+		getInstallationTokenFromGitHub(
+			createJwt(getPrivateKey(), GITHUB_APP_ID),
+			GITHUB_INSTALLATION_ID,
+		),
+		timeout,
+	]);
+
+	return Date.now() - started;
+}
