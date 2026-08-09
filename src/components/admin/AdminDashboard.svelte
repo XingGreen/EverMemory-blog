@@ -66,6 +66,7 @@ let editingPost = $state<Post | null>(null);
 let showDeleteModal = $state(false);
 let deletingPost = $state<Post | null>(null);
 let toast = $state<{ message: string; type: "success" | "error" } | null>(null);
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
 let isSyncing = $state(false);
 // GitHub 连通性状态：idle=默认（未测试） / checking=测试中 / ok=连接正常 / fail=无法连接
 let githubStatus = $state<"idle" | "checking" | "ok" | "fail">("idle");
@@ -386,7 +387,7 @@ async function testConnectivity() {
 		const data = await res.json();
 		if (data.success) {
 			githubStatus = "ok";
-			showToast(`GitHub 连接正常（${data.latency}ms）`, "success", 4000);
+			showToast(`GitHub 连接正常（${data.latency}ms）`, "success", 6000);
 		} else {
 			githubStatus = "fail";
 			showToast(data.message || "GitHub 连接失败", "error", 6000);
@@ -526,14 +527,19 @@ async function handleConfirmDelete() {
 function showToast(
 	message: string,
 	type: "success" | "error",
-	duration = 3000,
+	duration = 6000,
 ) {
 	toast = { message, type };
 	if (type === "error") {
 		console.error("[Toast] Error:", message);
 	}
-	setTimeout(() => {
+	// 先清除上一个定时器，避免旧定时器提前关掉新提示
+	if (toastTimer) {
+		clearTimeout(toastTimer);
+	}
+	toastTimer = setTimeout(() => {
 		toast = null;
+		toastTimer = null;
 	}, duration);
 }
 
@@ -1041,16 +1047,20 @@ function formatDate(dateStr: string | null): string {
 <style>
 	.admin-layout {
 		display: flex;
-		align-items: flex-start;
+		align-items: stretch;
 		gap: 1.25rem;
+		/* 让后台内容区始终限制在人眼可视范围（扣除 .admin-container 上下内边距），
+		   侧边栏与右侧内容区各自内部滚动，不再让整页滚动 */
+		height: calc(100vh - 3rem);
+		min-height: 0;
 	}
 
 	/* ── 左侧导航栏 ── */
 	.admin-sidebar {
 		width: 248px;
 		flex-shrink: 0;
-		position: sticky;
-		top: 1.5rem;
+		height: 100%;
+		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
 		background: var(--admin-sidebar-bg);
@@ -1186,6 +1196,8 @@ function formatDate(dateStr: string | null): string {
 	.admin-main {
 		flex: 1;
 		min-width: 0;
+		min-height: 0;
+		height: 100%;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
@@ -1199,6 +1211,10 @@ function formatDate(dateStr: string | null): string {
 		gap: 1rem;
 		box-shadow: var(--shadow-card);
 		border: none;
+		/* 页头同样限制最大宽度并居中，避免大屏下横向拉得过长 */
+		width: 100%;
+		max-width: 76rem;
+		margin-inline: auto;
 	}
 
 	.header-content {
@@ -1380,6 +1396,15 @@ function formatDate(dateStr: string | null): string {
 
 	.admin-content {
 		flex: 1;
+		min-width: 0;
+		min-height: 0;
+		/* 右侧内容区在可视范围内内部滚动 */
+		overflow-y: auto;
+		/* 内容区自身限制最大宽度并居中：不依赖子元素结构，
+		   任何页面的视图都受此约束（约 1216px） */
+		width: 100%;
+		max-width: 76rem;
+		margin-inline: auto;
 	}
 
 	/* ── 仪表板首页 ── */
@@ -2177,8 +2202,9 @@ function formatDate(dateStr: string | null): string {
 
 		.toast {
 			top: 5rem;
-			left: 1rem;
 			right: 1rem;
+			left: auto;
+			max-width: min(90vw, 22rem);
 		}
 
 		.placeholder-page {

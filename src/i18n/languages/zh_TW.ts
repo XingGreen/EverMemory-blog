@@ -575,6 +575,9 @@ export const zh_TW: Translation = {
 	[Key.configOn]: "開啟",
 	[Key.configOff]: "關閉",
 	[Key.configNullValue]: "（空值）",
+	[Key.configModeForm]: "視覺化表單",
+	[Key.configModeJson]: "JSON 文字",
+	[Key.configJsonInvalid]: "JSON 格式錯誤",
 	[Key.configDeleteItem]: "刪除該項",
 
 	[Key.configSite]: "站點設定",

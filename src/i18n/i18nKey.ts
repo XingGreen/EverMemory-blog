@@ -574,6 +574,9 @@ enum I18nKey {
 	configOff = "configOff",
 	configNullValue = "configNullValue",
 	configDeleteItem = "configDeleteItem",
+	configModeForm = "configModeForm",
+	configModeJson = "configModeJson",
+	configJsonInvalid = "configJsonInvalid",
 
 	// 网站配置 - 具体配置项
 	configSite = "configSite",

@@ -570,6 +570,9 @@ export const zaku: Translation = {
 	[Key.configOn]: "开启",
 	[Key.configOff]: "关闭",
 	[Key.configNullValue]: "（空值）",
+	[Key.configModeForm]: "可视化表单",
+	[Key.configModeJson]: "JSON 文本",
+	[Key.configJsonInvalid]: "JSON 格式错误",
 	[Key.configDeleteItem]: "删除该项",
 
 	[Key.configSite]: "站点配置",
