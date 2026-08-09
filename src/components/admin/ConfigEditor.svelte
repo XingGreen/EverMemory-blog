@@ -182,10 +182,20 @@ function addItem(arr: JsonValue[]) {
 					<div class="group-body">{@render renderObject(v, depth + 1, keyPath)}</div>
 				</div>
 			{:else if Array.isArray(v)}
-				<div class="group-card">
-					<div class="group-title" title={key}>{configFieldLabel(key)}</div>
-					<div class="group-body">{@render renderArray(v as JsonValue[], depth + 1, keyPath)}</div>
-				</div>
+				{#if v.every((item) => !isObject(item) && !Array.isArray(item))}
+					<!-- 纯标量数组（如关键词）：直接以字段呈现，不包外层分组框 -->
+					<div class="field-row">
+						<div class="field-label" title={key}>{configFieldLabel(key)}</div>
+						<div class="field-control">
+							{@render renderArray(v as JsonValue[], depth + 1, keyPath)}
+						</div>
+					</div>
+				{:else}
+					<div class="group-card">
+						<div class="group-title" title={key}>{configFieldLabel(key)}</div>
+						<div class="group-body">{@render renderArray(v as JsonValue[], depth + 1, keyPath)}</div>
+					</div>
+				{/if}
 			{:else}
 				{@const options = (fileKey ? SELECT_OPTIONS[`${fileKey}.${keyPath.join(".")}`] : undefined) ?? SELECT_OPTIONS[keyPath.join(".")]}
 				<div class="field-row">
@@ -334,6 +344,8 @@ function addItem(arr: JsonValue[]) {
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
+		/* 组内内容向右缩进，便于区分组名与内部配置项 */
+		padding-left: 0.875rem;
 	}
 
 	/* 数组 */

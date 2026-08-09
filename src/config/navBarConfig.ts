@@ -119,12 +119,8 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 	// 	icon: "material-symbols:docs",
 	// });
 
-	links.push({
-		name: "控制台",
-		url: "/admin/",
-		external: false,
-		icon: "material-symbols:dashboard",
-	});
+	// 控制台入口已迁移为导航栏右侧的 account-circle 图标（见 Navbar.astro），
+	// 不再作为导航菜单链接出现
 
 	return { links } as NavBarConfig;
 };

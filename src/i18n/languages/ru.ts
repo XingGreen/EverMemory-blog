@@ -596,6 +596,9 @@ export const ru: Translation = {
 	[Key.configOn]: "Вкл.",
 	[Key.configOff]: "Выкл.",
 	[Key.configNullValue]: "(пустое значение)",
+	[Key.configModeForm]: "Визуальная форма",
+	[Key.configModeJson]: "JSON текст",
+	[Key.configJsonInvalid]: "Неверный JSON",
 	[Key.configDeleteItem]: "Удалить элемент",
 
 	[Key.configSite]: "Конфигурация сайта",

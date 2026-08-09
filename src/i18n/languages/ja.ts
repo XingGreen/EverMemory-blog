@@ -588,6 +588,9 @@ export const ja: Translation = {
 	[Key.configOn]: "オン",
 	[Key.configOff]: "オフ",
 	[Key.configNullValue]: "（空値）",
+	[Key.configModeForm]: "フォーム表示",
+	[Key.configModeJson]: "JSON テキスト",
+	[Key.configJsonInvalid]: "JSON が無効です",
 	[Key.configDeleteItem]: "この項目を削除",
 
 	[Key.configSite]: "サイト設定",

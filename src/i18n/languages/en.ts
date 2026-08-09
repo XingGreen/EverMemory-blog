@@ -594,6 +594,9 @@ export const en: Translation = {
 	[Key.configOn]: "On",
 	[Key.configOff]: "Off",
 	[Key.configNullValue]: "(null)",
+	[Key.configModeForm]: "Form view",
+	[Key.configModeJson]: "JSON text",
+	[Key.configJsonInvalid]: "Invalid JSON",
 	[Key.configDeleteItem]: "Delete this item",
 
 	[Key.configSite]: "Site Configuration",
