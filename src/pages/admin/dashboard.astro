@@ -1,17 +1,18 @@
 ---
-import LoginGate from "@/components/admin/LoginGate.svelte";
+import AdminDashboard from "@/components/admin/AdminDashboard.svelte";
 import AdminLayout from "@/layouts/AdminLayout.astro";
+import { profileConfig } from "@/config";
 import { resolveAvatarUrl } from "@/utils/avatar-url";
 
 const title = "控制面板";
-const description = "登录后台管理";
+const description = `控制面板 - ${profileConfig.name}`;
 
 const avatarUrl = resolveAvatarUrl();
 ---
 
 <AdminLayout title={title} description={description}>
 	<div class="admin-container">
-		<LoginGate client:load avatarUrl={avatarUrl} />
+		<AdminDashboard client:load avatarUrl={avatarUrl} />
 	</div>
 </AdminLayout>
 

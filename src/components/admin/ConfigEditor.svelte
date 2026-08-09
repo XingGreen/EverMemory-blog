@@ -20,24 +20,25 @@ let { data, fileKey = "" }: { data: Record<string, JsonValue>; fileKey?: string 
 // 需要以下拉菜单切换的枚举字段（路径 = 从当前配置对象根开始的键路径）
 // navbar 配置单独编辑时根即导航栏本身，故同时收录前缀（navbar.x）与裸键（x）两种路径
 const SELECT_OPTIONS: Record<string, readonly string[]> = {
+	// 站点配置（site）
 	"themeColor.defaultMode": ["light", "dark", "system"],
 	"postListLayout.defaultMode": ["list", "grid"],
 	"postListLayout.mobileDefaultMode": ["list", "grid"],
 	"post.rehypeCallouts.theme": ["github", "obsidian", "vitepress", "docusaurus"],
 	"bangumi.mode": ["static", "dynamic"],
-	"music.mode": ["static", "dynamic"],
+	// 站点配置里的音乐区块与音乐播放器配置（musicConfig）同名键取值不同，需分开
+	"site.music.mode": ["static", "dynamic"],
 	"imageOptimization.formats": ["avif", "webp", "both"],
+	// 导航栏（navbar，含单独编辑时的裸键回退）
 	"navbar.menuAlign": ["left", "center"],
 	"navbar.mode": ["attached", "detached"],
 	"navbar.logo.type": ["icon", "image", "url"],
 	"menuAlign": ["left", "center"],
 	"mode": ["attached", "detached"],
 	"logo.type": ["icon", "image", "url"],
-	// 带文件前缀的条目优先匹配（解决同名键在不同配置文件里取值不同的冲突）
-	"navbar.mode": ["attached", "detached"],
-	"navbar.menuAlign": ["left", "center"],
-	"navbar.logo.type": ["icon", "image", "url"],
+	// 背景壁纸（wallpaper）
 	"wallpaper.mode": ["banner", "fullscreen", "overlay", "none"],
+	// 音乐播放器（music）
 	"music.mode": ["meting", "local"],
 	"music.playMode": ["list", "one", "random"],
 };

@@ -230,6 +230,123 @@ $effect(() => {
 	if (renderTimer) clearTimeout(renderTimer);
 	renderTimer = setTimeout(() => fetchPreview(mdContent), 300);
 });
+
+// ── MD 语法快捷插入 ──
+let editorEl: HTMLTextAreaElement | undefined = $state();
+
+/** 在选区两侧包裹符号（选区为空时使用占位文本） */
+function wrapSelection(before: string, after: string, placeholder: string) {
+	const el = editorEl;
+	if (!el) return;
+	const start = el.selectionStart;
+	const end = el.selectionEnd;
+	const selected = content.slice(start, end) || placeholder;
+	content = content.slice(0, start) + before + selected + after + content.slice(end);
+	requestAnimationFrame(() => {
+		el.focus();
+		const ns = start + before.length;
+		el.setSelectionRange(ns, ns + selected.length);
+	});
+}
+
+/** 在选区所在行(或每行)前加前缀；firstLineOnly 时仅作用于首行（如标题） */
+function prependLines(prefix: string, firstLineOnly = false) {
+	const el = editorEl;
+	if (!el) return;
+	const start = el.selectionStart;
+	const end = el.selectionEnd;
+	const lineStart = content.lastIndexOf("\n", start - 1) + 1;
+	let selEnd = end;
+	if (content[selEnd] !== "\n") {
+		const nl = content.indexOf("\n", selEnd);
+		selEnd = nl === -1 ? content.length : nl;
+	}
+	const block = content.slice(lineStart, selEnd);
+	const processed = block
+		.split("\n")
+		.map((line, i) => (firstLineOnly && i > 0 ? line : prefix + line))
+		.join("\n");
+	content = content.slice(0, lineStart) + processed + "\n" + content.slice(selEnd);
+	requestAnimationFrame(() => {
+		el.focus();
+		el.setSelectionRange(lineStart, lineStart + processed.length);
+	});
+}
+
+/** 在光标处插入文本 */
+function insertAtCursor(text: string) {
+	const el = editorEl;
+	if (!el) return;
+	const start = el.selectionStart;
+	const end = el.selectionEnd;
+	content = content.slice(0, start) + text + content.slice(end);
+	requestAnimationFrame(() => {
+		el.focus();
+		const pos = start + text.length;
+		el.setSelectionRange(pos, pos);
+	});
+}
+
+const insertBold = () => wrapSelection("**", "**", "text");
+const insertItalic = () => wrapSelection("*", "*", "text");
+const insertStrikethrough = () => wrapSelection("~~", "~~", "text");
+const insertH2 = () => prependLines("## ", true);
+const insertH3 = () => prependLines("### ", true);
+const insertInlineCode = () => wrapSelection("`", "`", "code");
+const insertCodeBlock = () => wrapSelection("```\n", "\n```", "code");
+const insertLink = () => wrapSelection("[", "](url)", "text");
+const insertImage = () => wrapSelection("![", "](url)", "alt");
+const insertQuote = () => prependLines("> ");
+const insertUl = () => prependLines("- ");
+const insertOl = () => prependLines("1. ");
+const insertDivider = () => insertAtCursor("\n\n---\n\n");
+
+// ── 右侧目录 ──
+interface TocItem {
+	level: number;
+	text: string;
+	lineIndex: number;
+}
+
+const tocItems = $derived<TocItem[]>(
+	content.split("\n").reduce<TocItem[]>((acc, line, i) => {
+		const m = /^(#{1,6})\s+(.+)$/.exec(line);
+		if (m && m[2].trim()) acc.push({ level: m[1].length, text: m[2].trim(), lineIndex: i });
+		return acc;
+	}, []),
+);
+
+let activeTocLine = $state(0);
+
+function tocTop(item: TocItem): number {
+	const el = editorEl;
+	if (!el) return 0;
+	const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 24;
+	return item.lineIndex * lineHeight;
+}
+
+function jumpToToc(item: TocItem) {
+	if (activeTab !== "editor") activeTab = "editor";
+	requestAnimationFrame(() => {
+		const el = editorEl;
+		if (!el) return;
+		el.scrollTop = Math.max(0, tocTop(item) - 8);
+		activeTocLine = item.lineIndex;
+	});
+}
+
+function handleEditorScroll() {
+	const el = editorEl;
+	if (!el) return;
+	const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 24;
+	const currentLine = Math.floor(el.scrollTop / lineHeight) + 1;
+	let idx = -1;
+	for (let i = 0; i < tocItems.length; i++) {
+		if (tocItems[i].lineIndex <= currentLine) idx = i;
+		else break;
+	}
+	activeTocLine = idx >= 0 ? tocItems[idx].lineIndex : 0;
+}
 </script>
 
 <div class="editor-container">
@@ -258,7 +375,9 @@ $effect(() => {
 			<p>{i18n(I18nKey.postLoadingContent)}</p>
 		</div>
 	{:else}
-		<div class="editor-body">
+		<div class="editor-layout">
+			<!-- 左侧：Front Matter 元数据 -->
+			<aside class="fm-panel">
 			<div class="form-section">
 					<h3>{i18n(I18nKey.postBasicInfo)}</h3>
 					<div class="form-grid">
@@ -447,9 +566,10 @@ $effect(() => {
 					</div>
 				</div>
 
-			<div class="form-section">
-				<h3>{i18n(I18nKey.postContentSection)}</h3>
+			</aside>
 
+			<!-- 中间：书写区 -->
+			<section class="write-panel">
 				<div class="tabs">
 					<button
 						class={`tab ${activeTab === "editor" ? "active" : ""}`}
@@ -471,18 +591,89 @@ $effect(() => {
 					</button>
 				</div>
 
+				<!-- MD 语法快捷键 -->
+				<div class="md-toolbar" role="toolbar" aria-label={i18n(I18nKey.postMdToolbar)}>
+					<button type="button" title={i18n(I18nKey.postMdBold)} aria-label={i18n(I18nKey.postMdBold)} onclick={insertBold}>
+						<Icon icon="material-symbols:format-bold" class="text-sm" />
+					</button>
+					<button type="button" title={i18n(I18nKey.postMdItalic)} aria-label={i18n(I18nKey.postMdItalic)} onclick={insertItalic}>
+						<Icon icon="material-symbols:format-italic" class="text-sm" />
+					</button>
+					<button type="button" title={i18n(I18nKey.postMdStrikethrough)} aria-label={i18n(I18nKey.postMdStrikethrough)} onclick={insertStrikethrough}>
+						<Icon icon="material-symbols:format-strikethrough" class="text-sm" />
+					</button>
+					<span class="toolbar-sep"></span>
+					<button type="button" title={i18n(I18nKey.postMdH2)} aria-label={i18n(I18nKey.postMdH2)} onclick={insertH2}>
+						<span class="toolbar-glyph">H2</span>
+					</button>
+					<button type="button" title={i18n(I18nKey.postMdH3)} aria-label={i18n(I18nKey.postMdH3)} onclick={insertH3}>
+						<span class="toolbar-glyph">H3</span>
+					</button>
+					<span class="toolbar-sep"></span>
+					<button type="button" title={i18n(I18nKey.postMdInlineCode)} aria-label={i18n(I18nKey.postMdInlineCode)} onclick={insertInlineCode}>
+						<Icon icon="material-symbols:code" class="text-sm" />
+					</button>
+					<button type="button" title={i18n(I18nKey.postMdCodeBlock)} aria-label={i18n(I18nKey.postMdCodeBlock)} onclick={insertCodeBlock}>
+						<Icon icon="material-symbols:data-object" class="text-sm" />
+					</button>
+					<span class="toolbar-sep"></span>
+					<button type="button" title={i18n(I18nKey.postMdLink)} aria-label={i18n(I18nKey.postMdLink)} onclick={insertLink}>
+						<Icon icon="material-symbols:link" class="text-sm" />
+					</button>
+					<button type="button" title={i18n(I18nKey.postMdImage)} aria-label={i18n(I18nKey.postMdImage)} onclick={insertImage}>
+						<Icon icon="material-symbols:image" class="text-sm" />
+					</button>
+					<button type="button" title={i18n(I18nKey.postMdQuote)} aria-label={i18n(I18nKey.postMdQuote)} onclick={insertQuote}>
+						<Icon icon="material-symbols:format-quote" class="text-sm" />
+					</button>
+					<span class="toolbar-sep"></span>
+					<button type="button" title={i18n(I18nKey.postMdUl)} aria-label={i18n(I18nKey.postMdUl)} onclick={insertUl}>
+						<Icon icon="material-symbols:format-list-bulleted" class="text-sm" />
+					</button>
+					<button type="button" title={i18n(I18nKey.postMdOl)} aria-label={i18n(I18nKey.postMdOl)} onclick={insertOl}>
+						<Icon icon="material-symbols:format-list-numbered" class="text-sm" />
+					</button>
+					<span class="toolbar-sep"></span>
+					<button type="button" title={i18n(I18nKey.postMdDivider)} aria-label={i18n(I18nKey.postMdDivider)} onclick={insertDivider}>
+						<Icon icon="material-symbols:horizontal-rule" class="text-sm" />
+					</button>
+				</div>
+
 				{#if activeTab === "editor"}
-						<textarea
-							bind:value={content}
-							placeholder={i18n(I18nKey.postContentPlaceholder)}
-							class="content-editor"
-						></textarea>
-					{:else}
-						<div class="content-preview custom-md">
-							{@html renderedHtml}
-						</div>
-					{/if}
-			</div>
+					<textarea
+						bind:this={editorEl}
+						bind:value={content}
+						onscroll={handleEditorScroll}
+						placeholder={i18n(I18nKey.postContentPlaceholder)}
+						class="content-editor"
+					></textarea>
+				{:else}
+					<div class="content-preview custom-md">
+						{@html renderedHtml}
+					</div>
+				{/if}
+			</section>
+
+			<!-- 右侧：目录 -->
+			<aside class="toc-panel">
+				<h3>{i18n(I18nKey.postToc)}</h3>
+				{#if tocItems.length > 0}
+					<nav class="toc-list">
+						{#each tocItems as item}
+							<button
+								type="button"
+								class="toc-item {`toc-level-${item.level}`}"
+								class:active={item.lineIndex === activeTocLine}
+								onclick={() => jumpToToc(item)}
+							>
+								{item.text}
+							</button>
+						{/each}
+					</nav>
+				{:else}
+					<p class="toc-empty">{i18n(I18nKey.postTocEmpty)}</p>
+				{/if}
+			</aside>
 		</div>
 	{/if}
 </div>
@@ -588,11 +779,195 @@ $effect(() => {
 		color: var(--content-meta);
 	}
 
-	.editor-body {
+	.editor-layout {
+		display: grid;
+		grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) 240px;
+		gap: 1.25rem;
 		padding: 1.5rem;
+		align-items: start;
+	}
+
+	/* ── 左侧：Front Matter 面板 ── */
+	.fm-panel {
+		position: sticky;
+		top: 1rem;
+		max-height: calc(100vh - 7.5rem);
+		overflow-y: auto;
+		padding: 1.25rem;
+		background: var(--btn-regular-bg);
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-large);
 		display: flex;
 		flex-direction: column;
-		gap: 2rem;
+		gap: 1.25rem;
+	}
+
+	.fm-panel .form-section {
+		gap: 0.75rem;
+	}
+
+	.fm-panel .form-section h3 {
+		font-size: 0.9375rem;
+		padding-bottom: 0.5rem;
+	}
+
+	.fm-panel .form-grid {
+		grid-template-columns: 1fr;
+		gap: 0.75rem;
+	}
+
+	.fm-panel .switch-row {
+		padding: 0;
+		gap: 1rem;
+	}
+
+	.fm-panel .form-input,
+	.fm-panel .form-textarea {
+		padding: 0.5rem 0.75rem;
+		font-size: 0.8125rem;
+	}
+
+	/* ── 中间：书写区 ── */
+	.write-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		min-width: 0;
+	}
+
+	.md-toolbar {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.125rem;
+		padding: 0.375rem;
+		background: var(--btn-regular-bg);
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-md);
+	}
+
+	.md-toolbar button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		border: none;
+		border-radius: var(--radius-sm);
+		background: none;
+		color: var(--content-meta);
+		cursor: pointer;
+		font-family: inherit;
+		transition: background 0.15s, color 0.15s;
+	}
+
+	.md-toolbar button:hover {
+		background: color-mix(in srgb, var(--primary) 12%, transparent);
+		color: var(--primary);
+	}
+
+	.toolbar-glyph {
+		font-size: 0.6875rem;
+		font-weight: 700;
+	}
+
+	.toolbar-sep {
+		width: 1px;
+		height: 1.25rem;
+		background: var(--line-divider);
+		margin: 0 0.375rem;
+	}
+
+	.write-panel .content-editor,
+	.write-panel > .content-preview {
+		min-height: 0;
+		height: calc(100vh - 16rem);
+	}
+
+	/* ── 右侧：目录 ── */
+	.toc-panel {
+		position: sticky;
+		top: 1rem;
+		max-height: calc(100vh - 7.5rem);
+		overflow-y: auto;
+		padding: 1.25rem 1rem;
+		background: var(--btn-regular-bg);
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-large);
+	}
+
+	.toc-panel h3 {
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: var(--deep-text);
+		padding-bottom: 0.5rem;
+		margin-bottom: 0.75rem;
+		border-bottom: 1px solid var(--line-divider);
+	}
+
+	.toc-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+	}
+
+	.toc-item {
+		display: block;
+		width: 100%;
+		text-align: left;
+		border: none;
+		background: none;
+		padding: 0.3125rem 0.5rem;
+		font-size: 0.8125rem;
+		line-height: 1.4;
+		color: var(--content-meta);
+		cursor: pointer;
+		border-radius: var(--radius-sm);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		transition: background 0.15s, color 0.15s;
+	}
+
+	.toc-item:hover {
+		color: var(--primary);
+		background: color-mix(in srgb, var(--primary) 8%, transparent);
+	}
+
+	.toc-item.active {
+		color: var(--primary);
+		background: color-mix(in srgb, var(--primary) 14%, transparent);
+		font-weight: 500;
+	}
+
+	.toc-level-1 {
+		padding-left: 0.5rem;
+	}
+
+	.toc-level-2 {
+		padding-left: 1.25rem;
+	}
+
+	.toc-level-3 {
+		padding-left: 2rem;
+	}
+
+	.toc-level-4 {
+		padding-left: 2.75rem;
+	}
+
+	.toc-level-5 {
+		padding-left: 3.5rem;
+	}
+
+	.toc-level-6 {
+		padding-left: 4.25rem;
+	}
+
+	.toc-empty {
+		font-size: 0.8125rem;
+		line-height: 1.6;
+		color: var(--content-meta);
 	}
 
 	.form-section {
@@ -844,6 +1219,37 @@ $effect(() => {
 		color: var(--content-meta);
 		text-align: center;
 		padding: 2rem;
+	}
+
+	@media (max-width: 1400px) {
+		.editor-layout {
+			grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+		}
+
+		.toc-panel {
+			display: none;
+		}
+	}
+
+	@media (max-width: 900px) {
+		.editor-layout {
+			grid-template-columns: 1fr;
+		}
+
+		.fm-panel,
+		.toc-panel {
+			position: static;
+			max-height: none;
+		}
+
+		.toc-panel {
+			display: block;
+		}
+
+		.write-panel .content-editor,
+		.write-panel > .content-preview {
+			height: 60vh;
+		}
 	}
 
 	@media (max-width: 768px) {

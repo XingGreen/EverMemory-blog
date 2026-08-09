@@ -56,6 +56,7 @@ function handleKeydown(e: KeyboardEvent) {
 		aria-describedby="confirm-description"
 		tabindex="-1"
 		onclick={(e) => e.stopPropagation()}
+		onkeydown={(e) => e.stopPropagation()}
 	>
 		<div class="modal-header">
 			<Icon icon="material-symbols:warning-rounded" class="modal-icon" />

@@ -35,14 +35,13 @@ type Post = {
 type ViewMode = "list" | "edit" | "create";
 type Page = "dashboard" | "posts" | "settings";
 
-// 基于 URL hash 的后台路由：
-//   #/dashboard/home                 → 首页
-//   #/dashboard/articles            → 文章列表
-//   #/dashboard/articles/new        → 新建文章
-//   #/dashboard/articles/edit/:slug → 编辑文章
-//   #/dashboard/settings            → 网站配置（概览）
-//   #/dashboard/settings/:section   → 网站配置（具体配置文件子页）
-//   #login                          → 登录页
+// 基于 URL 路径的真实路由（History API）：
+//   /admin/dashboard/                      → 首页
+//   /admin/dashboard/articles/             → 文章列表
+//   /admin/dashboard/articles/new/         → 新建文章
+//   /admin/dashboard/articles/edit/:slug/  → 编辑文章
+//   /admin/dashboard/settings/             → 网站配置（概览）
+//   /admin/dashboard/settings/:key/        → 网站配置（具体配置文件子页）
 type Route =
 	| { page: "login" }
 	| { page: "dashboard" }
@@ -53,7 +52,12 @@ type Route =
 
 let { avatarUrl = "" }: { avatarUrl?: string } = $props();
 
-let isVerified = $state(false);
+// 直接读取会话状态，避免后台页在未登录时先闪现登录表单
+let isVerified = $state(
+	typeof sessionStorage !== "undefined"
+		? sessionStorage.getItem("admin_verified") === "true"
+		: false,
+);
 let posts = $state<Post[]>([]);
 let isLoading = $state(true);
 let error = $state("");
@@ -131,76 +135,81 @@ const publishRate = $derived(
 
 // 进入编辑路由时按 slug 找到对应文章（文章列表异步加载完成后会自动再次匹配）
 $effect(() => {
-	if (route.page === "edit") {
-		editingPost = posts.find((p) => p.slug === route.slug) ?? null;
-	} else {
+	// 先用局部变量承载 route，避免 $state 代理导致 TS 无法对联合类型收窄
+	const current = route;
+	if (current.page !== "edit") {
 		editingPost = null;
+		return;
 	}
+	editingPost = posts.find((p) => p.slug === current.slug) ?? null;
 });
 
-function parseRoute(hash: string): Route {
-	if (!hash || hash === "#login") return { page: "login" };
-	if (!hash.startsWith("#/")) return { page: "login" };
-	const segments = hash.slice(2).split("/").filter(Boolean);
-	if (segments[0] !== "dashboard") return { page: "login" };
-	switch (segments[1]) {
+function parseRoute(pathname: string): Route {
+	const rest = pathname.replace(/^\/admin\/dashboard\/?/, "");
+	// 不在后台前缀下视为未知路由，回落到登录态判定
+	if (rest === pathname) return { page: "login" };
+	const segments = rest.split("/").filter(Boolean);
+	switch (segments[0]) {
 		case undefined:
-		case "home":
 			return { page: "dashboard" };
 		case "articles":
-			if (segments[2] === "new") return { page: "create" };
-			if (segments[2] === "edit" && segments[3])
-				return { page: "edit", slug: segments[3] };
+			if (segments[1] === "new") return { page: "create" };
+			if (segments[1] === "edit" && segments[2])
+				return { page: "edit", slug: segments[2] };
 			return { page: "posts" };
 		case "settings": {
 			// 仅接受已知配置项作为子页，否则回落到配置概览
 			const section =
-				segments[2] && CONFIG_ITEMS.some((item) => item.key === segments[2])
-					? segments[2]
+				segments[1] && CONFIG_ITEMS.some((item) => item.key === segments[1])
+					? segments[1]
 					: undefined;
 			return { page: "settings", section };
 		}
 		default:
+			// 未知路由：返回登录态判定，由 applyRoute 决定去向
 			return { page: "login" };
 	}
 }
 
-function setHash(hash: string) {
-	if (window.location.hash === hash) {
-		applyRoute();
-		return;
-	}
-	window.location.hash = hash;
-}
-
 function applyRoute() {
-	// 未登录：只允许停在登录页
+	// 未登录：跳回独立登录页（/admin/），不再在后台页内展示登录
 	if (!isVerified) {
 		route = { page: "login" };
-		if (window.location.hash !== "#login") window.location.hash = "#login";
+		window.location.replace("/admin/");
 		return;
 	}
-	let next = parseRoute(window.location.hash);
-	// 已登录却落在登录页或无 hash：跳转到控制面板首页
-	if (next.page === "login") {
-		next = { page: "dashboard" };
-		if (window.location.hash !== "#/dashboard/home")
-			window.location.hash = "#/dashboard/home";
-	}
-	route = next;
+	const next = parseRoute(window.location.pathname);
+	// 已登录用户落在未知路由时，回落到控制面板首页（保持地址不变）
+	route = next.page === "login" ? { page: "dashboard" } : next;
 }
 
-onMount(() => {
-	// Svelte 水合完成，移除 Astro 预渲染的骨架
-	const skeleton = document.getElementById("admin-skeleton");
-	if (skeleton) skeleton.remove();
-
-	const stored = sessionStorage.getItem("admin_verified");
-	isVerified = stored === "true";
-	if (isVerified) loadPosts();
-
-	window.addEventListener("hashchange", applyRoute);
+function startAdmin() {
+	loadPosts();
+	window.addEventListener("popstate", applyRoute);
 	applyRoute(); // 同步初始路由
+}
+
+onMount(async () => {
+	if (!isVerified) {
+		// 未登录访问后台页：先尝试"记住我"Cookie，有效则免登录进入
+		try {
+			const res = await fetch("/api/admin/session/");
+			const data = await res.json();
+			if (data.success) {
+				isVerified = true;
+				sessionStorage.setItem("admin_verified", "true");
+				startAdmin();
+				return;
+			}
+		} catch {
+			// 网络异常时按未登录处理
+		}
+		// 记住想进入的地址，跳回独立登录页，登录后跳回原目标
+		sessionStorage.setItem("admin_redirect", window.location.pathname);
+		window.location.replace("/admin/");
+		return;
+	}
+	startAdmin();
 });
 
 // 顶部标题随页面联动
@@ -369,25 +378,39 @@ function handleVerify(success: boolean) {
 	}
 }
 
-function handleLogout() {
+async function handleLogout() {
 	isVerified = false;
 	sessionStorage.removeItem("admin_verified");
-	showToast("已退出", "success");
-	setHash("#login");
+	// 退出后回到独立登录页，同时清掉深链记录，避免下次登录被带回旧页
+	sessionStorage.removeItem("admin_redirect");
+	// 清除服务端会话 Cookie（含"记住我"的 7 天 Cookie），否则退出后仍会免登录
+	try {
+		await fetch("/api/admin/verify/", { method: "DELETE" });
+	} catch {
+		// 忽略清理失败
+	}
+	window.location.replace("/admin/");
 }
 
-// ── 导航（hash 路由） ──
-function goTo(hash: string) {
+// ── 导航（History API 真实路径路由） ──
+const DASHBOARD_PATH = "/admin/dashboard/";
+
+function navigate(path: string) {
 	isSidebarOpen = false;
-	setHash(hash);
+	if (window.location.pathname === path) {
+		applyRoute();
+		return;
+	}
+	history.pushState({}, "", path);
+	applyRoute();
 }
 
 function goDashboard() {
-	goTo("#/dashboard/home");
+	navigate(DASHBOARD_PATH);
 }
 
 function goSettings(section?: string) {
-	goTo(section ? `#/dashboard/settings/${section}` : "#/dashboard/settings");
+	navigate(section ? `${DASHBOARD_PATH}settings/${section}/` : `${DASHBOARD_PATH}settings/`);
 }
 
 function toggleSettingsSubmenu() {
@@ -396,17 +419,17 @@ function toggleSettingsSubmenu() {
 
 function goPostList() {
 	postsSubOpen = true;
-	goTo("#/dashboard/articles");
+	navigate(`${DASHBOARD_PATH}articles/`);
 }
 
 function goCreatePost() {
 	postsSubOpen = true;
-	goTo("#/dashboard/articles/new");
+	navigate(`${DASHBOARD_PATH}articles/new/`);
 }
 
 function goEditPost(post: Post) {
 	postsSubOpen = true;
-	goTo(`#/dashboard/articles/edit/${post.slug}`);
+	navigate(`${DASHBOARD_PATH}articles/edit/${post.slug}/`);
 }
 
 function togglePostsSubmenu() {
@@ -710,7 +733,13 @@ function formatDate(dateStr: string | null): string {
 	<div class="admin-layout">
 		<!-- 移动端侧边栏遮罩 -->
 		{#if isSidebarOpen}
-			<div class="sidebar-backdrop" onclick={() => (isSidebarOpen = false)}></div>
+			<button
+				type="button"
+				class="sidebar-backdrop"
+				aria-label="关闭菜单"
+				tabindex="-1"
+				onclick={() => (isSidebarOpen = false)}
+			></button>
 		{/if}
 
 		<!-- 左侧导航栏 -->
@@ -1090,6 +1119,12 @@ function formatDate(dateStr: string | null): string {
 
 	.sidebar-backdrop {
 		display: none;
+		/* 转成 <button> 后的浏览器默认样式重置 */
+		border: none;
+		padding: 0;
+		margin: 0;
+		font: inherit;
+		background: transparent;
 	}
 
 	/* ── 主内容区 ── */

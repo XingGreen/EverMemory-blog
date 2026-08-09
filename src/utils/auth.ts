@@ -2,6 +2,10 @@ import crypto from "node:crypto";
 
 const JWT_EXPIRY_HOURS = 1;
 
+// 会话 Cookie 有效时长
+export const SESSION_MAX_AGE = JWT_EXPIRY_HOURS * 3600; // 1 小时（未勾选"记住我"）
+export const REMEMBER_MAX_AGE = 7 * 24 * 3600; // 7 天（勾选"记住我"）
+
 let cachedSecret: string | null = null;
 
 /**
@@ -41,12 +45,12 @@ interface JwtPayload {
 	exp: number;
 }
 
-export function generateSessionToken(): string {
+export function generateSessionToken(maxAgeSeconds = SESSION_MAX_AGE): string {
 	const payload: JwtPayload = {
 		sub: crypto.randomUUID(),
 		role: "admin",
 		iat: Math.floor(Date.now() / 1000),
-		exp: Math.floor(Date.now() / 1000) + JWT_EXPIRY_HOURS * 3600,
+		exp: Math.floor(Date.now() / 1000) + maxAgeSeconds,
 	};
 
 	const header = { alg: "HS256", typ: "JWT" };
@@ -150,10 +154,14 @@ export function requireAuth(request: Request): {
 	return { authenticated: true };
 }
 
-export function setAuthCookie(token: string, headers: Headers): void {
+export function setAuthCookie(
+	token: string,
+	headers: Headers,
+	maxAgeSeconds = SESSION_MAX_AGE,
+): void {
 	headers.set(
 		"Set-Cookie",
-		`admin_session=${encodeURIComponent(token)}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${JWT_EXPIRY_HOURS * 3600}`,
+		`admin_session=${encodeURIComponent(token)}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAgeSeconds}`,
 	);
 }
 
