@@ -74,6 +74,7 @@ export const siteConfig: SiteConfig = {
 		followTheme: false,
 		// 导航栏是否固定在顶部并始终可见
 		stickyNavbar: true,
+		// 导航栏模式：attached=紧贴模式（导航栏紧贴页面顶部），detached=分离模式（导航栏上部距离边缘有间隔）
 		mode: "attached",
 	},
 	// 站点开始日期，用于统计运行天数
