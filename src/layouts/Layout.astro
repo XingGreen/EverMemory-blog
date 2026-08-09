@@ -4,6 +4,7 @@ import La51Analytics from "@components/analytics/La51Analytics.astro";
 import MicrosoftClarity from "@components/analytics/MicrosoftClarity.astro";
 import UmamiAnalytics from "@components/analytics/UmamiAnalytics.astro";
 import FancyboxManager from "@components/features/FancyboxManager.astro";
+import ExternalLinkConfirm from "@components/common/ExternalLinkConfirm.svelte";
 import FontSetup from "@components/features/FontSetup.astro";
 import MusicManager from "@components/features/MusicManager.astro";
 import SakuraEffect from "@components/features/SakuraEffect.astro";
@@ -589,6 +590,9 @@ const siteLang = lang.replace("_", "-");
 
     <!-- Sakura Effect -->
     {!excludeFrontendEffects && <SakuraEffect />}
+
+    <!-- 外链安全确认弹窗（仅前台：拦截站外链接点击，确认后再跳转） -->
+    {!excludeFrontendEffects && <ExternalLinkConfirm client:only="svelte" />}
 
     <!-- Fancybox Manager -->
     <FancyboxManager />

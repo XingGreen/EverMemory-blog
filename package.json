@@ -99,7 +99,26 @@
   "packageManager": "pnpm@9.14.4",
   "pnpm": {
     "supportedArchitectures": {
-      "libc": ["glibc", "musl"]
+      "libc": [
+        "glibc",
+        "musl"
+      ]
     }
-  }
+  },
+  "description": "<img src=\"./docs/images/Forget-me-not.png\" width = \"350\" height = \"500\" alt=\"Forget-me-not\" align=right />",
+  "main": "svelte.config.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/XingGreen/EverMemory-blog.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/XingGreen/EverMemory-blog/issues"
+  },
+  "homepage": "https://github.com/XingGreen/EverMemory-blog#readme"
 }
