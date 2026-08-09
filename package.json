@@ -96,5 +96,10 @@
     "tailwindcss": "^4.3.1",
     "tsx": "^4.22.4"
   },
-  "packageManager": "pnpm@9.14.4"
+  "packageManager": "pnpm@9.14.4",
+  "pnpm": {
+    "supportedArchitectures": {
+      "libc": ["glibc", "musl"]
+    }
+  }
 }
