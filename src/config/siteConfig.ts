@@ -8,7 +8,7 @@ export const siteConfig: SiteConfig = {
 	// 站点标题
 	title: "EverMemory's Blog",
 	// 站点副标题
-	subtitle: "demo",
+	subtitle: "",
 	// 站点 URL
 	site_url: "https://blog.evermemory.dpdns.org",
 	// 站点描述

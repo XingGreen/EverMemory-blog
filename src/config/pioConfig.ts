@@ -110,15 +110,18 @@ export const live2dWidgetConfig: Live2DWidgetConfig = {
 		},
 	],
 	// 显示位置：bottom-left 或 bottom-right
-	position: "bottom-left" as const,
+	position: "bottom-left",
 	// 画布尺寸（px）
-	size: { width: 280, height: 250 },
+	size: {
+		width: 280,
+		height: 250,
+	},
 	// 主题色，用于菜单、状态条等 UI 元素的背景色，默认 'rgba(96,165,250,0.9)'
 	primaryColor: "var(--l2d-msg-bg)",
 	// 入场/退场动画时长（ms）
 	transitionDuration: 1500,
 	// 入场/退场动画类型
-	transitionType: "slide" as const,
+	transitionType: "slide",
 	// 菜单配置
 	menus: {
 		// 完全替换默认菜单项
@@ -150,14 +153,17 @@ export const live2dWidgetConfig: Live2DWidgetConfig = {
 			},
 		],
 		// 菜单对齐方式
-		align: "right" as const,
+		align: "right",
 	},
 	// 提示气泡配置
 	tips: {
 		// 气泡开关
 		enable: true,
 		// 初始欢迎消息
-		welcomeMessage: ["你好呀！", "欢迎来到我的世界！"],
+		welcomeMessage: [
+			"你好呀！",
+			"欢迎来到我的世界！",
+		],
 		// 循环提示内容
 		messages: [
 			"有什么需要帮助的吗？",
@@ -171,8 +177,9 @@ export const live2dWidgetConfig: Live2DWidgetConfig = {
 		interval: 6000,
 		// 位置偏移量（px），基于默认位置（模型正上方居中）进行微调
 		offset: {
-			x: 0, // 正值右移，负值左移
-			y: 0, // 正值下移，负值上移
+			x: 0,
+			// 正值右移，负值左移
+			y: 0,
 		},
 	},
 	// 响应式配置

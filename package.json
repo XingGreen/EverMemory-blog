@@ -97,14 +97,6 @@
     "tsx": "^4.22.4"
   },
   "packageManager": "pnpm@9.14.4",
-  "pnpm": {
-    "supportedArchitectures": {
-      "libc": [
-        "glibc",
-        "musl"
-      ]
-    }
-  },
   "description": "<img src=\"./docs/images/Forget-me-not.png\" width = \"350\" height = \"500\" alt=\"Forget-me-not\" align=right />",
   "main": "svelte.config.js",
   "directories": {

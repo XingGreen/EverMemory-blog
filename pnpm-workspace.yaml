@@ -1,0 +1,7 @@
+# pnpm 中央配置（pnpm 9+ 不再读取 package.json 中的 "pnpm" 字段）
+# 原 package.json 中 "pnpm.supportedArchitectures" 迁移至此
+packages: []
+supportedArchitectures:
+  libc:
+    - glibc
+    - musl

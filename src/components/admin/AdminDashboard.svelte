@@ -4,8 +4,10 @@ import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import {
+	CONFIG_GROUPS,
 	CONFIG_ITEMS,
 	getConfigDescKey,
+	getConfigGroup,
 	getConfigItem,
 	getConfigLabelKey,
 } from "@/utils/admin-settings";
@@ -87,10 +89,40 @@ let settingsError = $state("");
 let settingsLoading = $state(false);
 let settingsSaving = $state(false);
 let settingsSearchTerm = $state("");
+// 配置文件的磁盘原文（源码模式用）；settingsMode 记录当前编辑模式
+let settingsSource = $state("");
+let settingsMode = $state<"form" | "source">("form");
+// 后台页头：深浅模式切换按钮的当前状态（亮色显示月亮图标，暗色显示太阳）
+let isDark = $state(false);
+
+// 深浅模式切换：与应用全局主题保持一致（localStorage "theme" + html.dark/data-theme）
+function toggleTheme() {
+	const next = isDark ? "light" : "dark";
+	document.documentElement.classList.toggle("dark", next === "dark");
+	document.documentElement.setAttribute("data-theme", next);
+	localStorage.setItem("theme", next);
+	isDark = next === "dark";
+}
 // 侧边栏状态
 let postsSubOpen = $state(true); // 文章管理子菜单是否展开
 let settingsSubOpen = $state(true); // 网站配置子菜单是否展开
 let isSidebarOpen = $state(false); // 移动端侧边栏抽屉是否打开
+let sidebarCollapsed = $state(false); // 桌面端侧边栏是否折叠（仅图标模式）
+
+if (typeof window !== "undefined") {
+	const savedCollapsed = localStorage.getItem("admin-sidebar-collapsed");
+	if (savedCollapsed === "true") sidebarCollapsed = true;
+}
+
+// 折叠/展开侧边栏：折叠时自动收起所有子菜单，仅保留图标，悬停图标滑出二级菜单
+function toggleCollapseSidebar() {
+	sidebarCollapsed = !sidebarCollapsed;
+	if (sidebarCollapsed) {
+		postsSubOpen = false;
+		settingsSubOpen = false;
+	}
+	localStorage.setItem("admin-sidebar-collapsed", String(sidebarCollapsed));
+}
 
 const activePage = $derived<Page>(
 	route.page === "dashboard"
@@ -203,6 +235,8 @@ function startAdmin() {
 }
 
 onMount(async () => {
+	// 同步当前主题状态（深浅切换按钮图标）
+	isDark = document.documentElement.classList.contains("dark");
 	if (!isVerified) {
 		// 未登录访问后台页：先尝试"记住我"Cookie，有效则免登录进入
 		try {
@@ -301,11 +335,14 @@ $effect(() => {
 async function loadSettings(key: string) {
 	settingsLoading = true;
 	settingsError = "";
+	// 重新加载配置时回到默认的可视化表单模式
+	settingsMode = "form";
 	try {
 		const res = await fetch(`/api/admin/configs/${key}/`);
 		const json = await res.json();
 		if (json.success) {
 			settingsData = json.data;
+			settingsSource = json.source ?? "";
 		} else {
 			settingsError = json.message || "读取配置失败";
 		}
@@ -324,7 +361,12 @@ async function saveSettings() {
 		const res = await fetch(`/api/admin/configs/${key}/`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ data: settingsData }),
+			// 源码模式整份写回文件原文；可视化表单模式由后端序列化配置值
+			body: JSON.stringify(
+				settingsMode === "source"
+					? { source: settingsSource }
+					: { data: settingsData },
+			),
 		});
 		const json = await res.json();
 		if (json.success) {
@@ -450,6 +492,8 @@ function goSettings(section?: string) {
 }
 
 function toggleSettingsSubmenu() {
+	// 折叠态下组头仅作为 hover 滑出触发点，不允许内联展开
+	if (sidebarCollapsed) return;
 	settingsSubOpen = !settingsSubOpen;
 }
 
@@ -469,6 +513,8 @@ function goEditPost(post: Post) {
 }
 
 function togglePostsSubmenu() {
+	// 折叠态下组头仅作为 hover 滑出触发点，不允许内联展开
+	if (sidebarCollapsed) return;
 	postsSubOpen = !postsSubOpen;
 }
 
@@ -804,12 +850,24 @@ function formatDate(dateStr: string | null): string {
 		{/if}
 
 		<!-- 左侧导航栏 -->
-		<aside class="admin-sidebar" class:open={isSidebarOpen}>
+		<aside class="admin-sidebar" class:open={isSidebarOpen} class:collapsed={sidebarCollapsed}>
 			<div class="sidebar-brand">
 				<div class="brand-icon">
 					<Icon icon="material-symbols:apps" class="text-lg" />
 				</div>
 				<span>{i18n(I18nKey.adminDashboard)}</span>
+				<button
+					class="sidebar-collapse-btn"
+					onclick={toggleCollapseSidebar}
+					aria-label={i18n(sidebarCollapsed ? I18nKey.adminExpandSidebar : I18nKey.adminCollapseSidebar)}
+					title={i18n(sidebarCollapsed ? I18nKey.adminExpandSidebar : I18nKey.adminCollapseSidebar)}
+				>
+					<Icon
+						icon={sidebarCollapsed
+							? "material-symbols:menu-rounded"
+							: "material-symbols:menu-open-rounded"}
+					/>
+				</button>
 			</div>
 
 			<nav class="sidebar-nav">
@@ -833,12 +891,14 @@ function formatDate(dateStr: string | null): string {
 					>
 						<Icon icon="material-symbols:article-outline" />
 						<span>{i18n(I18nKey.adminPosts)}</span>
-						<Icon
-							icon={postsSubOpen ? "material-symbols:keyboard-arrow-up-rounded" : "material-symbols:keyboard-arrow-down-rounded"}
-							class="nav-arrow"
-						/>
+						{#if !sidebarCollapsed}
+							<Icon
+								icon={postsSubOpen ? "material-symbols:keyboard-arrow-up-rounded" : "material-symbols:keyboard-arrow-down-rounded"}
+								class="nav-arrow"
+							/>
+						{/if}
 					</button>
-					{#if postsSubOpen}
+					<div class="nav-submenu-wrap" class:open={postsSubOpen}>
 						<div class="nav-submenu">
 							<button
 								class="nav-item sub"
@@ -857,7 +917,26 @@ function formatDate(dateStr: string | null): string {
 								<span>{i18n(I18nKey.adminNewPost)}</span>
 							</button>
 						</div>
-					{/if}
+					</div>
+					<!-- 折叠态悬停弹出的文章子菜单 -->
+					<div class="flyout-panel" aria-hidden={!sidebarCollapsed}>
+						<button
+							class="nav-item sub"
+							class:active={activePage === "posts" && (viewMode === "list" || viewMode === "edit")}
+							onclick={goPostList}
+						>
+							<Icon icon="material-symbols:format-list-bulleted" />
+							<span>{i18n(I18nKey.adminPostList)}</span>
+						</button>
+						<button
+							class="nav-item sub"
+							class:active={activePage === "posts" && viewMode === "create"}
+							onclick={goCreatePost}
+						>
+							<Icon icon="material-symbols:edit-calendar-outline-rounded" />
+							<span>{i18n(I18nKey.adminNewPost)}</span>
+						</button>
+					</div>
 				</div>
 
 				<!-- 网站配置（二级菜单） -->
@@ -870,12 +949,14 @@ function formatDate(dateStr: string | null): string {
 					>
 						<Icon icon="material-symbols:settings" />
 						<span>{i18n(I18nKey.adminSettings)}</span>
-						<Icon
-							icon={settingsSubOpen ? "material-symbols:keyboard-arrow-up-rounded" : "material-symbols:keyboard-arrow-down-rounded"}
-							class="nav-arrow"
-						/>
+						{#if !sidebarCollapsed}
+							<Icon
+								icon={settingsSubOpen ? "material-symbols:keyboard-arrow-up-rounded" : "material-symbols:keyboard-arrow-down-rounded"}
+								class="nav-arrow"
+							/>
+						{/if}
 					</button>
-					{#if settingsSubOpen}
+					<div class="nav-submenu-wrap" class:open={settingsSubOpen}>
 						<div class="nav-submenu">
 							<button
 								class="nav-item sub"
@@ -885,7 +966,43 @@ function formatDate(dateStr: string | null): string {
 								<Icon icon="material-symbols:apps" />
 								<span>{i18n(I18nKey.adminSettingsOverview)}</span>
 							</button>
-							{#each CONFIG_ITEMS as item}
+							{#each CONFIG_GROUPS as group}
+							{@const groupItems = CONFIG_ITEMS.filter(
+								(item) => getConfigGroup(item.key) === group.id,
+							)}
+							{#if groupItems.length > 0}
+								<div class="nav-group-label">{i18n(group.labelKey)}</div>
+								{#each groupItems as item (item.key)}
+									<button
+										class="nav-item sub"
+										class:active={activePage === "settings" && settingsSection === item.key}
+										onclick={() => goSettings(item.key)}
+									>
+										<Icon icon={item.icon} />
+										<span>{i18n(getConfigLabelKey(item.key))}</span>
+									</button>
+								{/each}
+							{/if}
+						{/each}
+						</div>
+					</div>
+					<!-- 折叠态悬停弹出的网站配置子菜单 -->
+					<div class="flyout-panel flyout-settings" aria-hidden={!sidebarCollapsed}>
+						<button
+							class="nav-item sub"
+							class:active={activePage === "settings" && !settingsSection}
+							onclick={() => goSettings()}
+						>
+							<Icon icon="material-symbols:apps" />
+							<span>{i18n(I18nKey.adminSettingsOverview)}</span>
+						</button>
+						{#each CONFIG_GROUPS as group}
+						{@const groupItems = CONFIG_ITEMS.filter(
+							(item) => getConfigGroup(item.key) === group.id,
+						)}
+						{#if groupItems.length > 0}
+							<div class="nav-group-label">{i18n(group.labelKey)}</div>
+							{#each groupItems as item (item.key)}
 								<button
 									class="nav-item sub"
 									class:active={activePage === "settings" && settingsSection === item.key}
@@ -895,12 +1012,27 @@ function formatDate(dateStr: string | null): string {
 									<span>{i18n(getConfigLabelKey(item.key))}</span>
 								</button>
 							{/each}
-						</div>
-					{/if}
+						{/if}
+					{/each}
+					</div>
 				</div>
 			</nav>
 
 			<div class="sidebar-footer">
+				<!-- 返回前台首页 -->
+				<a class="nav-item" href="/">
+					<Icon icon="material-symbols:home-outline-rounded" />
+					<span>{i18n(I18nKey.adminBackHome)}</span>
+				</a>
+				<!-- 深浅模式切换（亮色显示月亮图标，暗色显示太阳图标，点击切换） -->
+				<button class="nav-item" onclick={toggleTheme}>
+					<Icon
+						icon={isDark
+							? "material-symbols:wb-sunny-outline-rounded"
+							: "material-symbols:dark-mode-outline-rounded"}
+					/>
+					<span>{i18n(I18nKey.adminToggleTheme)}</span>
+				</button>
 				<button class="nav-item" onclick={handleLogout}>
 					<Icon icon="material-symbols:arrow-back" />
 					<span>{i18n(I18nKey.adminLogout)}</span>
@@ -926,7 +1058,7 @@ function formatDate(dateStr: string | null): string {
 					</div>
 				</div>
 				<div class="header-actions">
-					{#if activePage === "settings" && !settingsSection}
+				{#if activePage === "settings" && !settingsSection}
 						<div class="search-box" class:focused={settingsSearchTerm.length > 0}>
 							<Icon icon="material-symbols:search" class="search-icon" size="lg" />
 							<input
@@ -1000,9 +1132,12 @@ function formatDate(dateStr: string | null): string {
 							<SettingsEditor
 								item={getConfigItem(settingsSection)!}
 								data={settingsData}
+								source={settingsSource}
 								error={settingsError}
 								isLoading={settingsLoading}
 								onUpdate={(v) => (settingsData = v)}
+								onModeChange={(m) => (settingsMode = m)}
+								onSourceChange={(s) => (settingsSource = s)}
 							/>
 						{:else}
 							{@render placeholder(i18n(I18nKey.adminSettings), i18n(I18nKey.configSectionUnknown), "material-symbols:settings")}
@@ -1057,18 +1192,35 @@ function formatDate(dateStr: string | null): string {
 
 	/* ── 左侧导航栏 ── */
 	.admin-sidebar {
-		width: 248px;
+		width: 216px;
 		flex-shrink: 0;
 		height: 100%;
 		overflow-y: auto;
+		/* 始终预留滚动条槽位：子菜单展开出现滚动条时内容不再向左偏移 */
+		scrollbar-gutter: stable;
+		scrollbar-width: thin;
+		scrollbar-color: color-mix(in srgb, var(--deep-text) 25%, transparent) transparent;
 		display: flex;
 		flex-direction: column;
 		background: var(--admin-sidebar-bg);
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-large);
-		padding: 1.25rem;
+		padding: 1rem;
 		gap: 0.5rem;
 		box-shadow: var(--shadow-card);
+	}
+
+	.admin-sidebar::-webkit-scrollbar {
+		width: 6px;
+	}
+
+	.admin-sidebar::-webkit-scrollbar-thumb {
+		background: color-mix(in srgb, var(--deep-text) 25%, transparent);
+		border-radius: 999px;
+	}
+
+	.admin-sidebar::-webkit-scrollbar-track {
+		background: transparent;
 	}
 
 	.sidebar-brand {
@@ -1126,10 +1278,8 @@ function formatDate(dateStr: string | null): string {
 		font-family: inherit;
 		text-align: left;
 		line-height: 1.2;
-	}
-
-	.nav-item:hover {
-		background: var(--btn-regular-bg);
+		/* 侧边栏内的链接项（返回首页）去除下划线 */
+		text-decoration: none;
 	}
 
 	.nav-item:focus-visible {
@@ -1137,21 +1287,38 @@ function formatDate(dateStr: string | null): string {
 		outline-offset: 2px;
 	}
 
+	/* 一级菜单高亮：仅文字高亮，不涂背景 */
 	.nav-item.active {
-		background: var(--primary);
-		color: var(--primary-foreground);
-		box-shadow: var(--shadow-button);
+		background: transparent;
+		color: var(--primary);
+		font-weight: 600;
 	}
 
-	/* 有二级菜单的父级项：高亮时使用浅色风格，避免与子菜单的实色冲突 */
+	/* 有二级菜单的父级项：同样仅文字高亮 */
 	.nav-group-head.group-active {
-		background: var(--btn-regular-bg);
+		background: transparent;
 		color: var(--primary);
 	}
 
 	.nav-arrow {
 		margin-left: auto;
 		flex-shrink: 0;
+	}
+
+	/* 折叠子菜单动画容器（grid 行高过渡） */
+	.nav-submenu-wrap {
+		display: grid;
+		grid-template-rows: 0fr;
+		transition: grid-template-rows 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.nav-submenu-wrap.open {
+		grid-template-rows: 1fr;
+	}
+
+	.nav-submenu-wrap > .nav-submenu {
+		overflow: hidden;
+		min-height: 0;
 	}
 
 	.nav-submenu {
@@ -1163,6 +1330,22 @@ function formatDate(dateStr: string | null): string {
 		border-left: 2px solid var(--line-divider);
 	}
 
+	/* 配置分组小标题（侧边栏"网站配置"二级菜单） */
+	.nav-group-label {
+		margin-top: 0.5rem;
+		margin-bottom: 0.125rem;
+		padding: 0.25rem 0.75rem 0.125rem;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--content-meta);
+	}
+
+	.nav-group-label:first-child {
+		margin-top: 0;
+	}
+
 	.nav-item.sub {
 		padding: 0.625rem 0.875rem;
 		font-size: 0.8125rem;
@@ -1171,15 +1354,144 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.nav-item.sub.active {
-		background: var(--primary);
-		color: var(--primary-foreground);
-		box-shadow: var(--shadow-button);
+		/* 二级菜单高亮：半透明主题色 */
+		background: color-mix(in srgb, var(--primary) 16%, transparent);
+		color: var(--primary);
+		box-shadow: none;
+	}
+
+	/* 悬停高亮：中性灰色（放在 active 规则之后，保证当前选中项悬停时也变灰） */
+	.nav-item:hover,
+	.nav-item.active:hover,
+	.nav-item.sub.active:hover {
+		background: color-mix(in srgb, var(--deep-text) 8%, transparent);
 	}
 
 	.sidebar-footer {
 		border-top: 1px solid var(--line-divider);
 		padding-top: 0.5rem;
 		margin-top: 0.5rem;
+	}
+
+	/* 侧边栏折叠/展开按钮（位于品牌区右侧） */
+	.sidebar-collapse-btn {
+		margin-left: auto;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		border: none;
+		border-radius: var(--radius-lg);
+		background: transparent;
+		color: var(--content-meta);
+		cursor: pointer;
+		transition: background 0.2s, color 0.2s;
+		flex-shrink: 0;
+	}
+
+	.sidebar-collapse-btn:hover {
+		background: var(--btn-regular-bg);
+		color: var(--deep-text);
+	}
+
+	/* 折叠态滑出的二级菜单面板（仅折叠时悬停一级图标显示） */
+	.flyout-panel {
+		display: none;
+		position: absolute;
+		top: 0;
+		/* 紧贴侧栏右侧，保证鼠标从图标移到面板时 hover 不断链 */
+		left: 100%;
+		z-index: 70;
+		min-width: 216px;
+		max-width: 272px;
+		max-height: min(70vh, 600px);
+		overflow-y: auto;
+		padding: 0.5rem;
+		background: var(--admin-card-bg, var(--admin-sidebar-bg));
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-large);
+		box-shadow: 6px 12px 28px rgba(0, 0, 0, 0.2);
+	}
+
+	.flyout-panel .nav-item {
+		width: 100%;
+		justify-content: flex-start;
+		gap: 0.625rem;
+		padding: 0.625rem 0.875rem;
+		font-size: 0.8125rem;
+		border-radius: var(--radius-lg);
+	}
+
+	.flyout-panel .nav-group-label {
+		display: block;
+		text-transform: none;
+		letter-spacing: 0.05em;
+	}
+
+	/* 桌面端折叠模式：仅图标，悬停滑出二级菜单 */
+	@media (min-width: 1024px) {
+		.admin-sidebar.collapsed {
+			width: 56px;
+			padding: 1rem 0.5rem;
+			/* flyout 面板超出侧栏右边界，必须关掉滚动裁切才能显示 */
+			overflow: visible;
+		}
+
+		/* 折叠时隐藏文字与内联子菜单（flyout 面板内的文字不受影响） */
+		.admin-sidebar.collapsed :not(.flyout-panel) > .nav-item > span,
+		.admin-sidebar.collapsed .sidebar-brand > span,
+		.admin-sidebar.collapsed .nav-submenu-wrap {
+			display: none;
+		}
+
+		.admin-sidebar.collapsed .sidebar-brand {
+			justify-content: center;
+			padding: 0.5rem 0 1rem;
+		}
+
+		/* 折叠态品牌图标让位：仅保留折叠按钮居中（避免与图标并排溢出） */
+		.admin-sidebar.collapsed .brand-icon {
+			display: none;
+		}
+
+		.admin-sidebar.collapsed .sidebar-collapse-btn {
+			margin-left: 0;
+		}
+
+		.admin-sidebar.collapsed .nav-item {
+			justify-content: center;
+			padding: 0.5rem;
+		}
+
+		.admin-sidebar.collapsed .nav-group {
+			position: relative;
+		}
+
+		/* flyout 内按钮保持左对齐文字布局 */
+		.admin-sidebar.collapsed .flyout-panel .nav-item {
+			justify-content: flex-start;
+			padding: 0.625rem 0.875rem;
+		}
+
+		/* 悬停一级图标 => 右侧滑出二级菜单 */
+		.admin-sidebar.collapsed .nav-group:hover > .flyout-panel,
+		.admin-sidebar.collapsed .nav-group:focus-within > .flyout-panel {
+			display: block;
+			animation: sidebar-flyout-in 0.22s ease;
+		}
+	}
+
+	@keyframes sidebar-flyout-in {
+		from {
+			opacity: 0;
+			transform: translateX(-6px);
+		}
+
+		to {
+			opacity: 1;
+			transform: translateX(0);
+		}
 	}
 
 	.sidebar-backdrop {
@@ -2134,7 +2446,7 @@ function formatDate(dateStr: string | null): string {
 			top: 0;
 			left: 0;
 			bottom: 0;
-			width: 248px;
+			width: 216px;
 			z-index: 120;
 			border: none;
 			border-right: 1px solid var(--line-divider);

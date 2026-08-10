@@ -14,10 +14,20 @@
 /* 暗色模式选择器配置 */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* 全局字体：人间失格奶酪体（后台控制面板与前台统一使用） */
+@font-face {
+  font-family: 'Renjian SSCN';
+  src: url('/assets/fonts/人间失格奶酪体字体 _爱给网_aigei_com.ttf')
+    format('truetype');
+  font-display: swap;
+  font-weight: 400 900;
+  font-style: normal;
+}
+
 /* Tailwind v4 配置 - 从 tailwind.config.cjs 迁移 */
 @theme {
   --font-sans:
-    'Roboto', 'sans-serif', ui-sans-serif, system-ui, sans-serif,
+    'Renjian SSCN', 'Roboto', 'sans-serif', ui-sans-serif, system-ui, sans-serif,
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
