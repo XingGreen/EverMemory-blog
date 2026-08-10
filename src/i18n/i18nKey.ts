@@ -440,6 +440,10 @@ enum I18nKey {
 	adminSettings = "adminSettings",
 	adminSettingsOverview = "adminSettingsOverview",
 	adminLogout = "adminLogout",
+	adminBackHome = "adminBackHome",
+	adminToggleTheme = "adminToggleTheme",
+	adminCollapseSidebar = "adminCollapseSidebar",
+	adminExpandSidebar = "adminExpandSidebar",
 
 	// 登录验证
 	verifyTitle = "verifyTitle",
@@ -575,8 +579,13 @@ enum I18nKey {
 	configNullValue = "configNullValue",
 	configDeleteItem = "configDeleteItem",
 	configModeForm = "configModeForm",
-	configModeJson = "configModeJson",
-	configJsonInvalid = "configJsonInvalid",
+	configModeSource = "configModeSource",
+	configSourceInvalid = "configSourceInvalid",
+	configGroupCore = "configGroupCore",
+	configGroupLayout = "configGroupLayout",
+	configGroupStyle = "configGroupStyle",
+	configGroupComponent = "configGroupComponent",
+	configGroupFeature = "configGroupFeature",
 
 	// 网站配置 - 具体配置项
 	configSite = "configSite",

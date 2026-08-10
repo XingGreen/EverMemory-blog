@@ -10,14 +10,20 @@ let {
 	data,
 	error,
 	isLoading,
+	source = "",
 	onUpdate,
+	onModeChange,
+	onSourceChange,
 }: {
 	item: AdminConfigItem;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	data: Record<string, any> | string | null;
 	error: string;
 	isLoading: boolean;
+	source: string;
 	onUpdate?: (value: string | Record<string, any>) => void;
+	onModeChange?: (mode: "form" | "source") => void;
+	onSourceChange?: (source: string) => void;
 } = $props();
 
 // html 等原始文本配置的本地编辑副本（受控组件，随 data 刷新）
@@ -28,42 +34,28 @@ $effect(() => {
 	}
 });
 
-// json 配置的可视表单 / 纯文本双模式
-let mode: "form" | "json" = $state("form");
-let jsonDraft = $state("");
-let jsonError = $state("");
+// json 配置的可视表单 / 源码（真实文件）双模式
+let mode: "form" | "source" = $state("form");
+let sourceDraft = $state("");
 
-// 进入 JSON 模式：以当前配置对象生成草稿
-function goJson() {
-	mode = "json";
-	jsonDraft = JSON.stringify(data, null, 2);
-	jsonError = "";
+// 进入源码模式：以磁盘文件原文生成草稿
+function goSource() {
+	mode = "source";
+	sourceDraft = source;
+	onModeChange?.("source");
+	onSourceChange?.(sourceDraft);
 }
 
-// 切换回可视化表单：解析 JSON 草稿，校验通过后写回配置并切换，失败则留在 JSON 模式提示错误
+// 切回可视化表单：直接切换（保存时后端会做源码语法校验并回滚）
 function goFormMode() {
-	if (mode === "json") {
-		try {
-			const parsed = JSON.parse(jsonDraft);
-			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-				throw new Error("expect object");
-			}
-			onUpdate?.(parsed as Record<string, any>);
-			jsonError = "";
-		} catch (e) {
-			jsonError = `${i18n(I18nKey.configJsonInvalid)}: ${
-				e instanceof Error ? e.message : String(e)
-			}`;
-			return;
-		}
-	}
 	mode = "form";
+	onModeChange?.("form");
 }
 
-// 外部重新加载配置（data 引用变化）时，若正处于 json 模式则同步刷新草稿
+// 外部重新加载配置（source 变化）时，若正处于源码模式则同步刷新草稿
 $effect(() => {
-	if (mode === "json" && typeof data === "object" && data !== null) {
-		jsonDraft = JSON.stringify(data, null, 2);
+	if (mode === "source" && source) {
+		sourceDraft = source;
 	}
 });
 </script>
@@ -86,7 +78,7 @@ $effect(() => {
 			></textarea>
 		</div>
 	{:else if data && typeof data === "object"}
-		<!-- json 配置：可视化表单 / 纯文本 模式切换 -->
+		<!-- json 配置：可视化表单 / 源码（真实文件）模式切换 -->
 		<div class="mode-tabs">
 			<button
 				type="button"
@@ -98,11 +90,11 @@ $effect(() => {
 			</button>
 			<button
 				type="button"
-				class:active={mode === "json"}
-				onclick={goJson}
+				class:active={mode === "source"}
+				onclick={goSource}
 			>
 				<Icon icon="material-symbols:data-object" class="tab-icon" />
-				{i18n(I18nKey.configModeJson)}
+				{i18n(I18nKey.configModeSource)}
 			</button>
 		</div>
 		{#if mode === "form"}
@@ -113,16 +105,13 @@ $effect(() => {
 			<div class="editor-body">
 				<textarea
 					class="json-editor"
-					value={jsonDraft}
+					value={sourceDraft}
 					spellcheck="false"
 					oninput={(e) => {
-						jsonDraft = e.currentTarget.value;
-						jsonError = "";
+						sourceDraft = e.currentTarget.value;
+						onSourceChange?.(sourceDraft);
 					}}
 				></textarea>
-				{#if jsonError}
-					<div class="editor-error">{jsonError}</div>
-				{/if}
 			</div>
 		{/if}
 	{/if}
@@ -223,17 +212,6 @@ $effect(() => {
 	.json-editor:focus {
 		outline: none;
 		border-color: var(--primary);
-	}
-
-	.editor-error {
-		margin-top: 0.5rem;
-		padding: 0.5rem 0.75rem;
-		background: rgba(239, 68, 68, 0.1);
-		border: 1px solid rgba(239, 68, 68, 0.35);
-		border-radius: var(--radius-md);
-		color: #ef4444;
-		font-size: 0.8125rem;
-		word-break: break-all;
 	}
 
 	.editor-file {

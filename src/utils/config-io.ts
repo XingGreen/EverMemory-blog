@@ -60,6 +60,57 @@ export function readConfigJson(key: string): { data: unknown; file: string } {
 }
 
 /**
+ * 读取配置文件原文（TS 或 html 均直接返回磁盘上的源码）。
+ * 与 readConfigJson 不同：不解析求值，返回值与文件一字不差。
+ */
+export function readConfigSource(key: string): string {
+	const item = loadItem(key);
+	return readRawConfigFile(item);
+}
+
+/**
+ * 源码模式保存：整份文件原样写回本地 + 同步 GitHub。
+ * 写盘后先让 tsx 实际解析校验（TS 类配置），解析失败立即还原旧内容并抛错，
+ * 避免手误破坏配置文件的双导出结构/语法。
+ */
+export async function saveConfigSource(
+	key: string,
+	source: string,
+): Promise<{ file: string; local: boolean; github: boolean }> {
+	const item = loadItem(key);
+	const filePath = path.resolve(projectRoot, item.file);
+	const old = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : "";
+
+	// 先写盘再校验（校验脚本读的是磁盘文件）
+	fs.writeFileSync(filePath, source, "utf8");
+	try {
+		if (item.kind !== "html") {
+			const script = path.resolve(projectRoot, "scripts/dump-config.ts");
+			execFileSync(process.execPath, [TSX_CLI, script, key], {
+				cwd: projectRoot,
+				encoding: "utf8",
+				maxBuffer: 16 * 1024 * 1024,
+				timeout: 60_000,
+			});
+		}
+	} catch (error) {
+		fs.writeFileSync(filePath, old, "utf8");
+		const msg = error instanceof Error ? error.message : String(error);
+		throw new Error(`源码校验未通过（已自动还原旧内容）: ${msg}`);
+	}
+
+	const { saveFileLocally, saveFileToGitHub } = await import("./github-app");
+	const local = saveFileLocally(item.file, source);
+	const github = await saveFileToGitHub(
+		item.file,
+		source,
+		`update config source (${key}) via admin dashboard`,
+	);
+	if (!local && !github) throw new Error("保存失败（本地与 GitHub 均失败）");
+	return { file: item.file, local, github };
+}
+
+/**
  * 重写整个配置文件：
  * 保留目标导出声明之前的所有内容（import、工具函数、注释、其它导出），
  * 仅把目标导出变量替换为序列化后的新值。

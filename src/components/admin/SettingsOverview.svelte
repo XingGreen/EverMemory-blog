@@ -3,8 +3,10 @@ import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import {
+	CONFIG_GROUPS,
 	CONFIG_ITEMS,
 	getConfigDescKey,
+	getConfigGroup,
 	getConfigLabelKey,
 } from "@/utils/admin-settings";
 
@@ -55,38 +57,51 @@ function handleKeydown(event: KeyboardEvent, key: string) {
 			</button>
 		</div>
 	{:else}
-		<ul class="config-list" role="list">
-			{#each filteredItems as item, index (item.key)}
-				<li class="config-item" style="--index: {index}">
-					<button
-						class="config-card"
-						type="button"
-						onclick={() => onNavigate(item.key)}
-						onkeydown={(e) => handleKeydown(e, item.key)}
-						aria-label="{i18n(getConfigLabelKey(item.key))} - {fileLabel(item)}"
-					>
-						<div class="card-body">
-							<div class="card-main">
-								<div class="config-icon">
-									<Icon icon={item.icon} size="xl" />
-								</div>
-								<div class="config-info">
-									<h3>{i18n(getConfigLabelKey(item.key))}</h3>
-									<p>{i18n(getConfigDescKey(item.key))}</p>
-								</div>
-								<div class="config-action">
-									<span class="edit-label">{i18n(I18nKey.postEdit)}</span>
-								</div>
-							</div>
-							<div class="config-file">
-								<Icon icon="material-symbols:article" size="xs" />
-								<code>{fileLabel(item)}</code>
-							</div>
-						</div>
-					</button>
-				</li>
-			{/each}
-		</ul>
+		{#each CONFIG_GROUPS as group}
+			{@const groupItems = filteredItems.filter(
+				(item) => getConfigGroup(item.key) === group.id,
+			)}
+			{#if groupItems.length > 0}
+				<section class="config-group">
+					<h2 class="group-title">
+						<span class="group-name">{i18n(group.labelKey)}</span>
+						<span class="group-count">{groupItems.length}</span>
+					</h2>
+					<ul class="config-list" role="list">
+						{#each groupItems as item, index (item.key)}
+							<li class="config-item" style="--index: {index}">
+								<button
+									class="config-card"
+									type="button"
+									onclick={() => onNavigate(item.key)}
+									onkeydown={(e) => handleKeydown(e, item.key)}
+									aria-label="{i18n(getConfigLabelKey(item.key))} - {fileLabel(item)}"
+								>
+									<div class="card-body">
+										<div class="card-main">
+											<div class="config-icon">
+												<Icon icon={item.icon} size="xl" />
+											</div>
+											<div class="config-info">
+												<h3>{i18n(getConfigLabelKey(item.key))}</h3>
+												<p>{i18n(getConfigDescKey(item.key))}</p>
+											</div>
+											<div class="config-action">
+												<span class="edit-label">{i18n(I18nKey.postEdit)}</span>
+											</div>
+										</div>
+										<div class="config-file">
+											<Icon icon="material-symbols:article" size="xs" />
+											<code>{fileLabel(item)}</code>
+										</div>
+									</div>
+								</button>
+							</li>
+						{/each}
+					</ul>
+				</section>
+			{/if}
+		{/each}
 	{/if}
 </div>
 
@@ -141,6 +156,43 @@ function handleKeydown(event: KeyboardEvent, key: string) {
 
 	.empty-reset:hover {
 		background: color-mix(in srgb, var(--primary) 10%, transparent);
+	}
+
+	/* 配置分组标题 */
+	.config-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.group-title {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.group-title::before {
+		content: "";
+		width: 3px;
+		height: 1.1em;
+		border-radius: 999px;
+		background: var(--primary);
+		flex-shrink: 0;
+	}
+
+	.group-count {
+		margin-left: auto;
+		padding: 0.125rem 0.5rem;
+		font-size: 0.6875rem;
+		font-weight: 500;
+		color: var(--content-meta);
+		background: var(--btn-regular-bg);
+		border-radius: 999px;
+		font-family: var(--font-mono, monospace);
 	}
 
 	.config-list {

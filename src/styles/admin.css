@@ -44,7 +44,8 @@
     0px 2px 4px -1px hsl(270 20% 30% / 0.08);
   --shadow-button: 0px 4px 12px hsl(270 60% 40% / 0.22);
 
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "Renjian SSCN", "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
   --font-serif: "Georgia", serif;
   --font-mono: "JetBrains Mono", "Monaco", "Consolas", monospace;
 
