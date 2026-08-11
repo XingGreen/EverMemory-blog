@@ -104,13 +104,27 @@
 <svelte:window onkeydown={handleKeydown} />
 
 {#if pendingUrl}
-	<div class="elc-overlay" onclick={handleCancel}>
+	<div
+		class="elc-overlay"
+		role="button"
+		tabindex="-1"
+		onclick={(e) => {
+			// 仅点击遮罩背景本身时关闭，点击卡片内部不关闭（替代原先卡片的 stopPropagation）
+			if (e.target === e.currentTarget) handleCancel();
+		}}
+		onkeydown={(e) => {
+			if (e.key === "Enter" || e.key === " ") {
+				e.preventDefault();
+				handleCancel();
+			}
+		}}
+	>
 		<div
 			class="elc-card"
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="elc-title"
-			onclick={(e) => e.stopPropagation()}
+			tabindex="-1"
 		>
 			<!-- 头部：警告图标 + 标题/副标题 -->
 			<div class="elc-header">
