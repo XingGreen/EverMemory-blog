@@ -169,7 +169,7 @@ if (!isConfigured) {
 <MainGridLayout title={i18n(I18nKey.music)} description={i18n(I18nKey.musicDescription)}>
 	<div class="flex w-full rounded-(--radius-large) overflow-hidden relative min-h-32">
 		<div class="card-base z-10 px-4 sm:px-6 md:px-9 py-4 sm:py-6 relative w-full">
-			<div class="mb-6">
+			<div class="border-b border-(--line-divider) pb-6 mb-6">
 				<div class="flex items-center gap-3 mb-3">
 					<div class="h-8 w-8 rounded-lg bg-(--primary) flex items-center justify-center text-white dark:text-black/70">
 						<Icon is:inline name="material-symbols:music-note" class="text-[1.5rem]"></Icon>
@@ -181,13 +181,15 @@ if (!isConfigured) {
 				<p class="text-base text-neutral-600 dark:text-neutral-400 leading-relaxed">
 					{i18n(I18nKey.musicDescription)}
 				</p>
-				<div class="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-500 mt-2">
-					<Icon is:inline name="material-symbols:cloud" class="w-4 h-4" />
-					<span>{MODE === "static" ? i18n(I18nKey.musicStaticMode) : i18n(I18nKey.musicDynamicMode)}</span>
+				<div class="flex items-center gap-2.5 text-xs text-neutral-500 dark:text-neutral-500 mt-3">
+					<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-(--btn-regular-bg) text-(--btn-content)">
+						<Icon is:inline name="material-symbols:cloud" class="w-3.5 h-3.5" />
+						{MODE === "static" ? i18n(I18nKey.musicStaticMode) : i18n(I18nKey.musicDynamicMode)}
+					</span>
 					{MODE === "static" ? (
-						<span class="hidden sm:inline">| {i18n(I18nKey.musicBuildTime)} {buildTime}</span>
+						<span>{i18n(I18nKey.musicBuildTime)} {buildTime}</span>
 					) : (
-						<span id="updateTime" class="hidden sm:inline">| {i18n(I18nKey.musicUpdateTime)} --</span>
+						<span id="updateTime">{i18n(I18nKey.musicUpdateTime)} --</span>
 					)}
 				</div>
 			</div>
@@ -210,7 +212,7 @@ if (!isConfigured) {
 		) : MODE === "dynamic" ? (
 			<>
 				<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-					<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+					<div class="bg-(--bg-secondary) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
 						<div class="flex items-center gap-2 sm:gap-3">
 							<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-(--primary)/10 flex items-center justify-center shrink-0">
 								<Icon is:inline name="material-symbols:music-note" class="text-[1rem] sm:text-[1.25rem] text-(--primary)" />
@@ -221,7 +223,7 @@ if (!isConfigured) {
 							</div>
 						</div>
 					</div>
-					<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+					<div class="bg-(--bg-secondary) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
 						<div class="flex items-center gap-2 sm:gap-3">
 							<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
 								<Icon is:inline name="material-symbols:queue-music-rounded" class="text-[1rem] sm:text-[1.25rem] text-purple-500" />
@@ -232,7 +234,7 @@ if (!isConfigured) {
 							</div>
 						</div>
 					</div>
-					<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+					<div class="bg-(--bg-secondary) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
 						<div class="flex items-center gap-2 sm:gap-3">
 							<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-pink-500/10 flex items-center justify-center shrink-0">
 								<Icon is:inline name="material-symbols:star" class="text-[1rem] sm:text-[1.25rem] text-pink-500" />
@@ -243,7 +245,7 @@ if (!isConfigured) {
 							</div>
 						</div>
 					</div>
-					<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+					<div class="bg-(--bg-secondary) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
 						<div class="flex items-center gap-2 sm:gap-3">
 							<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
 								<Icon is:inline name="material-symbols:database" class="text-[1rem] sm:text-[1.25rem] text-blue-500" />
@@ -261,16 +263,21 @@ if (!isConfigured) {
 					<input type="text" id="searchInput" placeholder={i18n(I18nKey.musicSearchPlaceholder)} class="w-full pl-10 pr-4 py-2.5 bg-(--card-bg) border border-(--line-divider) rounded-xl text-sm focus:outline-none focus:border-(--primary) focus:ring-2 focus:ring-(--primary)/20 transition-all" />
 				</div>
 
-				<div id="filterTabs" class="hidden flex gap-4 mb-4">
-					<button id="tab-all" onclick="setFilter('all')" class="text-sm font-medium px-4 py-2 border-b-2 transition-colors active-tab">
-						{i18n(I18nKey.musicTabAll)}
-					</button>
-					<button id="tab-mine" onclick="setFilter('mine')" class="text-sm font-medium px-4 py-2 border-b-2 transition-colors inactive-tab">
-						{i18n(I18nKey.musicTabMine)}
-					</button>
-					<button id="tab-subscribed" onclick="setFilter('subscribed')" class="text-sm font-medium px-4 py-2 border-b-2 transition-colors inactive-tab">
-						{i18n(I18nKey.musicTabSubscribed)}
-					</button>
+				<div id="filterTabs" class="hidden border-b border-(--line-divider) mb-5">
+					<div class="flex gap-6 overflow-x-auto">
+						<button id="tab-all" onclick="setFilter('all')" class="whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium transition-colors active-tab">
+							{i18n(I18nKey.musicTabAll)}
+							<span id="tab-count-all" class="ml-1.5 bg-(--btn-regular-bg) text-(--btn-content) py-0.5 px-2 rounded-full text-xs">0</span>
+						</button>
+						<button id="tab-mine" onclick="setFilter('mine')" class="whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium transition-colors inactive-tab">
+							{i18n(I18nKey.musicTabMine)}
+							<span id="tab-count-mine" class="ml-1.5 bg-(--btn-regular-bg) text-(--btn-content) py-0.5 px-2 rounded-full text-xs">0</span>
+						</button>
+						<button id="tab-subscribed" onclick="setFilter('subscribed')" class="whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium transition-colors inactive-tab">
+							{i18n(I18nKey.musicTabSubscribed)}
+							<span id="tab-count-subscribed" class="ml-1.5 bg-(--btn-regular-bg) text-(--btn-content) py-0.5 px-2 rounded-full text-xs">0</span>
+						</button>
+					</div>
 				</div>
 
 				<input type="hidden" id="i18n-switched" value={i18n(I18nKey.musicPlaylistSwitched)} />
@@ -298,19 +305,25 @@ if (!isConfigured) {
 				</div>
 
 				<div id="myPlaylistsSection" class="hidden">
-					<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-3 flex items-center gap-2">
-						<Icon is:inline name="material-symbols:folder-open-rounded" class="text-base text-(--primary)" />
-						{i18n(I18nKey.musicMyPlaylists)}
-					</h3>
-					<div id="myPlaylistsContainer" class="space-y-3"></div>
+					<div class="flex items-center justify-between border-b border-(--line-divider) pb-2 mb-4">
+						<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+							<Icon is:inline name="material-symbols:folder-open-rounded" class="text-base text-(--primary)" />
+							{i18n(I18nKey.musicMyPlaylists)}
+						</h3>
+						<span id="my-count-badge" class="bg-(--btn-regular-bg) text-(--btn-content) py-0.5 px-2.5 rounded-full text-xs">0</span>
+					</div>
+					<div id="myPlaylistsContainer" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
 				</div>
 
 				<div id="subscribedPlaylistsSection" class="hidden mt-8">
-					<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-3 flex items-center gap-2">
-						<Icon is:inline name="material-symbols:star" class="text-base text-pink-500" />
-						{i18n(I18nKey.musicSubscribedPlaylists)}
-					</h3>
-					<div id="subscribedPlaylistsContainer" class="space-y-3"></div>
+					<div class="flex items-center justify-between border-b border-(--line-divider) pb-2 mb-4">
+						<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+							<Icon is:inline name="material-symbols:star" class="text-base text-pink-500" />
+							{i18n(I18nKey.musicSubscribedPlaylists)}
+						</h3>
+						<span id="subscribed-count-badge" class="bg-(--btn-regular-bg) text-(--btn-content) py-0.5 px-2.5 rounded-full text-xs">0</span>
+					</div>
+					<div id="subscribedPlaylistsContainer" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
 				</div>
 
 				<div id="playlistModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -371,7 +384,7 @@ if (!isConfigured) {
 				) : (
 					<>
 						<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-							<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+							<div class="bg-(--bg-secondary) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
 								<div class="flex items-center gap-2 sm:gap-3">
 									<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-(--primary)/10 flex items-center justify-center shrink-0">
 										<Icon is:inline name="material-symbols:music-note" class="text-[1rem] sm:text-[1.25rem] text-(--primary)" />
@@ -382,7 +395,7 @@ if (!isConfigured) {
 									</div>
 								</div>
 							</div>
-							<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+							<div class="bg-(--bg-secondary) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
 								<div class="flex items-center gap-2 sm:gap-3">
 									<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
 										<Icon is:inline name="material-symbols:queue-music-rounded" class="text-[1rem] sm:text-[1.25rem] text-purple-500" />
@@ -395,7 +408,7 @@ if (!isConfigured) {
 									</div>
 								</div>
 							</div>
-							<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+							<div class="bg-(--bg-secondary) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
 								<div class="flex items-center gap-2 sm:gap-3">
 									<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-pink-500/10 flex items-center justify-center shrink-0">
 										<Icon is:inline name="material-symbols:star" class="text-[1rem] sm:text-[1.25rem] text-pink-500" />
@@ -406,7 +419,7 @@ if (!isConfigured) {
 									</div>
 								</div>
 							</div>
-							<div class="bg-(--card-bg) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
+							<div class="bg-(--bg-secondary) rounded-xl p-3 sm:p-4 border border-(--line-divider)">
 								<div class="flex items-center gap-2 sm:gap-3">
 									<div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
 										<Icon is:inline name="material-symbols:database" class="text-[1rem] sm:text-[1.25rem] text-blue-500" />
@@ -465,42 +478,44 @@ if (!isConfigured) {
 
 						{staticPlaylists.myPlaylists.length > 0 && (
 							<div>
-								<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-3 flex items-center gap-2">
-									<Icon is:inline name="material-symbols:folder-open-rounded" class="text-base text-(--primary)" />
-									{i18n(I18nKey.musicMyPlaylists)}
-								</h3>
-								<div class="space-y-3">
+								<div class="flex items-center justify-between border-b border-(--line-divider) pb-2 mb-4">
+									<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+										<Icon is:inline name="material-symbols:folder-open-rounded" class="text-base text-(--primary)" />
+										{i18n(I18nKey.musicMyPlaylists)}
+									</h3>
+									<span class="bg-(--btn-regular-bg) text-(--btn-content) py-0.5 px-2.5 rounded-full text-xs">{staticPlaylists.myPlaylists.length}</span>
+								</div>
+								<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
 									{staticPlaylists.myPlaylists.map(playlist => (
-										<div class="playlist-card card-base hover:border-(--primary)/30 hover:shadow-lg hover:shadow-(--primary)/5 transition-all duration-300 group">
-											<div class="flex gap-4 p-4">
-												<button class="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 focus:outline-none group/cover" onclick={`if(window.__fireflyMusic){window.__fireflyMusic.loadPlaylist('netease','playlist','${playlist.id}');showToast(document.getElementById('i18n-switched').value);}else{showToast(document.getElementById('i18n-not-loaded').value);}`}>
-													<img src={(playlist.coverImgUrl || playlist.cover || '') + (playlist.coverImgUrl || playlist.cover ? '?t=' + Date.now() : '')} alt={playlist.name} class="w-full h-full object-cover transition-transform duration-500 group-hover/cover:scale-110" loading="lazy" />
-													<div class="absolute inset-0 bg-black/20 opacity-0 group-hover/cover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-														<svg class="h-12 w-12 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
+										<div class="static-playlist-card group relative overflow-hidden rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-[1.02] cursor-pointer" data-playlist-id={playlist.id} data-playlist-name={playlist.name} data-playlist-cover={playlist.coverImgUrl || playlist.cover || ''} data-playlist-desc={playlist.description || ''} data-playlist-creator={playlist.creator?.nickname || ''} data-playlist-tracks={playlist.trackCount || playlist.tracks?.length || 0} data-playlist-plays={playlist.playCount || 0}>
+											<div class="aspect-square relative overflow-hidden">
+												<img src={(playlist.coverImgUrl || playlist.cover || '') + (playlist.coverImgUrl || playlist.cover ? '?t=' + Date.now() : '')} alt={playlist.name} class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+												<div class="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent pointer-events-none"></div>
+												<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+													<button class="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-white/25 text-white backdrop-blur-sm transition-colors hover:bg-white/40" onclick="if(window.__fireflyMusic){window.__fireflyMusic.loadPlaylist('netease','playlist','{playlist.id}');showToast(document.getElementById('i18n-switched').value);}else{showToast(document.getElementById('i18n-not-loaded').value);}">
+														<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
 															<path d="M8 5v14l11-7z"/>
 														</svg>
-													</div>
-												</button>
-												<div class="flex-1 min-w-0 flex flex-col cursor-pointer static-playlist-card" data-playlist-id={playlist.id} data-playlist-name={playlist.name} data-playlist-cover={playlist.coverImgUrl || playlist.cover || ''} data-playlist-desc={playlist.description || ''} data-playlist-creator={playlist.creator?.nickname || ''} data-playlist-tracks={playlist.trackCount || playlist.tracks?.length || 0} data-playlist-plays={playlist.playCount || 0}>
-													<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 truncate mb-1">{playlist.name}</h3>
-													<p class="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 mb-3 flex-1">{playlist.description || '暂无简介'}</p>
-													<div class="flex items-center gap-4 text-xs text-neutral-400">
-														<span class="flex items-center gap-1">
-															<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
-															</svg>
-															{playlist.trackCount || playlist.tracks?.length || 0}
-														</span>
-														<span class="flex items-center gap-1">
-															<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+													</button>
+												</div>
+												<span class="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
+													<svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+														<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+													</svg>
+													{playlist.trackCount || playlist.tracks?.length || 0}
+												</span>
+												<div class="absolute bottom-0 left-0 right-0 p-3">
+													<h3 class="text-sm font-bold text-white line-clamp-2 drop-shadow-lg">{playlist.name}</h3>
+													<div class="mt-1 flex items-center gap-3 text-xs text-white/70">
+														<span class="inline-flex items-center gap-1">
+															<svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+																<path d="M8 5v14l11-7z"/>
 															</svg>
 															{(playlist.playCount || 0) >= 10000 ? ((playlist.playCount || 0) / 10000).toFixed(1) + '万' : (playlist.playCount || 0)}
 														</span>
-														<span class="flex items-center gap-1">
-															<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+														<span class="inline-flex items-center gap-1 truncate">
+															<svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+																<path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
 															</svg>
 															{playlist.creator?.nickname || '未知'}
 														</span>
@@ -515,42 +530,44 @@ if (!isConfigured) {
 
 						{staticPlaylists.subscribedPlaylists.length > 0 && (
 							<div class="mt-8">
-								<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-3 flex items-center gap-2">
-									<Icon is:inline name="material-symbols:star" class="text-base text-pink-500" />
-									{i18n(I18nKey.musicSubscribedPlaylists)}
-								</h3>
-								<div class="space-y-3">
+								<div class="flex items-center justify-between border-b border-(--line-divider) pb-2 mb-4">
+									<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+										<Icon is:inline name="material-symbols:star" class="text-base text-pink-500" />
+										{i18n(I18nKey.musicSubscribedPlaylists)}
+									</h3>
+									<span class="bg-(--btn-regular-bg) text-(--btn-content) py-0.5 px-2.5 rounded-full text-xs">{staticPlaylists.subscribedPlaylists.length}</span>
+								</div>
+								<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
 									{staticPlaylists.subscribedPlaylists.map(playlist => (
-										<div class="playlist-card card-base hover:border-(--primary)/30 hover:shadow-lg hover:shadow-(--primary)/5 transition-all duration-300 group">
-											<div class="flex gap-4 p-4">
-												<button class="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 focus:outline-none group/cover" onclick={`if(window.__fireflyMusic){window.__fireflyMusic.loadPlaylist('netease','playlist','${playlist.id}');showToast(document.getElementById('i18n-switched').value);}else{showToast(document.getElementById('i18n-not-loaded').value);}`}>
-													<img src={(playlist.coverImgUrl || playlist.cover || '') + (playlist.coverImgUrl || playlist.cover ? '?t=' + Date.now() : '')} alt={playlist.name} class="w-full h-full object-cover transition-transform duration-500 group-hover/cover:scale-110" loading="lazy" />
-													<div class="absolute inset-0 bg-black/20 opacity-0 group-hover/cover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-														<svg class="h-12 w-12 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
+										<div class="static-playlist-card group relative overflow-hidden rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-[1.02] cursor-pointer" data-playlist-id={playlist.id} data-playlist-name={playlist.name} data-playlist-cover={playlist.coverImgUrl || playlist.cover || ''} data-playlist-desc={playlist.description || ''} data-playlist-creator={playlist.creator?.nickname || ''} data-playlist-tracks={playlist.trackCount || playlist.tracks?.length || 0} data-playlist-plays={playlist.playCount || 0}>
+											<div class="aspect-square relative overflow-hidden">
+												<img src={(playlist.coverImgUrl || playlist.cover || '') + (playlist.coverImgUrl || playlist.cover ? '?t=' + Date.now() : '')} alt={playlist.name} class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+												<div class="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent pointer-events-none"></div>
+												<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+													<button class="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-white/25 text-white backdrop-blur-sm transition-colors hover:bg-white/40" onclick="if(window.__fireflyMusic){window.__fireflyMusic.loadPlaylist('netease','playlist','{playlist.id}');showToast(document.getElementById('i18n-switched').value);}else{showToast(document.getElementById('i18n-not-loaded').value);}">
+														<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
 															<path d="M8 5v14l11-7z"/>
 														</svg>
-													</div>
-												</button>
-												<div class="flex-1 min-w-0 flex flex-col cursor-pointer static-playlist-card" data-playlist-id={playlist.id} data-playlist-name={playlist.name} data-playlist-cover={playlist.coverImgUrl || playlist.cover || ''} data-playlist-desc={playlist.description || ''} data-playlist-creator={playlist.creator?.nickname || ''} data-playlist-tracks={playlist.trackCount || playlist.tracks?.length || 0} data-playlist-plays={playlist.playCount || 0}>
-													<h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 truncate mb-1">{playlist.name}</h3>
-													<p class="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 mb-3 flex-1">{playlist.description || '暂无简介'}</p>
-													<div class="flex items-center gap-4 text-xs text-neutral-400">
-														<span class="flex items-center gap-1">
-															<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
-															</svg>
-															{playlist.trackCount || playlist.tracks?.length || 0}
-														</span>
-														<span class="flex items-center gap-1">
-															<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+													</button>
+												</div>
+												<span class="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
+													<svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+														<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+													</svg>
+													{playlist.trackCount || playlist.tracks?.length || 0}
+												</span>
+												<div class="absolute bottom-0 left-0 right-0 p-3">
+													<h3 class="text-sm font-bold text-white line-clamp-2 drop-shadow-lg">{playlist.name}</h3>
+													<div class="mt-1 flex items-center gap-3 text-xs text-white/70">
+														<span class="inline-flex items-center gap-1">
+															<svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+																<path d="M8 5v14l11-7z"/>
 															</svg>
 															{(playlist.playCount || 0) >= 10000 ? ((playlist.playCount || 0) / 10000).toFixed(1) + '万' : (playlist.playCount || 0)}
 														</span>
-														<span class="flex items-center gap-1">
-															<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+														<span class="inline-flex items-center gap-1 truncate">
+															<svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+																<path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
 															</svg>
 															{playlist.creator?.nickname || '未知'}
 														</span>
@@ -735,7 +752,8 @@ if (!isConfigured) {
 		document.addEventListener('DOMContentLoaded', function() {
 			const staticCards = document.querySelectorAll('.static-playlist-card');
 			staticCards.forEach(function(card) {
-				card.addEventListener('click', function() {
+				card.addEventListener('click', function(e) {
+					if (e.target.closest('button')) return;
 					const playlist = {
 						id: card.getAttribute('data-playlist-id'),
 						name: card.getAttribute('data-playlist-name'),
@@ -772,10 +790,70 @@ if (!isConfigured) {
 	const statsPlaylists = document.getElementById('stats-playlists');
 	const statsTracks = document.getElementById('stats-tracks');
 	const statsSubscribed = document.getElementById('stats-subscribed');
+	const myCountBadge = document.getElementById('my-count-badge');
+	const subscribedCountBadge = document.getElementById('subscribed-count-badge');
+	const tabCountAll = document.getElementById('tab-count-all');
+	const tabCountMine = document.getElementById('tab-count-mine');
+	const tabCountSubscribed = document.getElementById('tab-count-subscribed');
 	
 	let allDetailedMyPlaylists = [];
 	let allDetailedSubscribedPlaylists = [];
 	let currentFilter = 'all';
+	const CONCURRENCY = 4; // 歌单详情最大并发数，避免一次性向第三方代理打出大量请求
+	// localStorage 缓存：再次进入页面时秒出渲染，避免每次等待第三方代理回源
+	const CACHE_KEY = 'music-playlist-data-' + userId;
+	const CACHE_TTL = 10 * 60 * 1000; // 缓存有效期 10 分钟
+
+	// 带超时的 fetch：第三方代理挂起时自动中断，快速 fallthrough 到备用 API
+	async function fetchWithTimeout(url, options, timeoutMs = 10000) {
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), timeoutMs);
+		try {
+			const response = await fetch(url, { ...options, signal: controller.signal });
+			clearTimeout(timer);
+			return response;
+		} catch (error) {
+			clearTimeout(timer);
+			throw error;
+		}
+	}
+
+	// 并发受限的 map：替代 Promise.all，控制同时进行的详情请求数量
+	async function mapWithConcurrency(items, concurrency, mapper) {
+		const results = new Array(items.length);
+		let next = 0;
+		async function worker() {
+			while (next < items.length) {
+				const index = next++;
+				results[index] = await mapper(items[index], index);
+			}
+		}
+		await Promise.all(
+			Array.from({ length: Math.min(concurrency, items.length) }, worker)
+		);
+		return results;
+	}
+
+	function readCache(ignoreTtl = false) {
+		try {
+			const raw = localStorage.getItem(CACHE_KEY);
+			if (!raw) return null;
+			const parsed = JSON.parse(raw);
+			if (!parsed || typeof parsed.savedAt !== 'number' || !parsed.data) return null;
+			if (!ignoreTtl && Date.now() - parsed.savedAt > CACHE_TTL) return null;
+			return parsed.data;
+		} catch {
+			return null;
+		}
+	}
+
+	function writeCache(data) {
+		try {
+			localStorage.setItem(CACHE_KEY, JSON.stringify({ savedAt: Date.now(), data }));
+		} catch {
+			// 隐私模式等场景下 localStorage 不可用，忽略即可
+		}
+	}
 
 	function handleSearch(e) {
 		const query = e.target.value.toLowerCase().trim();
@@ -884,7 +962,7 @@ if (!isConfigured) {
 		for (const url of apis) {
 			try {
 				const urlWithCacheBust = url + (url.includes('?') ? '&' : '?') + 't=' + timestamp;
-				const response = await fetch(urlWithCacheBust, {
+				const response = await fetchWithTimeout(urlWithCacheBust, {
 					headers: {
 						"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 						"Referer": "https://music.163.com/",
@@ -935,12 +1013,12 @@ if (!isConfigured) {
 	async function fetchPlaylistDetail(playlistId) {
 		const timestamp = Date.now();
 		const detailApis = [
-			`https://api.i-meto.com/meting/api?server=netease&type=playlist&id=${playlistId}&limit=1000`,
+			`https://api.i-meto.com/meting/api?server=netease&type=playlist&id=${playlistId}&limit=300`,
 		];
 		for (const url of detailApis) {
 			try {
 				const urlWithCacheBust = url + '&t=' + timestamp;
-				const response = await fetch(urlWithCacheBust, {
+				const response = await fetchWithTimeout(urlWithCacheBust, {
 					headers: {
 						"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 						"Referer": "https://music.163.com/",
@@ -997,132 +1075,120 @@ if (!isConfigured) {
 
 	function createPlaylistCard(playlist) {
 		const card = document.createElement('div');
-		card.className = 'playlist-card card-base hover:border-(--primary)/30 hover:shadow-lg hover:shadow-(--primary)/5 transition-all duration-300 group';
-		
+		card.className = 'playlist-card group relative overflow-hidden rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-[1.02] cursor-pointer';
+
 		const coverUrl = playlist.coverImgUrl || playlist.cover || '';
-		const description = playlist.description || '';
 		const creator = playlist.creator?.nickname || '';
 
-		const flexDiv = document.createElement('div');
-		flexDiv.className = 'flex gap-4 p-4';
-		card.appendChild(flexDiv);
+		const wrap = document.createElement('div');
+		wrap.className = 'aspect-square relative overflow-hidden';
+		card.appendChild(wrap);
 
-		const button = document.createElement('button');
-		button.className = 'relative w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 focus:outline-none group/cover';
-		button.setAttribute('data-playlist-id', playlist.id);
-		button.onclick = function(e) {
+		const img = document.createElement('img');
+		img.src = coverUrl ? coverUrl + (coverUrl.includes('?') ? '&' : '?') + 't=' + Date.now() : '';
+		img.alt = playlist.name;
+		img.className = 'w-full h-full object-cover transition-transform duration-500 group-hover:scale-105';
+		img.loading = 'lazy';
+		wrap.appendChild(img);
+
+		const gradient = document.createElement('div');
+		gradient.className = 'absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent pointer-events-none';
+		wrap.appendChild(gradient);
+
+		// 悬停播放按钮
+		const playOverlay = document.createElement('div');
+		playOverlay.className = 'absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none';
+		wrap.appendChild(playOverlay);
+
+		const playBtn = document.createElement('button');
+		playBtn.type = 'button';
+		playBtn.className = 'pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-white/25 text-white backdrop-blur-sm transition-colors hover:bg-white/40';
+		playBtn.onclick = function(e) {
 			e.stopPropagation();
 			if (window.__fireflyMusic) {
-				window.__fireflyMusic.loadPlaylist('netease', 'playlist', this.getAttribute('data-playlist-id'));
+				window.__fireflyMusic.loadPlaylist('netease', 'playlist', playlist.id);
 				showToast(document.getElementById('i18n-switched').value);
 			} else {
 				showToast(document.getElementById('i18n-not-loaded').value);
 			}
 		};
-		flexDiv.appendChild(button);
+		const playIcon = createSVG('play', '');
+		playIcon.setAttribute('width', '20');
+		playIcon.setAttribute('height', '20');
+		playBtn.appendChild(playIcon);
+		playOverlay.appendChild(playBtn);
 
-		const img = document.createElement('img');
-		img.src = coverUrl ? coverUrl + (coverUrl.includes('?') ? '&' : '?') + 't=' + Date.now() : '';
-		img.alt = playlist.name;
-		img.className = 'w-full h-full object-cover transition-transform duration-500 group-hover/cover:scale-110';
-				img.loading = 'lazy';
-				button.appendChild(img);
+		// 曲目数徽标
+		const trackBadge = document.createElement('span');
+		trackBadge.className = 'absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm';
+		const noteIcon = createSVG('music', '');
+		noteIcon.setAttribute('width', '12');
+		noteIcon.setAttribute('height', '12');
+		trackBadge.appendChild(noteIcon);
+		trackBadge.appendChild(document.createTextNode((playlist.trackCount || playlist.tracks?.length || 0) + ' 首'));
+		wrap.appendChild(trackBadge);
 
-				const overlay = document.createElement('div');
-				overlay.className = 'absolute inset-0 bg-black/20 opacity-0 group-hover/cover:opacity-100 transition-opacity duration-300 flex items-center justify-center';
-				button.appendChild(overlay);
+		// 底部信息（渐变上）
+		const info = document.createElement('div');
+		info.className = 'absolute bottom-0 left-0 right-0 p-3';
+		wrap.appendChild(info);
 
-				const playIcon = createSVG('play', 'text-3xl text-white drop-shadow-lg');
-				playIcon.setAttribute('width', '48');
-				playIcon.setAttribute('height', '48');
-				overlay.appendChild(playIcon);
+		const title = document.createElement('h3');
+		title.className = 'text-sm font-bold text-white line-clamp-2 drop-shadow-lg';
+		title.textContent = playlist.name;
+		info.appendChild(title);
 
-				const infoDiv = document.createElement('div');
-				infoDiv.className = 'flex-1 min-w-0 flex flex-col cursor-pointer hover:text-[var(--primary)] transition-colors';
-				infoDiv.onclick = function() {
-					openModal(playlist);
-				};
-				flexDiv.appendChild(infoDiv);
+		const meta = document.createElement('div');
+		meta.className = 'mt-1 flex items-center gap-3 text-xs text-white/70';
+		info.appendChild(meta);
 
-				const title = document.createElement('h3');
-				title.className = 'text-lg font-bold text-neutral-900 dark:text-neutral-100 truncate mb-1';
-				title.textContent = playlist.name;
-				infoDiv.appendChild(title);
+		const playSpan = document.createElement('span');
+		playSpan.className = 'inline-flex items-center gap-1';
+		const playCountIcon = createSVG('play', '');
+		playCountIcon.setAttribute('width', '12');
+		playCountIcon.setAttribute('height', '12');
+		playSpan.appendChild(playCountIcon);
+		playSpan.appendChild(document.createTextNode(formatPlays(playlist.playCount) + ' 次播放'));
+		meta.appendChild(playSpan);
 
-				const desc = document.createElement('p');
-				desc.className = 'text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 mb-3 flex-1';
-				desc.textContent = description || '暂无简介';
-				infoDiv.appendChild(desc);
+		if (creator) {
+			const creatorSpan = document.createElement('span');
+			creatorSpan.className = 'inline-flex items-center gap-1 truncate';
+			const creatorIcon = createSVG('account', '');
+			creatorIcon.setAttribute('width', '12');
+			creatorIcon.setAttribute('height', '12');
+			creatorSpan.appendChild(creatorIcon);
+			creatorSpan.appendChild(document.createTextNode(creator));
+			meta.appendChild(creatorSpan);
+		}
 
-				const metaDiv = document.createElement('div');
-				metaDiv.className = 'flex items-center gap-4 text-xs text-neutral-400';
-				infoDiv.appendChild(metaDiv);
+		card.onclick = function() {
+			openModal(playlist);
+		};
 
-				const trackSpan = document.createElement('span');
-				trackSpan.className = 'flex items-center gap-1';
-				const trackIcon = createSVG('music', 'text-base');
-				trackSpan.appendChild(trackIcon);
-				trackSpan.appendChild(document.createTextNode(playlist.trackCount + ' 首'));
-				metaDiv.appendChild(trackSpan);
+		return card;
+	}
 
-				const playSpan = document.createElement('span');
-				playSpan.className = 'flex items-center gap-1';
-				const playCountIcon = createSVG('play', 'text-base');
-				playSpan.appendChild(playCountIcon);
-				playSpan.appendChild(document.createTextNode(formatPlays(playlist.playCount) + ' 次播放'));
-				metaDiv.appendChild(playSpan);
+			function applyPlaylistData({ my, subscribed }) {
+				allDetailedMyPlaylists = my;
+				allDetailedSubscribedPlaylists = subscribed;
 
-				if (creator) {
-					const creatorSpan = document.createElement('span');
-					creatorSpan.className = 'flex items-center gap-1';
-					const creatorIcon = createSVG('account', 'text-base');
-					creatorSpan.appendChild(creatorIcon);
-					creatorSpan.appendChild(document.createTextNode(creator));
-					metaDiv.appendChild(creatorSpan);
-				}
+				// 同步标签页与分区头的计数徽标
+				if (myCountBadge) myCountBadge.textContent = my.length;
+				if (subscribedCountBadge) subscribedCountBadge.textContent = subscribed.length;
+				if (tabCountAll) tabCountAll.textContent = my.length + subscribed.length;
+				if (tabCountMine) tabCountMine.textContent = my.length;
+				if (tabCountSubscribed) tabCountSubscribed.textContent = subscribed.length;
 
-				return card;
-			}
+				const totalTracks = [...my, ...subscribed].reduce((sum, p) => sum + (p.trackCount || p.tracks?.length || 0), 0);
 
-			fetchPlaylists().then(async (result) => {
-				if (!result) {
-					loadingState.classList.add('hidden');
-					emptyState.classList.remove('hidden');
-					return;
-				}
-
-				const { myPlaylists = [], subscribedPlaylists = [] } = result;
-				const allPlaylists = [...myPlaylists, ...subscribedPlaylists];
-				
-				if (allPlaylists.length === 0) {
-					loadingState.classList.add('hidden');
-					emptyState.classList.remove('hidden');
-					return;
-				}
-
-				allDetailedMyPlaylists = myPlaylists.length > 0 ? await Promise.all(
-					myPlaylists.map(async (playlist) => {
-						const detail = await fetchPlaylistDetail(playlist.id);
-						return detail || playlist;
-					})
-				) : [];
-				
-				allDetailedSubscribedPlaylists = subscribedPlaylists.length > 0 ? await Promise.all(
-					subscribedPlaylists.map(async (playlist) => {
-						const detail = await fetchPlaylistDetail(playlist.id);
-						return detail || playlist;
-					})
-				) : [];
-				
-				const totalTracks = [...allDetailedMyPlaylists, ...allDetailedSubscribedPlaylists].reduce((sum, p) => sum + (p.trackCount || p.tracks?.length || 0), 0);
-				
-				statsPlaylists.textContent = allDetailedMyPlaylists.length;
+				statsPlaylists.textContent = my.length;
 				statsTracks.textContent = totalTracks;
-				statsSubscribed.textContent = allDetailedSubscribedPlaylists.length;
+				statsSubscribed.textContent = subscribed.length;
 
 				loadingState.classList.add('hidden');
-				displayPlaylists(allDetailedMyPlaylists, allDetailedSubscribedPlaylists);
-				
+				displayPlaylists(my, subscribed);
+
 				const updateTimeEl = document.getElementById('updateTime');
 				if (updateTimeEl) {
 					const now = new Date();
@@ -1134,10 +1200,59 @@ if (!isConfigured) {
 					});
 					updateTimeEl.innerHTML = '| 更新时间 ' + timeStr;
 				}
-			}).catch(() => {
-				loadingState.classList.add('hidden');
-				emptyState.classList.remove('hidden');
-			});
+			}
+
+			// 从网络加载并渲染，成功后写入缓存；失败时回退到过期缓存，仍无则显示空态
+			async function loadData() {
+				try {
+					const result = await fetchPlaylists();
+					if (!result) throw new Error('no data');
+
+					const { myPlaylists = [], subscribedPlaylists = [] } = result;
+					const allPlaylists = [...myPlaylists, ...subscribedPlaylists];
+					if (allPlaylists.length === 0) throw new Error('empty');
+
+					// 详情并发受限获取；列表接口的 trackCount 更可靠，详情仅作补充，
+					// 避免 limit 截断后把真实数量覆盖成 300
+					const enrich = async (playlist) => {
+						const detail = await fetchPlaylistDetail(playlist.id);
+						if (!detail) return playlist;
+						return {
+							...playlist,
+							...detail,
+							trackCount: playlist.trackCount || detail.trackCount || detail.tracks?.length || 0,
+						};
+					};
+
+					const [my, subscribed] = await Promise.all([
+						myPlaylists.length > 0
+							? mapWithConcurrency(myPlaylists, CONCURRENCY, enrich)
+							: Promise.resolve([]),
+						subscribedPlaylists.length > 0
+							? mapWithConcurrency(subscribedPlaylists, CONCURRENCY, enrich)
+							: Promise.resolve([]),
+					]);
+
+					writeCache({ my, subscribed });
+					applyPlaylistData({ my, subscribed });
+				} catch (error) {
+					// 网络失败或数据为空时，回退到过期缓存，避免页面白等后一片空白
+					const stale = readCache(true);
+					if (stale) {
+						applyPlaylistData({ my: stale.my, subscribed: stale.subscribed });
+						return;
+					}
+					loadingState.classList.add('hidden');
+					emptyState.classList.remove('hidden');
+				}
+			}
+
+			// 缓存命中：立即用缓存渲染，再后台静默刷新，保证页面快速可见
+			const cached = readCache();
+			if (cached) {
+				applyPlaylistData({ my: cached.my, subscribed: cached.subscribed });
+			}
+			loadData();
 	}
 	
 	if (document.readyState === 'loading') {
