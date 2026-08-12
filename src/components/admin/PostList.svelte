@@ -447,7 +447,7 @@ function formatDate(dateStr: string): string {
 		text-align: center;
 	}
 
-	.state-icon {
+	:global(.state-icon) {
 		font-size: 3rem;
 		color: var(--md-on-surface-variant);
 	}
@@ -582,7 +582,7 @@ function formatDate(dateStr: string): string {
 		gap: 0.375rem;
 	}
 
-	.pin-icon {
+	:global(.pin-icon) {
 		font-size: 0.875rem;
 		color: var(--md-primary);
 		flex-shrink: 0;
