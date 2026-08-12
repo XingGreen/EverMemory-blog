@@ -121,6 +121,7 @@ function handleKeyDown(e: KeyboardEvent) {
 			<!-- 用户名 -->
 			<div class="field" class:focused={usernameFocused} class:filled={username.trim()}>
 				<input
+					id="verify-username"
 					type="text"
 					bind:value={username}
 					onfocus={() => (usernameFocused = true)}
@@ -129,12 +130,13 @@ function handleKeyDown(e: KeyboardEvent) {
 					placeholder=" "
 					autocomplete="username"
 				/>
-				<label>{i18n(I18nKey.verifyUsername)}</label>
+				<label for="verify-username">{i18n(I18nKey.verifyUsername)}</label>
 			</div>
 
 			<!-- 密码 -->
 			<div class="field" class:focused={passwordFocused} class:filled={password.trim()}>
 				<input
+					id="verify-password"
 					type={showPassword ? "text" : "password"}
 					bind:value={password}
 					onfocus={() => (passwordFocused = true)}
@@ -144,7 +146,7 @@ function handleKeyDown(e: KeyboardEvent) {
 					autocomplete="current-password"
 					class="password-input"
 				/>
-				<label>{i18n(I18nKey.verifyPassword)}</label>
+				<label for="verify-password">{i18n(I18nKey.verifyPassword)}</label>
 				<button
 					type="button"
 					class="password-toggle"
