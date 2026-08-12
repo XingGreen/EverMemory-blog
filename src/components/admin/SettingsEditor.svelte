@@ -184,7 +184,7 @@ $effect(() => {
 		font-weight: 600;
 	}
 
-	.tab-icon {
+	:global(.tab-icon) {
 		font-size: 1.125rem;
 	}
 

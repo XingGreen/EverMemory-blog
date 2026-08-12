@@ -264,7 +264,7 @@ function handleKeyDown(e: KeyboardEvent) {
 		border-radius: 50%;
 	}
 
-	.avatar-icon {
+	:global(.avatar-icon) {
 		font-size: 2rem;
 	}
 
