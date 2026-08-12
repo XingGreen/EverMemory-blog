@@ -104,7 +104,7 @@ const description =
         )
       }
 
-      <div class="friends-grid my-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 my-4">
         {
           items.length === 0 && (
             <div class="col-span-full flex flex-col items-center justify-center py-12 text-neutral-400 dark:text-neutral-500">
@@ -206,14 +206,19 @@ const description =
 
         connectedCallback() {
           this.addEventListener("click", this.handleClick);
-          const input = this.querySelector("[data-search]");
-          if (input) {
-            input.addEventListener("input", () => this.applyFilters());
-          }
+          // 使用事件委托绑定 input，避免自定义元素升级时子节点尚未解析而丢失监听
+          this.addEventListener("input", this.handleInput);
         }
 
         disconnectedCallback() {
           this.removeEventListener("click", this.handleClick);
+          this.removeEventListener("input", this.handleInput);
+        }
+
+        handleInput(e) {
+          if (e.target.matches("[data-search]")) {
+            this.applyFilters();
+          }
         }
 
         handleClick(e) {
@@ -286,12 +291,4 @@ const description =
       customElements.define("friend-filter", FriendFilter);
     }
   </script>
-
-  <style is:global>
-    .friends-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 0.75rem;
-    }
-  </style>
 </MainGridLayout>

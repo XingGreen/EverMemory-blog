@@ -192,11 +192,6 @@ function handleKeydown(e: KeyboardEvent) {
 		line-height: 1.6;
 	}
 
-	.warning-text strong {
-		color: #ef4444;
-		word-break: break-all;
-	}
-
 	.confirm-instructions {
 		display: flex;
 		flex-direction: column;

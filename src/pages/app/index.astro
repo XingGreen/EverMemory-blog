@@ -179,14 +179,19 @@ const allPlatforms = [...new Set(apps.flatMap((s) => s.platform || []))].sort();
 
 				connectedCallback() {
 					this.addEventListener("click", this.handleClick);
-					const input = this.querySelector("[data-search]");
-					if (input) {
-						input.addEventListener("input", () => this.applyFilters());
-					}
+					// 使用事件委托绑定 input，避免自定义元素升级时子节点尚未解析而丢失监听
+					this.addEventListener("input", this.handleInput);
 				}
 
 				disconnectedCallback() {
 					this.removeEventListener("click", this.handleClick);
+					this.removeEventListener("input", this.handleInput);
+				}
+
+				handleInput(e) {
+					if (e.target.matches("[data-search]")) {
+						this.applyFilters();
+					}
 				}
 
 				handleClick(e) {
