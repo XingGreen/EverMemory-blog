@@ -739,6 +739,10 @@ export const ja: Translation = {
 	[Key.adminSetupConfirmLabel]: "パスワード確認",
 	[Key.adminSetupSubmit]: "初期化を完了",
 	[Key.adminSetupSubmitting]: "初期化中…",
+	[Key.adminSetupVerifyToken]: "トークンを確認",
+	[Key.adminSetupVerifying]: "確認中…",
+	[Key.adminSetupTokenVerified]: "トークン確認済み。管理者アカウントを設定してください",
+	[Key.adminSetupTokenBack]: "トークンを再入力",
 	[Key.adminSetupPasswordWeak]:
 		"パスワードは 8 文字以上で、ユーザー名と同じにできません",
 	[Key.adminSetupPasswordMismatch]: "パスワードが一致しません",

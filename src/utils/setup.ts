@@ -23,39 +23,70 @@ import {
 } from "./secret-io";
 
 const SETUP_TOKEN_KEY = "ADMIN_SETUP_TOKEN";
+const SETUP_TOKEN_EXPIRES_KEY = "ADMIN_SETUP_TOKEN_EXPIRES";
+const SETUP_TOKEN_TTL_MS = 30 * 60 * 1000;
 
-// 进程内缓存：生成后避免重复写入/覆盖 .env.local
+// 进程内缓存：TTL 内避免重复写入/覆盖 .env.local
 let cachedSetupToken: string | null = null;
+let cachedSetupTokenAt = 0;
 
 /** 是否已完成初始化（ADMIN_PASSWORD 已配置，文件优先实时检测） */
 export function isInitialized(): boolean {
 	return readSecretStates().ADMIN_PASSWORD === true;
 }
 
-/** 读取或（惰性）生成一次性安装令牌；只读环境或无此场景返回 null */
-export function getSetupToken(): string | null {
+/** 读取 .env.local 中存储的令牌与过期时间（无过期时间视为部署者预置，永不过期） */
+function readStoredToken(): { token: string; expiresAt: number | null } | null {
+	const token = readSecretPreview(SETUP_TOKEN_KEY);
+	if (!token) return null;
+	const rawExpires = readSecretPreview(SETUP_TOKEN_EXPIRES_KEY);
+	const parsed = rawExpires ? Date.parse(rawExpires) : Number.NaN;
+	return { token, expiresAt: Number.isNaN(parsed) ? null : parsed };
+}
+
+/**
+ * 读取或（惰性）生成一次性安装令牌；只读环境或无此场景返回 null。
+ *  - TTL 内（进程缓存或 .env.local 中未过期）复用同一令牌，避免多标签页互相失效
+ *  - 过期后自动重新生成并覆盖旧值，旧令牌立即失效（防重放 + 防止悬挂）
+ *  - 部署者预置的令牌（无过期时间字段）视为有意配置，永不过期
+ * @param origin 触发生成时的访问地址（用于终端日志提示）
+ */
+export function getSetupToken(origin?: string): string | null {
 	if (!isEnvFileWritable()) return null;
-	if (cachedSetupToken) return cachedSetupToken;
 
-	// 优先使用部署者预置的令牌（.env.local 文件或环境变量）
-	const fileToken = readSecretPreview(SETUP_TOKEN_KEY);
-	if (fileToken) {
-		cachedSetupToken = fileToken;
-		return fileToken;
-	}
-	const envToken = import.meta.env.ADMIN_SETUP_TOKEN || "";
-	if (envToken) {
-		cachedSetupToken = envToken;
-		return envToken;
+	// 进程内缓存仍在有效期内：直接复用
+	if (
+		cachedSetupToken &&
+		Date.now() - cachedSetupTokenAt < SETUP_TOKEN_TTL_MS
+	) {
+		return cachedSetupToken;
 	}
 
-	// 无预置令牌：生成并写入 .env.local，同时打印到终端日志供部署者获取
+	// .env.local 中存在有效令牌（未过期或无过期时间）：复用
+	const stored = readStoredToken();
+	if (stored) {
+		if (stored.expiresAt === null || stored.expiresAt > Date.now()) {
+			cachedSetupToken = stored.token;
+			cachedSetupTokenAt = Date.now();
+			return stored.token;
+		}
+	}
+
+	// 无有效令牌：生成新令牌并写入（覆盖已过期的旧值）
 	const token = crypto.randomBytes(24).toString("base64url");
-	applyEnvFileUpdates([{ key: SETUP_TOKEN_KEY, value: token }]);
+	const expiresAt = new Date(Date.now() + SETUP_TOKEN_TTL_MS).toISOString();
+	applyEnvFileUpdates([
+		{ key: SETUP_TOKEN_KEY, value: token },
+		{ key: SETUP_TOKEN_EXPIRES_KEY, value: expiresAt },
+	]);
 	cachedSetupToken = token;
+	cachedSetupTokenAt = Date.now();
 	console.log(
-		`[Setup] 首次初始化安装令牌（一次性，用于设置管理员账号）: ${token}`,
+		`[Setup] 控制台首次初始化安装令牌（一次性，${SETUP_TOKEN_TTL_MS / 60000} 分钟内有效）`,
 	);
+	console.log(`  访问地址: ${origin ?? "控制台登录页"}`);
+	console.log(`  安装令牌: ${token}`);
+	console.log("  提示: 初始化完成后令牌自动删除，请勿将令牌交给不可信方");
 	return token;
 }
 
@@ -69,10 +100,14 @@ export function verifySetupToken(input: string): boolean {
 	return crypto.timingSafeEqual(a, b);
 }
 
-/** 焚毁安装令牌：清内存缓存 + 从 .env.local 删除该键 */
+/** 焚毁安装令牌：清内存缓存 + 从 .env.local 删除令牌及其过期时间 */
 export function consumeSetupToken(): void {
 	cachedSetupToken = null;
-	applyEnvFileUpdates([{ key: SETUP_TOKEN_KEY, delete: true }]);
+	cachedSetupTokenAt = 0;
+	applyEnvFileUpdates([
+		{ key: SETUP_TOKEN_KEY, delete: true },
+		{ key: SETUP_TOKEN_EXPIRES_KEY, delete: true },
+	]);
 }
 
 /**

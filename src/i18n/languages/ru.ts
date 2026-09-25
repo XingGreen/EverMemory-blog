@@ -751,6 +751,10 @@ export const ru: Translation = {
 	[Key.adminSetupConfirmLabel]: "Подтверждение пароля",
 	[Key.adminSetupSubmit]: "Завершить настройку",
 	[Key.adminSetupSubmitting]: "Настройка…",
+	[Key.adminSetupVerifyToken]: "Проверить токен",
+	[Key.adminSetupVerifying]: "Проверка…",
+	[Key.adminSetupTokenVerified]: "Токен подтверждён. Настройте учётную запись администратора",
+	[Key.adminSetupTokenBack]: "Ввести токен заново",
 	[Key.adminSetupPasswordWeak]:
 		"Пароль должен быть не короче 8 символов и отличаться от имени пользователя.",
 	[Key.adminSetupPasswordMismatch]: "Пароли не совпадают.",
