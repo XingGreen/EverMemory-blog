@@ -60,8 +60,13 @@ function closeTour() {
 }
 
 function goAction(action: TourAction) {
-	closeTour();
+	// 导航到对应页面，但引导不结束：推进到下一步继续引导
 	onNavigate(action);
+	if (current >= total - 1) {
+		closeTour();
+	} else {
+		current++;
+	}
 }
 </script>
 
