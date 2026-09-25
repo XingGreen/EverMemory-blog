@@ -1,4 +1,12 @@
 import crypto from "node:crypto";
+import {
+	applyEnvFileUpdates,
+	hashAdminPassword,
+	isEnvFileWritable,
+	isScryptHash,
+	readSecretPreview,
+	verifyPasswordHash,
+} from "./secret-io";
 
 const JWT_EXPIRY_HOURS = 1;
 
@@ -6,7 +14,22 @@ const JWT_EXPIRY_HOURS = 1;
 export const SESSION_MAX_AGE = JWT_EXPIRY_HOURS * 3600; // 1 小时（未勾选"记住我"）
 export const REMEMBER_MAX_AGE = 7 * 24 * 3600; // 7 天（勾选"记住我"）
 
+/** 会话撤销版本号所存储的环境变量键；修改认证信息时 +1，旧会话立即失效 */
+const TOKEN_VER_KEY = "ADMIN_TOKEN_VER";
+
 let cachedSecret: string | null = null;
+
+/**
+ * 当前会话令牌版本号：读取 .env.local 的 ADMIN_TOKEN_VER（文件优先实时，
+ * 保证改密/改钥后同进程内旧令牌立即失效）；未配置视为 0。
+ */
+function getTokenVersion(): string {
+	try {
+		return readSecretPreview(TOKEN_VER_KEY) || "0";
+	} catch {
+		return "0";
+	}
+}
 
 /**
  * 获取 JWT 签名密钥
@@ -41,6 +64,8 @@ function getJwtSecret(): string {
 interface JwtPayload {
 	sub: string;
 	role: string;
+	/** 会话撤销版本号：与 .env.local 的 ADMIN_TOKEN_VER 一致才有效 */
+	ver: string;
 	iat: number;
 	exp: number;
 }
@@ -49,6 +74,7 @@ export function generateSessionToken(maxAgeSeconds = SESSION_MAX_AGE): string {
 	const payload: JwtPayload = {
 		sub: crypto.randomUUID(),
 		role: "admin",
+		ver: getTokenVersion(),
 		iat: Math.floor(Date.now() / 1000),
 		exp: Math.floor(Date.now() / 1000) + maxAgeSeconds,
 	};
@@ -114,6 +140,11 @@ export function verifySessionToken(token: string): boolean {
 			return false;
 		}
 
+		// 撤销广播：令牌签发时的版本号必须与当前一致（改密/改钥后旧会话立即失效）
+		if (payload.ver !== getTokenVersion()) {
+			return false;
+		}
+
 		return true;
 	} catch {
 		return false;
@@ -174,36 +205,38 @@ export function clearAuthCookie(headers: Headers): void {
 
 /**
  * 验证管理员密码
- * 环境变量 ADMIN_PASSWORD 存储 SHA256(password) 的 hex 字符串
- * 使用 timingSafeEqual 防止时序攻击
+ * 环境变量 ADMIN_PASSWORD 存储 scrypt 哈希（scrypt$N$salt$hash）；
+ * 兼容旧版 SHA256 hex。使用 timingSafeEqual 防止时序攻击。
+ * 旧版 SHA256 验证通过后会自动迁移为 scrypt 并写回 .env.local。
  */
 export function verifyAdminPassword(password: string): boolean {
 	try {
 		if (!password) return false;
 
-		const storedHash = import.meta.env.ADMIN_PASSWORD;
+		const storedHash = readSecretPreview("ADMIN_PASSWORD");
 		if (!storedHash) {
 			console.error("[Auth] ADMIN_PASSWORD 环境变量未配置，无法验证管理员密码");
 			return false;
 		}
 
-		const inputHash = crypto
-			.createHash("sha256")
-			.update(password)
-			.digest("hex");
+		const ok = verifyPasswordHash(password, storedHash);
+		if (!ok) return false;
 
-		if (inputHash.length !== storedHash.length) {
-			return false;
+		// 自动迁移：旧 SHA256 哈希 → scrypt（下次验证起使用新格式）
+		if (!isScryptHash(storedHash) && isEnvFileWritable()) {
+			try {
+				applyEnvFileUpdates([
+					{ key: "ADMIN_PASSWORD", value: hashAdminPassword(password) },
+				]);
+				console.log(
+					"[Auth] ADMIN_PASSWORD 已验证并自动迁移为 scrypt 哈希（重启后完全生效）",
+				);
+			} catch {
+				// 文件系统不可写：保持旧格式，不影响本次验证
+			}
 		}
 
-		const inputBuf = Buffer.from(inputHash, "hex");
-		const storedBuf = Buffer.from(storedHash, "hex");
-
-		if (inputBuf.length !== storedBuf.length) {
-			return false;
-		}
-
-		return crypto.timingSafeEqual(inputBuf, storedBuf);
+		return true;
 	} catch (error) {
 		console.error(
 			"[Auth] 管理员密码验证异常:",

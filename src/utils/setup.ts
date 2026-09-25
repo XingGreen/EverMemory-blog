@@ -121,6 +121,7 @@ export function finishSetup(username: string, password: string): void {
 	const updates: { key: string; value: string }[] = [
 		{ key: "ADMIN_USERNAME", value: name },
 		{ key: "ADMIN_PASSWORD", value: hashAdminPassword(password) },
+		{ key: "ADMIN_TOKEN_VER", value: "1" },
 	];
 	if (!readSecretStates().ADMIN_JWT_SECRET) {
 		updates.push({ key: "ADMIN_JWT_SECRET", value: generateJwtSecret() });

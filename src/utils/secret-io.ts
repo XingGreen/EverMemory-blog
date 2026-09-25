@@ -175,9 +175,56 @@ export function generateJwtSecret(): string {
 	return crypto.randomBytes(32).toString("hex");
 }
 
-/** 生成管理员密码的 SHA256 哈希（64 位 hex） */
+/** scrypt 成本参数（迭代次数）；显式写入哈希格式便于未来升级 */
+const SCRYPT_N = 16384;
+
+/**
+ * 生成管理员密码哈希：scrypt 加盐哈希，格式 `scrypt$N$salt$hash`
+ * （salt 16 字节随机，hash 64 字节；均 base64）。
+ * 取代早先的裸 SHA256：防彩虹表/高速破解。
+ */
 export function hashAdminPassword(plain: string): string {
-	return crypto.createHash("sha256").update(plain, "utf8").digest("hex");
+	const salt = crypto.randomBytes(16);
+	const hash = crypto.scryptSync(plain, salt, 64, { N: SCRYPT_N });
+	return `scrypt$${SCRYPT_N}$${salt.toString("base64")}$${hash.toString("base64")}`;
+}
+
+/** 是否为 scrypt 哈希格式（否则视为旧版 SHA256 hex） */
+export function isScryptHash(stored: string): boolean {
+	return typeof stored === "string" && stored.startsWith("scrypt$");
+}
+
+/**
+ * 校验明文密码是否匹配存储哈希（scrypt 或旧版 SHA256 hex）。
+ * 使用 timingSafeEqual 防止时序攻击；格式/参数异常一律返回 false。
+ */
+export function verifyPasswordHash(plain: string, stored: string): boolean {
+	try {
+		if (!plain || !stored) return false;
+		if (isScryptHash(stored)) {
+			const parts = stored.split("$");
+			// scrypt$N$salt$hash 或兼容省略 N 的 scrypt$salt$hash
+			const hasN = parts.length === 4 && /^\d+$/.test(parts[1]);
+			const salt = Buffer.from(hasN ? parts[2] : parts[1] ?? "", "base64");
+			const hash = Buffer.from(hasN ? parts[3] : parts[2] ?? "", "base64");
+			const N = hasN ? Number(parts[1]) : SCRYPT_N;
+			if (salt.length === 0 || hash.length === 0) return false;
+			const computed = crypto.scryptSync(plain, salt, 64, { N });
+			if (computed.length !== hash.length) return false;
+			return crypto.timingSafeEqual(computed, hash);
+		}
+		// 旧格式：SHA256 的 hex 串
+		const inputHash = crypto
+			.createHash("sha256")
+			.update(plain, "utf8")
+			.digest("hex");
+		const inputBuf = Buffer.from(inputHash, "hex");
+		const storedBuf = Buffer.from(stored, "hex");
+		if (inputBuf.length !== storedBuf.length) return false;
+		return crypto.timingSafeEqual(inputBuf, storedBuf);
+	} catch {
+		return false;
+	}
 }
 
 /** 读取全部密钥的真实值（仅服务端导出场景使用；敏感值请谨慎处理） */
@@ -217,15 +264,24 @@ export function verifyCurrentPassword(plain: string): boolean {
 		if (!plain) return false;
 		const storedHash = readEnvValue("ADMIN_PASSWORD");
 		if (!storedHash) return false;
-		const inputHash = crypto
-			.createHash("sha256")
-			.update(plain, "utf8")
-			.digest("hex");
-		const inputBuf = Buffer.from(inputHash, "hex");
-		const storedBuf = Buffer.from(storedHash, "hex");
-		if (inputBuf.length !== storedBuf.length) return false;
-		return crypto.timingSafeEqual(inputBuf, storedBuf);
+		return verifyPasswordHash(plain, storedHash);
 	} catch {
 		return false;
+	}
+}
+
+/**
+ * 会话令牌版本号 +1 并写回 .env.local（ADMIN_TOKEN_VER）。
+ * 用于"修改认证信息后使所有旧会话立即失效"的撤销广播。
+ * 返回新版本号；无法读取/写入时返回 -1（调用方应忽略）。
+ */
+export function incrementTokenVersion(): number {
+	try {
+		const current = Number(readEnvValue("ADMIN_TOKEN_VER")) || 0;
+		const next = current + 1;
+		applyEnvFileUpdates([{ key: "ADMIN_TOKEN_VER", value: String(next) }]);
+		return next;
+	} catch {
+		return -1;
 	}
 }
