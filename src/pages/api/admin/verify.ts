@@ -1,4 +1,12 @@
 import {
+	checkLockout,
+	clearFailures,
+	failureCount,
+	getClientIp,
+	registerFailure,
+	writeAuditLog,
+} from "@/utils/login-guard";
+import {
 	clearAuthCookie,
 	generateSessionToken,
 	REMEMBER_MAX_AGE,
@@ -15,6 +23,7 @@ export async function POST({ request }) {
 		const text = await request.text();
 		const body = JSON.parse(text);
 		const { username, password, rememberMe } = body;
+		const clientKey = getClientIp(request);
 
 		// 参数完整性检查
 		const missing: string[] = [];
@@ -32,6 +41,24 @@ export async function POST({ request }) {
 			);
 		}
 
+		// 暴力破解防护：连续失败达到阈值后锁定该客户端
+		const { locked, retryAfterSeconds } = checkLockout(clientKey);
+		if (locked) {
+			writeAuditLog({
+				event: "login_locked",
+				client: clientKey,
+				username,
+				detail: `locked for ${retryAfterSeconds}s`,
+			});
+			return new Response(
+				JSON.stringify({
+					success: false,
+					message: `尝试过于频繁，请 ${retryAfterSeconds} 秒后重试`,
+				}),
+				{ status: 429, headers: { "Content-Type": "application/json" } },
+			);
+		}
+
 		console.log(
 			`[Admin Verify] Username: ${username}, password length: ${password.length}`,
 		);
@@ -46,6 +73,12 @@ export async function POST({ request }) {
 		);
 
 		if (usernameOk && passwordOk) {
+			clearFailures(clientKey);
+			writeAuditLog({
+				event: "login_success",
+				client: clientKey,
+				username,
+			});
 			// 勾选"记住我"：签发 7 天令牌并写入 7 天 Cookie；否则保持 1 小时会话
 			const maxAge = rememberMe ? REMEMBER_MAX_AGE : SESSION_MAX_AGE;
 			const token = generateSessionToken(maxAge);
@@ -61,7 +94,16 @@ export async function POST({ request }) {
 			);
 		}
 
-		// 至少一项失败，返回具体提示（不泄露哪一项失败）
+		// 至少一项失败：统一提示（不泄露哪一项失败），并累计锁定
+		const lockInfo = registerFailure(clientKey);
+		writeAuditLog({
+			event: "login_failure",
+			client: clientKey,
+			username,
+			detail: lockInfo.locked
+				? `locked for ${lockInfo.retryAfterSeconds}s`
+				: `failures=${failureCount(clientKey)}`,
+		});
 		const failHeaders = new Headers({ "Content-Type": "application/json" });
 		clearAuthCookie(failHeaders);
 
