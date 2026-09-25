@@ -620,11 +620,14 @@ export const en: Translation = {
 	[Key.configFooterDesc]: "Configurations such as footer display toggles",
 	[Key.configSidebarDesc]: "Sidebar layout, widget toggles and sorting order",
 	[Key.configFooterHtml]: "Footer Custom HTML",
-	[Key.configFooterHtmlDesc]: "Custom HTML injected at the bottom of the footer (ICP number, trust badges, etc.)",
+	[Key.configFooterHtmlDesc]:
+		"Custom HTML injected at the bottom of the footer (ICP number, trust badges, etc.)",
 	[Key.configMusic]: "Music",
-	[Key.configMusicDesc]: "Music player configuration (NetEase Cloud Music, etc.)",
+	[Key.configMusicDesc]:
+		"Music player configuration (NetEase Cloud Music, etc.)",
 	[Key.configFriends]: "Friends",
-	[Key.configFriendsDesc]: "Friends page configuration and link list (content is defined in src/content/spec/friends.md)",
+	[Key.configFriendsDesc]:
+		"Friends page configuration and link list (content is defined in src/content/spec/friends.md)",
 	[Key.configComment]: "Comments",
 	[Key.configCommentDesc]: "Comment system type and provider configuration",
 	[Key.configFont]: "Fonts",
@@ -634,13 +637,16 @@ export const en: Translation = {
 	[Key.configAnnouncement]: "Announcement",
 	[Key.configAnnouncementDesc]: "Announcement title and content",
 	[Key.configAnalytics]: "Analytics",
-	[Key.configAnalyticsDesc]: "Site analytics (Google Analytics, Clarity, Umami, etc.)",
+	[Key.configAnalyticsDesc]:
+		"Site analytics (Google Analytics, Clarity, Umami, etc.)",
 	[Key.configGallery]: "Gallery",
 	[Key.configGalleryDesc]: "Album list and gallery images",
 	[Key.configApp]: "Apps",
-	[Key.configAppDesc]: "App recommendations page and the list of recommended apps",
+	[Key.configAppDesc]:
+		"App recommendations page and the list of recommended apps",
 	[Key.configSponsor]: "Sponsor",
-	[Key.configSponsorDesc]: "Sponsor page config (title, description and sponsor links)",
+	[Key.configSponsorDesc]:
+		"Sponsor page config (title, description and sponsor links)",
 	[Key.configLicense]: "License",
 	[Key.configLicenseDesc]: "Article license name, link and display toggle",
 	[Key.configCoverImage]: "Cover Image",
@@ -656,6 +662,40 @@ export const en: Translation = {
 	[Key.configPioSpineDesc]: "Spine mascot toggle and model config",
 	[Key.configPioLive2d]: "Mascot (Live2D)",
 	[Key.configPioLive2dDesc]: "Live2D mascot toggle and model config",
+
+	// Secret configuration
+	[Key.adminSecrets]: "Secrets",
+	[Key.adminSecretsDesc]:
+		"Manage environment secrets: GitHub App credentials and admin auth keys",
+	[Key.secretsGroupGithub]: "GitHub App Credentials",
+	[Key.secretsGroupAuth]: "Admin Authentication",
+	[Key.secretsConfigured]: "Configured",
+	[Key.secretsNotConfigured]: "Not configured",
+	[Key.secretsPendingDelete]: "Pending removal",
+	[Key.secretsSave]: "Save Secrets",
+	[Key.secretsSaving]: "Saving…",
+	[Key.secretsReload]: "Refresh",
+	[Key.secretsWritableHint]:
+		"Changes are written to {file} in the project root. Restart the service to apply.",
+	[Key.secretsReadonlyHint]:
+		"Read-only in production. Configure these in your deploy platform's environment variables (e.g. Vercel).",
+	[Key.secretsPlaceholderConfigured]:
+		"Configured; leave empty to keep the current value, enter a new one to overwrite",
+	[Key.secretsPlaceholderEmpty]: "Not configured; enter a value",
+	[Key.secretsClear]: "Clear",
+	[Key.secretsShow]: "Show",
+	[Key.secretsHide]: "Hide",
+	[Key.secretsGenerateJwt]: "Generate JWT Secret",
+	[Key.secretsGenerateJwtDone]:
+		"Generated a 64-char random key and filled it in. Click Save to apply.",
+	[Key.secretsGenerator]: "Generator tools",
+	[Key.secretsGeneratorDesc]:
+		"Don't want to craft keys by hand? Generate random values below and fill them into the form automatically.",
+	[Key.secretsPasswordInput]: "Plaintext password",
+	[Key.secretsPasswordPlaceholder]: "Enter the plaintext password to hash…",
+	[Key.secretsGenerateHash]: "Generate Password Hash",
+	[Key.secretsGenerateHashDone]:
+		"Hash generated and filled in. Click Save to apply.",
 
 	// ── Admin Dashboard Homepage ──
 	[Key.adminHome]: "Home",
@@ -689,7 +729,8 @@ export const en: Translation = {
 	[Key.externalLinkTitle]: "Leaving the site",
 	[Key.externalLinkSubtitle]: "Please confirm the destination address is safe",
 	[Key.externalLinkAddressLabel]: "Destination",
-	[Key.externalLinkWarning]: "Please check the destination address carefully and make sure it is a website you trust. If you are not sure, cancel the redirect.",
+	[Key.externalLinkWarning]:
+		"Please check the destination address carefully and make sure it is a website you trust. If you are not sure, cancel the redirect.",
 	[Key.externalLinkCancel]: "Cancel",
 	[Key.externalLinkConfirm]: "Continue",
 };

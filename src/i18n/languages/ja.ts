@@ -616,11 +616,14 @@ export const ja: Translation = {
 	[Key.configSidebarDesc]:
 		"サイドバーのレイアウト、ウィジェットのオン/オフと並び順",
 	[Key.configFooterHtml]: "フッターカスタムHTML",
-	[Key.configFooterHtmlDesc]: "フッター下部に挿入するカスタムHTML（ICP番号、認証バッジなど）",
+	[Key.configFooterHtmlDesc]:
+		"フッター下部に挿入するカスタムHTML（ICP番号、認証バッジなど）",
 	[Key.configMusic]: "音楽",
-	[Key.configMusicDesc]: "ミュージックプレイヤー設定（NetEase クラウドミュージックなど）",
+	[Key.configMusicDesc]:
+		"ミュージックプレイヤー設定（NetEase クラウドミュージックなど）",
 	[Key.configFriends]: "フレンド",
-	[Key.configFriendsDesc]: "フレンドページ設定とリンクリスト（内容は src/content/spec/friends.md を参照）",
+	[Key.configFriendsDesc]:
+		"フレンドページ設定とリンクリスト（内容は src/content/spec/friends.md を参照）",
 	[Key.configComment]: "コメント",
 	[Key.configCommentDesc]: "コメントシステムの種類と各プロバイダー設定",
 	[Key.configFont]: "フォント",
@@ -630,7 +633,8 @@ export const ja: Translation = {
 	[Key.configAnnouncement]: "お知らせ",
 	[Key.configAnnouncementDesc]: "お知らせのタイトルと内容",
 	[Key.configAnalytics]: "アナリティクス",
-	[Key.configAnalyticsDesc]: "サイト分析（Google Analytics / Clarity / Umami など）",
+	[Key.configAnalyticsDesc]:
+		"サイト分析（Google Analytics / Clarity / Umami など）",
 	[Key.configGallery]: "ギャラリー",
 	[Key.configGalleryDesc]: "アルバムリストとギャラリー画像の設定",
 	[Key.configApp]: "ソフトウェア",
@@ -652,6 +656,40 @@ export const ja: Translation = {
 	[Key.configPioSpineDesc]: "Spine マスコットのスイッチとモデル設定",
 	[Key.configPioLive2d]: "マスコット（Live2D）",
 	[Key.configPioLive2dDesc]: "Live2D マスコットのスイッチとモデル設定",
+
+	// シークレット設定
+	[Key.adminSecrets]: "シークレット設定",
+	[Key.adminSecretsDesc]:
+		"GitHub App 認証情報と管理者認証キーなどの環境変数を管理",
+	[Key.secretsGroupGithub]: "GitHub App 認証情報",
+	[Key.secretsGroupAuth]: "管理者認証",
+	[Key.secretsConfigured]: "設定済み",
+	[Key.secretsNotConfigured]: "未設定",
+	[Key.secretsPendingDelete]: "削除予定",
+	[Key.secretsSave]: "シークレットを保存",
+	[Key.secretsSaving]: "保存中…",
+	[Key.secretsReload]: "更新",
+	[Key.secretsWritableHint]:
+		"変更はプロジェクトルートの {file} に書き込まれます。再起動後に有効になります",
+	[Key.secretsReadonlyHint]:
+		"本番ビルドではファイルシステムは読み取り専用です。デプロイプラットフォーム（Vercel など）の環境変数で設定してください",
+	[Key.secretsPlaceholderConfigured]:
+		"設定済み；空欄のまま変更せず、新しく入力すると上書き",
+	[Key.secretsPlaceholderEmpty]: "未設定；ここに値を入力",
+	[Key.secretsClear]: "この項目をクリア",
+	[Key.secretsShow]: "表示",
+	[Key.secretsHide]: "非表示",
+	[Key.secretsGenerateJwt]: "JWT キーを生成",
+	[Key.secretsGenerateJwtDone]:
+		"64 桁のランダムキーを生成して入力しました。保存をクリックして適用",
+	[Key.secretsGenerator]: "生成ツール",
+	[Key.secretsGeneratorDesc]:
+		"手動でキーを生成したくない場合は、以下のツールでランダム値を生成してフォームに自動入力できます",
+	[Key.secretsPasswordInput]: "平文パスワード",
+	[Key.secretsPasswordPlaceholder]: "ハッシュ化する平文パスワードを入力…",
+	[Key.secretsGenerateHash]: "パスワードハッシュを生成",
+	[Key.secretsGenerateHashDone]:
+		"ハッシュを生成して入力しました。保存をクリックして適用",
 
 	// 控制面板仪表盘
 	[Key.adminHome]: "ホーム",
@@ -685,7 +723,8 @@ export const ja: Translation = {
 	[Key.externalLinkTitle]: "外部サイトへ移動します",
 	[Key.externalLinkSubtitle]: "移動先アドレスが安全かご確認ください",
 	[Key.externalLinkAddressLabel]: "移動先アドレス",
-	[Key.externalLinkWarning]: "移動先アドレスをよく確認し、信頼できるサイトであることをご確認ください。不明な場合は移動をキャンセルしてください。",
+	[Key.externalLinkWarning]:
+		"移動先アドレスをよく確認し、信頼できるサイトであることをご確認ください。不明な場合は移動をキャンセルしてください。",
 	[Key.externalLinkCancel]: "キャンセル",
 	[Key.externalLinkConfirm]: "移動する",
 };

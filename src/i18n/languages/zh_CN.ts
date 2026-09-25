@@ -603,7 +603,8 @@ export const zh_CN: Translation = {
 	[Key.configMusic]: "音乐",
 	[Key.configMusicDesc]: "音乐播放器配置（网易云音乐等）",
 	[Key.configFriends]: "友链",
-	[Key.configFriendsDesc]: "友链页面配置与友情链接列表（内容编辑见 src/content/spec/friends.md）",
+	[Key.configFriendsDesc]:
+		"友链页面配置与友情链接列表（内容编辑见 src/content/spec/friends.md）",
 	[Key.configComment]: "评论",
 	[Key.configCommentDesc]: "评论系统类型与各提供方配置",
 	[Key.configFont]: "字体",
@@ -629,11 +630,41 @@ export const zh_CN: Translation = {
 	[Key.configPlantuml]: "PlantUML",
 	[Key.configPlantumlDesc]: "PlantUML 图表渲染与明暗主题配置",
 	[Key.configCodeTheme]: "代码主题",
-	[Key.configCodeThemeDesc]: "expressive-code 代码高亮主题配置（修改后需重启服务）",
+	[Key.configCodeThemeDesc]:
+		"expressive-code 代码高亮主题配置（修改后需重启服务）",
 	[Key.configPioSpine]: "看板娘（Spine）",
 	[Key.configPioSpineDesc]: "Spine 看板娘开关与模型配置",
 	[Key.configPioLive2d]: "看板娘（Live2D）",
 	[Key.configPioLive2dDesc]: "Live2D 看板娘开关与模型配置",
+
+	// 密钥配置
+	[Key.adminSecrets]: "密钥配置",
+	[Key.adminSecretsDesc]: "管理 GitHub App 凭据与管理员认证密钥等环境变量",
+	[Key.secretsGroupGithub]: "GitHub App 凭据",
+	[Key.secretsGroupAuth]: "管理员认证",
+	[Key.secretsConfigured]: "已配置",
+	[Key.secretsNotConfigured]: "未配置",
+	[Key.secretsPendingDelete]: "待清除",
+	[Key.secretsSave]: "保存密钥",
+	[Key.secretsSaving]: "保存中…",
+	[Key.secretsReload]: "刷新",
+	[Key.secretsWritableHint]: "修改将写入项目根目录的 {file}，重启服务后生效",
+	[Key.secretsReadonlyHint]:
+		"当前为生产构建，文件系统只读；请到部署平台（如 Vercel）的环境变量设置中配置",
+	[Key.secretsPlaceholderConfigured]: "已配置；留空保持不变，输入新值将覆盖",
+	[Key.secretsPlaceholderEmpty]: "未配置；在此输入值",
+	[Key.secretsClear]: "清除该项",
+	[Key.secretsShow]: "显示",
+	[Key.secretsHide]: "隐藏",
+	[Key.secretsGenerateJwt]: "生成 JWT 密钥",
+	[Key.secretsGenerateJwtDone]: "已生成 64 位随机密钥并填入，点击保存生效",
+	[Key.secretsGenerator]: "生成工具",
+	[Key.secretsGeneratorDesc]:
+		"不想手动生成密钥？使用下面的工具一键生成随机值并自动填入表单",
+	[Key.secretsPasswordInput]: "明文密码",
+	[Key.secretsPasswordPlaceholder]: "输入要计算哈希的明文密码…",
+	[Key.secretsGenerateHash]: "生成密码哈希",
+	[Key.secretsGenerateHashDone]: "哈希已生成并填入，点击保存生效",
 
 	// 控制面板（仪表盘）
 	[Key.adminHome]: "首页",
@@ -667,7 +698,8 @@ export const zh_CN: Translation = {
 	[Key.externalLinkTitle]: "即将跳转",
 	[Key.externalLinkSubtitle]: "请确认目标地址是否安全",
 	[Key.externalLinkAddressLabel]: "目标地址",
-	[Key.externalLinkWarning]: "请仔细检查目标地址，确保是您信任的网站。如不确定，请取消跳转。",
+	[Key.externalLinkWarning]:
+		"请仔细检查目标地址，确保是您信任的网站。如不确定，请取消跳转。",
 	[Key.externalLinkCancel]: "取消",
 	[Key.externalLinkConfirm]: "确认跳转",
 };

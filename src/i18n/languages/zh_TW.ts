@@ -601,11 +601,13 @@ export const zh_TW: Translation = {
 	[Key.configFooterDesc]: "頁尾顯示開關等設定",
 	[Key.configSidebarDesc]: "側邊欄佈局、小工具開關與排列順序",
 	[Key.configFooterHtml]: "頁尾自訂 HTML",
-	[Key.configFooterHtmlDesc]: "在頁尾底部注入的自訂 HTML（ICP 備案號、認證徽章等）",
+	[Key.configFooterHtmlDesc]:
+		"在頁尾底部注入的自訂 HTML（ICP 備案號、認證徽章等）",
 	[Key.configMusic]: "音樂",
 	[Key.configMusicDesc]: "音樂播放器設定（網易雲音樂等）",
 	[Key.configFriends]: "好友鏈",
-	[Key.configFriendsDesc]: "好友鏈頁面設定與連結清單（內容編輯見 src/content/spec/friends.md）",
+	[Key.configFriendsDesc]:
+		"好友鏈頁面設定與連結清單（內容編輯見 src/content/spec/friends.md）",
 	[Key.configComment]: "評論",
 	[Key.configCommentDesc]: "評論系統類型與各提供商設定",
 	[Key.configFont]: "字型",
@@ -631,11 +633,42 @@ export const zh_TW: Translation = {
 	[Key.configPlantuml]: "PlantUML",
 	[Key.configPlantumlDesc]: "PlantUML 圖表渲染與明暗主題",
 	[Key.configCodeTheme]: "程式碼主題",
-	[Key.configCodeThemeDesc]: "expressive-code 程式碼高亮主題（修改後需重新啟動伺服器）",
+	[Key.configCodeThemeDesc]:
+		"expressive-code 程式碼高亮主題（修改後需重新啟動伺服器）",
 	[Key.configPioSpine]: "看板娘（Spine）",
 	[Key.configPioSpineDesc]: "Spine 看板娘開關與模型設定",
 	[Key.configPioLive2d]: "看板娘（Live2D）",
 	[Key.configPioLive2dDesc]: "Live2D 看板娘開關與模型設定",
+
+	// 密鑰設定
+	[Key.adminSecrets]: "密鑰設定",
+	[Key.adminSecretsDesc]: "管理 GitHub App 憑證與管理員認證密鑰等環境變數",
+	[Key.secretsGroupGithub]: "GitHub App 憑證",
+	[Key.secretsGroupAuth]: "管理員認證",
+	[Key.secretsConfigured]: "已設定",
+	[Key.secretsNotConfigured]: "未設定",
+	[Key.secretsPendingDelete]: "待清除",
+	[Key.secretsSave]: "儲存密鑰",
+	[Key.secretsSaving]: "儲存中…",
+	[Key.secretsReload]: "重新整理",
+	[Key.secretsWritableHint]:
+		"修改將寫入專案根目錄的 {file}，重新啟動服務後生效",
+	[Key.secretsReadonlyHint]:
+		"目前為正式環境建置，檔案系統唯讀；請到部署平台（如 Vercel）的環境變數設定中設定",
+	[Key.secretsPlaceholderConfigured]: "已設定；留空保持不變，輸入新值將覆蓋",
+	[Key.secretsPlaceholderEmpty]: "未設定；請在此輸入值",
+	[Key.secretsClear]: "清除此項",
+	[Key.secretsShow]: "顯示",
+	[Key.secretsHide]: "隱藏",
+	[Key.secretsGenerateJwt]: "產生 JWT 密鑰",
+	[Key.secretsGenerateJwtDone]: "已產生 64 位元隨機密鑰並填入，點擊儲存生效",
+	[Key.secretsGenerator]: "產生工具",
+	[Key.secretsGeneratorDesc]:
+		"不想手動產生密鑰？使用下方工具一鍵產生隨機值並自動填入表單",
+	[Key.secretsPasswordInput]: "明文密碼",
+	[Key.secretsPasswordPlaceholder]: "輸入要計算雜湊的明文密碼…",
+	[Key.secretsGenerateHash]: "產生密碼雜湊",
+	[Key.secretsGenerateHashDone]: "雜湊已產生並填入，點擊儲存生效",
 
 	// 控制面板儀表盤
 	[Key.adminHome]: "首頁",
@@ -669,7 +702,8 @@ export const zh_TW: Translation = {
 	[Key.externalLinkTitle]: "即將跳轉",
 	[Key.externalLinkSubtitle]: "請確認目標地址是否安全",
 	[Key.externalLinkAddressLabel]: "目標地址",
-	[Key.externalLinkWarning]: "請仔細檢查目標地址，確保是您信任的網站。如不確定，請取消跳轉。",
+	[Key.externalLinkWarning]:
+		"請仔細檢查目標地址，確保是您信任的網站。如不確定，請取消跳轉。",
 	[Key.externalLinkCancel]: "取消",
 	[Key.externalLinkConfirm]: "確認跳轉",
 };
