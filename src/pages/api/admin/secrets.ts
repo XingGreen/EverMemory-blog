@@ -1,8 +1,11 @@
 import { ADMIN_SECRETS, getSecretItem } from "@/utils/admin-secrets";
-import { requireAuth } from "@/utils/auth";
+import { generateSessionToken, requireAuth, setAuthCookie } from "@/utils/auth";
+import { getClientIp, writeAuditLog } from "@/utils/login-guard";
 import {
 	applyEnvFileUpdates,
+	decodePrivateKey,
 	hashAdminPassword,
+	incrementTokenVersion,
 	isEnvFileWritable,
 	readSecretPreview,
 	readSecretStates,
@@ -11,10 +14,10 @@ import {
 
 export const prerender = false;
 
-const json = (body: unknown, status: number) =>
+const json = (body: unknown, status: number, extraHeaders?: Headers) =>
 	new Response(JSON.stringify(body), {
 		status,
-		headers: { "Content-Type": "application/json" },
+		headers: { "Content-Type": "application/json", ...(extraHeaders ? Object.fromEntries(extraHeaders) : {}) },
 	});
 
 const MAX_TEXT_LENGTH = 4096;
@@ -131,11 +134,13 @@ export async function POST({
 		for (const entry of valid) {
 			const item = getSecretItem(entry.key);
 			if (!item) continue;
-			// ADMIN_PASSWORD 存哈希：若填入的不是 64 位 hex（如浏览器误填的明文密码），自动转为 SHA256 哈希
+			// ADMIN_PASSWORD 存哈希：填入 64 位 hex（旧版 SHA256 哈希）或 scrypt$ 开头
+			 // （新版自带哈希）视为已是哈希；其余视为明文，自动转为 scrypt 哈希
 			if (
 				entry.key === "ADMIN_PASSWORD" &&
 				entry.value &&
-				!/^[0-9a-f]{64}$/i.test(entry.value)
+				!/^[0-9a-f]{64}$/i.test(entry.value) &&
+				!entry.value.startsWith("scrypt$")
 			) {
 				entry.value = hashAdminPassword(entry.value);
 			}
@@ -157,10 +162,59 @@ export async function POST({
 			`[Admin Secrets] 已保存 .env.local（更新: ${updated.join(", ") || "无"}，移除: ${removed.join(", ") || "无"}）`,
 		);
 
+		// 读回校验：逐项比对写入值是否确实落盘（个别运行环境存在写入后读不到的现象）
+		const expectedByKey = new Map(
+			valid
+				.filter((entry) => !entry.delete)
+				.map((entry) => [entry.key, entry.value ?? ""]),
+		);
+		const mismatched: string[] = [];
+		for (const key of updated) {
+			const written = readSecretPreview(key);
+			if (written === "") {
+				mismatched.push(key);
+				continue;
+			}
+			// 私钥存储时被自动转换为 Base64，读回后需还原再比对
+			const normalized =
+				key === "GITHUB_PRIVATE_KEY" ? decodePrivateKey(written) : written;
+			if (normalized !== expectedByKey.get(key)) mismatched.push(key);
+		}
+
+		// 认证信息变更：会话版本号 +1 使所有旧会话立即失效，并为本请求续签新会话
+		const authUpdated = updated.filter((key) => AUTH_KEYS.has(key));
+		const responseHeaders = new Headers();
+		if (authUpdated.length > 0) {
+			incrementTokenVersion();
+			setAuthCookie(generateSessionToken(), responseHeaders);
+		}
+
+		// 审计：认证信息变更与普通密钥变更加以区分
+		if (authUpdated.length > 0) {
+			writeAuditLog({
+				event: "secrets_credentials_updated",
+				client: getClientIp(request),
+				username: "(控制台)",
+				detail: `keys=${authUpdated.join(",")}${mismatched.length > 0 ? `; readback-fail=${mismatched.join(",")}` : ""}`,
+			});
+		} else if (updated.length > 0) {
+			writeAuditLog({
+				event: "secrets_updated",
+				client: getClientIp(request),
+				username: "(控制台)",
+				detail: `keys=${updated.join(",")}`,
+			});
+		}
+
 		const parts: string[] = [];
 		if (updated.length > 0) parts.push(`已更新 ${updated.length} 项`);
 		if (removed.length > 0) parts.push(`已清除 ${removed.length} 项`);
 		if (ignored.length > 0) parts.push(`跳过无效项 ${ignored.length} 项`);
+		if (mismatched.length > 0) {
+			parts.push(
+				`警告: ${mismatched.join("、")} 读回校验未通过（可能未实际落盘），请重启服务后核对`,
+			);
+		}
 
 		return json(
 			{
@@ -168,9 +222,11 @@ export async function POST({
 				message: `${parts.join("，")}。重启服务后新值才会生效（登录验证与 GitHub 同步使用环境变量）。`,
 				updated,
 				removed,
+				mismatched,
 				writable: true,
 			},
 			200,
+			responseHeaders,
 		);
 	} catch (error) {
 		console.error(

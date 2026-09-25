@@ -1,4 +1,5 @@
 import { requireAuth } from "@/utils/auth";
+import { getClientIp, writeAuditLog } from "@/utils/login-guard";
 import { buildEnvExport, buildVercelCliCommands } from "@/utils/secret-export";
 
 export const prerender = false;
@@ -16,6 +17,13 @@ export async function GET({
 	const format = url.searchParams.get("format") === "vercel" ? "vercel" : "env";
 	const content =
 		format === "vercel" ? buildVercelCliCommands() : buildEnvExport();
+
+	writeAuditLog({
+		event: "secrets_exported",
+		client: getClientIp(request),
+		username: "(控制台)",
+		detail: `format=${format}`,
+	});
 
 	const headers = new Headers({
 		"Content-Type": "text/plain; charset=utf-8",
