@@ -3,8 +3,8 @@
   "type": "module",
   "version": "6.13.5",
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
+"dev": "node --max-old-space-size=4096 ./node_modules/astro/bin/astro.mjs dev",
+	"start": "node --max-old-space-size=4096 ./node_modules/astro/bin/astro.mjs dev",
     "check": "astro check",
     "build": "node scripts/generate-icons.js && npx tsx scripts/generate-lqips.ts && astro build && npx tsx scripts/subset-fonts.ts && pagefind --site dist",
     "preview": "astro preview",
