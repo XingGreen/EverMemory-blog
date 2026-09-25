@@ -2,6 +2,7 @@ import { ADMIN_SECRETS, getSecretItem } from "@/utils/admin-secrets";
 import { requireAuth } from "@/utils/auth";
 import {
 	applyEnvFileUpdates,
+	hashAdminPassword,
 	isEnvFileWritable,
 	readSecretPreview,
 	readSecretStates,
@@ -130,6 +131,14 @@ export async function POST({
 		for (const entry of valid) {
 			const item = getSecretItem(entry.key);
 			if (!item) continue;
+			// ADMIN_PASSWORD 存哈希：若填入的不是 64 位 hex（如浏览器误填的明文密码），自动转为 SHA256 哈希
+			if (
+				entry.key === "ADMIN_PASSWORD" &&
+				entry.value &&
+				!/^[0-9a-f]{64}$/i.test(entry.value)
+			) {
+				entry.value = hashAdminPassword(entry.value);
+			}
 			const limit =
 				item.kind === "multiline" ? MAX_KEY_LENGTH : MAX_TEXT_LENGTH;
 			if (entry.value && entry.value.length > limit) {

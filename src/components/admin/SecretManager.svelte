@@ -392,12 +392,13 @@ onMount(load);
 										></textarea>
 									{:else if item.kind === "password"}
 										<div class="input-wrap">
-											<input
-												class="secret-input"
-												type={showInput[item.key] ? "text" : "password"}
-												value={drafts[item.key] ?? ""}
-												spellcheck="false"
-												autocomplete="off"
+<input
+											class="secret-input"
+											type={showInput[item.key] ? "text" : "password"}
+											value={drafts[item.key] ?? ""}
+											spellcheck="false"
+											name="secret-draft"
+											autocomplete="new-password"
 												placeholder={item.configured
 													? i18n(I18nKey.secretsPlaceholderConfigured)
 													: i18n(I18nKey.secretsPlaceholderEmpty)}
@@ -505,8 +506,15 @@ onMount(load);
 	{#if exportOpen}
 		<div
 			class="modal-overlay"
+			role="dialog"
+			aria-modal="true"
+			aria-label={i18n(I18nKey.secretsExport)}
+			tabindex="-1"
 			onclick={(e) => {
 				if (e.target === e.currentTarget) exportOpen = false;
+			}}
+			onkeydown={(e) => {
+				if (e.key === "Escape") exportOpen = false;
 			}}
 		>
 			<div class="modal-card card-base">
@@ -554,8 +562,15 @@ onMount(load);
 	{#if authConfirmOpen}
 		<div
 			class="modal-overlay"
+			role="dialog"
+			aria-modal="true"
+			aria-label={i18n(I18nKey.secretsAuthConfirmTitle)}
+			tabindex="-1"
 			onclick={(e) => {
 				if (e.target === e.currentTarget && !saving) authConfirmOpen = false;
+			}}
+			onkeydown={(e) => {
+				if (e.key === "Escape" && !saving) authConfirmOpen = false;
 			}}
 		>
 			<div class="modal-card card-base">

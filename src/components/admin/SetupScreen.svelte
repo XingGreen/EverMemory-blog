@@ -21,6 +21,7 @@ let {
 } = $props();
 
 let token = $state("");
+// svelte-ignore state_referenced_locally —— 仅取 defaultUsername 的初始值回填，无需随 prop 同步
 let username = $state(defaultUsername);
 let password = $state("");
 let confirm = $state("");
