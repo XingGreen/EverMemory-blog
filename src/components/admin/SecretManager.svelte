@@ -3,7 +3,11 @@ import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
-import { type AdminSecretItem, SECRET_GROUPS } from "@/utils/admin-secrets";
+import {
+	type AdminSecretItem,
+	getSecretItem,
+	SECRET_GROUPS,
+} from "@/utils/admin-secrets";
 
 type SecretItemDTO = AdminSecretItem & {
 	configured: boolean;
@@ -34,6 +38,13 @@ let toDelete = $state<Record<string, boolean>>({});
 let showInput = $state<Record<string, boolean>>({});
 // 生成工具：明文密码
 let plainPassword = $state("");
+// 导出弹窗
+let exportOpen = $state(false);
+let exportBusy = $state(false);
+// 修改认证信息前的当前密码确认
+let authConfirmOpen = $state(false);
+let currentPassword = $state("");
+let pendingEntries: { key: string; value?: string; delete?: boolean }[] = [];
 
 const groups = $derived(
 	SECRET_GROUPS.map((g) => ({
@@ -77,7 +88,7 @@ async function load() {
 	}
 }
 
-async function save() {
+function buildEntries(): { key: string; value?: string; delete?: boolean }[] {
 	const entries: { key: string; value?: string; delete?: boolean }[] = [];
 	for (const item of items) {
 		if (toDelete[item.key]) {
@@ -91,16 +102,38 @@ async function save() {
 			entries.push({ key: item.key, value: draft });
 		}
 	}
+	return entries;
+}
+
+async function save() {
+	const entries = buildEntries();
 	if (entries.length === 0) {
 		onNotify("没有需要保存的修改", "error", 5000);
 		return;
 	}
+	// 涉及管理员认证（用户名 / 密码 / JWT）：先验证当前登录密码
+	const touchesAuth = entries.some(
+		(entry) => getSecretItem(entry.key)?.group === "auth",
+	);
+	if (touchesAuth) {
+		pendingEntries = entries;
+		currentPassword = "";
+		authConfirmOpen = true;
+		return;
+	}
+	await doSave(entries, "");
+}
+
+async function doSave(
+	entries: { key: string; value?: string; delete?: boolean }[],
+	password: string,
+) {
 	saving = true;
 	try {
 		const res = await fetch("/api/admin/secrets/", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ entries }),
+			body: JSON.stringify({ entries, currentPassword: password }),
 		});
 		const data = await res.json();
 		if (data.success) {
@@ -117,6 +150,65 @@ async function save() {
 		);
 	} finally {
 		saving = false;
+		authConfirmOpen = false;
+		currentPassword = "";
+		pendingEntries = [];
+	}
+}
+
+function confirmAuthSave() {
+	if (!currentPassword.trim()) {
+		onNotify(
+			`${i18n(I18nKey.secretsAuthConfirmPlaceholder)}不能为空`,
+			"error",
+			5000,
+		);
+		return;
+	}
+	doSave(pendingEntries, currentPassword);
+}
+
+async function downloadEnv() {
+	exportBusy = true;
+	try {
+		const res = await fetch("/api/admin/secrets/export/?format=env");
+		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		const text = await res.text();
+		const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = "firefly-env-export.env";
+		a.click();
+		URL.revokeObjectURL(url);
+		onNotify(i18n(I18nKey.secretsExportEnvDone), "success", 8000);
+	} catch (err) {
+		onNotify(
+			`导出失败: ${err instanceof Error ? err.message : String(err)}`,
+			"error",
+			8000,
+		);
+	} finally {
+		exportBusy = false;
+	}
+}
+
+async function copyVercelCommands() {
+	exportBusy = true;
+	try {
+		const res = await fetch("/api/admin/secrets/export/?format=vercel");
+		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		const text = await res.text();
+		await navigator.clipboard.writeText(text);
+		onNotify(i18n(I18nKey.secretsExportCopied), "success", 8000);
+	} catch (err) {
+		onNotify(
+			`复制失败: ${err instanceof Error ? err.message : String(err)}`,
+			"error",
+			8000,
+		);
+	} finally {
+		exportBusy = false;
 	}
 }
 
@@ -214,6 +306,15 @@ onMount(load);
 				<span>{i18n(I18nKey.secretsReload)}</span>
 			</button>
 			{#if writable}
+				<button
+					class="sec-btn"
+					title={i18n(I18nKey.secretsExport)}
+					onclick={() => (exportOpen = true)}
+					disabled={exportBusy || loading}
+				>
+					<Icon icon="material-symbols:download" />
+					<span>{i18n(I18nKey.secretsExport)}</span>
+				</button>
 				<button
 					class="sec-btn primary"
 					onclick={save}
@@ -399,6 +500,116 @@ onMount(load);
 				</div>
 			</section>
 		{/if}
+	{/if}
+
+	{#if exportOpen}
+		<div
+			class="modal-overlay"
+			onclick={(e) => {
+				if (e.target === e.currentTarget) exportOpen = false;
+			}}
+		>
+			<div class="modal-card card-base">
+				<div class="modal-head">
+					<h3>
+						<Icon icon="material-symbols:download" class="modal-head-icon" />
+						<span>{i18n(I18nKey.secretsExport)}</span>
+					</h3>
+					<button
+						class="modal-close"
+						type="button"
+						aria-label={i18n(I18nKey.secretsClose)}
+						onclick={() => (exportOpen = false)}
+					>
+						<Icon icon="material-symbols:close" />
+					</button>
+				</div>
+				<p class="modal-desc">{i18n(I18nKey.secretsExportDesc)}</p>
+				<div class="modal-warning">
+					<Icon icon="material-symbols:error-outline" />
+					<span>{i18n(I18nKey.secretsExportWarning)}</span>
+				</div>
+				<div class="modal-actions">
+					<button
+						class="sec-btn primary export-btn"
+						onclick={downloadEnv}
+						disabled={exportBusy}
+					>
+						<Icon icon="material-symbols:download" />
+						<span>{i18n(I18nKey.secretsExportDownloadEnv)}</span>
+					</button>
+					<button
+						class="sec-btn export-btn"
+						onclick={copyVercelCommands}
+						disabled={exportBusy}
+					>
+						<Icon icon="material-symbols:terminal-rounded" />
+						<span>{i18n(I18nKey.secretsExportCopyVercel)}</span>
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	{#if authConfirmOpen}
+		<div
+			class="modal-overlay"
+			onclick={(e) => {
+				if (e.target === e.currentTarget && !saving) authConfirmOpen = false;
+			}}
+		>
+			<div class="modal-card card-base">
+				<div class="modal-head">
+					<h3>
+						<Icon icon="material-symbols:shield-lock" class="modal-head-icon" />
+						<span>{i18n(I18nKey.secretsAuthConfirmTitle)}</span>
+					</h3>
+					<button
+						class="modal-close"
+						type="button"
+						aria-label={i18n(I18nKey.secretsClose)}
+						onclick={() => !saving && (authConfirmOpen = false)}
+					>
+						<Icon icon="material-symbols:close" />
+					</button>
+				</div>
+				<p class="modal-desc">{i18n(I18nKey.secretsAuthConfirmDesc)}</p>
+				<div class="modal-field">
+					<input
+						type="password"
+						class="secret-input"
+						value={currentPassword}
+						placeholder={i18n(I18nKey.secretsAuthConfirmPlaceholder)}
+						autocomplete="current-password"
+						oninput={(e) => (currentPassword = e.currentTarget.value)}
+						onkeydown={(e) => {
+							if (e.key === "Enter") confirmAuthSave();
+						}}
+					/>
+				</div>
+				<div class="modal-actions">
+					<button
+						class="sec-btn modal-cancel"
+						onclick={() => (authConfirmOpen = false)}
+						disabled={saving}
+					>
+						{i18n(I18nKey.secretsCancel)}
+					</button>
+					<button
+						class="sec-btn primary"
+						onclick={confirmAuthSave}
+						disabled={saving}
+					>
+						<Icon icon="material-symbols:shield-lock" />
+						<span
+							>{saving
+								? i18n(I18nKey.secretsSaving)
+								: i18n(I18nKey.secretsAuthConfirmSubmit)}</span
+						>
+					</button>
+				</div>
+			</div>
+		</div>
 	{/if}
 </div>
 
@@ -818,6 +1029,117 @@ onMount(load);
 
 	.gen-password {
 		max-width: 320px;
+	}
+
+	/* ── 弹窗（导出 / 当前密码确认） ── */
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0, 0, 0, 0.45);
+		backdrop-filter: blur(2px);
+		padding: 1rem;
+	}
+
+	.modal-card {
+		width: 100%;
+		max-width: 440px;
+		padding: 1.5rem;
+		box-shadow: var(--shadow-card);
+		border-radius: var(--radius-large);
+	}
+
+	.modal-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 0.75rem;
+	}
+
+	.modal-head h3 {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 1.0625rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	:global(.modal-head-icon) {
+		color: var(--primary);
+	}
+
+	.modal-close {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		border: none;
+		border-radius: var(--radius-md);
+		background: transparent;
+		color: var(--content-meta);
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.modal-close:hover {
+		background: rgba(0, 0, 0, 0.05);
+		color: var(--deep-text);
+	}
+
+	.modal-desc {
+		font-size: 0.875rem;
+		color: var(--content-meta);
+		line-height: 1.7;
+		margin-bottom: 1rem;
+	}
+
+	.modal-warning {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.5rem;
+		padding: 0.625rem 0.875rem;
+		background: rgba(249, 115, 22, 0.1);
+		border: 1px solid rgba(249, 115, 22, 0.3);
+		border-radius: var(--radius-sm);
+		color: #f97316;
+		font-size: 0.8125rem;
+		line-height: 1.6;
+		margin-bottom: 1.25rem;
+	}
+
+	.modal-warning :global(svg) {
+		flex-shrink: 0;
+		margin-top: 0.125rem;
+	}
+
+	.modal-actions {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.625rem;
+	}
+
+	.export-btn {
+		flex: 1;
+		justify-content: center;
+	}
+
+	.modal-cancel {
+		background: transparent;
+		color: var(--content-meta);
+	}
+
+	.modal-cancel:hover {
+		color: var(--deep-text);
+	}
+
+	.modal-field {
+		margin-bottom: 1.25rem;
 	}
 
 	@media (max-width: 768px) {
