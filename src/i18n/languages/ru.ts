@@ -640,20 +640,25 @@ export const ru: Translation = {
 	[Key.configAnnouncement]: "Объявление",
 	[Key.configAnnouncementDesc]: "Заголовок и содержимое объявления",
 	[Key.configAnalytics]: "Аналитика",
-	[Key.configAnalyticsDesc]: "Аналитика сайта (Google Analytics, Clarity, Umami и др.)",
+	[Key.configAnalyticsDesc]:
+		"Аналитика сайта (Google Analytics, Clarity, Umami и др.)",
 	[Key.configGallery]: "Галерея",
 	[Key.configGalleryDesc]: "Список альбомов и изображения галереи",
 	[Key.configApp]: "Приложения",
-	[Key.configAppDesc]: "Страница рекомендаций приложений и список рекомендуемых приложений",
+	[Key.configAppDesc]:
+		"Страница рекомендаций приложений и список рекомендуемых приложений",
 	[Key.configSponsor]: "Поддержка",
-	[Key.configSponsorDesc]: "Настройки страницы поддержки (заголовок, описание и ссылки)",
+	[Key.configSponsorDesc]:
+		"Настройки страницы поддержки (заголовок, описание и ссылки)",
 	[Key.configLicense]: "Лицензия",
 	[Key.configLicenseDesc]:
 		"Название лицензии статей, ссылка и переключатель отображения",
 	[Key.configCoverImage]: "Обложка",
-	[Key.configCoverImageDesc]: "Настройки обложек статей (фиксированная или случайная)",
+	[Key.configCoverImageDesc]:
+		"Настройки обложек статей (фиксированная или случайная)",
 	[Key.configEffects]: "Эффекты",
-	[Key.configEffectsDesc]: "Переключатели и параметры эффектов страницы (сакура и др.)",
+	[Key.configEffectsDesc]:
+		"Переключатели и параметры эффектов страницы (сакура и др.)",
 	[Key.configPlantuml]: "PlantUML",
 	[Key.configPlantumlDesc]: "Рендеринг диаграмм PlantUML и светлая/тёмная темы",
 	[Key.configCodeTheme]: "Тема кода",
@@ -663,6 +668,40 @@ export const ru: Translation = {
 	[Key.configPioSpineDesc]: "Переключатель и модель талисмана Spine",
 	[Key.configPioLive2d]: "Талисман (Live2D)",
 	[Key.configPioLive2dDesc]: "Переключатель и модель талисмана Live2D",
+
+	// Конфигурация секретов
+	[Key.adminSecrets]: "Секреты",
+	[Key.adminSecretsDesc]:
+		"Управление секретами окружения: учётные данные GitHub App и ключи аутентификации",
+	[Key.secretsGroupGithub]: "Учётные данные GitHub App",
+	[Key.secretsGroupAuth]: "Аутентификация администратора",
+	[Key.secretsConfigured]: "Настроено",
+	[Key.secretsNotConfigured]: "Не настроено",
+	[Key.secretsPendingDelete]: "Ожидает удаления",
+	[Key.secretsSave]: "Сохранить секреты",
+	[Key.secretsSaving]: "Сохранение…",
+	[Key.secretsReload]: "Обновить",
+	[Key.secretsWritableHint]:
+		"Изменения будут записаны в {file} в корне проекта. Применятся после перезапуска.",
+	[Key.secretsReadonlyHint]:
+		"В продакшене файловая система доступна только для чтения. Настройте переменные окружения на платформе развёртывания (например, Vercel).",
+	[Key.secretsPlaceholderConfigured]:
+		"Настроено; оставьте пустым, чтобы сохранить текущее значение, введите новое для замены",
+	[Key.secretsPlaceholderEmpty]: "Не настроено; введите значение",
+	[Key.secretsClear]: "Очистить",
+	[Key.secretsShow]: "Показать",
+	[Key.secretsHide]: "Скрыть",
+	[Key.secretsGenerateJwt]: "Сгенерировать JWT-ключ",
+	[Key.secretsGenerateJwtDone]:
+		"Сгенерирован случайный ключ (64 символа) и вставлен. Нажмите «Сохранить».",
+	[Key.secretsGenerator]: "Инструменты генерации",
+	[Key.secretsGeneratorDesc]:
+		"Не хотите создавать ключи вручную? Сгенерируйте случайные значения ниже и они автоматически попадут в форму.",
+	[Key.secretsPasswordInput]: "Пароль в открытом виде",
+	[Key.secretsPasswordPlaceholder]: "Введите пароль для хеширования…",
+	[Key.secretsGenerateHash]: "Сгенерировать хеш пароля",
+	[Key.secretsGenerateHashDone]:
+		"Хеш сгенерирован и вставлен. Нажмите «Сохранить».",
 
 	// Панель управления — приборная панель
 	[Key.adminHome]: "Главная",
@@ -696,7 +735,8 @@ export const ru: Translation = {
 	[Key.externalLinkTitle]: "Переход на внешний сайт",
 	[Key.externalLinkSubtitle]: "Убедитесь, что адрес назначения безопасен",
 	[Key.externalLinkAddressLabel]: "Адрес назначения",
-	[Key.externalLinkWarning]: "Внимательно проверьте адрес назначения и убедитесь, что это сайт, которому вы доверяете. Если не уверены — отмените переход.",
+	[Key.externalLinkWarning]:
+		"Внимательно проверьте адрес назначения и убедитесь, что это сайт, которому вы доверяете. Если не уверены — отмените переход.",
 	[Key.externalLinkCancel]: "Отмена",
 	[Key.externalLinkConfirm]: "Перейти",
 };

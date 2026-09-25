@@ -14,6 +14,7 @@ import {
 import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
 import PostEditor from "./PostEditor.svelte";
 import PostList from "./PostList.svelte";
+import SecretManager from "./SecretManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
 import SettingsOverview from "./SettingsOverview.svelte";
 import VerifyScreen from "./VerifyScreen.svelte";
@@ -35,7 +36,7 @@ type Post = {
 };
 
 type ViewMode = "list" | "edit" | "create";
-type Page = "dashboard" | "posts" | "settings";
+type Page = "dashboard" | "posts" | "settings" | "secrets";
 
 // 基于 URL 路径的真实路由（History API）：
 //   /admin/dashboard/                      → 首页
@@ -50,7 +51,8 @@ type Route =
 	| { page: "posts" }
 	| { page: "create" }
 	| { page: "edit"; slug: string }
-	| { page: "settings"; section?: string };
+	| { page: "settings"; section?: string }
+	| { page: "secrets" };
 
 let { avatarUrl = "" }: { avatarUrl?: string } = $props();
 
@@ -129,7 +131,9 @@ const activePage = $derived<Page>(
 		? "dashboard"
 		: route.page === "settings"
 			? "settings"
-			: "posts",
+			: route.page === "secrets"
+				? "secrets"
+				: "posts",
 );
 
 const viewMode = $derived<ViewMode>(
@@ -210,6 +214,8 @@ function parseRoute(pathname: string): Route {
 					: undefined;
 			return { page: "settings", section };
 		}
+		case "secrets":
+			return { page: "secrets" };
 		default:
 			// 未知路由：返回登录态判定，由 applyRoute 决定去向
 			return { page: "login" };
@@ -279,6 +285,12 @@ const headerInfo = $derived.by(() => {
 					subtitle: i18n(I18nKey.settingsSelectHint),
 				};
 	}
+	if (activePage === "secrets") {
+		return {
+			title: i18n(I18nKey.adminSecrets),
+			subtitle: i18n(I18nKey.adminSecretsDesc),
+		};
+	}
 	if (viewMode === "edit" && editingPost) {
 		return { title: i18n(I18nKey.adminEditPost), subtitle: editingPost.title };
 	}
@@ -300,7 +312,9 @@ const headerIcon = $derived(
 		: activePage === "settings"
 			? (settingsSection && getConfigItem(settingsSection)?.icon) ||
 				"material-symbols:settings"
-			: "material-symbols:article-outline",
+			: activePage === "secrets"
+				? "material-symbols:shield-lock"
+				: "material-symbols:article-outline",
 );
 
 async function loadPosts() {
@@ -488,7 +502,15 @@ function goDashboard() {
 }
 
 function goSettings(section?: string) {
-	navigate(section ? `${DASHBOARD_PATH}settings/${section}/` : `${DASHBOARD_PATH}settings/`);
+	navigate(
+		section
+			? `${DASHBOARD_PATH}settings/${section}/`
+			: `${DASHBOARD_PATH}settings/`,
+	);
+}
+
+function goSecrets() {
+	navigate(`${DASHBOARD_PATH}secrets/`);
 }
 
 function toggleSettingsSubmenu() {
@@ -1016,6 +1038,16 @@ function formatDate(dateStr: string | null): string {
 					{/each}
 					</div>
 				</div>
+
+				<!-- 密钥配置 -->
+				<button
+					class="nav-item"
+					class:active={activePage === "secrets"}
+					onclick={goSecrets}
+				>
+					<Icon icon="material-symbols:shield-lock" />
+					<span>{i18n(I18nKey.adminSecrets)}</span>
+				</button>
 			</nav>
 
 			<div class="sidebar-footer">
@@ -1149,6 +1181,11 @@ function formatDate(dateStr: string | null): string {
 							onSearchChange={(value) => (settingsSearchTerm = value)}
 						/>
 					{/if}
+				{:else if activePage === "secrets"}
+					<SecretManager
+						onNotify={(message, type, duration) =>
+							showToast(message, type, duration)}
+					/>
 				{/if}
 			</div>
 		</div>

@@ -580,18 +580,26 @@ export function getConfig() {
 export async function testGitHubConnection(): Promise<number> {
 	const started = Date.now();
 
+	// 真实请求：race 可能被超时先判胜，因此给真实请求附加空 catch，
+	// 避免超时后请求抛错时 rejection 无人消费（UnhandledRejection）
+	const request = getInstallationTokenFromGitHub(
+		createJwt(getPrivateKey(), GITHUB_APP_ID),
+		GITHUB_INSTALLATION_ID,
+	);
+	request.catch(() => {});
+
 	// 15s 超时，避免网络断开时请求长时间挂起
+	let timer: ReturnType<typeof setTimeout> | undefined;
 	const timeout = new Promise<never>((_, reject) => {
-		setTimeout(() => reject(new Error("连接超时（15s）")), 15000);
+		timer = setTimeout(() => reject(new Error("连接超时（15s）")), 15000);
 	});
 
-	await Promise.race([
-		getInstallationTokenFromGitHub(
-			createJwt(getPrivateKey(), GITHUB_APP_ID),
-			GITHUB_INSTALLATION_ID,
-		),
-		timeout,
-	]);
+	try {
+		await Promise.race([request, timeout]);
+	} finally {
+		// race 结束即取消定时器，防止超时 reject 在请求先返回后仍然触发
+		if (timer) clearTimeout(timer);
+	}
 
 	return Date.now() - started;
 }
