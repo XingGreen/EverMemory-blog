@@ -115,7 +115,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "auth",
 		label: "管理员密码哈希",
 		description:
-			"后台登录密码的 SHA256 哈希（64 位十六进制串）。可先用下方生成工具把明文密码转为哈希再填入",
+			"后台登录密码的 SHA256 哈希（64 位十六进制串）。直接粘贴明文密码也可以，保存时会自动转为哈希；或用下方生成工具转换",
 		kind: "password",
 		sensitive: true,
 		required: true,

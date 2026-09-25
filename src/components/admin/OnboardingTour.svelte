@@ -76,8 +76,12 @@ function goAction(action: TourAction) {
 		role="dialog"
 		aria-modal="true"
 		aria-label={i18n(I18nKey.adminTourTitle)}
+		tabindex="-1"
 		onclick={(e) => {
 			if (e.target === e.currentTarget) closeTour();
+		}}
+		onkeydown={(e) => {
+			if (e.key === "Escape") closeTour();
 		}}
 	>
 		<div class="tour-card card-base">
