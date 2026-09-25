@@ -22,12 +22,22 @@ function json(body: unknown, status = 200, extraHeaders?: Headers): Response {
 }
 
 /** GET：返回初始化状态；未初始化时惰性生成安装令牌并通知前端 */
-export async function GET(): Promise<Response> {
+export async function GET({
+	request,
+}: {
+	request: Request;
+}): Promise<Response> {
 	if (isInitialized()) {
 		return json({ success: true, initialized: true });
 	}
 
 	const writable = isEnvFileWritable();
+	let origin: string | undefined;
+	try {
+		origin = new URL(request.url).origin;
+	} catch {
+		// 解析失败时日志回退到默认文案
+	}
 	return json({
 		success: true,
 		initialized: false,
@@ -35,7 +45,7 @@ export async function GET(): Promise<Response> {
 		tokenRequired: writable,
 		defaultUsername: import.meta.env.ADMIN_USERNAME || "admin",
 		// 未初始化时确保令牌已生成（打印到服务端日志供部署者获取）
-		...(writable ? { tokenReady: Boolean(getSetupToken()) } : {}),
+		...(writable ? { tokenReady: Boolean(getSetupToken(origin)) } : {}),
 	});
 }
 

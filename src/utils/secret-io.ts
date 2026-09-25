@@ -34,7 +34,7 @@ const ENV_GETTERS: Record<string, () => string> = {
 
 /** 生产构建（Vercel / Cloudflare Workers 等）文件系统只读 */
 export function isEnvFileWritable(): boolean {
-	return !import.meta.env.PROD;
+	return !import.meta.env?.PROD;
 }
 
 /** 解析 .env 文件内容为键值映射（自动处理引号与转义，忽略注释） */
@@ -76,8 +76,13 @@ function readEnvValue(key: string): string {
 	} catch {
 		// 文件读取失败时回退到 import.meta.env
 	}
-	const getter = ENV_GETTERS[key];
-	return getter ? getter() : "";
+	try {
+		const getter = ENV_GETTERS[key];
+		return getter ? getter() : "";
+	} catch {
+		// 非 Vite 运行环境（如 node 脚本）无 import.meta.env，视为未配置
+		return "";
+	}
 }
 
 /** 返回所有密钥的配置状态（敏感值绝不返回真实内容） */

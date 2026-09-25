@@ -743,6 +743,10 @@ export const en: Translation = {
 	[Key.adminSetupConfirmLabel]: "Confirm Password",
 	[Key.adminSetupSubmit]: "Complete Setup",
 	[Key.adminSetupSubmitting]: "Setting up…",
+	[Key.adminSetupVerifyToken]: "Verify Token",
+	[Key.adminSetupVerifying]: "Verifying…",
+	[Key.adminSetupTokenVerified]: "Token verified. Now set up the admin account",
+	[Key.adminSetupTokenBack]: "Re-enter token",
 	[Key.adminSetupPasswordWeak]:
 		"Password must be at least 8 characters and different from the username.",
 	[Key.adminSetupPasswordMismatch]: "Passwords do not match.",

@@ -29,6 +29,10 @@ let error = $state("");
 let successMsg = $state("");
 let showPassword = $state(false);
 
+// 两段式：先验证安装令牌，通过后再填写账号信息
+let verified = $state(false);
+let verifyingToken = $state(false);
+
 let isDark = $state(false);
 onMount(() => {
 	isDark = document.documentElement.classList.contains("dark");
@@ -45,9 +49,6 @@ let passwordFocused = $state(false);
 let confirmFocused = $state(false);
 
 function validate(): string {
-	if (tokenRequired && !token.trim()) {
-		return `${i18n(I18nKey.adminSetupTokenLabel)}不能为空`;
-	}
 	if (!username.trim()) {
 		return `${i18n(I18nKey.adminSetupUsernameLabel)}不能为空`;
 	}
@@ -58,6 +59,32 @@ function validate(): string {
 		return i18n(I18nKey.adminSetupPasswordMismatch);
 	}
 	return "";
+}
+
+async function verifyToken() {
+	if (!token.trim()) {
+		error = `${i18n(I18nKey.adminSetupTokenLabel)}不能为空`;
+		return;
+	}
+	verifyingToken = true;
+	error = "";
+	try {
+		const response = await fetch("/api/admin/setup/verify-token/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ token }),
+		});
+		const data = await response.json();
+		if (response.ok && data.success) {
+			verified = true;
+		} else {
+			error = data.message || "令牌验证失败";
+		}
+	} catch {
+		error = "网络请求失败";
+	} finally {
+		verifyingToken = false;
+	}
 }
 
 async function handleSubmit() {
@@ -94,8 +121,17 @@ async function handleSubmit() {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-	if (e.key === "Enter" && !isSubmitting) {
+	if (e.key !== "Enter" || isSubmitting) return;
+	if (tokenRequired && !verified) {
+		verifyToken();
+	} else {
 		handleSubmit();
+	}
+}
+
+function handleTokenKeyDown(e: KeyboardEvent) {
+	if (e.key === "Enter" && !verifyingToken) {
+		verifyToken();
 	}
 }
 </script>
@@ -157,40 +193,82 @@ function handleKeyDown(e: KeyboardEvent) {
 				<p class="subtitle">{i18n(I18nKey.adminSetupDesc)}</p>
 			</div>
 
-			<div class="setup-form">
-				{#if tokenRequired}
-					<div class="field" class:focused={tokenFocused} class:filled={token.trim()}>
-						<input
-							id="setup-token"
-							type={showPassword ? "text" : "password"}
-							bind:value={token}
-							onfocus={() => (tokenFocused = true)}
-							onblur={() => (tokenFocused = false)}
-							onkeydown={handleKeyDown}
-							placeholder=" "
-							autocomplete="off"
-							class="password-input"
+<div class="setup-form">
+			{#if tokenRequired && !verified}
+				<!-- 第一步：输入安装令牌（从服务端终端日志获取） -->
+				<div class="field" class:focused={tokenFocused} class:filled={token.trim()}>
+					<input
+						id="setup-token"
+						type={showPassword ? "text" : "password"}
+						bind:value={token}
+						onfocus={() => (tokenFocused = true)}
+						onblur={() => (tokenFocused = false)}
+						onkeydown={handleTokenKeyDown}
+						placeholder=" "
+						autocomplete="off"
+						class="password-input"
+					/>
+					<label for="setup-token">{i18n(I18nKey.adminSetupTokenLabel)}</label>
+					<button
+						type="button"
+						class="password-toggle"
+						title={showPassword ? i18n(I18nKey.secretsHide) : i18n(I18nKey.secretsShow)}
+						aria-label={showPassword ? i18n(I18nKey.secretsHide) : i18n(I18nKey.secretsShow)}
+						onclick={() => (showPassword = !showPassword)}
+					>
+						<Icon
+							icon={showPassword
+								? "material-symbols:visibility-off-outline-rounded"
+								: "material-symbols:visibility-outline-rounded"}
+							size="sm"
 						/>
-						<label for="setup-token">{i18n(I18nKey.adminSetupTokenLabel)}</label>
+					</button>
+				</div>
+				<p class="field-hint">
+					<Icon icon="material-symbols:terminal-rounded" size="sm" />
+					<span>{i18n(I18nKey.adminSetupTokenHint)}</span>
+				</p>
+
+				{#if error}
+					<div class="error-message">
+						<Icon icon="material-symbols:error-outline" class="text-base" />
+						<span>{error}</span>
+					</div>
+				{/if}
+
+				<button
+					class="submit-btn"
+					class:loading={verifyingToken}
+					onclick={verifyToken}
+					disabled={verifyingToken || !token.trim()}
+				>
+					{#if verifyingToken}
+						<span class="spinner"></span>
+						{i18n(I18nKey.adminSetupVerifying)}
+					{:else}
+						<Icon icon="material-symbols:shield-lock" size="sm" />
+						{i18n(I18nKey.adminSetupVerifyToken)}
+					{/if}
+				</button>
+			{:else}
+				<!-- 第一步已通过：令牌确认条 + 账号信息表单 -->
+				{#if tokenRequired}
+					<div class="token-verified">
+						<span class="token-ok">
+							<Icon icon="material-symbols:check-circle-outline" size="sm" />
+							{i18n(I18nKey.adminSetupTokenVerified)}
+						</span>
 						<button
 							type="button"
-							class="password-toggle"
-							title={showPassword ? i18n(I18nKey.secretsHide) : i18n(I18nKey.secretsShow)}
-							aria-label={showPassword ? i18n(I18nKey.secretsHide) : i18n(I18nKey.secretsShow)}
-							onclick={() => (showPassword = !showPassword)}
+							class="token-back"
+							onclick={() => {
+								verified = false;
+								error = "";
+							}}
 						>
-							<Icon
-								icon={showPassword
-									? "material-symbols:visibility-off-outline-rounded"
-									: "material-symbols:visibility-outline-rounded"}
-								size="sm"
-							/>
+							{i18n(I18nKey.adminSetupTokenBack)}
 						</button>
 					</div>
-					<p class="field-hint">
-						<Icon icon="material-symbols:terminal-rounded" size="sm" />
-						<span>{i18n(I18nKey.adminSetupTokenHint)}</span>
-					</p>
 				{/if}
 
 				<div class="field" class:focused={usernameFocused} class:filled={username.trim()}>
@@ -281,7 +359,8 @@ function handleKeyDown(e: KeyboardEvent) {
 						{i18n(I18nKey.adminSetupSubmit)}
 					{/if}
 				</button>
-			</div>
+			{/if}
+		</div>
 		{/if}
 	</div>
 </div>
@@ -486,6 +565,40 @@ function handleKeyDown(e: KeyboardEvent) {
 	.field-hint :global(svg) {
 		flex-shrink: 0;
 		margin-top: 0.125rem;
+	}
+
+	/* ── 令牌验证通过提示条 ── */
+	.token-verified {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		padding: 0.625rem 0.875rem;
+		background: rgba(34, 197, 94, 0.1);
+		border: 1px solid rgba(34, 197, 94, 0.3);
+		border-radius: var(--radius-sm);
+		font-size: 0.8125rem;
+	}
+
+	.token-ok {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		color: #22c55e;
+	}
+
+	.token-back {
+		border: none;
+		background: transparent;
+		color: var(--content-meta);
+		font-size: 0.75rem;
+		cursor: pointer;
+		padding: 0;
+		text-decoration: underline;
+	}
+
+	.token-back:hover {
+		color: var(--primary);
 	}
 
 	/* ── 错误 / 成功提示 ── */
