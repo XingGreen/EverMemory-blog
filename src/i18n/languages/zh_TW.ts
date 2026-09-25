@@ -670,6 +670,80 @@ export const zh_TW: Translation = {
 	[Key.secretsGenerateHash]: "產生密碼雜湊",
 	[Key.secretsGenerateHashDone]: "雜湊已產生並填入，點擊儲存生效",
 
+	// 金鑰匯出
+	[Key.secretsExport]: "匯出配置",
+	[Key.secretsExportDesc]:
+		"將本地已配置的金鑰匯出，供生產環境（如 Vercel）使用",
+	[Key.secretsExportWarning]:
+		"匯出內容包含敏感金鑰，僅用於匯入部署平台；請勿提交到 Git，用完即刪。",
+	[Key.secretsExportDownloadEnv]: "下載 .env 檔案",
+	[Key.secretsExportCopyVercel]: "複製 Vercel CLI 指令",
+	[Key.secretsExportEnvDone]: "已匯出 .env 檔案，請妥善保管",
+	[Key.secretsExportCopied]: "Vercel CLI 指令已複製",
+	[Key.secretsClose]: "關閉",
+	[Key.secretsCancel]: "取消",
+
+	// 修改認證資訊前的目前密碼確認
+	[Key.secretsAuthConfirmTitle]: "驗證目前密碼",
+	[Key.secretsAuthConfirmDesc]:
+		"修改管理員認證資訊（使用者名稱 / 密碼 / JWT 金鑰）需要輸入目前登入密碼",
+	[Key.secretsAuthConfirmPlaceholder]: "目前登入密碼",
+	[Key.secretsAuthConfirmSubmit]: "驗證並儲存",
+
+	// 生產環境金鑰配置指南
+	[Key.adminSecretsLocalOnlyTitle]: "金鑰配置僅支援本機開發環境",
+	[Key.adminSecretsLocalOnlyDesc]:
+		"為保護敏感資訊，Web 端金鑰管理僅在本機開發環境開放；生產環境的金鑰請在本地配置完成後，透過「一鍵匯出」匯入部署平台。",
+	[Key.adminSecretsGuideTitle]: "如何為生產環境配置金鑰",
+	[Key.adminSecretsGuideStep1]:
+		"在本機啟動站點（pnpm dev）並登入控制台，進入「金鑰配置」完成配置。",
+	[Key.adminSecretsGuideStep2]:
+		"配置完成後點擊「匯出配置」按鈕，下載 .env 檔案或複製 Vercel CLI 指令。",
+	[Key.adminSecretsGuideStep3]:
+		"到部署平台（如 Vercel）貼上環境變數並重新部署站點。",
+	[Key.adminSecretsLocalOnlyTip]:
+		"提示：僅當站點在本機執行時（如 http://localhost:4321），金鑰管理頁面才會顯示。",
+
+	// 首次初始化引導
+	[Key.adminSetupTitle]: "首次初始化",
+	[Key.adminSetupDesc]: "設定管理員帳號與安全金鑰，完成後即可進入控制台",
+	[Key.adminSetupTokenLabel]: "安裝令牌",
+	[Key.adminSetupTokenHint]:
+		"為防止他人搶註管理員帳號，請從服務端終端日誌中取得一次性安裝令牌",
+	[Key.adminSetupUsernameLabel]: "管理員使用者名稱",
+	[Key.adminSetupPasswordLabel]: "管理員密碼",
+	[Key.adminSetupConfirmLabel]: "確認密碼",
+	[Key.adminSetupSubmit]: "完成初始化",
+	[Key.adminSetupSubmitting]: "初始化中…",
+	[Key.adminSetupPasswordWeak]: "密碼至少需要 8 位，且不能與使用者名稱相同",
+	[Key.adminSetupPasswordMismatch]: "兩次輸入的密碼不一致",
+	[Key.adminSetupDone]: "初始化完成，正在進入控制台",
+	[Key.adminSetupReadonly]:
+		"目前為唯讀部署環境（檔案系統不可寫），請到部署平台設定 ADMIN_USERNAME、ADMIN_PASSWORD、ADMIN_JWT_SECRET 環境變數後重新啟動服務。",
+
+	// 新手指引（Onboarding Tour）
+	[Key.adminTourTitle]: "控制台功能指引",
+	[Key.adminTourNext]: "下一步",
+	[Key.adminTourPrev]: "上一步",
+	[Key.adminTourSkip]: "跳過",
+	[Key.adminTourDone]: "開始使用",
+	[Key.adminTourRestart]: "重新查看指引",
+	[Key.adminTourWelcomeTitle]: "歡迎使用控制台",
+	[Key.adminTourWelcomeDesc]:
+		"這裡是你的部落格管理後台：撰寫文章、設定金鑰、同步倉庫與個人化設定，跟隨指引快速上手。",
+	[Key.adminTourSecretsTitle]: "金鑰設定",
+	[Key.adminTourSecretsDesc]:
+		"在這裡設定 GitHub App 憑證與管理員認證金鑰。建議先完成 GitHub 倉庫授權，即可同步倉庫中的文章。",
+	[Key.adminTourGoSecrets]: "前往金鑰設定",
+	[Key.adminTourArticlesTitle]: "文章管理",
+	[Key.adminTourArticlesDesc]:
+		"在文章頁可以檢視、編輯、刪除倉庫中的文章，也可以直接在後台建立新文章。",
+	[Key.adminTourGoArticles]: "前往文章管理",
+	[Key.adminTourSettingsTitle]: "個人化設定",
+	[Key.adminTourSettingsDesc]:
+		"網站的主題、側邊欄、公告、評論等所有設定都可以在這裡調整，改動即時生效。",
+	[Key.adminTourGoSettings]: "前往設定",
+
 	// 控制面板儀表盤
 	[Key.adminHome]: "首頁",
 	[Key.dashboardUnit]: "共 {count} 篇",

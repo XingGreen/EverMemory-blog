@@ -697,6 +697,82 @@ export const en: Translation = {
 	[Key.secretsGenerateHashDone]:
 		"Hash generated and filled in. Click Save to apply.",
 
+	// ── Secret Export ──
+	[Key.secretsExport]: "Export Config",
+	[Key.secretsExportDesc]:
+		"Export locally configured secrets to be used in production (e.g. Vercel)",
+	[Key.secretsExportWarning]:
+		"Exported content contains sensitive secrets. Only use it to import into your deployment platform; do not commit it to Git and delete it after use.",
+	[Key.secretsExportDownloadEnv]: "Download .env file",
+	[Key.secretsExportCopyVercel]: "Copy Vercel CLI commands",
+	[Key.secretsExportEnvDone]: ".env file exported. Keep it safe.",
+	[Key.secretsExportCopied]: "Vercel CLI commands copied",
+	[Key.secretsClose]: "Close",
+	[Key.secretsCancel]: "Cancel",
+
+	// ── Current Password Confirmation for Auth Changes ──
+	[Key.secretsAuthConfirmTitle]: "Verify Current Password",
+	[Key.secretsAuthConfirmDesc]:
+		"Changing admin credentials (username / password / JWT secret) requires your current login password",
+	[Key.secretsAuthConfirmPlaceholder]: "Current login password",
+	[Key.secretsAuthConfirmSubmit]: "Verify & Save",
+
+	// ── Production Secret Configuration Guide ──
+	[Key.adminSecretsLocalOnlyTitle]: "Secret Management Is Local-Only",
+	[Key.adminSecretsLocalOnlyDesc]:
+		"To protect sensitive information, the web-based secret manager is only available in the local development environment. For production, configure secrets locally first, then import them into your deployment platform via one-click export.",
+	[Key.adminSecretsGuideTitle]: "How to Configure Secrets for Production",
+	[Key.adminSecretsGuideStep1]:
+		"Start the site locally (pnpm dev), sign in to the dashboard, and complete the configuration under “Secret Management”.",
+	[Key.adminSecretsGuideStep2]:
+		"Click the “Export Config” button and download the .env file or copy the Vercel CLI commands.",
+	[Key.adminSecretsGuideStep3]:
+		"Paste the environment variables on your deployment platform (e.g. Vercel) and redeploy the site.",
+	[Key.adminSecretsLocalOnlyTip]:
+		"Tip: The secret management page is only displayed when the site runs locally (e.g. http://localhost:4321).",
+
+	// ── First-time Initialization ──
+	[Key.adminSetupTitle]: "First-time Setup",
+	[Key.adminSetupDesc]:
+		"Create the administrator account and security keys to unlock the console.",
+	[Key.adminSetupTokenLabel]: "Setup Token",
+	[Key.adminSetupTokenHint]:
+		"To prevent others from claiming the admin account, grab the one-time setup token from the server terminal logs.",
+	[Key.adminSetupUsernameLabel]: "Admin Username",
+	[Key.adminSetupPasswordLabel]: "Admin Password",
+	[Key.adminSetupConfirmLabel]: "Confirm Password",
+	[Key.adminSetupSubmit]: "Complete Setup",
+	[Key.adminSetupSubmitting]: "Setting up…",
+	[Key.adminSetupPasswordWeak]:
+		"Password must be at least 8 characters and different from the username.",
+	[Key.adminSetupPasswordMismatch]: "Passwords do not match.",
+	[Key.adminSetupDone]: "Initialized. Entering console…",
+	[Key.adminSetupReadonly]:
+		"This is a read-only deployment (file system not writable). Configure the ADMIN_USERNAME, ADMIN_PASSWORD and ADMIN_JWT_SECRET environment variables on your hosting platform, then restart the service.",
+
+	// ── Onboarding Tour ──
+	[Key.adminTourTitle]: "Console Guide",
+	[Key.adminTourNext]: "Next",
+	[Key.adminTourPrev]: "Back",
+	[Key.adminTourSkip]: "Skip",
+	[Key.adminTourDone]: "Get Started",
+	[Key.adminTourRestart]: "Show Guide Again",
+	[Key.adminTourWelcomeTitle]: "Welcome to the Console",
+	[Key.adminTourWelcomeDesc]:
+		"This is your blog admin: write posts, manage keys, sync your repository and personalize everything. Let's get you started.",
+	[Key.adminTourSecretsTitle]: "Secrets",
+	[Key.adminTourSecretsDesc]:
+		"Configure GitHub App credentials and admin auth keys here. Authorize your GitHub repository first to sync posts from it.",
+	[Key.adminTourGoSecrets]: "Open Secrets",
+	[Key.adminTourArticlesTitle]: "Posts",
+	[Key.adminTourArticlesDesc]:
+		"View, edit and delete posts in your repository, or create new ones right from the console.",
+	[Key.adminTourGoArticles]: "Open Posts",
+	[Key.adminTourSettingsTitle]: "Settings",
+	[Key.adminTourSettingsDesc]:
+		"Tune the theme, sidebar, announcements, comments and more. Changes take effect instantly.",
+	[Key.adminTourGoSettings]: "Open Settings",
+
 	// ── Admin Dashboard Homepage ──
 	[Key.adminHome]: "Home",
 	[Key.dashboardUnit]: "{count} posts",

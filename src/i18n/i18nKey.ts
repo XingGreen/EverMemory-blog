@@ -662,6 +662,66 @@ enum I18nKey {
 	secretsGenerateHash = "secretsGenerateHash",
 	secretsGenerateHashDone = "secretsGenerateHashDone",
 
+	// 密钥导出
+	secretsExport = "secretsExport",
+	secretsExportDesc = "secretsExportDesc",
+	secretsExportWarning = "secretsExportWarning",
+	secretsExportDownloadEnv = "secretsExportDownloadEnv",
+	secretsExportCopyVercel = "secretsExportCopyVercel",
+	secretsExportEnvDone = "secretsExportEnvDone",
+	secretsExportCopied = "secretsExportCopied",
+	secretsClose = "secretsClose",
+	secretsCancel = "secretsCancel",
+
+	// 修改认证信息前的当前密码确认
+	secretsAuthConfirmTitle = "secretsAuthConfirmTitle",
+	secretsAuthConfirmDesc = "secretsAuthConfirmDesc",
+	secretsAuthConfirmPlaceholder = "secretsAuthConfirmPlaceholder",
+	secretsAuthConfirmSubmit = "secretsAuthConfirmSubmit",
+
+	// 生产环境密钥配置指南
+	adminSecretsLocalOnlyTitle = "adminSecretsLocalOnlyTitle",
+	adminSecretsLocalOnlyDesc = "adminSecretsLocalOnlyDesc",
+	adminSecretsGuideTitle = "adminSecretsGuideTitle",
+	adminSecretsGuideStep1 = "adminSecretsGuideStep1",
+	adminSecretsGuideStep2 = "adminSecretsGuideStep2",
+	adminSecretsGuideStep3 = "adminSecretsGuideStep3",
+	adminSecretsLocalOnlyTip = "adminSecretsLocalOnlyTip",
+
+	// 首次初始化引导
+	adminSetupTitle = "adminSetupTitle",
+	adminSetupDesc = "adminSetupDesc",
+	adminSetupTokenLabel = "adminSetupTokenLabel",
+	adminSetupTokenHint = "adminSetupTokenHint",
+	adminSetupUsernameLabel = "adminSetupUsernameLabel",
+	adminSetupPasswordLabel = "adminSetupPasswordLabel",
+	adminSetupConfirmLabel = "adminSetupConfirmLabel",
+	adminSetupSubmit = "adminSetupSubmit",
+	adminSetupSubmitting = "adminSetupSubmitting",
+	adminSetupPasswordWeak = "adminSetupPasswordWeak",
+	adminSetupPasswordMismatch = "adminSetupPasswordMismatch",
+	adminSetupDone = "adminSetupDone",
+	adminSetupReadonly = "adminSetupReadonly",
+
+	// 新手指引（Onboarding Tour）
+	adminTourTitle = "adminTourTitle",
+	adminTourNext = "adminTourNext",
+	adminTourPrev = "adminTourPrev",
+	adminTourSkip = "adminTourSkip",
+	adminTourDone = "adminTourDone",
+	adminTourRestart = "adminTourRestart",
+	adminTourWelcomeTitle = "adminTourWelcomeTitle",
+	adminTourWelcomeDesc = "adminTourWelcomeDesc",
+	adminTourSecretsTitle = "adminTourSecretsTitle",
+	adminTourSecretsDesc = "adminTourSecretsDesc",
+	adminTourGoSecrets = "adminTourGoSecrets",
+	adminTourArticlesTitle = "adminTourArticlesTitle",
+	adminTourArticlesDesc = "adminTourArticlesDesc",
+	adminTourGoArticles = "adminTourGoArticles",
+	adminTourSettingsTitle = "adminTourSettingsTitle",
+	adminTourSettingsDesc = "adminTourSettingsDesc",
+	adminTourGoSettings = "adminTourGoSettings",
+
 	// 控制面板首页（仪表盘）
 	adminHome = "adminHome",
 	dashboardUnit = "dashboardUnit",

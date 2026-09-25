@@ -691,6 +691,84 @@ export const ja: Translation = {
 	[Key.secretsGenerateHashDone]:
 		"ハッシュを生成して入力しました。保存をクリックして適用",
 
+	// シークレットのエクスポート
+	[Key.secretsExport]: "設定をエクスポート",
+	[Key.secretsExportDesc]:
+		"ローカルで設定したシークレットを本番環境（Vercel など）向けに書き出します",
+	[Key.secretsExportWarning]:
+		"エクスポート内容には機密シークレットが含まれます。デプロイ先へのインポート以外に使わず、Git にコミットせず、使用後は削除してください。",
+	[Key.secretsExportDownloadEnv]: ".env ファイルをダウンロード",
+	[Key.secretsExportCopyVercel]: "Vercel CLI コマンドをコピー",
+	[Key.secretsExportEnvDone]:
+		".env ファイルを書き出しました。大切に保管してください",
+	[Key.secretsExportCopied]: "Vercel CLI コマンドをコピーしました",
+	[Key.secretsClose]: "閉じる",
+	[Key.secretsCancel]: "キャンセル",
+
+	// 認証情報変更前の現在パスワード確認
+	[Key.secretsAuthConfirmTitle]: "現在のパスワードを確認",
+	[Key.secretsAuthConfirmDesc]:
+		"管理者認証情報（ユーザー名 / パスワード / JWT シークレット）の変更には現在のログインパスワードが必要です",
+	[Key.secretsAuthConfirmPlaceholder]: "現在のログインパスワード",
+	[Key.secretsAuthConfirmSubmit]: "確認して保存",
+
+	// 本番環境のシークレット設定ガイド
+	[Key.adminSecretsLocalOnlyTitle]:
+		"シークレット設定はローカル開発環境のみ対応",
+	[Key.adminSecretsLocalOnlyDesc]:
+		"機密情報を保護するため、Web 上のシークレット管理はローカル開発環境でのみ利用できます。本番環境のシークレットは、ローカルで設定した後に「ワンクリックエクスポート」でデプロイ先にインポートしてください。",
+	[Key.adminSecretsGuideTitle]: "本番環境向けシークレットの設定方法",
+	[Key.adminSecretsGuideStep1]:
+		"ローカルでサイトを起動（pnpm dev）し、ダッシュボードにログインして「シークレット設定」で設定を完了します。",
+	[Key.adminSecretsGuideStep2]:
+		"設定完了後「設定をエクスポート」ボタンをクリックし、.env ファイルをダウンロードするか Vercel CLI コマンドをコピーします。",
+	[Key.adminSecretsGuideStep3]:
+		"デプロイ先（Vercel など）で環境変数を貼り付け、サイトを再デプロイします。",
+	[Key.adminSecretsLocalOnlyTip]:
+		"ヒント：サイトがローカルで実行されている場合（例：http://localhost:4321）にのみ、シークレット管理ページが表示されます。",
+
+	// 初回初期化ガイド
+	[Key.adminSetupTitle]: "初回初期化",
+	[Key.adminSetupDesc]:
+		"管理者アカウントとセキュリティキーを設定すると、コンソールに入れます",
+	[Key.adminSetupTokenLabel]: "セットアップトークン",
+	[Key.adminSetupTokenHint]:
+		"管理者アカウントの乗っ取りを防ぐため、サーバーのターミナルログからワンタイムのセットアップトークンを取得してください",
+	[Key.adminSetupUsernameLabel]: "管理者ユーザー名",
+	[Key.adminSetupPasswordLabel]: "管理者パスワード",
+	[Key.adminSetupConfirmLabel]: "パスワード確認",
+	[Key.adminSetupSubmit]: "初期化を完了",
+	[Key.adminSetupSubmitting]: "初期化中…",
+	[Key.adminSetupPasswordWeak]:
+		"パスワードは 8 文字以上で、ユーザー名と同じにできません",
+	[Key.adminSetupPasswordMismatch]: "パスワードが一致しません",
+	[Key.adminSetupDone]: "初期化完了、コンソールに移動中…",
+	[Key.adminSetupReadonly]:
+		"現在の環境は読み取り専用（ファイルシステムに書き込み不可）です。ホスティングプラットフォームで ADMIN_USERNAME・ADMIN_PASSWORD・ADMIN_JWT_SECRET 環境変数を設定し、サービスを再起動してください。",
+
+	// 初回ガイド（Onboarding Tour）
+	[Key.adminTourTitle]: "コンソール機能ガイド",
+	[Key.adminTourNext]: "次へ",
+	[Key.adminTourPrev]: "前へ",
+	[Key.adminTourSkip]: "スキップ",
+	[Key.adminTourDone]: "始める",
+	[Key.adminTourRestart]: "ガイドをもう一度見る",
+	[Key.adminTourWelcomeTitle]: "コンソールへようこそ",
+	[Key.adminTourWelcomeDesc]:
+		"ここはブログの管理画面です。記事の執筆、キー管理、リポジトリ同期、カスタマイズができます。ガイドに沿って始めましょう。",
+	[Key.adminTourSecretsTitle]: "キー設定",
+	[Key.adminTourSecretsDesc]:
+		"GitHub App の認証情報と管理者認証キーをここで設定します。まず GitHub リポジトリを認証すると、記事を同期できます。",
+	[Key.adminTourGoSecrets]: "キー設定へ",
+	[Key.adminTourArticlesTitle]: "記事管理",
+	[Key.adminTourArticlesDesc]:
+		"記事ページでリポジトリ内の記事を閲覧・編集・削除でき、新規作成もできます。",
+	[Key.adminTourGoArticles]: "記事管理へ",
+	[Key.adminTourSettingsTitle]: "カスタマイズ",
+	[Key.adminTourSettingsDesc]:
+		"テーマ・サイドバー・お知らせ・コメントなど、すべての設定をここで調整できます。変更は即時反映されます。",
+	[Key.adminTourGoSettings]: "設定へ",
+
 	// 控制面板仪表盘
 	[Key.adminHome]: "ホーム",
 	[Key.dashboardUnit]: "{count} 記事",

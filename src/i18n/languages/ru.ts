@@ -703,6 +703,84 @@ export const ru: Translation = {
 	[Key.secretsGenerateHashDone]:
 		"Хеш сгенерирован и вставлен. Нажмите «Сохранить».",
 
+	// Экспорт секретов
+	[Key.secretsExport]: "Экспорт конфигурации",
+	[Key.secretsExportDesc]:
+		"Экспорт локально настроенных секретов для продакшн-среды (например Vercel)",
+	[Key.secretsExportWarning]:
+		"Экспортируемое содержимое содержит секреты. Используйте его только для импорта на платформу развёртывания; не коммитьте в Git и удалите после использования.",
+	[Key.secretsExportDownloadEnv]: "Скачать файл .env",
+	[Key.secretsExportCopyVercel]: "Скопировать команды Vercel CLI",
+	[Key.secretsExportEnvDone]:
+		"Файл .env экспортирован. Храните его в безопасности.",
+	[Key.secretsExportCopied]: "Команды Vercel CLI скопированы",
+	[Key.secretsClose]: "Закрыть",
+	[Key.secretsCancel]: "Отмена",
+
+	// Подтверждение текущего пароля при изменении учётных данных
+	[Key.secretsAuthConfirmTitle]: "Подтвердите текущий пароль",
+	[Key.secretsAuthConfirmDesc]:
+		"Для изменения учётных данных администратора (имя пользователя / пароль / JWT-секрет) требуется текущий пароль входа",
+	[Key.secretsAuthConfirmPlaceholder]: "Текущий пароль входа",
+	[Key.secretsAuthConfirmSubmit]: "Подтвердить и сохранить",
+
+	// Руководство по настройке секретов в продакшене
+	[Key.adminSecretsLocalOnlyTitle]:
+		"Управление секретами доступно только в локальной среде",
+	[Key.adminSecretsLocalOnlyDesc]:
+		"Для защиты конфиденциальной информации веб-управление секретами доступно только в локальной среде разработки. Сначала настройте секреты локально, затем импортируйте их на платформу развёртывания одним кликом.",
+	[Key.adminSecretsGuideTitle]: "Как настроить секреты для продакшена",
+	[Key.adminSecretsGuideStep1]:
+		"Запустите сайт локально (pnpm dev), войдите в панель управления и завершите настройку в разделе «Секреты».",
+	[Key.adminSecretsGuideStep2]:
+		"После настройки нажмите кнопку «Экспорт конфигурации», скачайте файл .env или скопируйте команды Vercel CLI.",
+	[Key.adminSecretsGuideStep3]:
+		"Вставьте переменные окружения на платформе развёртывания (например Vercel) и переразверните сайт.",
+	[Key.adminSecretsLocalOnlyTip]:
+		"Совет: страница управления секретами отображается только при локальном запуске сайта (например http://localhost:4321).",
+
+	// Первичная инициализация
+	[Key.adminSetupTitle]: "Первичная настройка",
+	[Key.adminSetupDesc]:
+		"Создайте учётную запись администратора и ключи безопасности, чтобы войти в консоль.",
+	[Key.adminSetupTokenLabel]: "Установочный токен",
+	[Key.adminSetupTokenHint]:
+		"Чтобы никто другой не занял учётную запись администратора, возьмите одноразовый токен из журнала терминала сервера.",
+	[Key.adminSetupUsernameLabel]: "Имя администратора",
+	[Key.adminSetupPasswordLabel]: "Пароль администратора",
+	[Key.adminSetupConfirmLabel]: "Подтверждение пароля",
+	[Key.adminSetupSubmit]: "Завершить настройку",
+	[Key.adminSetupSubmitting]: "Настройка…",
+	[Key.adminSetupPasswordWeak]:
+		"Пароль должен быть не короче 8 символов и отличаться от имени пользователя.",
+	[Key.adminSetupPasswordMismatch]: "Пароли не совпадают.",
+	[Key.adminSetupDone]: "Настройка завершена. Вход в консоль…",
+	[Key.adminSetupReadonly]:
+		"Развёртывание только для чтения (файловая система недоступна для записи). Задайте переменные окружения ADMIN_USERNAME, ADMIN_PASSWORD и ADMIN_JWT_SECRET на хостинг-платформе и перезапустите сервис.",
+
+	// Обучающий тур
+	[Key.adminTourTitle]: "Гид по консоли",
+	[Key.adminTourNext]: "Далее",
+	[Key.adminTourPrev]: "Назад",
+	[Key.adminTourSkip]: "Пропустить",
+	[Key.adminTourDone]: "Начать",
+	[Key.adminTourRestart]: "Показать гид снова",
+	[Key.adminTourWelcomeTitle]: "Добро пожаловать в консоль",
+	[Key.adminTourWelcomeDesc]:
+		"Это админка вашего блога: пишите посты, управляйте ключами, синхронизируйте репозиторий и настраивайте всё под себя.",
+	[Key.adminTourSecretsTitle]: "Секреты",
+	[Key.adminTourSecretsDesc]:
+		"Здесь настраиваются учётные данные GitHub App и ключи аутентификации администратора. Сначала авторизуйте репозиторий GitHub, чтобы синхронизировать посты.",
+	[Key.adminTourGoSecrets]: "Открыть секреты",
+	[Key.adminTourArticlesTitle]: "Управление постами",
+	[Key.adminTourArticlesDesc]:
+		"На странице постов можно просматривать, редактировать и удалять посты из репозитория, а также создавать новые.",
+	[Key.adminTourGoArticles]: "Открыть посты",
+	[Key.adminTourSettingsTitle]: "Настройки",
+	[Key.adminTourSettingsDesc]:
+		"Тема, боковая панель, объявления, комментарии и многое другое настраивается здесь. Изменения вступают в силу сразу.",
+	[Key.adminTourGoSettings]: "Открыть настройки",
+
 	// Панель управления — приборная панель
 	[Key.adminHome]: "Главная",
 	[Key.dashboardUnit]: "{count} записей",
