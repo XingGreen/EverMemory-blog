@@ -666,6 +666,80 @@ export const zh_CN: Translation = {
 	[Key.secretsGenerateHash]: "生成密码哈希",
 	[Key.secretsGenerateHashDone]: "哈希已生成并填入，点击保存生效",
 
+	// 密钥导出
+	[Key.secretsExport]: "导出配置",
+	[Key.secretsExportDesc]:
+		"将本地已配置的密钥导出，供生产环境（如 Vercel）使用",
+	[Key.secretsExportWarning]:
+		"导出内容包含敏感密钥，仅用于导入部署平台；请勿提交到 Git，用毕即删。",
+	[Key.secretsExportDownloadEnv]: "下载 .env 文件",
+	[Key.secretsExportCopyVercel]: "复制 Vercel CLI 命令",
+	[Key.secretsExportEnvDone]: "已导出 .env 文件，请妥善保管",
+	[Key.secretsExportCopied]: "Vercel CLI 命令已复制",
+	[Key.secretsClose]: "关闭",
+	[Key.secretsCancel]: "取消",
+
+	// 修改认证信息前的当前密码确认
+	[Key.secretsAuthConfirmTitle]: "验证当前密码",
+	[Key.secretsAuthConfirmDesc]:
+		"修改管理员认证信息（用户名 / 密码 / JWT 密钥）需要输入当前登录密码",
+	[Key.secretsAuthConfirmPlaceholder]: "当前登录密码",
+	[Key.secretsAuthConfirmSubmit]: "验证并保存",
+
+	// 生产环境密钥配置指南
+	[Key.adminSecretsLocalOnlyTitle]: "密钥配置仅支持本地开发环境",
+	[Key.adminSecretsLocalOnlyDesc]:
+		"为保护敏感信息，Web 端密钥管理只在本机开发环境开放；生产环境的密钥请在本地配置完成后，通过「一键导出」导入部署平台。",
+	[Key.adminSecretsGuideTitle]: "如何为生产环境配置密钥",
+	[Key.adminSecretsGuideStep1]:
+		"在本地启动站点（pnpm dev）并登录控制台，进入「密钥配置」完成配置。",
+	[Key.adminSecretsGuideStep2]:
+		"配置完成后点击「导出配置」按钮，下载 .env 文件或复制 Vercel CLI 命令。",
+	[Key.adminSecretsGuideStep3]:
+		"到部署平台（如 Vercel）粘贴环境变量并重新部署站点。",
+	[Key.adminSecretsLocalOnlyTip]:
+		"提示：仅当站点在本地运行时（如 http://localhost:4321），密钥管理页面才会显示。",
+
+	// 首次初始化引导
+	[Key.adminSetupTitle]: "首次初始化",
+	[Key.adminSetupDesc]: "配置管理员账号与安全密钥，完成后即可进入控制台",
+	[Key.adminSetupTokenLabel]: "安装令牌",
+	[Key.adminSetupTokenHint]:
+		"为防止他人抢注管理员账号，请从服务端终端日志中获取一次性安装令牌",
+	[Key.adminSetupUsernameLabel]: "管理员用户名",
+	[Key.adminSetupPasswordLabel]: "管理员密码",
+	[Key.adminSetupConfirmLabel]: "确认密码",
+	[Key.adminSetupSubmit]: "完成初始化",
+	[Key.adminSetupSubmitting]: "初始化中…",
+	[Key.adminSetupPasswordWeak]: "密码至少需要 8 位，且不能与用户名相同",
+	[Key.adminSetupPasswordMismatch]: "两次输入的密码不一致",
+	[Key.adminSetupDone]: "初始化完成，正在进入控制台",
+	[Key.adminSetupReadonly]:
+		"当前环境为只读部署（文件系统不可写），请到部署平台配置 ADMIN_USERNAME、ADMIN_PASSWORD、ADMIN_JWT_SECRET 环境变量后重启服务。",
+
+	// 新手指引（Onboarding Tour）
+	[Key.adminTourTitle]: "控制台功能指引",
+	[Key.adminTourNext]: "下一步",
+	[Key.adminTourPrev]: "上一步",
+	[Key.adminTourSkip]: "跳过",
+	[Key.adminTourDone]: "开始使用",
+	[Key.adminTourRestart]: "重新查看指引",
+	[Key.adminTourWelcomeTitle]: "欢迎使用控制台",
+	[Key.adminTourWelcomeDesc]:
+		"这里是你的博客管理后台：撰写文章、配置密钥、同步仓库与个性化设置，跟随指引快速上手。",
+	[Key.adminTourSecretsTitle]: "密钥配置",
+	[Key.adminTourSecretsDesc]:
+		"在这里配置 GitHub App 凭据与管理员认证密钥。建议先完成 GitHub 仓库授权，即可同步仓库中的文章。",
+	[Key.adminTourGoSecrets]: "前往密钥配置",
+	[Key.adminTourArticlesTitle]: "文章管理",
+	[Key.adminTourArticlesDesc]:
+		"在文章页可以查看、编辑、删除仓库中的文章，也可以直接在后台创建新文章。",
+	[Key.adminTourGoArticles]: "前往文章管理",
+	[Key.adminTourSettingsTitle]: "个性化设置",
+	[Key.adminTourSettingsDesc]:
+		"站点的主题、侧边栏、公告、评论等所有配置都可以在这里调整，改动即时生效。",
+	[Key.adminTourGoSettings]: "前往设置",
+
 	// 控制面板（仪表盘）
 	[Key.adminHome]: "首页",
 	[Key.dashboardUnit]: "共 {count} 篇",
