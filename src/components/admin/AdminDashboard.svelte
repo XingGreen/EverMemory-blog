@@ -11,7 +11,9 @@ import {
 	getConfigItem,
 	getConfigLabelKey,
 } from "@/utils/admin-settings";
+import { isTourDone, resetTour } from "@/utils/onboarding";
 import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
+import OnboardingTour from "./OnboardingTour.svelte";
 import PostEditor from "./PostEditor.svelte";
 import PostList from "./PostList.svelte";
 import SecretManager from "./SecretManager.svelte";
@@ -71,6 +73,7 @@ let showDeleteModal = $state(false);
 let deletingPost = $state<Post | null>(null);
 let toast = $state<{ message: string; type: "success" | "error" } | null>(null);
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
+let tourOpen = $state(false);
 let isSyncing = $state(false);
 // GitHub 连通性状态：idle=默认（未测试） / checking=测试中 / ok=连接正常 / fail=无法连接
 let githubStatus = $state<"idle" | "checking" | "ok" | "fail">("idle");
@@ -238,6 +241,10 @@ function startAdmin() {
 	loadPosts();
 	window.addEventListener("popstate", applyRoute);
 	applyRoute(); // 同步初始路由
+	// 首次进入控制台：自动弹出新手指引
+	if (!isTourDone()) {
+		tourOpen = true;
+	}
 }
 
 onMount(async () => {
@@ -1123,6 +1130,18 @@ function formatDate(dateStr: string | null): string {
 							<span>{settingsSaving ? i18n(I18nKey.configSaving) : i18n(I18nKey.configSave)}</span>
 						</button>
 					{/if}
+					{#if isVerified}
+						<button
+							class="action-btn"
+							title={i18n(I18nKey.adminTourRestart)}
+							onclick={() => {
+								resetTour();
+								tourOpen = true;
+							}}
+						>
+							<Icon icon="material-symbols:help-outline-rounded" class="text-sm" />
+						</button>
+					{/if}
 				</div>
 			</div>
 
@@ -1181,12 +1200,43 @@ function formatDate(dateStr: string | null): string {
 							onSearchChange={(value) => (settingsSearchTerm = value)}
 						/>
 					{/if}
-				{:else if activePage === "secrets"}
+{:else if activePage === "secrets"}
+				{#if import.meta.env.PROD}
+					<section class="card-base secrets-guide">
+						<div class="guide-head">
+							<Icon icon="material-symbols:shield-lock" class="guide-icon" />
+							<div>
+								<h2>{i18n(I18nKey.adminSecretsLocalOnlyTitle)}</h2>
+								<p>{i18n(I18nKey.adminSecretsLocalOnlyDesc)}</p>
+							</div>
+						</div>
+						<h3 class="guide-subtitle">{i18n(I18nKey.adminSecretsGuideTitle)}</h3>
+						<div class="guide-steps">
+							<div class="guide-step">
+								<span class="step-num">1</span>
+								<p>{i18n(I18nKey.adminSecretsGuideStep1)}</p>
+							</div>
+							<div class="guide-step">
+								<span class="step-num">2</span>
+								<p>{i18n(I18nKey.adminSecretsGuideStep2)}</p>
+							</div>
+							<div class="guide-step">
+								<span class="step-num">3</span>
+								<p>{i18n(I18nKey.adminSecretsGuideStep3)}</p>
+							</div>
+						</div>
+						<div class="guide-tip">
+							<Icon icon="material-symbols:terminal-rounded" />
+							<span>{i18n(I18nKey.adminSecretsLocalOnlyTip)}</span>
+						</div>
+					</section>
+				{:else}
 					<SecretManager
 						onNotify={(message, type, duration) =>
 							showToast(message, type, duration)}
 					/>
 				{/if}
+			{/if}
 			</div>
 		</div>
 	</div>
@@ -1214,6 +1264,16 @@ function formatDate(dateStr: string | null): string {
 			</button>
 		</div>
 	{/if}
+
+	<OnboardingTour
+		open={tourOpen}
+		onClose={() => (tourOpen = false)}
+		onNavigate={(page) => {
+			if (page === "secrets") goSecrets();
+			else if (page === "posts") goPostList();
+			else goSettings();
+		}}
+	/>
 {/if}
 
 <style>
@@ -2595,5 +2655,96 @@ function formatDate(dateStr: string | null): string {
 			flex-direction: column;
 			align-items: flex-start;
 		}
+	}
+.secrets-guide {
+		padding: 1.75rem;
+	}
+
+	.guide-head {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.875rem;
+		margin-bottom: 1.25rem;
+	}
+
+	:global(.guide-icon) {
+		flex-shrink: 0;
+		margin-top: 0.25rem;
+		color: var(--primary);
+	}
+
+	.guide-head h2 {
+		font-size: 1.1875rem;
+		font-weight: 600;
+		color: var(--deep-text);
+		margin-bottom: 0.375rem;
+	}
+
+	.guide-head p {
+		font-size: 0.875rem;
+		color: var(--content-meta);
+		line-height: 1.7;
+	}
+
+	.guide-subtitle {
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--deep-text);
+		margin-bottom: 0.875rem;
+	}
+
+	.guide-steps {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.guide-step {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.75rem;
+		background: rgba(128, 128, 128, 0.06);
+		border-radius: var(--radius-md);
+		padding: 0.75rem 0.875rem;
+	}
+
+	.step-num {
+		flex-shrink: 0;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.5rem;
+		height: 1.5rem;
+		border-radius: 50%;
+		background: var(--primary);
+		color: #fff;
+		font-size: 0.8125rem;
+		font-weight: 600;
+	}
+
+	.guide-step p {
+		font-size: 0.875rem;
+		color: var(--deep-text);
+		line-height: 1.7;
+	}
+
+	.guide-tip {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.5rem;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+		line-height: 1.6;
+		background: rgba(59, 130, 246, 0.08);
+		border: 1px solid rgba(59, 130, 246, 0.25);
+		border-radius: var(--radius-sm);
+		padding: 0.625rem 0.875rem;
+	}
+
+	.guide-tip :global(svg) {
+		flex-shrink: 0;
+		margin-top: 0.125rem;
+		color: #3b82f6;
 	}
 </style>

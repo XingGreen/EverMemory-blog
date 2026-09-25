@@ -174,3 +174,53 @@ export function generateJwtSecret(): string {
 export function hashAdminPassword(plain: string): string {
 	return crypto.createHash("sha256").update(plain, "utf8").digest("hex");
 }
+
+/** 读取全部密钥的真实值（仅服务端导出场景使用；敏感值请谨慎处理） */
+export function readAllSecretValues(): Record<string, string> {
+	const values: Record<string, string> = {};
+	for (const key of Object.keys(ENV_GETTERS)) {
+		values[key] = readEnvValue(key);
+	}
+	return values;
+}
+
+/**
+ * 私钥还原：.env.local 中的私钥可能被 quoteEnvValue 自动存为 Base64，
+ * 导出到生产环境时还原为 PEM 原文（平台环境变量面板更友好）。
+ * 已含 PEM 头或解码结果不含 PEM 头时保持原文。
+ */
+export function decodePrivateKey(value: string): string {
+	if (!value || value.includes("-----BEGIN")) return value;
+	try {
+		const decoded = Buffer.from(value, "base64").toString("utf8");
+		if (decoded.includes("-----BEGIN") && decoded.includes("-----END")) {
+			return decoded;
+		}
+	} catch {
+		// 非 Base64（或解码失败）时保持原文
+	}
+	return value;
+}
+
+/**
+ * 校验"当前登录密码"：对比 .env.local 中当前生效的 ADMIN_PASSWORD 哈希
+ * （文件优先实时读取，避免 import.meta.env 启动快照导致的误判）。
+ * 用于修改认证信息（用户名 / 密码 / JWT 密钥）时的二次确认，防 CSRF/会话劫持。
+ */
+export function verifyCurrentPassword(plain: string): boolean {
+	try {
+		if (!plain) return false;
+		const storedHash = readEnvValue("ADMIN_PASSWORD");
+		if (!storedHash) return false;
+		const inputHash = crypto
+			.createHash("sha256")
+			.update(plain, "utf8")
+			.digest("hex");
+		const inputBuf = Buffer.from(inputHash, "hex");
+		const storedBuf = Buffer.from(storedHash, "hex");
+		if (inputBuf.length !== storedBuf.length) return false;
+		return crypto.timingSafeEqual(inputBuf, storedBuf);
+	} catch {
+		return false;
+	}
+}

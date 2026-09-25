@@ -5,6 +5,7 @@ import {
 	isEnvFileWritable,
 	readSecretPreview,
 	readSecretStates,
+	verifyCurrentPassword,
 } from "@/utils/secret-io";
 
 export const prerender = false;
@@ -17,6 +18,13 @@ const json = (body: unknown, status: number) =>
 
 const MAX_TEXT_LENGTH = 4096;
 const MAX_KEY_LENGTH = 100 * 1024;
+
+/** 涉及管理员认证的键：修改时必须二次验证当前密码 */
+const AUTH_KEYS = new Set([
+	"ADMIN_USERNAME",
+	"ADMIN_PASSWORD",
+	"ADMIN_JWT_SECRET",
+]);
 
 export async function GET({
 	request,
@@ -97,6 +105,25 @@ export async function POST({
 
 		if (valid.length === 0) {
 			return json({ success: false, message: "没有需要保存的修改" }, 400);
+		}
+
+		// 涉及管理员认证信息的修改：二次验证当前密码（防 CSRF / 会话劫持）
+		const touchesAuth = valid.some((entry) => AUTH_KEYS.has(entry.key));
+		if (touchesAuth) {
+			const currentPassword =
+				typeof body.currentPassword === "string" ? body.currentPassword : "";
+			if (!currentPassword) {
+				return json(
+					{ success: false, message: "修改认证信息需要验证当前登录密码" },
+					400,
+				);
+			}
+			if (!verifyCurrentPassword(currentPassword)) {
+				return json(
+					{ success: false, message: "当前密码验证失败，未保存任何修改" },
+					401,
+				);
+			}
 		}
 
 		// 长度校验：私钥字段放宽，其余限制 4KB
