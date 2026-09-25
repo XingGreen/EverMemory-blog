@@ -1,3 +1,4 @@
+import { getClientIp, writeAuditLog } from "@/utils/login-guard";
 import {
 	generateSessionToken,
 	SESSION_MAX_AGE,
@@ -100,6 +101,12 @@ export async function POST({
 
 		// 写入 .env.local 并焚毁令牌
 		finishSetup(username, body.password);
+		writeAuditLog({
+			event: "setup_completed",
+			client: getClientIp(request),
+			username,
+			detail: "管理员账号初始化完成，安装令牌已焚毁",
+		});
 
 		// 直接签发会话 Cookie，让用户免登录进入控制台
 		const token = generateSessionToken(SESSION_MAX_AGE);

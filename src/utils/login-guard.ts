@@ -158,7 +158,14 @@ function auditLogPath(): string {
 
 /** 追加一条审计记录；文件系统不可写时降级为仅控制台 */
 export function writeAuditLog(entry: {
-	event: "login_success" | "login_failure" | "login_locked";
+	event:
+		| "login_success"
+		| "login_failure"
+		| "login_locked"
+		| "secrets_updated"
+		| "secrets_credentials_updated"
+		| "secrets_exported"
+		| "setup_completed";
 	client: string;
 	username: string;
 	detail?: string;
