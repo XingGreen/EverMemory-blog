@@ -63,6 +63,9 @@ function getAllFiles(dir, extensions = [".svelte", ".astro", ".ts", ".js"]) {
 function extractIconNames(content) {
 	const icons = new Set();
 
+	// 剔除 <meta> 标签：其 name/property 属性（如 twitter:card）与图标格式冲突，会被误判为图标调用
+	content = content.replace(/<meta\b[^>]*>/gi, "");
+
 	// 匹配各种图标使用模式
 	const patterns = [
 		// icon="xxx:yyy" 或 icon='xxx:yyy'
