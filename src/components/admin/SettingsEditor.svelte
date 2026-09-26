@@ -1,8 +1,8 @@
 <script lang="ts">
+import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import type { AdminConfigItem } from "@/utils/admin-settings";
-import Icon from "@/components/common/Icon.svelte";
 import ConfigEditor from "./ConfigEditor.svelte";
 
 let {

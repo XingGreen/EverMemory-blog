@@ -17,6 +17,7 @@ import OnboardingTour from "./OnboardingTour.svelte";
 import PostEditor from "./PostEditor.svelte";
 import PostList from "./PostList.svelte";
 import SecretManager from "./SecretManager.svelte";
+import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
 import SettingsOverview from "./SettingsOverview.svelte";
 import VerifyScreen from "./VerifyScreen.svelte";
@@ -38,7 +39,7 @@ type Post = {
 };
 
 type ViewMode = "list" | "edit" | "create";
-type Page = "dashboard" | "posts" | "settings" | "secrets";
+type Page = "dashboard" | "posts" | "settings" | "secrets" | "sessions";
 
 // 基于 URL 路径的真实路由（History API）：
 //   /admin/dashboard/                      → 首页
@@ -54,7 +55,8 @@ type Route =
 	| { page: "create" }
 	| { page: "edit"; slug: string }
 	| { page: "settings"; section?: string }
-	| { page: "secrets" };
+	| { page: "secrets" }
+	| { page: "sessions" };
 
 let { avatarUrl = "" }: { avatarUrl?: string } = $props();
 
@@ -136,7 +138,9 @@ const activePage = $derived<Page>(
 			? "settings"
 			: route.page === "secrets"
 				? "secrets"
-				: "posts",
+				: route.page === "sessions"
+					? "sessions"
+					: "posts",
 );
 
 const viewMode = $derived<ViewMode>(
@@ -219,6 +223,8 @@ function parseRoute(pathname: string): Route {
 		}
 		case "secrets":
 			return { page: "secrets" };
+		case "sessions":
+			return { page: "sessions" };
 		default:
 			// 未知路由：返回登录态判定，由 applyRoute 决定去向
 			return { page: "login" };
@@ -298,6 +304,12 @@ const headerInfo = $derived.by(() => {
 			subtitle: i18n(I18nKey.adminSecretsDesc),
 		};
 	}
+	if (activePage === "sessions") {
+		return {
+			title: i18n(I18nKey.adminSessions),
+			subtitle: i18n(I18nKey.adminSessionsDesc),
+		};
+	}
 	if (viewMode === "edit" && editingPost) {
 		return { title: i18n(I18nKey.adminEditPost), subtitle: editingPost.title };
 	}
@@ -321,7 +333,9 @@ const headerIcon = $derived(
 				"material-symbols:settings"
 			: activePage === "secrets"
 				? "material-symbols:shield-lock"
-				: "material-symbols:article-outline",
+				: activePage === "sessions"
+					? "material-symbols:devices"
+					: "material-symbols:article-outline",
 );
 
 async function loadPosts() {
@@ -518,6 +532,10 @@ function goSettings(section?: string) {
 
 function goSecrets() {
 	navigate(`${DASHBOARD_PATH}secrets/`);
+}
+
+function goSessions() {
+	navigate(`${DASHBOARD_PATH}sessions/`);
 }
 
 function toggleSettingsSubmenu() {
@@ -1055,6 +1073,16 @@ function formatDate(dateStr: string | null): string {
 					<Icon icon="material-symbols:shield-lock" />
 					<span>{i18n(I18nKey.adminSecrets)}</span>
 				</button>
+
+				<!-- 会话管理 -->
+				<button
+					class="nav-item"
+					class:active={activePage === "sessions"}
+					onclick={goSessions}
+				>
+					<Icon icon="material-symbols:devices" />
+					<span>{i18n(I18nKey.adminSessions)}</span>
+				</button>
 			</nav>
 
 			<div class="sidebar-footer">
@@ -1231,6 +1259,11 @@ function formatDate(dateStr: string | null): string {
 							showToast(message, type, duration)}
 					/>
 				{/if}
+			{:else if activePage === "sessions"}
+				<SessionManager
+					onNotify={(message, type, duration) =>
+						showToast(message, type, duration)}
+				/>
 			{/if}
 			</div>
 		</div>

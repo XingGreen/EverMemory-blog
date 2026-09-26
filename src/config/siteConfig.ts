@@ -12,7 +12,8 @@ export const siteConfig: SiteConfig = {
 	// 站点 URL
 	site_url: "https://blog.evermemory.dpdns.org",
 	// 站点描述
-	description: "EverMemory's blog 是一款基于 Firefly 开发的清新美观且现代化个人博客主题模板，专为技术爱好者和内容创作者设计。该主题融合了现代 Web 技术栈，提供了丰富的功能模块和高度可定制的界面，让您能够轻松打造出专业且美观的个人博客网站。",
+	description:
+		"EverMemory's blog 是一款基于 Firefly 开发的清新美观且现代化个人博客主题模板，专为技术爱好者和内容创作者设计。该主题融合了现代 Web 技术栈，提供了丰富的功能模块和高度可定制的界面，让您能够轻松打造出专业且美观的个人博客网站。",
 	// 站点关键词
 	keywords: [
 		"EverMemory",
@@ -159,12 +160,7 @@ export const siteConfig: SiteConfig = {
 		// 条目类型排序，数组中的类型将按顺序优先展示
 		// 可选值: "anime" | "book" | "music" | "game" | "real" (暂不支持"real"类型)
 		// 未列出的类型将按默认顺序排在后面
-		categoryOrder: [
-			"anime",
-			"book",
-			"music",
-			"game",
-		],
+		categoryOrder: ["anime", "book", "music", "game"],
 	},
 	// 追番配置（Bilibili + TMDB）
 	anime: {
@@ -204,10 +200,7 @@ export const siteConfig: SiteConfig = {
 		// 为特定域名的图片添加 referrerpolicy="no-referrer" 属性
 		// 支持通配符 *，例如：["i0.hdslb.com", "*.bilibili.com"]
 		// 可解决指定域名图片加载时的 403 问题（如防盗链图片）
-		noReferrerDomains: [
-			"*.hdslb.com",
-			"*.bilibili.com",
-		],
+		noReferrerDomains: ["*.hdslb.com", "*.bilibili.com"],
 	},
 	// 站点语言，在本配置文件顶部SITE_LANG定义
 	lang: "zh_CN",

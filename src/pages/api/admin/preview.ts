@@ -4,7 +4,7 @@ import { renderMarkdown } from "@/utils/markdown-renderer";
 export const prerender = false;
 
 export async function POST({ request }) {
-	const auth = requireAuth(request);
+	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) {
 		return auth.response;
 	}

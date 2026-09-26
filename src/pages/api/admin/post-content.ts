@@ -7,7 +7,7 @@ import { isValidPostSlug } from "@/utils/github-app";
 export const prerender = false;
 
 export async function GET({ request, url }) {
-	const auth = requireAuth(request);
+	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) {
 		return auth.response;
 	}

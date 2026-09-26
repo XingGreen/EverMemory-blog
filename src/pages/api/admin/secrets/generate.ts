@@ -16,7 +16,7 @@ export async function POST({
 }: {
 	request: Request;
 }): Promise<Response> {
-	const auth = requireAuth(request);
+	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 
 	try {

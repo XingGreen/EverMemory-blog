@@ -638,6 +638,30 @@ enum I18nKey {
 	// 密钥配置
 	adminSecrets = "adminSecrets",
 	adminSecretsDesc = "adminSecretsDesc",
+
+	// 会话管理
+	adminSessions = "adminSessions",
+	adminSessionsDesc = "adminSessionsDesc",
+	sessionsCurrent = "sessionsCurrent",
+	sessionsRemembered = "sessionsRemembered",
+	sessionsKick = "sessionsKick",
+	sessionsKickAllOther = "sessionsKickAllOther",
+	sessionsEmpty = "sessionsEmpty",
+	sessionsLoadError = "sessionsLoadError",
+	sessionsLastActive = "sessionsLastActive",
+	sessionsLoginAt = "sessionsLoginAt",
+	sessionsIp = "sessionsIp",
+	sessionsConfirmKick = "sessionsConfirmKick",
+	sessionsConfirmKickAll = "sessionsConfirmKickAll",
+	sessionsKicked = "sessionsKicked",
+	sessionsKickedAll = "sessionsKickedAll",
+	sessionsKickFail = "sessionsKickFail",
+
+	// 云端草稿
+	cloudDraftSaved = "cloudDraftSaved",
+	cloudDraftSyncing = "cloudDraftSyncing",
+	cloudDraftFailed = "cloudDraftFailed",
+	cloudDraftRetry = "cloudDraftRetry",
 	secretsGroupGithub = "secretsGroupGithub",
 	secretsGroupAuth = "secretsGroupAuth",
 	secretsConfigured = "secretsConfigured",

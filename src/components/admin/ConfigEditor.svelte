@@ -14,8 +14,10 @@ import { configFieldLabel } from "@/config/configFieldLabels";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 
-let { data, fileKey = "" }: { data: Record<string, JsonValue>; fileKey?: string } =
-	$props();
+let {
+	data,
+	fileKey = "",
+}: { data: Record<string, JsonValue>; fileKey?: string } = $props();
 
 // 需要以下拉菜单切换的枚举字段（路径 = 从当前配置对象根开始的键路径）
 // navbar 配置单独编辑时根即导航栏本身，故同时收录前缀（navbar.x）与裸键（x）两种路径
@@ -24,7 +26,12 @@ const SELECT_OPTIONS: Record<string, readonly string[]> = {
 	"themeColor.defaultMode": ["light", "dark", "system"],
 	"postListLayout.defaultMode": ["list", "grid"],
 	"postListLayout.mobileDefaultMode": ["list", "grid"],
-	"post.rehypeCallouts.theme": ["github", "obsidian", "vitepress", "docusaurus"],
+	"post.rehypeCallouts.theme": [
+		"github",
+		"obsidian",
+		"vitepress",
+		"docusaurus",
+	],
 	"bangumi.mode": ["static", "dynamic"],
 	// 站点配置里的音乐区块与音乐播放器配置（musicConfig）同名键取值不同，需分开
 	"site.music.mode": ["static", "dynamic"],
@@ -33,8 +40,8 @@ const SELECT_OPTIONS: Record<string, readonly string[]> = {
 	"navbar.menuAlign": ["left", "center"],
 	"navbar.mode": ["attached", "detached"],
 	"navbar.logo.type": ["icon", "image", "url"],
-	"menuAlign": ["left", "center"],
-	"mode": ["attached", "detached"],
+	menuAlign: ["left", "center"],
+	mode: ["attached", "detached"],
 	"logo.type": ["icon", "image", "url"],
 	// 背景壁纸（wallpaper）
 	"wallpaper.mode": ["banner", "fullscreen", "overlay", "none"],

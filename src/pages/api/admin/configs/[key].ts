@@ -16,7 +16,7 @@ const json = (body: unknown, status: number) =>
 	});
 
 export async function GET({ request, params }) {
-	const auth = requireAuth(request);
+	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 
 	const item = getConfigItem(params.key);
@@ -44,7 +44,7 @@ export async function GET({ request, params }) {
 }
 
 export async function POST({ request, params }) {
-	const auth = requireAuth(request);
+	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 
 	const item = getConfigItem(params.key);

@@ -671,6 +671,29 @@ export const ru: Translation = {
 
 	// Конфигурация секретов
 	[Key.adminSecrets]: "Секреты",
+	[Key.adminSessions]: "Сеансы",
+	[Key.adminSessionsDesc]:
+		"Просмотр активных устройств и отзыв подозрительных сеансов",
+	[Key.sessionsCurrent]: "Текущее устройство",
+	[Key.sessionsRemembered]: "Запомнен (7 дней)",
+	[Key.sessionsKick]: "Отозвать",
+	[Key.sessionsKickAllOther]: "Отозвать остальные",
+	[Key.sessionsEmpty]: "Нет активных сеансов",
+	[Key.sessionsLoadError]: "Не удалось загрузить сеансы",
+	[Key.sessionsLastActive]: "Последняя активность",
+	[Key.sessionsLoginAt]: "Вход",
+	[Key.sessionsIp]: "IP-адрес",
+	[Key.sessionsConfirmKick]:
+		"Отозвать это устройство? Его сеанс будет немедленно завершён.",
+	[Key.sessionsConfirmKickAll]:
+		"Отозвать все остальные устройства? Они будут немедленно выведены.",
+	[Key.sessionsKicked]: "Сеанс отозван",
+	[Key.sessionsKickedAll]: "Все остальные сеансы отозваны",
+	[Key.sessionsKickFail]: "Ошибка операции",
+	[Key.cloudDraftSaved]: "Синхронизировано",
+	[Key.cloudDraftSyncing]: "Синхронизация…",
+	[Key.cloudDraftFailed]: "Сбой синхронизации",
+	[Key.cloudDraftRetry]: "Повторить",
 	[Key.adminSecretsDesc]:
 		"Управление секретами окружения: учётные данные GitHub App и ключи аутентификации",
 	[Key.secretsGroupGithub]: "Учётные данные GitHub App",
@@ -758,7 +781,8 @@ export const ru: Translation = {
 	[Key.adminSetupSubmitting]: "Настройка…",
 	[Key.adminSetupVerifyToken]: "Проверить токен",
 	[Key.adminSetupVerifying]: "Проверка…",
-	[Key.adminSetupTokenVerified]: "Токен подтверждён. Настройте учётную запись администратора",
+	[Key.adminSetupTokenVerified]:
+		"Токен подтверждён. Настройте учётную запись администратора",
 	[Key.adminSetupTokenBack]: "Ввести токен заново",
 	[Key.adminSetupPasswordWeak]:
 		"Пароль должен быть не короче 8 символов и отличаться от имени пользователя.",

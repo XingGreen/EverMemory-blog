@@ -665,6 +665,29 @@ export const en: Translation = {
 
 	// Secret configuration
 	[Key.adminSecrets]: "Secrets",
+	[Key.adminSessions]: "Sessions",
+	[Key.adminSessionsDesc]:
+		"View active devices and revoke suspicious sessions anytime",
+	[Key.sessionsCurrent]: "Current device",
+	[Key.sessionsRemembered]: "Remembered (7 days)",
+	[Key.sessionsKick]: "Revoke",
+	[Key.sessionsKickAllOther]: "Revoke all others",
+	[Key.sessionsEmpty]: "No active sessions",
+	[Key.sessionsLoadError]: "Failed to load sessions",
+	[Key.sessionsLastActive]: "Last active",
+	[Key.sessionsLoginAt]: "Signed in",
+	[Key.sessionsIp]: "IP address",
+	[Key.sessionsConfirmKick]:
+		"Revoke this device? Its session will be terminated immediately.",
+	[Key.sessionsConfirmKickAll]:
+		"Revoke all other devices? They will be signed out immediately.",
+	[Key.sessionsKicked]: "Session revoked",
+	[Key.sessionsKickedAll]: "All other sessions revoked",
+	[Key.sessionsKickFail]: "Operation failed",
+	[Key.cloudDraftSaved]: "Synced to cloud",
+	[Key.cloudDraftSyncing]: "Syncing...",
+	[Key.cloudDraftFailed]: "Cloud sync failed",
+	[Key.cloudDraftRetry]: "Retry",
 	[Key.adminSecretsDesc]:
 		"Manage environment secrets: GitHub App credentials and admin auth keys",
 	[Key.secretsGroupGithub]: "GitHub App Credentials",
@@ -683,7 +706,7 @@ export const en: Translation = {
 	[Key.secretsStatusPartial]: "Completed {done}/{total} required items",
 	[Key.secretsStatusMissing]: "Missing: ",
 	[Key.secretsExportInlineHint]:
-		"You can also use \"Export Config\" above to download a .env file and import it into your deployment platform (e.g. Vercel) in one click",
+		'You can also use "Export Config" above to download a .env file and import it into your deployment platform (e.g. Vercel) in one click',
 	[Key.secretsPlaceholderConfigured]:
 		"Configured; leave empty to keep the current value, enter a new one to overwrite",
 	[Key.secretsPlaceholderEmpty]: "Not configured; enter a value",

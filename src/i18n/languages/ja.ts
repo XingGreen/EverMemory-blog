@@ -659,6 +659,29 @@ export const ja: Translation = {
 
 	// シークレット設定
 	[Key.adminSecrets]: "シークレット設定",
+	[Key.adminSessions]: "セッション管理",
+	[Key.adminSessionsDesc]:
+		"オンラインのデバイスを確認し、怪しいセッションをいつでも切断できます",
+	[Key.sessionsCurrent]: "現在のデバイス",
+	[Key.sessionsRemembered]: "記憶済み（7 日間）",
+	[Key.sessionsKick]: "切断する",
+	[Key.sessionsKickAllOther]: "他のデバイスをすべて切断",
+	[Key.sessionsEmpty]: "アクティブなセッションはありません",
+	[Key.sessionsLoadError]: "セッション一覧の読み込みに失敗しました",
+	[Key.sessionsLastActive]: "最終アクティブ",
+	[Key.sessionsLoginAt]: "ログイン日時",
+	[Key.sessionsIp]: "IP アドレス",
+	[Key.sessionsConfirmKick]:
+		"このデバイスを切断しますか？セッションは直ちに無効になります。",
+	[Key.sessionsConfirmKickAll]:
+		"他のすべてのデバイスを切断しますか？直ちにログアウトされます。",
+	[Key.sessionsKicked]: "切断しました",
+	[Key.sessionsKickedAll]: "他のセッションをすべて切断しました",
+	[Key.sessionsKickFail]: "操作に失敗しました",
+	[Key.cloudDraftSaved]: "クラウドに同期済み",
+	[Key.cloudDraftSyncing]: "同期中…",
+	[Key.cloudDraftFailed]: "クラウド同期に失敗",
+	[Key.cloudDraftRetry]: "再試行",
 	[Key.adminSecretsDesc]:
 		"GitHub App 認証情報と管理者認証キーなどの環境変数を管理",
 	[Key.secretsGroupGithub]: "GitHub App 認証情報",
@@ -746,7 +769,8 @@ export const ja: Translation = {
 	[Key.adminSetupSubmitting]: "初期化中…",
 	[Key.adminSetupVerifyToken]: "トークンを確認",
 	[Key.adminSetupVerifying]: "確認中…",
-	[Key.adminSetupTokenVerified]: "トークン確認済み。管理者アカウントを設定してください",
+	[Key.adminSetupTokenVerified]:
+		"トークン確認済み。管理者アカウントを設定してください",
 	[Key.adminSetupTokenBack]: "トークンを再入力",
 	[Key.adminSetupPasswordWeak]:
 		"パスワードは 8 文字以上で、ユーザー名と同じにできません",

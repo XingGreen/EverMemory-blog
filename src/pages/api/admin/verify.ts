@@ -1,12 +1,4 @@
 import {
-	checkLockout,
-	clearFailures,
-	failureCount,
-	getClientIp,
-	registerFailure,
-	writeAuditLog,
-} from "@/utils/login-guard";
-import {
 	clearAuthCookie,
 	generateSessionToken,
 	REMEMBER_MAX_AGE,
@@ -15,6 +7,15 @@ import {
 	verifyAdminPassword,
 	verifyAdminUsername,
 } from "@/utils/auth";
+import {
+	checkLockout,
+	clearFailures,
+	failureCount,
+	getClientIp,
+	registerFailure,
+	writeAuditLog,
+} from "@/utils/login-guard";
+import { registerSession } from "@/utils/session-store";
 
 export const prerender = false;
 
@@ -81,7 +82,15 @@ export async function POST({ request }) {
 			});
 			// 勾选"记住我"：签发 7 天令牌并写入 7 天 Cookie；否则保持 1 小时会话
 			const maxAge = rememberMe ? REMEMBER_MAX_AGE : SESSION_MAX_AGE;
-			const token = generateSessionToken(maxAge);
+			// 注册服务端会话（登记设备/IP/时间，供会话管理页查看与踢下线）
+			const sid = await registerSession({
+				username,
+				ua: request.headers.get("user-agent") || "",
+				ip: clientKey,
+				maxAgeSeconds: maxAge,
+				remember: rememberMe,
+			});
+			const token = generateSessionToken(maxAge, sid);
 			const headers = new Headers({ "Content-Type": "application/json" });
 			setAuthCookie(token, headers, maxAge);
 
