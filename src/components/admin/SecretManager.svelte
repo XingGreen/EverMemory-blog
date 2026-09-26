@@ -53,6 +53,16 @@ const groups = $derived(
 	})),
 );
 
+// 配置完成度：只统计 required 必配项
+const requiredItems = $derived(items.filter((item) => item.required));
+const requiredConfiguredCount = $derived(
+	requiredItems.filter((item) => item.configured).length,
+);
+const missingRequired = $derived(requiredItems.filter((item) => !item.configured));
+const allRequiredConfigured = $derived(
+	requiredItems.length > 0 && requiredConfiguredCount === requiredItems.length,
+);
+
 function isDirty(item: SecretItemDTO): boolean {
 	if (toDelete[item.key]) return true;
 	const draft = (drafts[item.key] ?? "").trim();
@@ -168,6 +178,12 @@ function confirmAuthSave() {
 	doSave(pendingEntries, currentPassword);
 }
 
+function timestampForFilename(): string {
+	const d = new Date();
+	const pad = (n: number) => String(n).padStart(2, "0");
+	return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+
 async function downloadEnv() {
 	exportBusy = true;
 	try {
@@ -178,7 +194,7 @@ async function downloadEnv() {
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement("a");
 		a.href = url;
-		a.download = "firefly-env-export.env";
+		a.download = `evermemory-env-${timestampForFilename()}.env`;
 		a.click();
 		URL.revokeObjectURL(url);
 		onNotify(i18n(I18nKey.secretsExportEnvDone), "success", 8000);
@@ -288,6 +304,32 @@ onMount(load);
 		</div>
 	{/if}
 
+	{#if !loading && !loadError}
+		<div class="secrets-status" class:all-done={allRequiredConfigured}>
+			{#if allRequiredConfigured}
+				<Icon icon="material-symbols:task-alt" class="status-icon" />
+				<span class="status-text">{i18n(I18nKey.secretsStatusAllDone)}</span>
+			{:else}
+				<Icon icon="material-symbols:info-outline" class="status-icon" />
+				<span class="status-text">
+					{i18n(I18nKey.secretsStatusPartial)
+						.replace("{done}", String(requiredConfiguredCount))
+						.replace("{total}", String(requiredItems.length))}
+				</span>
+				<span class="status-missing">
+					{i18n(I18nKey.secretsStatusMissing)}
+					{#each missingRequired as item, i (item.key)}
+						<span class="status-key" title={item.key}>
+							{item.label}
+							<code class="status-key-code">{item.key}</code>
+						</span>
+						{#if i < missingRequired.length - 1}、{/if}
+					{/each}
+				</span>
+			{/if}
+		</div>
+	{/if}
+
 	<div class="toolbar card-base">
 		<div class="toolbar-hint">
 			<Icon
@@ -299,6 +341,15 @@ onMount(load);
 					? i18n(I18nKey.secretsWritableHint).replace("{file}", envFile)
 					: i18n(I18nKey.secretsReadonlyHint)}
 			</span>
+			{#if writable}
+				<span class="hint-sub">
+					<Icon
+						icon="material-symbols:download"
+						class={writable ? "hint-ok" : "hint-warn"}
+					/>
+					{i18n(I18nKey.secretsExportInlineHint)}
+				</span>
+			{/if}
 		</div>
 		<div class="toolbar-actions">
 			<button class="sec-btn" onclick={load} disabled={loading}>
@@ -668,6 +719,66 @@ onMount(load);
 		}
 	}
 
+	/* ── 配置完成度状态卡 ── */
+	.secrets-status {
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		flex-wrap: wrap;
+		padding: 0.875rem 1.125rem;
+		border-radius: var(--radius-large);
+		background: color-mix(in srgb, var(--warning) 10%, var(--card-bg));
+		border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+		color: var(--deep-text);
+		font-size: 0.875rem;
+	}
+
+	.secrets-status.all-done {
+		background: color-mix(in srgb, var(--success) 10%, var(--card-bg));
+		border-color: color-mix(in srgb, var(--success) 30%, transparent);
+	}
+
+	.secrets-status :global(.status-icon) {
+		color: var(--warning);
+		flex-shrink: 0;
+	}
+
+	.secrets-status.all-done :global(.status-icon) {
+		color: var(--success);
+	}
+
+	.status-text {
+		font-weight: 600;
+		white-space: nowrap;
+	}
+
+	.status-missing {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		flex-wrap: wrap;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+	}
+
+	.status-key {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.1875rem 0.625rem;
+		border-radius: 999px;
+		background: var(--btn-regular-bg);
+		font-size: 0.8125rem;
+		color: var(--deep-text);
+		white-space: nowrap;
+	}
+
+	.status-key-code {
+		font-family: var(--font-mono, monospace);
+		font-size: 0.6875rem;
+		color: var(--warning);
+	}
+
 	/* ── 顶部工具栏 ── */
 	.toolbar {
 		display: flex;
@@ -680,13 +791,24 @@ onMount(load);
 
 	.toolbar-hint {
 		display: flex;
-		align-items: center;
-		gap: 0.5rem;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.25rem;
 		font-size: 0.8125rem;
 		color: var(--content-meta);
 		line-height: 1.5;
 		min-width: 0;
 		flex: 1;
+	}
+
+	.toolbar-hint > span {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	.toolbar-hint .hint-sub {
+		opacity: 0.85;
 	}
 
 	.toolbar-hint :global(.hint-ok) {

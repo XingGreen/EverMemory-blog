@@ -4,11 +4,11 @@
  *
  * 规则：
  *  - 仅导出已在 .env.local 中配置的项；未配置项以注释占位，方便对照补齐
- *  - GITHUB_PRIVATE_KEY_PATH 仅本地开发使用，不导出
- *  - GITHUB_PRIVATE_KEY 若存为 Base64，导出时还原为 PEM 原文
+ *  - GITHUB_PRIVATE_KEY_PATH 仅本地使用，不导出
+ *  - GITHUB_PRIVATE_KEY 统一导出为 Base64 单行（适配 Vercel 环境变量不支持换行的限制，与保存时行为一致）
  */
 import { ADMIN_SECRETS } from "./admin-secrets";
-import { decodePrivateKey, readAllSecretValues } from "./secret-io";
+import { readAllSecretValues } from "./secret-io";
 
 /** 仅本地开发使用、无需导出到生产的键 */
 const LOCAL_ONLY_KEYS = new Set(["GITHUB_PRIVATE_KEY_PATH"]);
@@ -26,16 +26,20 @@ function shellQuote(value: string): string {
 	return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-/** 导出项：跳过本地专用键；私钥还原 PEM */
+/** 导出项：跳过本地专用键；私钥统一转 Base64，已是 Base64 则保持 */
 function normalizeValue(key: string, value: string): string {
-	return key === "GITHUB_PRIVATE_KEY" ? decodePrivateKey(value) : value;
+	if (key !== "GITHUB_PRIVATE_KEY") return value;
+	if (value.includes("-----BEGIN")) {
+		return Buffer.from(value, "utf8").toString("base64");
+	}
+	return value;
 }
 
 /** 生成 .env 文件内容（通用格式，可在 Vercel / Docker / 服务器使用） */
 export function buildEnvExport(): string {
 	const values = readAllSecretValues();
 	const lines: string[] = [
-		"# Firefly 密钥导出（由本机 .env.local 生成）",
+		"# EverMemory 密钥导出（由本机 .env.local 生成）",
 		`# 生成时间: ${new Date().toISOString()}`,
 		"# 警告：本文件包含敏感密钥，请勿提交到 Git，导入生产环境后请即删。",
 		"",

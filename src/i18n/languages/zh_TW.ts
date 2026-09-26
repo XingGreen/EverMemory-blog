@@ -655,6 +655,11 @@ export const zh_TW: Translation = {
 		"修改將寫入專案根目錄的 {file}，重新啟動服務後生效",
 	[Key.secretsReadonlyHint]:
 		"目前為正式環境建置，檔案系統唯讀；請到部署平台（如 Vercel）的環境變數設定中設定",
+	[Key.secretsStatusAllDone]: "你已完成所有必要設定！🎉",
+	[Key.secretsStatusPartial]: "已完成 {done}/{total} 項必要設定",
+	[Key.secretsStatusMissing]: "還缺：",
+	[Key.secretsExportInlineHint]:
+		"也可以點上方「匯出設定」下載 .env 檔案，一鍵匯入部署平台（如 Vercel）",
 	[Key.secretsPlaceholderConfigured]: "已設定；留空保持不變，輸入新值將覆蓋",
 	[Key.secretsPlaceholderEmpty]: "未設定；請在此輸入值",
 	[Key.secretsClear]: "清除此項",

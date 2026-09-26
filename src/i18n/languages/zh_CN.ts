@@ -651,6 +651,11 @@ export const zh_CN: Translation = {
 	[Key.secretsWritableHint]: "修改将写入项目根目录的 {file}，重启服务后生效",
 	[Key.secretsReadonlyHint]:
 		"当前为生产构建，文件系统只读；请到部署平台（如 Vercel）的环境变量设置中配置",
+	[Key.secretsStatusAllDone]: "你已完成所有必要配置！🎉",
+	[Key.secretsStatusPartial]: "已完成 {done}/{total} 项必要配置",
+	[Key.secretsStatusMissing]: "还缺：",
+	[Key.secretsExportInlineHint]:
+		"也可以点上方「导出配置」下载 .env 文件，一键导入部署平台（如 Vercel）",
 	[Key.secretsPlaceholderConfigured]: "已配置；留空保持不变，输入新值将覆盖",
 	[Key.secretsPlaceholderEmpty]: "未配置；在此输入值",
 	[Key.secretsClear]: "清除该项",

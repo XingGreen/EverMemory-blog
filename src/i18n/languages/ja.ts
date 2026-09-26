@@ -673,6 +673,11 @@ export const ja: Translation = {
 		"変更はプロジェクトルートの {file} に書き込まれます。再起動後に有効になります",
 	[Key.secretsReadonlyHint]:
 		"本番ビルドではファイルシステムは読み取り専用です。デプロイプラットフォーム（Vercel など）の環境変数で設定してください",
+	[Key.secretsStatusAllDone]: "必要な設定はすべて完了しています！🎉",
+	[Key.secretsStatusPartial]: "必須設定 {done}/{total} 件完了",
+	[Key.secretsStatusMissing]: "未設定：",
+	[Key.secretsExportInlineHint]:
+		"上部の「設定をエクスポート」から .env ファイルをダウンロードし、デプロイプラットフォーム（例: Vercel）にワンクリックでインポートできます",
 	[Key.secretsPlaceholderConfigured]:
 		"設定済み；空欄のまま変更せず、新しく入力すると上書き",
 	[Key.secretsPlaceholderEmpty]: "未設定；ここに値を入力",
