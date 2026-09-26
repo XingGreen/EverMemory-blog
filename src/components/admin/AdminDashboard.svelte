@@ -1063,6 +1063,13 @@ function formatDate(dateStr: string | null): string {
 					<Icon icon="material-symbols:home-outline-rounded" />
 					<span>{i18n(I18nKey.adminBackHome)}</span>
 				</a>
+				<!-- 重新查看新手指引 -->
+				{#if isVerified}
+					<button class="nav-item" onclick={() => { resetTour(); tourOpen = true; }}>
+						<Icon icon="material-symbols:help-outline-rounded" />
+						<span>{i18n(I18nKey.adminTourRestart)}</span>
+					</button>
+				{/if}
 				<!-- 深浅模式切换（亮色显示月亮图标，暗色显示太阳图标，点击切换） -->
 				<button class="nav-item" onclick={toggleTheme}>
 					<Icon
@@ -1128,18 +1135,6 @@ function formatDate(dateStr: string | null): string {
 						<button class="action-btn primary" onclick={saveSettings} disabled={settingsSaving || settingsLoading}>
 							<Icon icon="material-symbols:save-outline" class="text-sm" />
 							<span>{settingsSaving ? i18n(I18nKey.configSaving) : i18n(I18nKey.configSave)}</span>
-						</button>
-					{/if}
-					{#if isVerified}
-						<button
-							class="action-btn"
-							title={i18n(I18nKey.adminTourRestart)}
-							onclick={() => {
-								resetTour();
-								tourOpen = true;
-							}}
-						>
-							<Icon icon="material-symbols:help-outline-rounded" class="text-sm" />
 						</button>
 					{/if}
 				</div>
