@@ -679,6 +679,11 @@ export const en: Translation = {
 		"Changes are written to {file} in the project root. Restart the service to apply.",
 	[Key.secretsReadonlyHint]:
 		"Read-only in production. Configure these in your deploy platform's environment variables (e.g. Vercel).",
+	[Key.secretsStatusAllDone]: "All required configuration is complete! 🎉",
+	[Key.secretsStatusPartial]: "Completed {done}/{total} required items",
+	[Key.secretsStatusMissing]: "Missing: ",
+	[Key.secretsExportInlineHint]:
+		"You can also use \"Export Config\" above to download a .env file and import it into your deployment platform (e.g. Vercel) in one click",
 	[Key.secretsPlaceholderConfigured]:
 		"Configured; leave empty to keep the current value, enter a new one to overwrite",
 	[Key.secretsPlaceholderEmpty]: "Not configured; enter a value",

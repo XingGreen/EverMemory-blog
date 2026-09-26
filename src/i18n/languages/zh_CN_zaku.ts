@@ -648,6 +648,11 @@ export const zaku: Translation = {
 	[Key.secretsWritableHint]: "修改将写入项目根目录的 {file}，重启服务后生效",
 	[Key.secretsReadonlyHint]:
 		"当前为生产构建，文件系统只读；请到部署平台（如 Vercel）的环境变量设置中配置",
+	[Key.secretsStatusAllDone]: "该有的全齐了！🎉",
+	[Key.secretsStatusPartial]: "必配项搞定 {done}/{total}",
+	[Key.secretsStatusMissing]: "还差：",
+	[Key.secretsExportInlineHint]:
+		"也可以点上面的「导出配置」把 .env 掏出来，一键塞进部署平台（比如 Vercel）",
 	[Key.secretsPlaceholderConfigured]: "已配置；留空保持不变，输入新值将覆盖",
 	[Key.secretsPlaceholderEmpty]: "未配置；在此输入值",
 	[Key.secretsClear]: "清除该项",

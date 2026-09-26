@@ -33,7 +33,7 @@ export async function GET({
 	if (format === "env") {
 		headers.set(
 			"Content-Disposition",
-			'attachment; filename="firefly-env-export.env"',
+			'attachment; filename="evermemory-env-export.env"',
 		);
 	}
 
