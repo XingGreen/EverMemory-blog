@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from "svelte";
+import { onMount, onDestroy } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -43,6 +43,11 @@ let activeTab = $state<"editor" | "preview">("editor");
 let isLoadingContent = $state(false);
 // 标记用户是否手动编辑过 slug，防止自动生成覆盖用户输入
 let slugTouched = $state(false);
+// 新建草稿防丢失：本地持久备份（localStorage，跨会话/关浏览器仍保留）+ 刷新/关闭拦截（beforeunload）
+const DRAFT_KEY = "admin-post-draft-create";
+let dirty = $state(false);
+let draftTimer: ReturnType<typeof setTimeout> | null = null;
+let beforeUnloadHandler: ((e: BeforeUnloadEvent) => void) | null = null;
 
 $effect(() => {
 	title = post?.title || "";
@@ -91,6 +96,102 @@ function handleSlugInput() {
 	slugTouched = true;
 }
 
+/** 是否存在已输入的草稿内容（敏感字段：密码/密码提示不参与备份） */
+function hasDraftContent(): boolean {
+	return Boolean(
+		title.trim() ||
+			content.trim() ||
+			description.trim() ||
+			category.trim() ||
+			author.trim() ||
+			image.trim() ||
+			sourceLink.trim() ||
+			lang.trim() ||
+			licenseName.trim() ||
+			licenseUrl.trim() ||
+			slug.trim() ||
+			tags.length > 0 ||
+			isPinned,
+	);
+}
+
+/** 本地持久备份：内容变化后防抖 400ms 写入 localStorage（跨会话，第二天仍可继续） */
+$effect(() => {
+	const snapshot = JSON.stringify({
+		title,
+		author,
+		category,
+		description,
+		content,
+		slug,
+		published,
+		updated,
+		isDraft,
+		isPinned,
+		image,
+		lang,
+		licenseName,
+		licenseUrl,
+		sourceLink,
+		enableComment,
+		tags,
+	});
+	if (mode !== "create") return;
+	if (!hasDraftContent()) return;
+	if (draftTimer) clearTimeout(draftTimer);
+	draftTimer = setTimeout(() => {
+		try {
+			localStorage.setItem(DRAFT_KEY, snapshot);
+		} catch {
+			// 隐私模式等场景下 localStorage 不可用，忽略即可
+		}
+	}, 400);
+	dirty = true;
+});
+
+/** 重新进入新建页时，恢复上一次未保存的草稿（刷新 / 切走再回来均有效） */
+function restoreCreateDraft() {
+	if (mode !== "create") return;
+	try {
+		const raw = localStorage.getItem(DRAFT_KEY);
+		if (!raw) return;
+		const data = JSON.parse(raw);
+		if (!data || (!data.title && !data.content)) return;
+		title = data.title ?? "";
+		author = data.author ?? "";
+		category = data.category ?? "";
+		description = data.description ?? "";
+		content = data.content ?? "";
+		slug = data.slug ?? "";
+		slugTouched = Boolean(data.slug);
+		published = data.published ?? new Date().toISOString().split("T")[0];
+		updated = data.updated ?? "";
+		isDraft = Boolean(data.isDraft);
+		isPinned = Boolean(data.isPinned);
+		image = data.image ?? "";
+		lang = data.lang ?? "";
+		licenseName = data.licenseName ?? "";
+		licenseUrl = data.licenseUrl ?? "";
+		sourceLink = data.sourceLink ?? "";
+		enableComment = data.enableComment !== undefined ? data.enableComment : true;
+		tags = Array.isArray(data.tags) ? data.tags : [];
+		dirty = true;
+	} catch {
+		// 备份数据损坏时静默忽略，不阻塞编辑
+	}
+}
+
+/** 有未保存内容时，拦截刷新 / 关闭页面（浏览器原生确认框） */
+function registerBeforeUnload() {
+	if (typeof window === "undefined") return;
+	beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+		if (!dirty) return;
+		e.preventDefault();
+		e.returnValue = "";
+	};
+	window.addEventListener("beforeunload", beforeUnloadHandler);
+}
+
 async function loadContent() {
 	if (mode === "edit" && post?.slug) {
 		isLoadingContent = true;
@@ -112,7 +213,18 @@ async function loadContent() {
 	}
 }
 
-onMount(loadContent);
+onMount(() => {
+	loadContent();
+	registerBeforeUnload();
+	restoreCreateDraft();
+});
+
+onDestroy(() => {
+	if (draftTimer) clearTimeout(draftTimer);
+	if (beforeUnloadHandler) {
+		window.removeEventListener("beforeunload", beforeUnloadHandler);
+	}
+});
 
 function addTag() {
 	const tag = tagInput.trim();
@@ -176,6 +288,12 @@ async function handleSave() {
 		const data = await response.json();
 
 		if (response.ok && data.success) {
+			try {
+				localStorage.removeItem(DRAFT_KEY);
+			} catch {
+				// 忽略清理失败
+			}
+			dirty = false;
 			onSave();
 		} else {
 			console.error("[Editor] 保存失败:", data.message);
