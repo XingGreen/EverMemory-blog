@@ -27,8 +27,7 @@ function loadItem(key: string) {
  */
 function readRawConfigFile(item: ReturnType<typeof loadItem>): string {
 	const filePath = path.resolve(projectRoot, item.file);
-	if (!fs.existsSync(filePath))
-		throw new Error(`配置文件不存在: ${item.file}`);
+	if (!fs.existsSync(filePath)) throw new Error(`配置文件不存在: ${item.file}`);
 	return fs.readFileSync(filePath, "utf8");
 }
 
@@ -136,7 +135,8 @@ export function buildConfigFileContent(key: string, data: unknown): string {
 	}
 	const body = serializeValue(data, "", comments, "");
 	// 目标导出之后的文件内容（如 pioConfig.ts 中多个导出）也需保留，否则会被丢弃
-	const suffix = openIdx >= 0 && closeIdx > openIdx ? raw.slice(closeIdx + 1) : "";
+	const suffix =
+		openIdx >= 0 && closeIdx > openIdx ? raw.slice(closeIdx + 1) : "";
 	const tail = suffix || ";\n";
 	return `${prefix}export const ${item.exportName}: ${item.typeName} = ${body}${tail}`;
 }
@@ -152,9 +152,7 @@ export async function saveConfigJson(
 	const item = loadItem(key);
 	// html 等原始文本配置：直接以传入内容作为文件内容，避免 TS 序列化
 	const content =
-		item.kind === "html"
-			? (data as string)
-			: buildConfigFileContent(key, data);
+		item.kind === "html" ? (data as string) : buildConfigFileContent(key, data);
 	const { saveFileLocally, saveFileToGitHub } = await import("./github-app");
 	const local = saveFileLocally(item.file, content);
 	const github = await saveFileToGitHub(

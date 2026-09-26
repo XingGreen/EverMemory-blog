@@ -19,8 +19,9 @@
  * 审计：每次登录尝试（成功/失败/锁定）追加写入系统临时目录
  * firefly-admin-audit.log（尽力而为）+ 控制台 [Admin Audit] 行。
  */
-import os from "node:os";
+
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 /** 连续失败次数阈值，达到后开始锁定 */
@@ -127,7 +128,7 @@ export function registerFailure(clientKey: string): {
 	const lockedUntil =
 		failures >= FAIL_THRESHOLD
 			? Date.now() + lockSecondsFor(failures) * 1000
-			: prev?.lockedUntil ?? 0;
+			: (prev?.lockedUntil ?? 0);
 	state[clientKey] = { failures, lockedUntil };
 	saveState(state);
 	if (lockedUntil > Date.now()) {
@@ -165,7 +166,10 @@ export function writeAuditLog(entry: {
 		| "secrets_updated"
 		| "secrets_credentials_updated"
 		| "secrets_exported"
-		| "setup_completed";
+		| "setup_completed"
+		| "sessions_listed"
+		| "session_revoked"
+		| "draft_saved";
 	client: string;
 	username: string;
 	detail?: string;

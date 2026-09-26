@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount, onDestroy } from "svelte";
+import { onDestroy, onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -48,6 +48,13 @@ const DRAFT_KEY = "admin-post-draft-create";
 let dirty = $state(false);
 let draftTimer: ReturnType<typeof setTimeout> | null = null;
 let beforeUnloadHandler: ((e: BeforeUnloadEvent) => void) | null = null;
+// 云端草稿同步（跨设备）：自动上传到服务端存储（本机文件 / Vercel KV）
+type CloudSyncState = "idle" | "syncing" | "saved" | "error";
+let cloudSync = $state<CloudSyncState>("idle");
+let cloudSavedAt = $state<number | null>(null);
+let cloudTimer: ReturnType<typeof setTimeout> | null = null;
+let cloudSeq = 0;
+let lastCloudKey = "";
 
 $effect(() => {
 	title = post?.title || "";
@@ -115,9 +122,9 @@ function hasDraftContent(): boolean {
 	);
 }
 
-/** 本地持久备份：内容变化后防抖 400ms 写入 localStorage（跨会话，第二天仍可继续） */
+/** 本地持久备份 + 云端自动同步：内容变化后防抖写入 localStorage（400ms）与云端（1200ms，仅新建模式） */
 $effect(() => {
-	const snapshot = JSON.stringify({
+	const draft = {
 		title,
 		author,
 		category,
@@ -135,50 +142,130 @@ $effect(() => {
 		sourceLink,
 		enableComment,
 		tags,
-	});
+	};
 	if (mode !== "create") return;
 	if (!hasDraftContent()) return;
 	if (draftTimer) clearTimeout(draftTimer);
 	draftTimer = setTimeout(() => {
 		try {
-			localStorage.setItem(DRAFT_KEY, snapshot);
+			localStorage.setItem(
+				DRAFT_KEY,
+				JSON.stringify({ ...draft, savedAt: Date.now() }),
+			);
 		} catch {
 			// 隐私模式等场景下 localStorage 不可用，忽略即可
 		}
 	}, 400);
+	if (cloudTimer) clearTimeout(cloudTimer);
+	cloudTimer = setTimeout(() => {
+		void saveCloudDraft(draft);
+	}, 1200);
 	dirty = true;
 });
 
-/** 重新进入新建页时，恢复上一次未保存的草稿（刷新 / 切走再回来均有效） */
-function restoreCreateDraft() {
+/** 上传草稿到云端（内容无变化时跳过；敏感字段不上传） */
+async function saveCloudDraft(draft: DraftFields) {
+	const key = JSON.stringify(draft);
+	if (key === lastCloudKey) {
+		if (cloudSavedAt) cloudSync = "saved";
+		return;
+	}
+	cloudSync = "syncing";
+	const seq = ++cloudSeq;
+	try {
+		const res = await fetch("/api/admin/draft/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(draft),
+		});
+		const data = await res.json();
+		if (seq !== cloudSeq) return;
+		if (res.ok && data.success) {
+			lastCloudKey = key;
+			cloudSavedAt = data.savedAt ?? null;
+			cloudSync = "saved";
+		} else {
+			cloudSync = "error";
+		}
+	} catch {
+		if (seq === cloudSeq) cloudSync = "error";
+	}
+}
+
+interface DraftFields {
+	title: string;
+	author: string;
+	category: string;
+	description: string;
+	content: string;
+	slug: string;
+	published: string;
+	updated: string;
+	isDraft: boolean;
+	isPinned: boolean;
+	image: string;
+	lang: string;
+	licenseName: string;
+	licenseUrl: string;
+	sourceLink: string;
+	enableComment: boolean;
+	tags: string[];
+}
+
+interface DraftBlob extends DraftFields {
+	savedAt?: number;
+}
+
+function applyDraft(data: Partial<DraftBlob>) {
+	title = data.title ?? "";
+	author = data.author ?? "";
+	category = data.category ?? "";
+	description = data.description ?? "";
+	content = data.content ?? "";
+	slug = data.slug ?? "";
+	slugTouched = Boolean(data.slug);
+	published = data.published ?? new Date().toISOString().split("T")[0];
+	updated = data.updated ?? "";
+	isDraft = Boolean(data.isDraft);
+	isPinned = Boolean(data.isPinned);
+	image = data.image ?? "";
+	lang = data.lang ?? "";
+	licenseName = data.licenseName ?? "";
+	licenseUrl = data.licenseUrl ?? "";
+	sourceLink = data.sourceLink ?? "";
+	enableComment =
+		data.enableComment !== undefined ? Boolean(data.enableComment) : true;
+	tags = Array.isArray(data.tags) ? data.tags : [];
+	dirty = true;
+}
+
+/** 重新进入新建页时，恢复草稿：本地 localStorage 与云端各取较新者 */
+async function restoreCreateDraft() {
 	if (mode !== "create") return;
+	let local: DraftBlob | null = null;
 	try {
 		const raw = localStorage.getItem(DRAFT_KEY);
-		if (!raw) return;
-		const data = JSON.parse(raw);
-		if (!data || (!data.title && !data.content)) return;
-		title = data.title ?? "";
-		author = data.author ?? "";
-		category = data.category ?? "";
-		description = data.description ?? "";
-		content = data.content ?? "";
-		slug = data.slug ?? "";
-		slugTouched = Boolean(data.slug);
-		published = data.published ?? new Date().toISOString().split("T")[0];
-		updated = data.updated ?? "";
-		isDraft = Boolean(data.isDraft);
-		isPinned = Boolean(data.isPinned);
-		image = data.image ?? "";
-		lang = data.lang ?? "";
-		licenseName = data.licenseName ?? "";
-		licenseUrl = data.licenseUrl ?? "";
-		sourceLink = data.sourceLink ?? "";
-		enableComment = data.enableComment !== undefined ? data.enableComment : true;
-		tags = Array.isArray(data.tags) ? data.tags : [];
-		dirty = true;
+		if (raw) local = JSON.parse(raw) as DraftBlob;
 	} catch {
-		// 备份数据损坏时静默忽略，不阻塞编辑
+		// 备份损坏：忽略
 	}
+	let cloud: DraftBlob | null = null;
+	try {
+		const res = await fetch("/api/admin/draft/");
+		const data = await res.json();
+		if (res.ok && data.success && data.draft) {
+			cloud = data.draft as DraftBlob;
+		}
+	} catch {
+		// 云端不可达：仅使用本地草稿
+	}
+	const localTs = local?.savedAt || 0;
+	const cloudTs = cloud?.savedAt || 0;
+	const source = localTs >= cloudTs ? local : cloud;
+	if (!source || (!source.title && !source.content)) return;
+	applyDraft(source);
+	cloudSavedAt = cloudTs || null;
+	if (cloudTs) cloudSync = "saved";
 }
 
 /** 有未保存内容时，拦截刷新 / 关闭页面（浏览器原生确认框） */
@@ -216,11 +303,12 @@ async function loadContent() {
 onMount(() => {
 	loadContent();
 	registerBeforeUnload();
-	restoreCreateDraft();
+	void restoreCreateDraft();
 });
 
 onDestroy(() => {
 	if (draftTimer) clearTimeout(draftTimer);
+	if (cloudTimer) clearTimeout(cloudTimer);
 	if (beforeUnloadHandler) {
 		window.removeEventListener("beforeunload", beforeUnloadHandler);
 	}
@@ -293,6 +381,11 @@ async function handleSave() {
 			} catch {
 				// 忽略清理失败
 			}
+			// 文章已保存，清除云端草稿
+			void fetch("/api/admin/draft/", { method: "DELETE" }).catch(() => {});
+			lastCloudKey = "";
+			cloudSavedAt = null;
+			cloudSync = "idle";
 			dirty = false;
 			onSave();
 		} else {
@@ -359,7 +452,8 @@ function wrapSelection(before: string, after: string, placeholder: string) {
 	const start = el.selectionStart;
 	const end = el.selectionEnd;
 	const selected = content.slice(start, end) || placeholder;
-	content = content.slice(0, start) + before + selected + after + content.slice(end);
+	content =
+		content.slice(0, start) + before + selected + after + content.slice(end);
 	requestAnimationFrame(() => {
 		el.focus();
 		const ns = start + before.length;
@@ -384,7 +478,8 @@ function prependLines(prefix: string, firstLineOnly = false) {
 		.split("\n")
 		.map((line, i) => (firstLineOnly && i > 0 ? line : prefix + line))
 		.join("\n");
-	content = content.slice(0, lineStart) + processed + "\n" + content.slice(selEnd);
+	content =
+		content.slice(0, lineStart) + processed + "\n" + content.slice(selEnd);
 	requestAnimationFrame(() => {
 		el.focus();
 		el.setSelectionRange(lineStart, lineStart + processed.length);
@@ -429,7 +524,8 @@ interface TocItem {
 const tocItems = $derived<TocItem[]>(
 	content.split("\n").reduce<TocItem[]>((acc, line, i) => {
 		const m = /^(#{1,6})\s+(.+)$/.exec(line);
-		if (m && m[2].trim()) acc.push({ level: m[1].length, text: m[2].trim(), lineIndex: i });
+		if (m && m[2].trim())
+			acc.push({ level: m[1].length, text: m[2].trim(), lineIndex: i });
 		return acc;
 	}, []),
 );
@@ -439,7 +535,7 @@ let activeTocLine = $state(0);
 function tocTop(item: TocItem): number {
 	const el = editorEl;
 	if (!el) return 0;
-	const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 24;
+	const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight) || 24;
 	return item.lineIndex * lineHeight;
 }
 
@@ -456,7 +552,7 @@ function jumpToToc(item: TocItem) {
 function handleEditorScroll() {
 	const el = editorEl;
 	if (!el) return;
-	const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 24;
+	const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight) || 24;
 	const currentLine = Math.floor(el.scrollTop / lineHeight) + 1;
 	let idx = -1;
 	for (let i = 0; i < tocItems.length; i++) {
@@ -470,6 +566,51 @@ function handleEditorScroll() {
 <div class="editor-container">
 	<div class="editor-header">
 		<h2>{mode === "edit" ? i18n(I18nKey.adminEditPost) : i18n(I18nKey.adminNewPost)}</h2>
+		{#if mode === "create" && cloudSync !== "idle"}
+			<span
+				class="cloud-badge"
+				class:error={cloudSync === "error"}
+				class:syncing={cloudSync === "syncing"}
+			>
+				{#if cloudSync === "syncing"}
+					<span class="cloud-spinner"></span>
+					{i18n(I18nKey.cloudDraftSyncing)}
+				{:else if cloudSync === "saved"}
+					<Icon icon="material-symbols:cloud-done" class="text-sm" />
+					{i18n(I18nKey.cloudDraftSaved)}
+					{#if cloudSavedAt}
+						{new Date(cloudSavedAt).toLocaleTimeString("zh-CN", {
+							hour: "2-digit",
+							minute: "2-digit",
+						})}
+					{/if}
+				{:else}
+					<Icon icon="material-symbols:cloud-off" class="text-sm" />
+					{i18n(I18nKey.cloudDraftFailed)}
+					<button class="cloud-retry" onclick={() => saveCloudDraft({
+						title,
+						author,
+						category,
+						description,
+						content,
+						slug,
+						published,
+						updated,
+						isDraft,
+						isPinned,
+						image,
+						lang,
+						licenseName,
+						licenseUrl,
+						sourceLink,
+						enableComment,
+						tags,
+					})}>
+						{i18n(I18nKey.cloudDraftRetry)}
+					</button>
+				{/if}
+			</span>
+		{/if}
 		<div class="header-actions">
 			<button class="btn btn-cancel" onclick={onCancel}>
 				<Icon icon="material-symbols:arrow-back" class="text-sm" />
@@ -817,6 +958,59 @@ function handleEditorScroll() {
 		font-size: 1.25rem;
 		font-weight: 600;
 		color: var(--deep-text);
+	}
+
+	.cloud-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin-left: 0.75rem;
+		padding: 0.2rem 0.6rem;
+		border-radius: 999px;
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: hsl(130 45% 30%);
+		background: hsl(120 45% 92%);
+		border: 1px solid hsl(120 40% 78%);
+	}
+
+	.cloud-badge.syncing {
+		color: hsl(220 30% 40%);
+		background: hsl(220 40% 94%);
+		border-color: hsl(220 30% 80%);
+	}
+
+	.cloud-badge.error {
+		color: hsl(0 65% 45%);
+		background: hsl(0 60% 95%);
+		border-color: hsl(0 55% 82%);
+	}
+
+	.cloud-spinner {
+		width: 0.75rem;
+		height: 0.75rem;
+		border: 2px solid hsl(220 30% 75%);
+		border-top-color: hsl(220 30% 40%);
+		border-radius: 50%;
+		animation: cloud-spin 0.8s linear infinite;
+	}
+
+	@keyframes cloud-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.cloud-retry {
+		border: none;
+		background: none;
+		padding: 0;
+		margin: 0;
+		font-size: inherit;
+		font-weight: 600;
+		color: inherit;
+		cursor: pointer;
+		text-decoration: underline;
 	}
 
 	.header-actions {

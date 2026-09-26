@@ -301,12 +301,7 @@ export function getConfigDescKey(key: string): I18nKey {
 // 参照 src/config/index.ts 导出注释中的分类：
 // 核心配置（站点、打赏） / 布局配置（侧边栏） / 样式配置（背景壁纸） /
 // 组件配置（导航栏、个人资料、音乐、看板娘、PlantUML） / 功能配置（其余）
-export type ConfigGroup =
-	| "core"
-	| "layout"
-	| "style"
-	| "component"
-	| "feature";
+export type ConfigGroup = "core" | "layout" | "style" | "component" | "feature";
 
 /** 配置项 key → 所属分组 */
 const ITEM_GROUPS: Record<string, ConfigGroup> = {

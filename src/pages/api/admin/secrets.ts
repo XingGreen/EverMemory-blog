@@ -1,5 +1,10 @@
 import { ADMIN_SECRETS, getSecretItem } from "@/utils/admin-secrets";
-import { generateSessionToken, requireAuth, setAuthCookie } from "@/utils/auth";
+import {
+	generateSessionToken,
+	requireAuth,
+	SESSION_MAX_AGE,
+	setAuthCookie,
+} from "@/utils/auth";
 import { getClientIp, writeAuditLog } from "@/utils/login-guard";
 import {
 	applyEnvFileUpdates,
@@ -17,7 +22,10 @@ export const prerender = false;
 const json = (body: unknown, status: number, extraHeaders?: Headers) =>
 	new Response(JSON.stringify(body), {
 		status,
-		headers: { "Content-Type": "application/json", ...(extraHeaders ? Object.fromEntries(extraHeaders) : {}) },
+		headers: {
+			"Content-Type": "application/json",
+			...(extraHeaders ? Object.fromEntries(extraHeaders) : {}),
+		},
 	});
 
 const MAX_TEXT_LENGTH = 4096;
@@ -35,7 +43,7 @@ export async function GET({
 }: {
 	request: Request;
 }): Promise<Response> {
-	const auth = requireAuth(request);
+	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 
 	const states = readSecretStates();
@@ -68,7 +76,7 @@ export async function POST({
 }: {
 	request: Request;
 }): Promise<Response> {
-	const auth = requireAuth(request);
+	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 
 	if (!isEnvFileWritable()) {
@@ -135,7 +143,7 @@ export async function POST({
 			const item = getSecretItem(entry.key);
 			if (!item) continue;
 			// ADMIN_PASSWORD 存哈希：填入 64 位 hex（旧版 SHA256 哈希）或 scrypt$ 开头
-			 // （新版自带哈希）视为已是哈希；其余视为明文，自动转为 scrypt 哈希
+			// （新版自带哈希）视为已是哈希；其余视为明文，自动转为 scrypt 哈希
 			if (
 				entry.key === "ADMIN_PASSWORD" &&
 				entry.value &&
@@ -186,7 +194,10 @@ export async function POST({
 		const responseHeaders = new Headers();
 		if (authUpdated.length > 0) {
 			incrementTokenVersion();
-			setAuthCookie(generateSessionToken(), responseHeaders);
+			setAuthCookie(
+				generateSessionToken(SESSION_MAX_AGE, auth.payload?.sid),
+				responseHeaders,
+			);
 		}
 
 		// 审计：认证信息变更与普通密钥变更加以区分

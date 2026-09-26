@@ -1,10 +1,11 @@
-import { getClientIp, writeAuditLog } from "@/utils/login-guard";
 import {
 	generateSessionToken,
 	SESSION_MAX_AGE,
 	setAuthCookie,
 } from "@/utils/auth";
+import { getClientIp, writeAuditLog } from "@/utils/login-guard";
 import { isEnvFileWritable } from "@/utils/secret-io";
+import { registerSession } from "@/utils/session-store";
 import {
 	finishSetup,
 	getSetupToken,
@@ -108,8 +109,15 @@ export async function POST({
 			detail: "管理员账号初始化完成，安装令牌已焚毁",
 		});
 
-		// 直接签发会话 Cookie，让用户免登录进入控制台
-		const token = generateSessionToken(SESSION_MAX_AGE);
+		// 直接签发会话 Cookie，让用户免登录进入控制台（同时登记服务端会话）
+		const sid = await registerSession({
+			username,
+			ua: request.headers.get("user-agent") || "",
+			ip: getClientIp(request),
+			maxAgeSeconds: SESSION_MAX_AGE,
+			remember: false,
+		});
+		const token = generateSessionToken(SESSION_MAX_AGE, sid);
 		const headers = new Headers();
 		setAuthCookie(token, headers, SESSION_MAX_AGE);
 

@@ -205,8 +205,8 @@ export function verifyPasswordHash(plain: string, stored: string): boolean {
 			const parts = stored.split("$");
 			// scrypt$N$salt$hash 或兼容省略 N 的 scrypt$salt$hash
 			const hasN = parts.length === 4 && /^\d+$/.test(parts[1]);
-			const salt = Buffer.from(hasN ? parts[2] : parts[1] ?? "", "base64");
-			const hash = Buffer.from(hasN ? parts[3] : parts[2] ?? "", "base64");
+			const salt = Buffer.from(hasN ? parts[2] : (parts[1] ?? ""), "base64");
+			const hash = Buffer.from(hasN ? parts[3] : (parts[2] ?? ""), "base64");
 			const N = hasN ? Number(parts[1]) : SCRYPT_N;
 			if (salt.length === 0 || hash.length === 0) return false;
 			const computed = crypto.scryptSync(plain, salt, 64, { N });

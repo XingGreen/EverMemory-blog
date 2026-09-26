@@ -58,7 +58,9 @@ const requiredItems = $derived(items.filter((item) => item.required));
 const requiredConfiguredCount = $derived(
 	requiredItems.filter((item) => item.configured).length,
 );
-const missingRequired = $derived(requiredItems.filter((item) => !item.configured));
+const missingRequired = $derived(
+	requiredItems.filter((item) => !item.configured),
+);
 const allRequiredConfigured = $derived(
 	requiredItems.length > 0 && requiredConfiguredCount === requiredItems.length,
 );

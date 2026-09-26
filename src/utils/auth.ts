@@ -7,6 +7,7 @@ import {
 	readSecretPreview,
 	verifyPasswordHash,
 } from "./secret-io";
+import { getSession, touchSession } from "./session-store";
 
 const JWT_EXPIRY_HOURS = 1;
 
@@ -66,15 +67,21 @@ interface JwtPayload {
 	role: string;
 	/** 会话撤销版本号：与 .env.local 的 ADMIN_TOKEN_VER 一致才有效 */
 	ver: string;
+	/** 会话 ID：对应服务端会话表中的记录（被踢下线后此 ID 失效） */
+	sid: string;
 	iat: number;
 	exp: number;
 }
 
-export function generateSessionToken(maxAgeSeconds = SESSION_MAX_AGE): string {
+export function generateSessionToken(
+	maxAgeSeconds = SESSION_MAX_AGE,
+	sid?: string,
+): string {
 	const payload: JwtPayload = {
 		sub: crypto.randomUUID(),
 		role: "admin",
 		ver: getTokenVersion(),
+		sid: sid || crypto.randomUUID(),
 		iat: Math.floor(Date.now() / 1000),
 		exp: Math.floor(Date.now() / 1000) + maxAgeSeconds,
 	};
@@ -103,12 +110,15 @@ export function generateSessionToken(maxAgeSeconds = SESSION_MAX_AGE): string {
 	return `${signInput}.${signature}`;
 }
 
-export function verifySessionToken(token: string): boolean {
+/** 校验会话令牌；有效返回解析后的 payload，无效返回 null（签名错/过期/版本不符/已被踢） */
+export async function verifySessionToken(
+	token: string,
+): Promise<JwtPayload | null> {
 	try {
-		if (!token) return false;
+		if (!token) return null;
 
 		const parts = token.split(".");
-		if (parts.length !== 3) return false;
+		if (parts.length !== 3) return null;
 
 		const [headerB64, payloadB64, signature] = parts;
 		const signInput = `${headerB64}.${payloadB64}`;
@@ -122,7 +132,7 @@ export function verifySessionToken(token: string): boolean {
 			.replace(/=/g, "");
 
 		if (signature !== expectedSignature) {
-			return false;
+			return null;
 		}
 
 		const payload = JSON.parse(
@@ -133,21 +143,27 @@ export function verifySessionToken(token: string): boolean {
 		) as JwtPayload;
 
 		if (payload.exp < Math.floor(Date.now() / 1000)) {
-			return false;
+			return null;
 		}
 
 		if (payload.role !== "admin") {
-			return false;
+			return null;
 		}
 
 		// 撤销广播：令牌签发时的版本号必须与当前一致（改密/改钥后旧会话立即失效）
 		if (payload.ver !== getTokenVersion()) {
-			return false;
+			return null;
 		}
 
-		return true;
+		// 会话表检查：sid 必须存在且未过期（被「踢下线」后此校验即失败）
+		if (payload.sid) {
+			const session = await getSession(payload.sid);
+			if (!session) return null;
+		}
+
+		return payload;
 	} catch {
-		return false;
+		return null;
 	}
 }
 
@@ -166,13 +182,14 @@ export function getAuthTokenFromRequest(request: Request): string | null {
 	return null;
 }
 
-export function requireAuth(request: Request): {
+export async function requireAuth(request: Request): Promise<{
 	authenticated: boolean;
+	payload?: JwtPayload;
 	response?: Response;
-} {
+}> {
 	const token = getAuthTokenFromRequest(request);
 
-	if (!token || !verifySessionToken(token)) {
+	if (!token) {
 		return {
 			authenticated: false,
 			response: new Response(
@@ -182,7 +199,22 @@ export function requireAuth(request: Request): {
 		};
 	}
 
-	return { authenticated: true };
+	const payload = await verifySessionToken(token);
+
+	if (!payload) {
+		return {
+			authenticated: false,
+			response: new Response(
+				JSON.stringify({ success: false, message: "未授权或会话已过期" }),
+				{ status: 401, headers: { "Content-Type": "application/json" } },
+			),
+		};
+	}
+
+	// 顺手更新「最后活跃」（内部节流，不阻塞请求）
+	void touchSession(payload.sid).catch(() => {});
+
+	return { authenticated: true, payload };
 }
 
 export function setAuthCookie(
