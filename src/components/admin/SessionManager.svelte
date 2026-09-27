@@ -196,12 +196,14 @@ onMount(load);
 								}
 							}}
 						>
+							{#if revealedIps[s.sid]}
 							<Icon
-								icon={revealedIps[s.sid]
-									? "material-symbols:visibility"
-									: "material-symbols:visibility-off"}
+								icon="material-symbols:visibility-outline-rounded"
 								class="ip-eye"
 							/>
+						{:else}
+							<Icon icon="material-symbols:visibility-off" class="ip-eye" />
+						{/if}
 							<span
 								>{i18n(I18nKey.sessionsIp)}:{" "}
 								{revealedIps[s.sid] ? s.ip : "••••••"}</span
@@ -244,14 +246,14 @@ onMount(load);
 		gap: 0.5rem;
 		padding: 0.75rem 1rem;
 		border-radius: 0.75rem;
-		background: hsl(220 14% 94%);
-		color: var(--admin-text) !important;
+		background: var(--muted);
+		color: var(--deep-text) !important;
 		font-size: 0.925rem;
 	}
 
 	.status-banner.error {
-		background: hsl(0 72% 95%);
-		color: hsl(0 70% 45%) !important;
+		background: color-mix(in srgb, var(--destructive) 12%, var(--card-bg));
+		color: var(--destructive) !important;
 	}
 
 	.status-banner .spin {
@@ -272,7 +274,7 @@ onMount(load);
 		padding: 0.875rem 1.125rem;
 		border-radius: 0.875rem;
 		background: var(--card-bg);
-		border: 1px solid var(--admin-border);
+		border: 1px solid var(--line-divider);
 		flex-wrap: wrap;
 	}
 
@@ -281,11 +283,11 @@ onMount(load);
 		align-items: center;
 		gap: 0.5rem;
 		font-size: 0.9rem;
-		color: var(--admin-muted);
+		color: var(--content-meta);
 	}
 
 	.hint-ok {
-		color: var(--admin-primary, oklch(0.7 0.14 275));
+		color: var(--primary);
 	}
 
 	.toolbar-actions {
@@ -299,16 +301,16 @@ onMount(load);
 		gap: 0.4rem;
 		padding: 0.45rem 0.875rem;
 		border-radius: 0.65rem;
-		border: 1px solid var(--admin-border);
+		border: 1px solid var(--line-divider);
 		background: var(--card-bg);
-		color: var(--admin-text);
+		color: var(--deep-text);
 		font-size: 0.875rem;
 		cursor: pointer;
 		transition: background 0.15s ease, border-color 0.15s ease;
 	}
 
 	.sec-btn:hover:not(:disabled) {
-		background: var(--admin-hover-bg);
+		background: var(--btn-card-bg-hover);
 	}
 
 	.sec-btn:disabled {
@@ -317,12 +319,12 @@ onMount(load);
 	}
 
 	.sec-btn.danger {
-		border-color: hsl(0 60% 80%);
-		color: hsl(0 65% 50%);
+		border-color: color-mix(in srgb, var(--destructive) 45%, var(--line-divider));
+		color: var(--destructive);
 	}
 
 	.sec-btn.danger:hover:not(:disabled) {
-		background: hsl(0 70% 96%);
+		background: color-mix(in srgb, var(--destructive) 10%, var(--card-bg));
 	}
 
 	.sec-btn.sm {
@@ -336,7 +338,7 @@ onMount(load);
 		align-items: center;
 		gap: 0.5rem;
 		padding: 3rem 1rem;
-		color: var(--admin-muted);
+		color: var(--content-meta);
 		font-size: 0.925rem;
 	}
 
@@ -352,12 +354,12 @@ onMount(load);
 		padding: 0.9rem 1.125rem;
 		border-radius: 0.875rem;
 		background: var(--card-bg);
-		border: 1px solid var(--admin-border);
+		border: 1px solid var(--line-divider);
 	}
 
 	.session-icon {
 		font-size: 1.5rem;
-		color: var(--admin-primary, oklch(0.7 0.14 275));
+		color: var(--primary);
 		flex-shrink: 0;
 	}
 
@@ -379,7 +381,7 @@ onMount(load);
 	.session-device {
 		font-weight: 600;
 		font-size: 0.95rem;
-		color: var(--admin-text);
+		color: var(--deep-text);
 	}
 
 	.badge {
@@ -389,14 +391,14 @@ onMount(load);
 	}
 
 	.badge.current {
-		background: var(--admin-primary, oklch(0.7 0.14 275));
-		color: #fff;
+		background: var(--primary);
+		color: var(--primary-foreground);
 	}
 
 	.badge.remember {
-		background: hsl(120 45% 90%);
-		color: hsl(130 45% 35%);
-		border: 1px solid hsl(120 40% 75%);
+		background: color-mix(in srgb, var(--success) 15%, var(--card-bg));
+		color: var(--success);
+		border: 1px solid color-mix(in srgb, var(--success) 35%, var(--line-divider));
 	}
 
 	.session-meta {
@@ -404,7 +406,7 @@ onMount(load);
 		gap: 1rem;
 		flex-wrap: wrap;
 		font-size: 0.8rem;
-		color: var(--admin-muted);
+		color: var(--content-meta);
 	}
 
 	.ip-toggle {
@@ -424,8 +426,8 @@ onMount(load);
 	}
 
 	.ip-toggle:hover {
-		color: var(--admin-text);
-		border-bottom-color: var(--admin-muted);
+		color: var(--deep-text);
+		border-bottom-color: var(--content-meta);
 	}
 
 	.ip-eye {
