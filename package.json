@@ -6,7 +6,7 @@
 "dev": "node --max-old-space-size=4096 ./node_modules/astro/bin/astro.mjs dev",
 	"start": "node --max-old-space-size=4096 ./node_modules/astro/bin/astro.mjs dev",
     "check": "astro check",
-    "build": "node scripts/generate-icons.js && npx tsx scripts/generate-lqips.ts && astro build && npx tsx scripts/subset-fonts.ts && pagefind --site dist",
+    "build": "node scripts/generate-icons.js && npx tsx scripts/generate-lqips.ts && npx tsx scripts/generate-config-snapshot.ts && astro build && npx tsx scripts/subset-fonts.ts && pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro",
     "type-check": "tsc --noEmit --isolatedDeclarations",

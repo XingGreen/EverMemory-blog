@@ -11,9 +11,31 @@ interface Props {
 }
 
 const { title, description, lang } = Astro.props;
+
+// 构建时生成的配置快照（仅生产注入）：供前端直接读取（"线上配置免服务端 API"）。
+// 快照文件由 scripts/generate-config-snapshot.ts 生成并 gitignore；
+// dev 模式不注入，前端回落本地 API（tsx 读盘求值，保证实时编辑体验）。
+let adminConfigSnapshotJson = "{}";
+if (import.meta.env.PROD) {
+	try {
+		const { ADMIN_CONFIG_SNAPSHOT } = await import(
+			"@/constants/admin-config-snapshot"
+		);
+		// 转义 "<" 防止配置内容闭合 script 标签
+		adminConfigSnapshotJson = JSON.stringify(ADMIN_CONFIG_SNAPSHOT).replace(
+			/</g,
+			"\\u003c",
+		);
+	} catch {
+		// 快照未生成：前台回落 API 获取
+	}
+}
 ---
 
 <Layout title={title} description={description} lang={lang} excludeFrontendEffects>
+	<!-- 后台配置快照（构建时数据）：前端 AdminDashboard 读取，Serverless 下免 API。
+	不使用 <script> 承载（Astro 不支持 script 内容插值/set:html），以隐藏 div+data 属性存储。 -->
+	<div id="admin-config-snapshot" data-snapshot={adminConfigSnapshotJson} hidden></div>
 	<!-- 后台独立布局：
 	不提供 swup 容器（#swup-container 等），使后台页面完全不参与前台 SPA 导航，
 	保证后台内部 hash 路由、前进/后退均交由浏览器原生处理。 -->

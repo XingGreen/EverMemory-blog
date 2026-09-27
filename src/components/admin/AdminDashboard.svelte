@@ -369,11 +369,48 @@ $effect(() => {
 	}
 });
 
+/**
+ * 读取后台页 HTML 中注入的配置快照（构建时数据，AdminLayout 注入）。
+ * 未注入/解析失败返回 null，调用方回落 API。
+ */
+function readDomConfigSnapshot(): Record<
+	string,
+	{ data?: unknown; source?: string }
+> | null {
+	const el = document.getElementById("admin-config-snapshot");
+	if (!el) return null;
+	const raw = el.getAttribute("data-snapshot");
+	if (!raw || raw === "{}") return null;
+	try {
+		return JSON.parse(raw) as Record<
+			string,
+			{ data?: unknown; source?: string }
+		>;
+	} catch {
+		return null;
+	}
+}
+
 async function loadSettings(key: string) {
 	settingsLoading = true;
 	settingsError = "";
 	// 重新加载配置时回到默认的可视化表单模式
 	settingsMode = "form";
+
+	// 优先使用构建时注入页面的配置快照（Serverless 下免 API、零服务端文件依赖）
+	const snapshot = readDomConfigSnapshot()?.[key];
+	if (snapshot) {
+		settingsData = (snapshot.data as Record<string, any> | string | null) ?? null;
+		settingsSource = snapshot.source ?? "";
+		settingsRemote = true;
+		// 无快照数据（html/求值失败）时直接进入源码编辑模式
+		if (snapshot.data === undefined || snapshot.data === null)
+			settingsMode = "source";
+		settingsLoading = false;
+		settingsError = "";
+		return;
+	}
+
 	try {
 		const res = await fetch(`/api/admin/configs/${key}/`);
 		let json: {
@@ -392,8 +429,8 @@ async function loadSettings(key: string) {
 			settingsData = json.data as Record<string, any> | string | null;
 			settingsSource = json.source ?? "";
 			settingsRemote = !!json.remote;
-			// 线上环境只有远程源码，直接进入源码编辑模式
-			if (json.remote) settingsMode = "source";
+			// 线上环境无本地数据时直接进入源码编辑模式；有构建快照则可用表单
+			if (json.remote && json.data === null) settingsMode = "source";
 		} else {
 			settingsError = json.message || "读取配置失败";
 		}
@@ -1228,7 +1265,7 @@ function formatDate(dateStr: string | null): string {
 							{#if settingsRemote}
 								<div class="settings-remote-banner">
 									<Icon icon="material-symbols:cloud-sync" />
-									<span>线上环境：仅支持源码编辑，保存将直接提交 GitHub 并触发自动重建</span>
+									<span>线上环境：表单基于最近一次构建的配置快照，保存将提交 GitHub 并触发自动重建</span>
 								</div>
 							{/if}
 							<SettingsEditor
