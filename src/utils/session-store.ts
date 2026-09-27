@@ -10,7 +10,13 @@ import { getStore } from "./persist-store";
 
 const SESSIONS_KEY = "admin_sessions";
 
-/** 会话列表「最后活跃」写入节流：避免每次请求都回写存储 */
+/** 会话「最后活跃」独立 key 前缀：避免 touch 整表回写覆盖并发删除 */
+const TOUCH_PREFIX = "admin_touch_";
+
+/** touch key 自动过期时间（秒），过期后回退用表内 lastSeenAt */
+const TOUCH_TTL_SECONDS = 10 * 60;
+
+/** 会话列表「最后活跃」写入节流：避免每次请求都写入存储 */
 const TOUCH_THROTTLE_MS = 60_000;
 
 export interface AdminSession {
@@ -113,6 +119,7 @@ export async function revokeSession(sid: string): Promise<boolean> {
 	if (!sessions[sid]) return false;
 	delete sessions[sid];
 	await writeAll(sessions, 7 * 24 * 3600);
+	await verifyDeleted(sid);
 	return true;
 }
 
@@ -122,6 +129,9 @@ export async function revokeAllExcept(sid: string): Promise<number> {
 	const others = Object.keys(sessions).filter((key) => key !== sid);
 	for (const key of others) delete sessions[key];
 	await writeAll(sessions, 7 * 24 * 3600);
+	for (const key of others) {
+		await verifyDeleted(key);
+	}
 	return others.length;
 }
 
@@ -131,18 +141,38 @@ export async function getSession(sid: string): Promise<AdminSession | null> {
 	const record = sessions[sid];
 	if (!record) return null;
 	if (record.exp <= Date.now()) return null;
+	return withTouchAt(record);
+}
+
+/**
+ * 合并独立 touch key 的「最后活跃」时间（比表内值新时覆盖）。
+ * 单条与会话列表共用。
+ */
+async function withTouchAt(record: AdminSession): Promise<AdminSession> {
+	const t = await getStore().get<number>(TOUCH_PREFIX + record.sid);
+	if (typeof t === "number" && t > record.lastSeenAt) {
+		record.lastSeenAt = t;
+	}
 	return record;
 }
 
-/** 更新「最后活跃」时间（节流：同一会话 60 秒内不重复写） */
+/**
+ * 更新「最后活跃」时间。
+ * 写入独立 key（自动过期），不整表回写——避免与「踢下线」的
+ * 删除产生读-改-写竞态（旧快照整表写回会把已删除会话复活）。
+ */
 export async function touchSession(sid: string): Promise<void> {
-	const sessions = await readAll();
-	const record = sessions[sid];
-	if (!record) return;
-	const now = Date.now();
-	if (now - record.lastSeenAt < TOUCH_THROTTLE_MS) return;
-	record.lastSeenAt = now;
-	await writeAll(sessions, 7 * 24 * 3600);
+	try {
+		const now = Date.now();
+		const store = getStore();
+		const last = await store.get<number>(TOUCH_PREFIX + sid);
+		if (typeof last === "number" && now - last < TOUCH_THROTTLE_MS) {
+			return;
+		}
+		await store.set(TOUCH_PREFIX + sid, now, TOUCH_TTL_SECONDS);
+	} catch {
+		// 活跃时间更新失败不影响主流程，静默忽略
+	}
 }
 
 /** 会话列表（已过滤过期项） */
@@ -161,5 +191,16 @@ export async function listSessions(): Promise<AdminSession[]> {
 		list.push(record);
 	}
 	if (expired) await writeAll(sessions, 7 * 24 * 3600);
+	await Promise.all(list.map(withTouchAt));
 	return list.sort((a, b) => b.loginAt - a.loginAt);
+}
+
+/** 同步验证删除：若并行请求以旧快照把目标写复读，则重删（最多 2 次） */
+async function verifyDeleted(sid: string): Promise<void> {
+	for (let i = 0; i < 2; i++) {
+		const cur = await readAll();
+		if (cur[sid] === undefined) return;
+		delete cur[sid];
+		await writeAll(cur, 7 * 24 * 3600);
+	}
 }
