@@ -651,6 +651,7 @@ enum I18nKey {
 	sessionsLastActive = "sessionsLastActive",
 	sessionsLoginAt = "sessionsLoginAt",
 	sessionsIp = "sessionsIp",
+	sessionsIpReveal = "sessionsIpReveal",
 	sessionsConfirmKick = "sessionsConfirmKick",
 	sessionsConfirmKickAll = "sessionsConfirmKickAll",
 	sessionsKicked = "sessionsKicked",

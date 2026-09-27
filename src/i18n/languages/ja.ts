@@ -671,6 +671,7 @@ export const ja: Translation = {
 	[Key.sessionsLastActive]: "最終アクティブ",
 	[Key.sessionsLoginAt]: "ログイン日時",
 	[Key.sessionsIp]: "IP アドレス",
+	[Key.sessionsIpReveal]: "クリックで IP 表示・非表示",
 	[Key.sessionsConfirmKick]:
 		"このデバイスを切断しますか？セッションは直ちに無効になります。",
 	[Key.sessionsConfirmKickAll]:

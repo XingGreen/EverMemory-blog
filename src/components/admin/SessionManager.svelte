@@ -30,6 +30,12 @@ let loading = $state(true);
 let loadError = $state("");
 let kicking = $state<string | null>(null);
 let kickingAll = $state(false);
+/** 已主动展开明文的会话（默认隐藏 IP） */
+let revealedIps = $state<Record<string, boolean>>({});
+
+function toggleIp(sid: string) {
+	revealedIps[sid] = !revealedIps[sid];
+}
 
 function fmtTime(ts: number): string {
 	if (!ts) return "-";
@@ -177,7 +183,30 @@ onMount(load);
 						{/if}
 					</div>
 					<div class="session-meta">
-						<span>{i18n(I18nKey.sessionsIp)}: {s.ip}</span>
+						<span
+							class="ip-toggle"
+							role="button"
+							tabindex="0"
+							title={i18n(I18nKey.sessionsIpReveal)}
+							onclick={() => toggleIp(s.sid)}
+							onkeydown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									toggleIp(s.sid);
+								}
+							}}
+						>
+							<Icon
+								icon={revealedIps[s.sid]
+									? "material-symbols:visibility"
+									: "material-symbols:visibility-off"}
+								class="ip-eye"
+							/>
+							<span
+								>{i18n(I18nKey.sessionsIp)}:{" "}
+								{revealedIps[s.sid] ? s.ip : "••••••"}</span
+							>
+						</span>
 						<span
 							>{i18n(I18nKey.sessionsLoginAt)}: {fmtTime(s.loginAt)}</span
 						>
@@ -376,5 +405,31 @@ onMount(load);
 		flex-wrap: wrap;
 		font-size: 0.8rem;
 		color: var(--admin-muted);
+	}
+
+	.ip-toggle {
+		appearance: none;
+		background: none;
+		border: none;
+		padding: 0;
+		margin: 0;
+		font: inherit;
+		color: inherit;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		border-bottom: 1px dotted transparent;
+		transition: color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.ip-toggle:hover {
+		color: var(--admin-text);
+		border-bottom-color: var(--admin-muted);
+	}
+
+	.ip-eye {
+		font-size: 0.95rem;
+		flex-shrink: 0;
 	}
 </style>

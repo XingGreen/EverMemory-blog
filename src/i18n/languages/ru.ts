@@ -683,6 +683,7 @@ export const ru: Translation = {
 	[Key.sessionsLastActive]: "Последняя активность",
 	[Key.sessionsLoginAt]: "Вход",
 	[Key.sessionsIp]: "IP-адрес",
+	[Key.sessionsIpReveal]: "Нажмите, чтобы показать/скрыть IP",
 	[Key.sessionsConfirmKick]:
 		"Отозвать это устройство? Его сеанс будет немедленно завершён.",
 	[Key.sessionsConfirmKickAll]:

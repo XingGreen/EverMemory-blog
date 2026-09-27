@@ -647,6 +647,7 @@ export const zaku: Translation = {
 	[Key.sessionsLastActive]: "最后活跃",
 	[Key.sessionsLoginAt]: "登录时间",
 	[Key.sessionsIp]: "IP 地址",
+	[Key.sessionsIpReveal]: "点一下显示/藏起 IP",
 	[Key.sessionsConfirmKick]: "确定要把这设备踢下去？踢了它立马失效。",
 	[Key.sessionsConfirmKickAll]: "确定把其他设备全踢了？它们立马掉线。",
 	[Key.sessionsKicked]: "踢下去了",

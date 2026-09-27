@@ -653,6 +653,7 @@ export const zh_TW: Translation = {
 	[Key.sessionsLastActive]: "最後活躍",
 	[Key.sessionsLoginAt]: "登入時間",
 	[Key.sessionsIp]: "IP 位址",
+	[Key.sessionsIpReveal]: "點擊顯示或隱藏 IP 位址",
 	[Key.sessionsConfirmKick]: "確定要將該裝置踢下線嗎？其會話將立即失效。",
 	[Key.sessionsConfirmKickAll]: "確定要踢掉其他所有裝置嗎？它們將立即登出。",
 	[Key.sessionsKicked]: "已踢下線",
