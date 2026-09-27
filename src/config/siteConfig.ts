@@ -1,3 +1,4 @@
+import { defaultFavicons } from "@/constants/icon";
 import type { SiteConfig } from "@/types/siteConfig";
 
 // 定义站点语言
@@ -51,6 +52,7 @@ export const siteConfig: SiteConfig = {
 			// 图标文件路径
 			src: "/favicon/favicon.ico",
 		},
+		...defaultFavicons,
 	],
 	// 导航栏配置
 	navbar: {
