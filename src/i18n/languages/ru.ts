@@ -593,7 +593,7 @@ export const ru: Translation = {
 	[Key.configSave]: "Сохранить конфигурацию",
 	[Key.configSaving]: "Сохранение...",
 	[Key.configLoading]: "Загрузка...",
-	[Key.configLoadFailed]: "Не удалось загрузить: {message}",
+	[Key.configLoadFailed]: "Не удалось загрузить:",
 	[Key.configFile]: "Файл конфигурации: {file} (экспорт {exportName})",
 	[Key.configSectionUnknown]: "Неизвестный пункт конфигурации.",
 	[Key.configAdd]: "＋ Добавить",

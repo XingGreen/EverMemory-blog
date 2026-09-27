@@ -50,8 +50,18 @@ export function readConfigJson(key: string): { data: unknown; file: string } {
 		});
 		// 防止 tsx 在 stdout 混入警告信息，只取从第一个 "{" 开始的 JSON 内容
 		const start = out.indexOf("{");
-		if (start < 0) throw new Error("输出中未找到 JSON 内容");
-		return { data: JSON.parse(out.slice(start)), file: item.file };
+		if (start < 0)
+			throw new Error(
+				`输出中未找到 JSON 内容（原始输出: ${out.slice(0, 200)}）`,
+			);
+		try {
+			return { data: JSON.parse(out.slice(start)), file: item.file };
+		} catch (error) {
+			const msg = error instanceof Error ? error.message : String(error);
+			throw new Error(
+				`配置 JSON 解析失败: ${msg}（输出片段: ${out.slice(0, 200)}）`,
+			);
+		}
 	} catch (error) {
 		const msg = error instanceof Error ? error.message : String(error);
 		throw new Error(`读取配置失败（${key}）: ${msg}`);

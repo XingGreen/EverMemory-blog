@@ -591,7 +591,7 @@ export const en: Translation = {
 	[Key.configSave]: "Save Configuration",
 	[Key.configSaving]: "Saving...",
 	[Key.configLoading]: "Loading...",
-	[Key.configLoadFailed]: "Load failed: {message}",
+	[Key.configLoadFailed]: "Load failed:",
 	[Key.configFile]: "Config file: {file} (export {exportName})",
 	[Key.configSectionUnknown]: "Unknown configuration item.",
 	[Key.configAdd]: "＋ Add",
