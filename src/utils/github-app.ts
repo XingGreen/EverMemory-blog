@@ -2,11 +2,13 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-const GITHUB_APP_ID = import.meta.env.GITHUB_APP_ID || "";
-const GITHUB_OWNER = import.meta.env.GITHUB_OWNER || "";
-const GITHUB_REPO = import.meta.env.GITHUB_REPO || "";
-const GITHUB_BRANCH = import.meta.env.GITHUB_BRANCH || "main";
-const GITHUB_INSTALLATION_ID = import.meta.env.GITHUB_INSTALLATION_ID || "";
+import { getEnv } from "./env";
+
+const GITHUB_APP_ID = getEnv("GITHUB_APP_ID");
+const GITHUB_OWNER = getEnv("GITHUB_OWNER");
+const GITHUB_REPO = getEnv("GITHUB_REPO");
+const GITHUB_BRANCH = getEnv("GITHUB_BRANCH") || "main";
+const GITHUB_INSTALLATION_ID = getEnv("GITHUB_INSTALLATION_ID");
 
 let privateKeyCache: string | null = null;
 
@@ -21,7 +23,7 @@ export function getPrivateKey(): string {
 
 	// 1. 优先从环境变量读取（Vercel 等生产环境）
 	//    支持纯文本或 Base64 编码（避免环境变量中的换行符问题）
-	const envKey = import.meta.env.GITHUB_PRIVATE_KEY;
+	const envKey = getEnv("GITHUB_PRIVATE_KEY");
 	if (envKey) {
 		// 如果以 -----BEGIN 开头，当作纯文本
 		if (envKey.includes("-----BEGIN")) {
@@ -52,7 +54,7 @@ export function getPrivateKey(): string {
 			process.cwd(),
 			".keys/emblog-ghapp.2026-07-29.private-key.pem",
 		),
-		import.meta.env.GITHUB_PRIVATE_KEY_PATH || "",
+		getEnv("GITHUB_PRIVATE_KEY_PATH") || "",
 	];
 
 	for (const keyPath of possiblePaths) {

@@ -3,7 +3,7 @@
  *
  * 状态检测策略：
  *  - 优先读取项目根 .env.local 磁盘文件（实时反映 WebUI 的改动，进程无需重启也能看到新状态）
- *  - .env.local 中没有的键回退到 import.meta.env（Vercel 等平台环境变量）
+ *  - .env.local 中没有的键回退到平台/运行时环境变量（Vercel 等：process.env，本地 dev：import.meta.env）
  *
  * 注意：.env.local 写入后，当前进程的 import.meta.env 仍是启动时的旧快照；
  * 真正的生效（如登录密码、GitHub 同步）需要重启服务，API 会对此作出提示。
@@ -12,25 +12,13 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+import { ENV_KEYS, getEnv } from "./env";
+
 const ENV_FILE_NAME = ".env.local";
 
 function envFilePath(): string {
 	return path.resolve(process.cwd(), ENV_FILE_NAME);
 }
-
-// 静态取值映射：import.meta.env 不支持动态索引，只能逐个静态访问
-const ENV_GETTERS: Record<string, () => string> = {
-	GITHUB_APP_ID: () => import.meta.env.GITHUB_APP_ID || "",
-	GITHUB_OWNER: () => import.meta.env.GITHUB_OWNER || "",
-	GITHUB_REPO: () => import.meta.env.GITHUB_REPO || "",
-	GITHUB_BRANCH: () => import.meta.env.GITHUB_BRANCH || "",
-	GITHUB_INSTALLATION_ID: () => import.meta.env.GITHUB_INSTALLATION_ID || "",
-	GITHUB_PRIVATE_KEY: () => import.meta.env.GITHUB_PRIVATE_KEY || "",
-	GITHUB_PRIVATE_KEY_PATH: () => import.meta.env.GITHUB_PRIVATE_KEY_PATH || "",
-	ADMIN_USERNAME: () => import.meta.env.ADMIN_USERNAME || "",
-	ADMIN_PASSWORD: () => import.meta.env.ADMIN_PASSWORD || "",
-	ADMIN_JWT_SECRET: () => import.meta.env.ADMIN_JWT_SECRET || "",
-};
 
 /** 生产构建（Vercel / Cloudflare Workers 等）文件系统只读 */
 export function isEnvFileWritable(): boolean {
@@ -65,7 +53,8 @@ function parseEnvFile(content: string): Record<string, string> {
 
 /**
  * 查询单个环境变量的当前值：
- * 优先 .env.local 文件（实时反映 WebUI 改动），其次 import.meta.env 快照。
+ * 优先 .env.local 文件（实时反映 WebUI 改动），其次平台/运行时环境变量（process.env），
+ * 最后 import.meta.env 快照（本地 dev 由 Vite 注入）。
  */
 function readEnvValue(key: string): string {
 	try {
@@ -74,21 +63,15 @@ function readEnvValue(key: string): string {
 			if (key in fileValues) return fileValues[key];
 		}
 	} catch {
-		// 文件读取失败时回退到 import.meta.env
+		// 文件读取失败时回退到平台环境变量
 	}
-	try {
-		const getter = ENV_GETTERS[key];
-		return getter ? getter() : "";
-	} catch {
-		// 非 Vite 运行环境（如 node 脚本）无 import.meta.env，视为未配置
-		return "";
-	}
+	return getEnv(key);
 }
 
 /** 返回所有密钥的配置状态（敏感值绝不返回真实内容） */
 export function readSecretStates(): Record<string, boolean> {
 	const states: Record<string, boolean> = {};
-	for (const key of Object.keys(ENV_GETTERS)) {
+	for (const key of ENV_KEYS) {
 		states[key] = readEnvValue(key) !== "";
 	}
 	return states;
@@ -230,7 +213,7 @@ export function verifyPasswordHash(plain: string, stored: string): boolean {
 /** 读取全部密钥的真实值（仅服务端导出场景使用；敏感值请谨慎处理） */
 export function readAllSecretValues(): Record<string, string> {
 	const values: Record<string, string> = {};
-	for (const key of Object.keys(ENV_GETTERS)) {
+	for (const key of ENV_KEYS) {
 		values[key] = readEnvValue(key);
 	}
 	return values;
