@@ -3,6 +3,7 @@ import {
 	SESSION_MAX_AGE,
 	setAuthCookie,
 } from "@/utils/auth";
+import { getEnv } from "@/utils/env";
 import { getClientIp, writeAuditLog } from "@/utils/login-guard";
 import { isEnvFileWritable } from "@/utils/secret-io";
 import { registerSession } from "@/utils/session-store";
@@ -45,7 +46,7 @@ export async function GET({
 		initialized: false,
 		writable,
 		tokenRequired: writable,
-		defaultUsername: import.meta.env.ADMIN_USERNAME || "admin",
+		defaultUsername: getEnv("ADMIN_USERNAME") || "admin",
 		// 未初始化时确保令牌已生成（打印到服务端日志供部署者获取）
 		...(writable ? { tokenReady: Boolean(getSetupToken(origin)) } : {}),
 	});

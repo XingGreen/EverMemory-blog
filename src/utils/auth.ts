@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+
+import { getEnv } from "./env";
 import {
 	applyEnvFileUpdates,
 	hashAdminPassword,
@@ -41,7 +43,7 @@ function getTokenVersion(): string {
 function getJwtSecret(): string {
 	if (cachedSecret) return cachedSecret;
 
-	const envSecret = import.meta.env.ADMIN_JWT_SECRET;
+	const envSecret = getEnv("ADMIN_JWT_SECRET");
 	if (envSecret) {
 		cachedSecret = envSecret;
 		return envSecret;
@@ -287,7 +289,7 @@ export function verifyAdminUsername(username: string): boolean {
 	try {
 		if (!username) return false;
 
-		const storedUsername = import.meta.env.ADMIN_USERNAME || "admin";
+		const storedUsername = getEnv("ADMIN_USERNAME") || "admin";
 
 		const inputBuf = Buffer.from(username);
 		const storedBuf = Buffer.from(storedUsername);
