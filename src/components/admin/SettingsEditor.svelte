@@ -30,7 +30,9 @@ let {
 } = $props();
 
 // html 等原始文本配置的本地编辑副本（受控组件，随 data 刷新）
-let htmlText = $state("");
+let htmlText = $state(
+	typeof data === "string" ? data : remote && source ? source : "",
+);
 $effect(() => {
 	if (item.kind === "html") {
 		const initial =
@@ -40,7 +42,8 @@ $effect(() => {
 });
 
 // json 配置的可视表单 / 源码（真实文件）双模式
-let mode: "form" | "source" = $state("form");
+// 远程（线上）环境首帧即源码模式，避免 data 为空时误渲染表单组件
+let mode: "form" | "source" = $state(remote ? "source" : "form");
 let sourceDraft = $state("");
 
 // 进入源码模式：以磁盘文件原文生成草稿
@@ -112,7 +115,7 @@ $effect(() => {
 				{i18n(I18nKey.configModeSource)}
 			</button>
 		</div>
-		{#if mode === "form"}
+		{#if mode === "form" && data && typeof data === "object"}
 			<div class="editor-body">
 				<ConfigEditor data={data} fileKey={item.key} />
 			</div>
