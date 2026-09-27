@@ -54,3 +54,4 @@ package/
 
 # local persistence (file backend for sessions/drafts)
 .data/.trae/
+.trae/
