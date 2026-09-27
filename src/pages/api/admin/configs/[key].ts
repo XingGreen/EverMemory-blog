@@ -1,11 +1,14 @@
 import { getConfigItem } from "@/utils/admin-settings";
 import { requireAuth } from "@/utils/auth";
 import {
+	isRemoteRuntime,
 	readConfigJson,
 	readConfigSource,
+	readConfigSourceFromGitHub,
 	saveConfigJson,
 	saveConfigSource,
 } from "@/utils/config-io";
+import { saveFileToGitHub } from "@/utils/github-app";
 
 export const prerender = false;
 
@@ -24,10 +27,27 @@ export async function GET({ request, params }) {
 		return json({ success: false, message: `未知配置项: ${params.key}` }, 404);
 
 	try {
+		// Serverless 环境无本地文件系统：直接从 GitHub 读取源码，仅提供源码模式
+		if (isRemoteRuntime()) {
+			const source = await readConfigSourceFromGitHub(params.key);
+			if (source === null)
+				return json(
+					{ success: false, message: "从 GitHub 读取配置失败" },
+					500,
+				);
+			return json(
+				{ success: true, data: null, source, file: item.file, remote: true },
+				200,
+			);
+		}
+
 		const { data } = readConfigJson(params.key);
 		// 同时返回文件源码，供前端"源码"模式直接展示/编辑真实文件
 		const source = readConfigSource(params.key);
-		return json({ success: true, data, source, file: item.file }, 200);
+		return json(
+			{ success: true, data, source, file: item.file, remote: false },
+			200,
+		);
 	} catch (error) {
 		console.error(
 			"[Admin Config] 读取失败:",
@@ -53,6 +73,34 @@ export async function POST({ request, params }) {
 
 	try {
 		const body = await request.json();
+
+		// Serverless 环境：源码直接提交 GitHub（触发自动重建后生效）
+		if (isRemoteRuntime()) {
+			if (typeof body?.source === "string" && body.source.length > 0) {
+				const ok = await saveFileToGitHub(
+					item.file,
+					body.source,
+					`update config source (${params.key}) via admin dashboard`,
+				);
+				if (!ok)
+					return json(
+						{ success: false, message: "GitHub 保存失败，请稍后重试" },
+						500,
+					);
+				return json(
+					{
+						success: true,
+						message: "保存成功（已提交 GitHub，自动重建后生效）",
+						file: item.file,
+					},
+					200,
+				);
+			}
+			return json(
+				{ success: false, message: "线上环境仅支持源码模式保存" },
+				400,
+			);
+		}
 
 		// 源码模式：整份文件原文写回（TS 校验 + 失败回滚），html 同样适用
 		if (typeof body?.source === "string" && body.source.length > 0) {
