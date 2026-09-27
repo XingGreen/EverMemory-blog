@@ -53,4 +53,4 @@ package/
 .plan/
 
 # local persistence (file backend for sessions/drafts)
-.data/
+.data/.trae/
