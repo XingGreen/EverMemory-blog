@@ -570,7 +570,7 @@ export const zh_CN: Translation = {
 	[Key.configSave]: "保存配置",
 	[Key.configSaving]: "保存中…",
 	[Key.configLoading]: "加载中…",
-	[Key.configLoadFailed]: "加载失败: {message}",
+	[Key.configLoadFailed]: "加载失败:",
 	[Key.configFile]: "配置文件: {file}（导出 {exportName}）",
 	[Key.configSectionUnknown]: "未知的配置项。",
 	[Key.configAdd]: "＋ 添加",

@@ -374,7 +374,12 @@ async function loadSettings(key: string) {
 	settingsMode = "form";
 	try {
 		const res = await fetch(`/api/admin/configs/${key}/`);
-		const json = await res.json();
+		let json: { success: boolean; data?: unknown; source?: string; message?: string };
+		try {
+			json = await res.json();
+		} catch {
+			throw new Error(`服务器返回异常（HTTP ${res.status}）`);
+		}
 		if (json.success) {
 			settingsData = json.data;
 			settingsSource = json.source ?? "";
@@ -403,7 +408,12 @@ async function saveSettings() {
 					: { data: settingsData },
 			),
 		});
-		const json = await res.json();
+		let json: { success: boolean; message?: string };
+		try {
+			json = await res.json();
+		} catch {
+			throw new Error(`服务器返回异常（HTTP ${res.status}）`);
+		}
 		if (json.success) {
 			showToast(json.message || "保存成功", "success");
 		} else {

@@ -572,7 +572,7 @@ export const zh_TW: Translation = {
 	[Key.configSave]: "儲存設定",
 	[Key.configSaving]: "儲存中…",
 	[Key.configLoading]: "載入中…",
-	[Key.configLoadFailed]: "載入失敗: {message}",
+	[Key.configLoadFailed]: "載入失敗:",
 	[Key.configFile]: "設定檔: {file}（匯出 {exportName}）",
 	[Key.configSectionUnknown]: "未知的設定項。",
 	[Key.configAdd]: "＋ 新增",

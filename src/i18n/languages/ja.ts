@@ -585,7 +585,7 @@ export const ja: Translation = {
 	[Key.configSave]: "設定を保存",
 	[Key.configSaving]: "保存中…",
 	[Key.configLoading]: "読み込み中…",
-	[Key.configLoadFailed]: "読み込みに失敗しました: {message}",
+	[Key.configLoadFailed]: "読み込みに失敗しました:",
 	[Key.configFile]: "設定ファイル: {file}（エクスポート: {exportName}）",
 	[Key.configSectionUnknown]: "未知の設定項目です。",
 	[Key.configAdd]: "＋ 追加",
