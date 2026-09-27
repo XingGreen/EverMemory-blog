@@ -9,10 +9,10 @@ import {
 } from "./secret-io";
 import { getSession, touchSession } from "./session-store";
 
-const JWT_EXPIRY_HOURS = 1;
+const JWT_EXPIRY_HOURS = 12;
 
 // 会话 Cookie 有效时长
-export const SESSION_MAX_AGE = JWT_EXPIRY_HOURS * 3600; // 1 小时（未勾选"记住我"）
+export const SESSION_MAX_AGE = JWT_EXPIRY_HOURS * 3600; // 12 小时（未勾选"记住我"）
 export const REMEMBER_MAX_AGE = 7 * 24 * 3600; // 7 天（勾选"记住我"）
 
 /** 会话撤销版本号所存储的环境变量键；修改认证信息时 +1，旧会话立即失效 */
