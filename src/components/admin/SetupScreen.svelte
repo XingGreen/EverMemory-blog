@@ -217,12 +217,17 @@ function handleTokenKeyDown(e: KeyboardEvent) {
 						aria-label={showPassword ? i18n(I18nKey.secretsHide) : i18n(I18nKey.secretsShow)}
 						onclick={() => (showPassword = !showPassword)}
 					>
-						<Icon
-							icon={showPassword
-								? "material-symbols:visibility-off-outline-rounded"
-								: "material-symbols:visibility-outline-rounded"}
-							size="sm"
-						/>
+						{#if showPassword}
+							<Icon
+								icon="material-symbols:visibility-off-outline-rounded"
+								size="sm"
+							/>
+						{:else}
+							<Icon
+								icon="material-symbols:visibility-outline-rounded"
+								size="sm"
+							/>
+						{/if}
 					</button>
 				</div>
 				<p class="field-hint">
@@ -306,12 +311,17 @@ function handleTokenKeyDown(e: KeyboardEvent) {
 						aria-label={showPassword ? i18n(I18nKey.secretsHide) : i18n(I18nKey.secretsShow)}
 						onclick={() => (showPassword = !showPassword)}
 					>
-						<Icon
-							icon={showPassword
-								? "material-symbols:visibility-off-outline-rounded"
-								: "material-symbols:visibility-outline-rounded"}
-							size="sm"
-						/>
+						{#if showPassword}
+							<Icon
+								icon="material-symbols:visibility-off-outline-rounded"
+								size="sm"
+							/>
+						{:else}
+							<Icon
+								icon="material-symbols:visibility-outline-rounded"
+								size="sm"
+							/>
+						{/if}
 					</button>
 				</div>
 

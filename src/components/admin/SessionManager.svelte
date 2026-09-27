@@ -60,6 +60,17 @@ function deviceIcon(s: SessionDTO): string {
 	return "material-symbols:devices";
 }
 
+// 设备图标清单：generate-icons 只扫描 icon: "xxx" 字面量形式，
+// 函数内动态 return 的图标需在此声明一次才会被构建进图标集
+const deviceIconList = [
+	{ icon: "material-symbols:smartphone" },
+	{ icon: "material-symbols:tablet-mac" },
+	{ icon: "material-symbols:tablet-android" },
+	{ icon: "material-symbols:laptop-mac" },
+	{ icon: "material-symbols:desktop-windows" },
+	{ icon: "material-symbols:devices" },
+];
+
 async function load() {
 	loading = true;
 	loadError = "";
