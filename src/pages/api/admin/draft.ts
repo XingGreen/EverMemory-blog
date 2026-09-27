@@ -4,7 +4,7 @@ import { getStore } from "@/utils/persist-store";
 
 export const prerender = false;
 
-const DRAFT_KEY = "admin:draft";
+const DRAFT_KEY = "admin_draft";
 
 /** 可自动上传到云端的字段（敏感字段 password/passwordHint 不参与） */
 export interface CloudDraft {

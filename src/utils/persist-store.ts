@@ -84,8 +84,11 @@ const fileStore: KVStore = {
 /* ---------------- Vercel KV（Upstash REST）后端 ---------------- */
 
 function kvConfig(): { url: string; token: string } | null {
-	const url = import.meta.env[KV_URL_KEY] as string | undefined;
-	const token = import.meta.env[KV_TOKEN_KEY] as string | undefined;
+	const getEnv = (key: string): string | undefined =>
+		(import.meta.env as Record<string, unknown>)[key] as string | undefined ??
+		(process.env[key] as string | undefined);
+	const url = getEnv(KV_URL_KEY);
+	const token = getEnv(KV_TOKEN_KEY);
 	if (url && token) return { url: url.replace(/\/+$/, ""), token };
 	return null;
 }
@@ -101,23 +104,30 @@ function kvConfigRequired(): { url: string; token: string } {
 const kvStore: KVStore = {
 	async get<T>(key: string): Promise<T | null> {
 		const { url, token } = kvConfigRequired();
-		const res = await fetch(`${url}/${encodeURIComponent(key)}`, {
-			headers: { Authorization: `Bearer ${token}` },
-		});
-		if (res.status === 404 || res.status === 204) return null;
-		if (!res.ok) {
-			throw new Error(`[PersistStore] KV GET 失败: ${res.status}`);
+		try {
+			const res = await fetch(`${url}/${key}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+			if (res.status === 404 || res.status === 204) return null;
+			if (!res.ok) {
+				console.error(`[PersistStore] KV GET 失败(${res.status}): 键 ${key}`);
+				// 读失败降级为"不存在"，避免线上 API 直接 500
+				return null;
+			}
+			const text = await res.text();
+			if (!text) return null;
+			return JSON.parse(text) as T;
+		} catch (err) {
+			console.error("[PersistStore] KV GET 异常:", err);
+			return null;
 		}
-		const text = await res.text();
-		if (!text) return null;
-		return JSON.parse(text) as T;
 	},
 
 	async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
 		const { url, token } = kvConfigRequired();
 		const qs =
 			ttlSeconds && ttlSeconds > 0 ? `?EX=${Math.floor(ttlSeconds)}` : "";
-		const res = await fetch(`${url}/${encodeURIComponent(key)}${qs}`, {
+		const res = await fetch(`${url}/${key}${qs}`, {
 			method: "PUT",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -132,7 +142,7 @@ const kvStore: KVStore = {
 
 	async del(key: string): Promise<void> {
 		const { url, token } = kvConfigRequired();
-		const res = await fetch(`${url}/${encodeURIComponent(key)}`, {
+		const res = await fetch(`${url}/${key}`, {
 			method: "DELETE",
 			headers: { Authorization: `Bearer ${token}` },
 		});
