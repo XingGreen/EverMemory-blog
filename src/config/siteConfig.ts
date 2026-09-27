@@ -1,4 +1,3 @@
-import { defaultFavicons } from "@/constants/icon";
 import type { SiteConfig } from "@/types/siteConfig";
 
 // 定义站点语言
@@ -52,7 +51,15 @@ export const siteConfig: SiteConfig = {
 			// 图标文件路径
 			src: "/favicon/favicon.ico",
 		},
-		...defaultFavicons,
+		// 各尺寸 + 明暗主题图标（浏览器按 prefers-color-scheme 自动匹配）
+		{ src: "/favicon/favicon-light-32.png", theme: "light", sizes: "32x32" },
+		{ src: "/favicon/favicon-light-128.png", theme: "light", sizes: "128x128" },
+		{ src: "/favicon/favicon-light-180.png", theme: "light", sizes: "180x180" },
+		{ src: "/favicon/favicon-light-192.png", theme: "light", sizes: "192x192" },
+		{ src: "/favicon/favicon-dark-32.png", theme: "dark", sizes: "32x32" },
+		{ src: "/favicon/favicon-dark-128.png", theme: "dark", sizes: "128x128" },
+		{ src: "/favicon/favicon-dark-180.png", theme: "dark", sizes: "180x180" },
+		{ src: "/favicon/favicon-dark-192.png", theme: "dark", sizes: "192x192" },
 	],
 	// 导航栏配置
 	navbar: {
