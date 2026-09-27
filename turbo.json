@@ -1,0 +1,48 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "icons": {
+      "inputs": [
+        "src/**/*.svelte",
+        "src/**/*.astro",
+        "src/**/*.ts",
+        "src/**/*.js",
+        "scripts/generate-icons.js"
+      ],
+      "outputs": ["src/constants/icons.ts"]
+    },
+    "lqips": {
+      "inputs": [
+        "src/**/*.{png,jpg,jpeg,webp,avif}",
+        "public/**/*.{png,jpg,jpeg,webp,avif}",
+        "!public/favicon/**",
+        "!public/pio/**",
+        "!public/assets/images/effects/**",
+        "!public/assets/music/**",
+        "scripts/generate-lqips.ts"
+      ],
+      "outputs": ["src/constants/lqips.json"]
+    },
+    "snapshot": {
+      "inputs": [
+        "src/config/**",
+        "src/types/**",
+        "src/content.config.ts",
+        "scripts/generate-config-snapshot.ts"
+      ],
+      "outputs": ["src/constants/admin-config-snapshot.ts"]
+    },
+    "astro-build": {
+      "dependsOn": ["icons", "lqips", "snapshot"],
+      "cache": false
+    },
+    "subset-fonts": {
+      "dependsOn": ["astro-build"],
+      "cache": false
+    },
+    "pagefind": {
+      "dependsOn": ["astro-build", "subset-fonts"],
+      "cache": false
+    }
+  }
+}
