@@ -8,7 +8,7 @@ import { getStore } from "./persist-store";
  * 支持查看在线设备、精确踢下线、区分设备。
  */
 
-const SESSIONS_KEY = "admin:sessions";
+const SESSIONS_KEY = "admin_sessions";
 
 /** 会话列表「最后活跃」写入节流：避免每次请求都回写存储 */
 const TOUCH_THROTTLE_MS = 60_000;

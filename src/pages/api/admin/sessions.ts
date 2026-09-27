@@ -24,25 +24,36 @@ export async function GET({
 	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 
-	const sessions = await listSessions();
-	const list = sessions.map((s) => ({
-		sid: s.sid,
-		device: s.device,
-		ua: s.ua,
-		ip: s.ip,
-		loginAt: s.loginAt,
-		lastSeenAt: s.lastSeenAt,
-		remember: s.remember,
-		isCurrent: s.sid === auth.payload?.sid,
-	}));
+	try {
+		const sessions = await listSessions();
+		const list = sessions.map((s) => ({
+			sid: s.sid,
+			device: s.device,
+			ua: s.ua,
+			ip: s.ip,
+			loginAt: s.loginAt,
+			lastSeenAt: s.lastSeenAt,
+			remember: s.remember,
+			isCurrent: s.sid === auth.payload?.sid,
+		}));
 
-	writeAuditLog({
-		event: "sessions_listed",
-		client: getClientIp(request),
-		username: "admin",
-	});
+		writeAuditLog({
+			event: "sessions_listed",
+			client: getClientIp(request),
+			username: "admin",
+		});
 
-	return json({ success: true, sessions: list });
+		return json({ success: true, sessions: list });
+	} catch (err) {
+		console.error("[Sessions] 读取会话列表失败:", err);
+		return json(
+			{
+				success: false,
+				message: err instanceof Error ? err.message : "会话列表读取失败",
+			},
+			500,
+		);
+	}
 }
 
 // 踢下线：?sid=xxx 踢指定设备；?allOther=1 踢除当前设备外的全部
@@ -61,21 +72,32 @@ export async function DELETE({
 
 	let revoked = 0;
 	let detail = "";
-	if (allOther) {
-		if (!currentSid) {
-			return json({ success: false, message: "无法识别当前会话" }, 400);
+	try {
+		if (allOther) {
+			if (!currentSid) {
+				return json({ success: false, message: "无法识别当前会话" }, 400);
+			}
+			revoked = await revokeAllExcept(currentSid);
+			detail = `踢除其他设备会话 ${revoked} 个`;
+		} else if (sid) {
+			const ok = await revokeSession(sid);
+			if (!ok) {
+				return json({ success: false, message: "该会话不存在或已失效" }, 404);
+			}
+			revoked = 1;
+			detail = `踢除会话 ${sid.slice(0, 8)}…`;
+		} else {
+			return json({ success: false, message: "缺少参数" }, 400);
 		}
-		revoked = await revokeAllExcept(currentSid);
-		detail = `踢除其他设备会话 ${revoked} 个`;
-	} else if (sid) {
-		const ok = await revokeSession(sid);
-		if (!ok) {
-			return json({ success: false, message: "该会话不存在或已失效" }, 404);
-		}
-		revoked = 1;
-		detail = `踢除会话 ${sid.slice(0, 8)}…`;
-	} else {
-		return json({ success: false, message: "缺少参数" }, 400);
+	} catch (err) {
+		console.error("[Sessions] 踢下线失败:", err);
+		return json(
+			{
+				success: false,
+				message: err instanceof Error ? err.message : "踢下线失败",
+			},
+			500,
+		);
 	}
 
 	writeAuditLog({
