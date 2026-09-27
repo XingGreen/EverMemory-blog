@@ -115,6 +115,19 @@ function kvConfigRequired(): { url: string; token: string } {
  * key 参数会做 URL 解码，直接拼接即可（含特殊字符时需 encodeURIComponent）。
  */
 
+/** Upstash 偶发连接重置（ECONNRESET/其他 side closed），网络层失败重试一次 */
+async function kvFetch(
+	url: string,
+	init: RequestInit,
+): Promise<Response> {
+	try {
+		return await fetch(url, init);
+	} catch (err) {
+		console.warn("[PersistStore] KV 网络请求失败，重试一次:", err);
+		return await fetch(url, init);
+	}
+}
+
 /** 解析 Upstash 响应：result 为 null 表示缺失；否则是存储的 JSON 字符串 */
 async function parseUpstashResult(
 	res: Response,
@@ -145,7 +158,7 @@ const kvStore: KVStore = {
 		assertSafeKey(key);
 		const { url, token } = kvConfigRequired();
 		try {
-			const res = await fetch(`${url}/get/${encodeURIComponent(key)}`, {
+			const res = await kvFetch(`${url}/get/${encodeURIComponent(key)}`, {
 				headers: { Authorization: `Bearer ${token}` },
 			});
 			return (await parseUpstashResult(res, key)) as T | null;
@@ -160,7 +173,7 @@ const kvStore: KVStore = {
 		const { url, token } = kvConfigRequired();
 		const qs =
 			ttlSeconds && ttlSeconds > 0 ? `?EX=${Math.floor(ttlSeconds)}` : "";
-		const res = await fetch(`${url}/set/${encodeURIComponent(key)}${qs}`, {
+		const res = await kvFetch(`${url}/set/${encodeURIComponent(key)}${qs}`, {
 			method: "PUT",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -176,7 +189,7 @@ const kvStore: KVStore = {
 	async del(key: string): Promise<void> {
 		assertSafeKey(key);
 		const { url, token } = kvConfigRequired();
-		const res = await fetch(`${url}/del/${encodeURIComponent(key)}`, {
+		const res = await kvFetch(`${url}/del/${encodeURIComponent(key)}`, {
 			method: "POST",
 			headers: { Authorization: `Bearer ${token}` },
 		});
