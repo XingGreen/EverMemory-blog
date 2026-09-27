@@ -18,7 +18,16 @@ if (!item) {
 
 const fileUrl = pathToFileURL(path.resolve(process.cwd(), item.file)).href;
 const mod = (await import(fileUrl)) as Record<string, unknown>;
-const value = mod[item.exportName];
+// 友链配置包含两个导出：页面配置 + 友链条目列表，合并为复合结构供后台表单编辑
+let value: unknown;
+if (item.key === "friends") {
+	value = {
+		page: mod["friendsPageConfig"],
+		links: mod["friendsConfig"],
+	};
+} else {
+	value = mod[item.exportName];
+}
 if (value === undefined) {
 	console.error(`[DumpConfig] 配置模块未导出 ${item.exportName}`);
 	process.exit(1);

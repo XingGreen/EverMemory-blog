@@ -40,6 +40,13 @@ const allTags = [...new Set(items.flatMap((item) => item.tags || []))].sort();
 const title = friendsPageConfig.title || i18n(I18nKey.friends);
 const description =
 	friendsPageConfig.description || i18n(I18nKey.friendsDescription);
+
+// 运行时覆盖脚本用到的 i18n 文案（构建期注入，避免硬编码）
+const runtimeLabels = {
+	all: i18n(I18nKey.all),
+	friendsEmpty: i18n(I18nKey.friendsEmpty),
+	fallbackTitle: i18n(I18nKey.friends),
+};
 ---
 
 <MainGridLayout title={title} description={description}>
@@ -55,13 +62,13 @@ const description =
           >
             <Icon is:inline name="material-symbols:group" class="text-[1.5rem]" />
           </div>
-          <div class="text-3xl font-bold text-neutral-900 dark:text-neutral-100">
+          <div class="text-3xl font-bold text-neutral-900 dark:text-neutral-100" id="friends-title">
             {title}
           </div>
         </div>
         {
           description && (
-            <p class="text-base text-neutral-600 dark:text-neutral-400 leading-relaxed mb-4">
+            <p class="text-base text-neutral-600 dark:text-neutral-400 leading-relaxed mb-4" id="friends-desc">
               {description}
             </p>
           )
@@ -84,7 +91,7 @@ const description =
                 class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-(--line-divider) bg-transparent text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-(--primary) focus:ring-1 focus:ring-(--primary) outline-none transition-all duration-200 text-sm"
               />
             </div>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2" id="friends-tags">
               <button
                 data-tag="all"
                 class="btn-regular px-3 py-1.5 rounded-lg bg-(--primary) text-white hover:bg-(--primary) transition-colors duration-200 text-sm font-medium"
@@ -104,7 +111,7 @@ const description =
         )
       }
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 my-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 my-4" id="friends-grid">
         {
           items.length === 0 && (
             <div class="col-span-full flex flex-col items-center justify-center py-12 text-neutral-400 dark:text-neutral-500">
@@ -181,7 +188,7 @@ const description =
   </div>
 
   {friendsPageConfig.showCustomContent !== false && (
-    <div class="mt-4 card-base z-10 px-9 py-6 relative w-full">
+    <div class="mt-4 card-base z-10 px-9 py-6 relative w-full" id="friends-custom">
       <Markdown class="">
         <Content />
       </Markdown>
@@ -190,7 +197,7 @@ const description =
 
   <!-- 评论区 -->
   {isCommentEnabled && (
-    <div class="mt-4">
+    <div class="mt-4" id="friends-comment">
       <Comment post={friendsPost} customPath="/friends/" />
     </div>
   )}
@@ -290,5 +297,118 @@ const description =
       }
       customElements.define("friend-filter", FriendFilter);
     }
+  </script>
+
+  <script is:inline define:vars={{ runtimeLabels }}>
+    (() => {
+      // 友链运行时覆盖：后台保存 page+links 覆盖层后，立即重建标题/描述/列表/筛选按钮（无需重建站点）
+      const runtimeApi = "/api/runtime-config/";
+      let cached = null;
+
+      function esc(s) {
+        return String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+        })[c]);
+      }
+
+      function filterButtonHtml(tag, isAll) {
+        const active =
+          "btn-regular px-3 py-1.5 rounded-lg bg-(--primary) text-white hover:bg-(--primary) transition-colors duration-200 text-sm font-medium";
+        const normal =
+          "btn-regular px-3 py-1.5 rounded-lg bg-(--btn-regular-bg) text-(--btn-content) hover:bg-(--btn-regular-bg-hover) transition-colors duration-200 text-sm font-medium";
+        return `<button data-tag="${isAll ? "all" : esc(tag)}" class="${isAll ? active : normal}">${esc(isAll ? runtimeLabels.all : tag)}</button>`;
+      }
+
+      function cardHtml(item) {
+        const tags = (item.tags || [])
+          .slice(0, 3)
+          .map(
+            (t) =>
+              `<span class="text-[0.65rem] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 transition-colors duration-300">${esc(t)}</span>`,
+          )
+          .join("");
+        return `
+        <a href="${esc(item.siteurl || "")}" target="_blank" rel="noopener noreferrer" data-tags="${esc((item.tags || []).join(","))}" class="friend-card group flex items-center gap-3 p-2.5 rounded-xl border border-(--line-divider) hover:border-(--primary) hover:bg-(--card-bg) transition-all duration-300 hover:shadow-lg relative overflow-hidden">
+          <div class="absolute inset-0 bg-(--primary) opacity-0 group-hover:opacity-5 transition-opacity duration-300 pointer-events-none"></div>
+          <div class="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-black/5 dark:border-white/5 group-hover:scale-105 transition-transform duration-300">
+            <img src="${esc(item.imgurl || "")}" alt="${esc(item.title || "")}" class="w-full h-full object-cover" loading="lazy">
+          </div>
+          <div class="grow min-w-0 flex flex-col justify-center gap-0.5">
+            <div class="flex items-center justify-between">
+              <div class="font-bold text-base text-neutral-900 dark:text-neutral-100 group-hover:text-(--primary) transition-colors truncate pr-4">${esc(item.title || "")}</div>
+              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" class="text-(--primary) text-lg opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300"><path fill="currentColor" d="M6 6v2h8.59L5 17.59 6.41 19 16 9.41V18h2V6H6z"/></svg>
+            </div>
+            <div class="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-1" title="${esc(item.desc || "")}">${esc(item.desc || "")}</div>
+            <div class="flex flex-wrap gap-1 mt-1">${tags}</div>
+          </div>
+        </a>`;
+      }
+
+      function renderFriends(page, links) {
+        const titleEl = document.getElementById("friends-title");
+        if (titleEl) titleEl.textContent = (page && page.title) || runtimeLabels.fallbackTitle;
+
+        const descEl = document.getElementById("friends-desc");
+        if (descEl) {
+          const desc = page && page.description;
+          descEl.textContent = desc || "";
+          descEl.style.display = desc ? "" : "none";
+        }
+
+        const customEl = document.getElementById("friends-custom");
+        if (customEl) {
+          customEl.style.display = page && page.showCustomContent === false ? "none" : "";
+        }
+        const commentEl = document.getElementById("friends-comment");
+        if (commentEl) {
+          commentEl.style.display = page && page.showComment === false ? "none" : "";
+        }
+
+        const items = (links || [])
+          .filter((f) => f.enabled !== false)
+          .sort((a, b) => (b.weight || 0) - (a.weight || 0));
+
+        const grid = document.getElementById("friends-grid");
+        if (!grid) return;
+
+        const tags = [...new Set(items.flatMap((f) => f.tags || []))].sort();
+        const tagBox = document.getElementById("friends-tags");
+        if (tagBox) {
+          tagBox.innerHTML =
+            filterButtonHtml("", true) + tags.map((t) => filterButtonHtml(t, false)).join("");
+        }
+
+        if (items.length === 0) {
+          grid.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center py-12 text-neutral-400 dark:text-neutral-500"><div class="text-sm">${esc(runtimeLabels.friendsEmpty)}</div></div>`;
+          return;
+        }
+        grid.innerHTML = items.map(cardHtml).join("");
+      }
+
+      async function apply() {
+        if (cached) {
+          renderFriends(cached.page, cached.links);
+          return;
+        }
+        try {
+          const res = await fetch(runtimeApi);
+          if (!res.ok) return;
+          const data = await res.json();
+          cached =
+            data && data.friends && Array.isArray(data.friends.links)
+              ? data.friends
+              : null;
+          if (cached) renderFriends(cached.page, cached.links);
+        } catch {
+          // 网络异常等保持 SSR 默认渲染
+        }
+      }
+
+      document.addEventListener("astro:page-load", () => apply());
+      apply();
+    })();
   </script>
 </MainGridLayout>
