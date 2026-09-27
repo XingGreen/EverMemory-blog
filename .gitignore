@@ -53,7 +53,7 @@ package/
 .plan/
 
 # local persistence (file backend for sessions/drafts)
-.data/.trae/
+.data/
 .trae/
 src/constants/admin-config-snapshot.ts
 

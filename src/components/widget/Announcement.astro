@@ -16,25 +16,26 @@ interface Props {
 const { class: className, style, widgetConfig } = Astro.props;
 
 const showTitle = widgetConfig?.showTitle !== false;
+const fallbackTitle = config.title || i18n(I18nKey.announcement);
 ---
 
 <!-- 组件显示现在由sidebarLayoutConfig统一控制，无需检查config.enable -->
 <WidgetLayout
-  name={config.title || i18n(I18nKey.announcement)}
+  name={fallbackTitle}
   showTitle={showTitle}
   id="announcement"
   class={className}
   style={style}
 >
   <div>
-    <!-- 公告栏内容 -->
-    <div class="text-neutral-600 dark:text-neutral-300 leading-relaxed mb-3">
+    <!-- 公告栏内容（运行时覆盖层会更新此区域） -->
+    <div id="announcement-content" class="text-neutral-600 dark:text-neutral-300 leading-relaxed mb-3">
       {config.content}
     </div>
 
-    <!-- 可选链接和关闭按钮 -->
+    <!-- 可选链接和关闭按钮（容器常驻，运行时按配置重建） -->
     <div class="flex items-center justify-between gap-3">
-      <div>
+      <div id="announcement-link">
         {
           config.link && config.link.enable !== false && (
             <a
@@ -49,17 +50,101 @@ const showTitle = widgetConfig?.showTitle !== false;
         }
       </div>
 
-      {
-        config.closable && (
-          <button
-            class="btn-regular rounded-lg h-8 w-8 text-sm hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-            onclick="this.closest('widget-layout').style.display='none'"
-            aria-label={i18n(I18nKey.announcementClose)}
-          >
-            <Icon is:inline name="fa7-solid:xmark" class="text-sm" />
-          </button>
-        )
-      }
+      <div id="announcement-close">
+        {
+          config.closable && (
+            <button
+              class="btn-regular rounded-lg h-8 w-8 text-sm hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+              onclick="this.closest('widget-layout').style.display='none'"
+              aria-label={i18n(I18nKey.announcementClose)}
+            >
+              <Icon is:inline name="fa7-solid:xmark" class="text-sm" />
+            </button>
+          )
+        }
+      </div>
     </div>
   </div>
 </WidgetLayout>
+
+<!--
+公告运行时覆盖：
+构建期以源码默认值渲染；页面加载后拉取 /api/runtime-config 的覆盖层，
+实时更新标题/内容/链接/关闭按钮，实现"后台改公告即时生效、无需重建"。
+-->
+<script is:inline define:vars={{ defaultConfig: config, fallbackTitle }}>{
+	(() => {
+		const runtimeApi = "/api/runtime-config";
+		let cached = null;
+
+		function applyAnnouncement(cfg) {
+			const c = cfg || {};
+			document
+				.querySelectorAll('widget-layout[data-id="announcement"]')
+				.forEach((root) => {
+					const titleEl = root.querySelector(".widget-name");
+					if (titleEl) titleEl.textContent = c.title || fallbackTitle;
+
+					const contentEl = root.querySelector("#announcement-content");
+					if (contentEl) {
+						contentEl.textContent =
+							typeof c.content === "string" ? c.content : "";
+					}
+
+					const linkBox = root.querySelector("#announcement-link");
+					if (linkBox) {
+						linkBox.innerHTML = "";
+						if (c.link && c.link.enable !== false && c.link.text && c.link.url) {
+							const a = document.createElement("a");
+							a.className =
+								"btn-regular rounded-lg px-3 py-1.5 text-sm font-medium active:scale-95 transition-transform";
+							a.href = c.link.url;
+							a.target = c.link.external ? "_blank" : "_self";
+							if (c.link.external) a.rel = "noopener noreferrer";
+							a.textContent = c.link.text;
+							linkBox.appendChild(a);
+						}
+					}
+
+					const closeBox = root.querySelector("#announcement-close");
+					if (closeBox) {
+						closeBox.innerHTML = "";
+						if (c.closable) {
+							const btn = document.createElement("button");
+							btn.className =
+								"btn-regular rounded-lg h-8 w-8 text-sm hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors";
+							btn.setAttribute("aria-label", "关闭公告");
+							btn.innerHTML =
+								'<svg xmlns="http://www.w3.org/2000/svg" class="text-sm" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M18.3 5.71L12 12l6.3 6.29-1.42 1.42L10.59 13.4 4.3 19.7 2.88 18.3 9.17 12 2.88 5.71 4.3 4.29 10.59 10.6 16.88 4.3z"/></svg>';
+							btn.addEventListener("click", () => {
+								const host = root.closest("widget-layout") || root;
+								host.style.display = "none";
+							});
+							closeBox.appendChild(btn);
+						}
+					}
+				});
+		}
+
+		async function loadRuntimeConfig() {
+			try {
+				const res = await fetch(runtimeApi, { headers: { Accept: "application/json" } });
+				if (!res.ok) return;
+				const json = await res.json();
+				cached = json || null;
+				if (cached && cached.announcement) applyAnnouncement(cached.announcement);
+			} catch {
+				// 网络失败保持构建期默认值
+			}
+		}
+
+		// SSR 已按源码默认值渲染；仅当拉取到覆盖时才改写 DOM
+		loadRuntimeConfig();
+
+		// swup SPA 导航替换容器后重新应用缓存并刷新
+		document.addEventListener("astro:page-load", () => {
+			if (cached && cached.announcement) applyAnnouncement(cached.announcement);
+			loadRuntimeConfig();
+		});
+	})();
+}</script>

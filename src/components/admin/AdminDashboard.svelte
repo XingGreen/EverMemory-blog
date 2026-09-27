@@ -447,6 +447,25 @@ async function saveSettings() {
 	if (!key || (settingsMode !== "source" && settingsData === null)) return;
 	settingsSaving = true;
 	try {
+		const cfgItem = key ? getConfigItem(key) : undefined;
+		// 运行时配置（可视化表单）：写入 KV 覆盖层，即时生效、不触发重建
+		if (cfgItem?.runtime && settingsMode !== "source") {
+			const res = await fetch(`/api/admin/runtime-config/${key}/`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ data: settingsData }),
+			});
+			const json = (await res.json().catch(() => null)) as {
+				success?: boolean;
+				message?: string;
+			} | null;
+			if (json?.success) {
+				showToast(json.message || "已保存并即时生效", "success");
+			} else {
+				showToast(json?.message || "保存失败", "error", 10000);
+			}
+			return;
+		}
 		const res = await fetch(`/api/admin/configs/${key}/`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },

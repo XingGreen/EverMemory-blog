@@ -79,6 +79,12 @@ $effect(() => {
 </script>
 
 <div class="card-base settings-editor">
+	{#if item.runtime && mode === "form"}
+		<div class="editor-status runtime-tip">
+			<Icon icon="material-symbols:bolt" class="tab-icon" />
+			此配置保存后即时生效（无需重新构建站点），用于站点的运行时覆盖
+		</div>
+	{/if}
 	{#if isLoading}
 		<div class="editor-status">{i18n(I18nKey.configLoading)}</div>
 	{:else if error}

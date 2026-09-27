@@ -19,6 +19,11 @@ export type AdminConfigItem = {
 	icon: string;
 	/** 后台显示的配置描述 */
 	description: string;
+	/**
+	 * 运行时配置标记：改动保存到 KV 覆盖层（不经 GitHub / 不触发站点重建），
+	 * 前台组件运行时拉取即时生效。未标记的配置仍走"改源码 + 重建"链路。
+	 */
+	runtime?: boolean;
 };
 
 export const CONFIG_ITEMS: AdminConfigItem[] = [
@@ -121,6 +126,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		label: "公告",
 		icon: "material-symbols:campaign",
 		description: "公告标题与公告内容",
+		runtime: true,
 	},
 	{
 		key: "analytics",
