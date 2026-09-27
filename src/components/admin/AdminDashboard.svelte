@@ -909,11 +909,11 @@ function formatDate(dateStr: string | null): string {
 					aria-label={i18n(sidebarCollapsed ? I18nKey.adminExpandSidebar : I18nKey.adminCollapseSidebar)}
 					title={i18n(sidebarCollapsed ? I18nKey.adminExpandSidebar : I18nKey.adminCollapseSidebar)}
 				>
-					<Icon
-						icon={sidebarCollapsed
-							? "material-symbols:menu-rounded"
-							: "material-symbols:menu-open-rounded"}
-					/>
+					{#if sidebarCollapsed}
+						<Icon icon="material-symbols:menu-rounded" />
+					{:else}
+						<Icon icon="material-symbols:menu-open-rounded" />
+					{/if}
 				</button>
 			</div>
 
