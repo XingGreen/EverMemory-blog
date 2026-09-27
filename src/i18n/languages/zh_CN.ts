@@ -650,6 +650,7 @@ export const zh_CN: Translation = {
 	[Key.sessionsLastActive]: "最后活跃",
 	[Key.sessionsLoginAt]: "登录时间",
 	[Key.sessionsIp]: "IP 地址",
+	[Key.sessionsIpReveal]: "点击显示或隐藏 IP 地址",
 	[Key.sessionsConfirmKick]: "确定要将该设备踢下线吗？其会话将立即失效。",
 	[Key.sessionsConfirmKickAll]:
 		"确定要踢掉其他所有设备吗？它们将立即退出登录。",

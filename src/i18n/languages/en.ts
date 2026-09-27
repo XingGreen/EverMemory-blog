@@ -677,6 +677,7 @@ export const en: Translation = {
 	[Key.sessionsLastActive]: "Last active",
 	[Key.sessionsLoginAt]: "Signed in",
 	[Key.sessionsIp]: "IP address",
+	[Key.sessionsIpReveal]: "Click to show or hide IP",
 	[Key.sessionsConfirmKick]:
 		"Revoke this device? Its session will be terminated immediately.",
 	[Key.sessionsConfirmKickAll]:
