@@ -156,10 +156,10 @@ export async function verifySessionToken(
 		}
 
 		// 会话表检查：sid 必须存在且未过期（被「踢下线」后此校验即失败）
-		if (payload.sid) {
-			const session = await getSession(payload.sid);
-			if (!session) return null;
-		}
+		// 无 sid 的旧令牌（升级前签发）一律视为无效，强制重新登录以登记会话
+		if (!payload.sid) return null;
+		const session = await getSession(payload.sid);
+		if (!session) return null;
 
 		return payload;
 	} catch {
