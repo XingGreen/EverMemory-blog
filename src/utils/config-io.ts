@@ -10,9 +10,22 @@ import {
 	serializeValue,
 } from "./config-serializer";
 
-const require = createRequire(import.meta.url);
-// tsx 的 CLI 入口，用它来直接运行配置解析脚本（避免依赖 npx/PATH/网络）
-const TSX_CLI = require.resolve("tsx/cli");
+// 注意：此处不得在模块顶层 require.resolve("tsx/cli")——tsx 是 devDependency，
+// Vercel 等 Serverless 函数不会打包它，顶层解析会导致整个模块加载即崩（500）。
+// 改为惰性解析，仅在本地运行时（需要 tsx 子进程）才触发。
+let tsxCliPath: string | undefined;
+function resolveTsxCli(): string {
+	if (tsxCliPath) return tsxCliPath;
+	const require = createRequire(import.meta.url);
+	try {
+		tsxCliPath = require.resolve("tsx/cli");
+	} catch {
+		throw new Error(
+			"本地读取配置需要 tsx 依赖，请先执行 pnpm install（线上环境请使用源码模式）",
+		);
+	}
+	return tsxCliPath;
+}
 
 const projectRoot = process.cwd();
 
@@ -65,7 +78,7 @@ export function readConfigJson(key: string): { data: unknown; file: string } {
 	}
 	const script = path.resolve(projectRoot, "scripts/dump-config.ts");
 	try {
-		const out = execFileSync(process.execPath, [TSX_CLI, script, key], {
+		const out = execFileSync(process.execPath, [resolveTsxCli(), script, key], {
 			cwd: projectRoot,
 			encoding: "utf8",
 			maxBuffer: 16 * 1024 * 1024,
@@ -118,7 +131,7 @@ export async function saveConfigSource(
 	try {
 		if (item.kind !== "html") {
 			const script = path.resolve(projectRoot, "scripts/dump-config.ts");
-			execFileSync(process.execPath, [TSX_CLI, script, key], {
+			execFileSync(process.execPath, [resolveTsxCli(), script, key], {
 				cwd: projectRoot,
 				encoding: "utf8",
 				maxBuffer: 16 * 1024 * 1024,
