@@ -40,7 +40,12 @@ for (const item of CONFIG_ITEMS) {
 		const fileUrl = pathToFileURL(filePath).href;
 		// 加 query 破模块缓存，确保读取磁盘上的最新内容
 		const mod = await import(`${fileUrl}?t=${Date.now()}+${Math.random()}`);
-		snapshot[item.key] = { data: mod[item.exportName], source };
+		// 友链配置包含页面配置 + 友链条目两个导出，合并为复合快照
+		const data =
+			item.key === "friends"
+				? { page: mod["friendsPageConfig"], links: mod["friendsConfig"] }
+				: mod[item.exportName];
+		snapshot[item.key] = { data, source };
 		console.log(`[ConfigSnapshot] ${item.key} <- ${item.file} OK`);
 	} catch (error) {
 		failed++;

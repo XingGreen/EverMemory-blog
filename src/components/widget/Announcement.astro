@@ -74,7 +74,7 @@ const fallbackTitle = config.title || i18n(I18nKey.announcement);
 -->
 <script is:inline define:vars={{ defaultConfig: config, fallbackTitle }}>{
 	(() => {
-		const runtimeApi = "/api/runtime-config";
+		const runtimeApi = "/api/runtime-config/";
 		let cached = null;
 
 		function applyAnnouncement(cfg) {

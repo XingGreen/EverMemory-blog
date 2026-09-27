@@ -90,6 +90,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		label: "友链",
 		icon: "material-symbols:link",
 		description: "友链页面配置与友情链接列表",
+		runtime: true,
 	},
 	{
 		key: "comment",
@@ -154,6 +155,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		label: "软件推荐",
 		icon: "material-symbols:apps",
 		description: "软件推荐页面与推荐软件列表",
+		runtime: true,
 	},
 	{
 		key: "sponsor",
