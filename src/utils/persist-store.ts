@@ -84,9 +84,13 @@ const fileStore: KVStore = {
 /* ---------------- Vercel KV（Upstash REST）后端 ---------------- */
 
 function kvConfig(): { url: string; token: string } | null {
-	const getEnv = (key: string): string | undefined =>
-		(import.meta.env as Record<string, unknown>)[key] as string | undefined ??
-		(process.env[key] as string | undefined);
+	const metaEnv = (import.meta as unknown as Record<string, unknown>)
+		.env as Record<string, unknown> | undefined;
+	const getEnv = (key: string): string | undefined => {
+		const fromMeta = metaEnv?.[key];
+		const fromProc = (process.env as Record<string, unknown>)[key];
+		return (fromMeta as string | undefined) ?? (fromProc as string | undefined);
+	};
 	const url = getEnv(KV_URL_KEY);
 	const token = getEnv(KV_TOKEN_KEY);
 	if (url && token) return { url: url.replace(/\/+$/, ""), token };
@@ -101,22 +105,50 @@ function kvConfigRequired(): { url: string; token: string } {
 	return conf;
 }
 
+/* ---------------- Vercel KV（Upstash REST）后端 ---------------- */
+
+/**
+ * Upstash REST API 是命令式 URL：
+ *   GET    /get/{key}   → 200 {"result": string|null}
+ *   PUT    /set/{key}   → body 为存储的原文
+ *   POST   /del/{key}   → 200 {"result": 0|1}
+ * key 参数会做 URL 解码，直接拼接即可（含特殊字符时需 encodeURIComponent）。
+ */
+
+/** 解析 Upstash 响应：result 为 null 表示缺失；否则是存储的 JSON 字符串 */
+async function parseUpstashResult(
+	res: Response,
+	key: string,
+): Promise<unknown | null> {
+	if (res.status === 404 || res.status === 204) return null;
+	if (!res.ok) {
+		console.error(`[PersistStore] KV ${res.status} (键 ${key})`);
+		// 读失败降级为"不存在"，避免线上 API 直接 500
+		return null;
+	}
+	const data = (await res.json()) as { result?: unknown };
+	const result = data?.result;
+	if (result === null || result === undefined) return null;
+	if (typeof result === "string") {
+		try {
+			return JSON.parse(result) as unknown;
+		} catch {
+			// 存储内容不是 JSON（如数字/自增），按原样返回字符串
+			return result;
+		}
+	}
+	return result;
+}
+
 const kvStore: KVStore = {
 	async get<T>(key: string): Promise<T | null> {
+		assertSafeKey(key);
 		const { url, token } = kvConfigRequired();
 		try {
-			const res = await fetch(`${url}/${key}`, {
+			const res = await fetch(`${url}/get/${encodeURIComponent(key)}`, {
 				headers: { Authorization: `Bearer ${token}` },
 			});
-			if (res.status === 404 || res.status === 204) return null;
-			if (!res.ok) {
-				console.error(`[PersistStore] KV GET 失败(${res.status}): 键 ${key}`);
-				// 读失败降级为"不存在"，避免线上 API 直接 500
-				return null;
-			}
-			const text = await res.text();
-			if (!text) return null;
-			return JSON.parse(text) as T;
+			return (await parseUpstashResult(res, key)) as T | null;
 		} catch (err) {
 			console.error("[PersistStore] KV GET 异常:", err);
 			return null;
@@ -124,10 +156,11 @@ const kvStore: KVStore = {
 	},
 
 	async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
+		assertSafeKey(key);
 		const { url, token } = kvConfigRequired();
 		const qs =
 			ttlSeconds && ttlSeconds > 0 ? `?EX=${Math.floor(ttlSeconds)}` : "";
-		const res = await fetch(`${url}/${key}${qs}`, {
+		const res = await fetch(`${url}/set/${encodeURIComponent(key)}${qs}`, {
 			method: "PUT",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -141,12 +174,13 @@ const kvStore: KVStore = {
 	},
 
 	async del(key: string): Promise<void> {
+		assertSafeKey(key);
 		const { url, token } = kvConfigRequired();
-		const res = await fetch(`${url}/${key}`, {
-			method: "DELETE",
+		const res = await fetch(`${url}/del/${encodeURIComponent(key)}`, {
+			method: "POST",
 			headers: { Authorization: `Bearer ${token}` },
 		});
-		if (!res.ok && res.status !== 404) {
+		if (!res.ok) {
 			throw new Error(`[PersistStore] KV DEL 失败: ${res.status}`);
 		}
 	},
