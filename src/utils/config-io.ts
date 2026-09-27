@@ -16,6 +16,29 @@ const TSX_CLI = require.resolve("tsx/cli");
 
 const projectRoot = process.cwd();
 
+/**
+ * 是否为无本地文件系统的 Serverless 运行环境（Vercel / Cloudflare Workers 等）。
+ * 此类环境无法运行 tsx 子进程，也无法直接读写磁盘，配置读写必须走 GitHub。
+ */
+export function isRemoteRuntime(): boolean {
+	const env = process.env;
+	return Boolean(
+		env.VERCEL || env.CF_WORKERS || env.AWS_LAMBDA_FUNCTION_NAME,
+	);
+}
+
+/**
+ * 从 GitHub 仓库读取配置文件源码（Serverless 环境使用）。
+ * 返回 null 表示读取失败（文件不存在或网络错误）。
+ */
+export async function readConfigSourceFromGitHub(
+	key: string,
+): Promise<string | null> {
+	const item = loadItem(key);
+	const { getFileFromGitHub } = await import("./github-app");
+	return getFileFromGitHub(item.file);
+}
+
 function loadItem(key: string) {
 	const item = getConfigItem(key);
 	if (!item) throw new Error(`未知配置项: ${key}`);

@@ -99,6 +99,8 @@ let settingsSearchTerm = $state("");
 // 配置文件的磁盘原文（源码模式用）；settingsMode 记录当前编辑模式
 let settingsSource = $state("");
 let settingsMode = $state<"form" | "source">("form");
+// 线上（Serverless）环境：配置仅存于 GitHub 远程仓库，只能源码模式编辑
+let settingsRemote = $state(false);
 // 后台页头：深浅模式切换按钮的当前状态（亮色显示月亮图标，暗色显示太阳）
 let isDark = $state(false);
 
@@ -374,15 +376,24 @@ async function loadSettings(key: string) {
 	settingsMode = "form";
 	try {
 		const res = await fetch(`/api/admin/configs/${key}/`);
-		let json: { success: boolean; data?: unknown; source?: string; message?: string };
+		let json: {
+			success: boolean;
+			data?: unknown;
+			source?: string;
+			message?: string;
+			remote?: boolean;
+		};
 		try {
 			json = await res.json();
 		} catch {
 			throw new Error(`服务器返回异常（HTTP ${res.status}）`);
 		}
 		if (json.success) {
-			settingsData = json.data;
+			settingsData = json.data as Record<string, any> | string | null;
 			settingsSource = json.source ?? "";
+			settingsRemote = !!json.remote;
+			// 线上环境只有远程源码，直接进入源码编辑模式
+			if (json.remote) settingsMode = "source";
 		} else {
 			settingsError = json.message || "读取配置失败";
 		}
@@ -395,7 +406,8 @@ async function loadSettings(key: string) {
 
 async function saveSettings() {
 	const key = settingsSection;
-	if (!key || settingsData === null) return;
+	// 线上（源码模式）可以无本地数据保存；本地表单模式必须有已加载的数据
+	if (!key || (settingsMode !== "source" && settingsData === null)) return;
 	settingsSaving = true;
 	try {
 		const res = await fetch(`/api/admin/configs/${key}/`, {
@@ -1213,12 +1225,19 @@ function formatDate(dateStr: string | null): string {
 				{:else if activePage === "settings"}
 					{#if settingsSection}
 						{#if getConfigItem(settingsSection)}
+							{#if settingsRemote}
+								<div class="settings-remote-banner">
+									<Icon icon="material-symbols:cloud-sync" />
+									<span>线上环境：仅支持源码编辑，保存将直接提交 GitHub 并触发自动重建</span>
+								</div>
+							{/if}
 							<SettingsEditor
 								item={getConfigItem(settingsSection)!}
 								data={settingsData}
 								source={settingsSource}
 								error={settingsError}
 								isLoading={settingsLoading}
+								remote={settingsRemote}
 								onUpdate={(v) => (settingsData = v)}
 								onModeChange={(m) => (settingsMode = m)}
 								onSourceChange={(s) => (settingsSource = s)}
@@ -2696,6 +2715,25 @@ function formatDate(dateStr: string | null): string {
 	}
 .secrets-guide {
 		padding: 1.75rem;
+	}
+
+	.settings-remote-banner {
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		padding: 0.75rem 1rem;
+		margin-bottom: 1rem;
+		border-radius: 0.75rem;
+		font-size: 0.875rem;
+		line-height: 1.6;
+		color: var(--content-meta);
+		background: color-mix(in srgb, var(--primary) 8%, transparent);
+		border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+	}
+
+	.settings-remote-banner :global(.icon) {
+		flex-shrink: 0;
+		color: var(--primary);
 	}
 
 	.guide-head {

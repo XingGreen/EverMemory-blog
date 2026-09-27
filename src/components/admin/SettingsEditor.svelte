@@ -11,6 +11,7 @@ let {
 	error,
 	isLoading,
 	source = "",
+	remote = false,
 	onUpdate,
 	onModeChange,
 	onSourceChange,
@@ -21,6 +22,8 @@ let {
 	error: string;
 	isLoading: boolean;
 	source: string;
+	// 线上（Serverless）环境：无本地文件，仅有远程源码，只能源码模式
+	remote: boolean;
 	onUpdate?: (value: string | Record<string, any>) => void;
 	onModeChange?: (mode: "form" | "source") => void;
 	onSourceChange?: (source: string) => void;
@@ -29,8 +32,10 @@ let {
 // html 等原始文本配置的本地编辑副本（受控组件，随 data 刷新）
 let htmlText = $state("");
 $effect(() => {
-	if (item.kind === "html" && typeof data === "string") {
-		htmlText = data;
+	if (item.kind === "html") {
+		const initial =
+			typeof data === "string" ? data : remote && source ? source : null;
+		if (initial !== null) htmlText = initial;
 	}
 });
 
@@ -58,6 +63,14 @@ $effect(() => {
 		sourceDraft = source;
 	}
 });
+
+// 线上环境强制源码模式（无本地数据可表单化）
+$effect(() => {
+	if (remote) {
+		mode = "source";
+		if (source) sourceDraft = source;
+	}
+});
 </script>
 
 <div class="card-base settings-editor">
@@ -65,7 +78,7 @@ $effect(() => {
 		<div class="editor-status">{i18n(I18nKey.configLoading)}</div>
 	{:else if error}
 		<div class="editor-status error">{i18n(I18nKey.configLoadFailed)}: {error}</div>
-	{:else if item.kind === "html" && typeof data === "string"}
+	{:else if item.kind === "html" && (typeof data === "string" || (remote && source))}
 		<div class="editor-body">
 			<textarea
 				class="json-editor"
@@ -77,17 +90,19 @@ $effect(() => {
 				}}
 			></textarea>
 		</div>
-	{:else if data && typeof data === "object"}
+	{:else if (data && typeof data === "object") || (remote && source)}
 		<!-- json 配置：可视化表单 / 源码（真实文件）模式切换 -->
 		<div class="mode-tabs">
-			<button
-				type="button"
-				class:active={mode === "form"}
-				onclick={goFormMode}
-			>
-				<Icon icon="material-symbols:view-quilt-outline" class="tab-icon" />
-				{i18n(I18nKey.configModeForm)}
-			</button>
+			{#if !remote}
+				<button
+					type="button"
+					class:active={mode === "form"}
+					onclick={goFormMode}
+				>
+					<Icon icon="material-symbols:view-quilt-outline" class="tab-icon" />
+					{i18n(I18nKey.configModeForm)}
+				</button>
+			{/if}
 			<button
 				type="button"
 				class:active={mode === "source"}
