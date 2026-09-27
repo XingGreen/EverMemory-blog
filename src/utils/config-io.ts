@@ -3,7 +3,10 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { getConfigItem } from "./admin-settings";
+import {
+	getConfigItem,
+	type AdminConfigItem,
+} from "./admin-settings";
 import {
 	collectComments,
 	matchClosingBrace,
@@ -37,6 +40,44 @@ export function isRemoteRuntime(): boolean {
 	const env = process.env;
 	return Boolean(
 		env.VERCEL || env.CF_WORKERS || env.AWS_LAMBDA_FUNCTION_NAME,
+	);
+}
+
+/**
+ * 从构建时生成的配置快照中读取指定配置项的求值结果（Serverless 使用）。
+ * 快照由 scripts/generate-config-snapshot.ts 在构建阶段生成并随函数打包。
+ * 返回 undefined 表示未命中（该 key 为 html 类型 / 快照缺失 / 求值失败）。
+ */
+export async function readConfigSnapshot(
+	key: string,
+): Promise<unknown | undefined> {
+	try {
+		const { ADMIN_CONFIG_SNAPSHOT } = await import(
+			"@/constants/admin-config-snapshot"
+		);
+		return (ADMIN_CONFIG_SNAPSHOT as Record<string, unknown>)[key];
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Serverless 环境保存 json 配置：
+ * 拉取 GitHub 上当前源码 → 以它为基底序列化新值 → 提交 GitHub（触发重建生效）。
+ */
+export async function saveConfigJsonRemote(
+	key: string,
+	data: unknown,
+): Promise<boolean> {
+	const item = loadItem(key);
+	const source = await readConfigSourceFromGitHub(key);
+	if (source === null) throw new Error("从 GitHub 读取当前配置源码失败");
+	const content = buildConfigSource(item, source, data);
+	const { saveFileToGitHub } = await import("./github-app");
+	return saveFileToGitHub(
+		item.file,
+		content,
+		`update config (${key}) via admin dashboard`,
 	);
 }
 
@@ -165,24 +206,36 @@ export function buildConfigFileContent(key: string, data: unknown): string {
 	const filePath = path.resolve(projectRoot, item.file);
 	let raw = "";
 	if (fs.existsSync(filePath)) raw = fs.readFileSync(filePath, "utf8");
+	return buildConfigSource(item, raw, data);
+}
+
+/**
+ * 以给定的配置文件源码为基底，仅替换目标导出对象为序列化后的新值
+ * （保留 import、注释、其它导出与后缀内容）。
+ * Serverless 保存时以 GitHub 拉取的源码为基底，效果与本地一致。
+ */
+export function buildConfigSource(
+	item: AdminConfigItem,
+	source: string,
+	data: unknown,
+): string {
 	const marker = `export const ${item.exportName}`;
-	const idx = raw.indexOf(marker);
-	const prefix = idx >= 0 ? raw.slice(0, idx) : "";
+	const idx = source.indexOf(marker);
+	const prefix = idx >= 0 ? source.slice(0, idx) : "";
 	// 提取当前导出的对象字面量，收集其中注释，序列化时按键路径回填，避免保存后丢失注释
-	const openIdx = idx >= 0 ? raw.indexOf("{", idx) : -1;
+	const openIdx = idx >= 0 ? source.indexOf("{", idx) : -1;
 	let comments: Map<string, string[]> | undefined;
 	let closeIdx = -1;
 	if (openIdx >= 0) {
-		closeIdx = matchClosingBrace(raw, openIdx);
+		closeIdx = matchClosingBrace(source, openIdx);
 		if (closeIdx > openIdx) {
-			const literal = raw.slice(openIdx, closeIdx + 1);
+			const literal = source.slice(openIdx, closeIdx + 1);
 			comments = collectComments(literal);
 		}
 	}
 	const body = serializeValue(data, "", comments, "");
 	// 目标导出之后的文件内容（如 pioConfig.ts 中多个导出）也需保留，否则会被丢弃
-	const suffix =
-		openIdx >= 0 && closeIdx > openIdx ? raw.slice(closeIdx + 1) : "";
+	const suffix = openIdx >= 0 && closeIdx > openIdx ? source.slice(closeIdx + 1) : "";
 	const tail = suffix || ";\n";
 	return `${prefix}export const ${item.exportName}: ${item.typeName} = ${body}${tail}`;
 }

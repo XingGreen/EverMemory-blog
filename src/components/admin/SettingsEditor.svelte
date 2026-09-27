@@ -42,8 +42,10 @@ $effect(() => {
 });
 
 // json 配置的可视表单 / 源码（真实文件）双模式
-// 远程（线上）环境首帧即源码模式，避免 data 为空时误渲染表单组件
-let mode: "form" | "source" = $state(remote ? "source" : "form");
+// 远程（线上）且无快照数据时首帧即源码模式，避免 data 为空时误渲染表单组件
+let mode: "form" | "source" = $state(
+	remote && !data ? "source" : "form",
+);
 let sourceDraft = $state("");
 
 // 进入源码模式：以磁盘文件原文生成草稿
@@ -67,9 +69,9 @@ $effect(() => {
 	}
 });
 
-// 线上环境强制源码模式（无本地数据可表单化）
+// 线上环境无快照数据时强制源码模式（有快照数据则表单/源码皆可用）
 $effect(() => {
-	if (remote) {
+	if (remote && !data) {
 		mode = "source";
 		if (source) sourceDraft = source;
 	}
@@ -96,7 +98,7 @@ $effect(() => {
 	{:else if (data && typeof data === "object") || (remote && source)}
 		<!-- json 配置：可视化表单 / 源码（真实文件）模式切换 -->
 		<div class="mode-tabs">
-			{#if !remote}
+			{#if !(remote && !data)}
 				<button
 					type="button"
 					class:active={mode === "form"}
