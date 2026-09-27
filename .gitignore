@@ -56,3 +56,6 @@ package/
 .data/.trae/
 .trae/
 src/constants/admin-config-snapshot.ts
+
+# Turborepo 本地缓存
+.turbo/
