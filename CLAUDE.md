@@ -67,6 +67,15 @@ Defined in `src/content.config.ts`:
 - Relaxed rules for `.svelte`/`.astro` files (useConst off, noUnusedVariables off)
 - Commit convention: **Conventional Commits** (`feat:`, `fix:`, `chore:`, etc.)
 
+## Markdown 渲染约定
+
+任何 Markdown 渲染/预览（前台文章、后台编辑器预览、相关 API）**必须复用项目既有管线**，优先级高于任何自建/手写方案：
+
+- 渲染：`src/utils/markdown-renderer.ts`（remark 管线）与 `/api/admin/preview/` 等既有 API
+- 样式：`src/styles/markdown.css` 的 `.custom-md`（前台）与 `markdown-extend.styl` 扩展
+
+后台若缺样式，通过引入既有 CSS 或补主题变量（如 `admin.css` 中 `--card-bg-transparent`/`--link-hover`/`--font-jetbrains-mono`）解决，不得另起炉灶手写一套渲染或样式。
+
 ## Build Pipeline
 
 Multi-step: `scripts/generate-icons.js` → `scripts/generate-lqips.ts` → `astro build` → `pagefind --site dist`
