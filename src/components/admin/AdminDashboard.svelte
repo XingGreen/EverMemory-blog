@@ -400,7 +400,8 @@ async function loadSettings(key: string) {
 	// 优先使用构建时注入页面的配置快照（Serverless 下免 API、零服务端文件依赖）
 	const snapshot = readDomConfigSnapshot()?.[key];
 	if (snapshot) {
-		settingsData = (snapshot.data as Record<string, any> | string | null) ?? null;
+		settingsData =
+			(snapshot.data as Record<string, any> | string | null) ?? null;
 		settingsSource = snapshot.source ?? "";
 		settingsRemote = true;
 		// 无快照数据（html/求值失败）时直接进入源码编辑模式
