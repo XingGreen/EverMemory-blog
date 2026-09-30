@@ -143,6 +143,9 @@ importers:
       rehype-components:
         specifier: ^0.3.0
         version: 0.3.0
+      rehype-expressive-code:
+        specifier: ^0.43.1
+        version: 0.43.1
       rehype-katex:
         specifier: ^7.0.1
         version: 7.0.1

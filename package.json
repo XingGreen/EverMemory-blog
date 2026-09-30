@@ -58,6 +58,7 @@
     "glob": "^11.1.0",
     "hastscript": "^9.0.1",
     "katex": "^0.17.0",
+    "rehype-expressive-code": "^0.43.1",
     "l2d-widget": "^0.1.0",
     "mdast-util-to-string": "^4.0.0",
     "pagefind": "^1.5.2",
