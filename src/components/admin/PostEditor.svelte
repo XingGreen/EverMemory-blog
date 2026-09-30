@@ -1397,8 +1397,14 @@ $effect(() => {
 		z-index: 1;
 	}
 
-	.toc-panel .toc-list .toc-active-indicator {
+.toc-panel .toc-list .toc-active-indicator {
 		z-index: 0;
+		background: color-mix(in oklab, var(--primary) 12%, var(--btn-regular-bg));
+	}
+
+	.toc-panel .toc-list .toc-badge-index {
+		background: color-mix(in oklab, var(--primary) 16%, var(--btn-regular-bg));
+		color: color-mix(in oklab, var(--primary) 75%, var(--deep-text));
 	}
 
 	.toc-empty {
