@@ -442,6 +442,20 @@ $effect(() => {
 	renderTimer = setTimeout(() => fetchPreview(mdContent), 300);
 });
 
+let previewEl: HTMLElement | undefined = $state();
+
+$effect(() => {
+	const el = previewEl;
+	const html = renderedHtml;
+	if (!el) return;
+	for (const oldScript of [...el.querySelectorAll("script[type='module']")]) {
+		const newScript = document.createElement("script");
+		newScript.type = "module";
+		newScript.textContent = oldScript.textContent ?? "";
+		oldScript.replaceWith(newScript);
+	}
+});
+
 // ── MD 语法快捷插入 ──
 let editorEl: HTMLTextAreaElement | undefined = $state();
 
@@ -530,7 +544,45 @@ const tocItems = $derived<TocItem[]>(
 	}, []),
 );
 
-let activeTocLine = $state(0);
+const tocMinDepth = $derived(
+	tocItems.length ? Math.min(...tocItems.map((i) => i.level)) : 6,
+);
+
+function tocDepthLevel(level: number): number {
+	return level === tocMinDepth ? 0 : level === tocMinDepth + 1 ? 1 : 2;
+}
+
+let visibleTocLines: number[] = $state([]);
+
+let indicatorTop = $state(0);
+let indicatorHeight = $state(0);
+let indicatorOpacity = $state(0);
+let tocListEl: HTMLElement | undefined = $state();
+
+$effect(() => {
+	const lines = visibleTocLines;
+	if (!tocListEl) return;
+	requestAnimationFrame(() => {
+		const list = tocListEl;
+		if (!list) return;
+		const items = Array.from(
+			list.querySelectorAll<HTMLElement>(".toc-item.visible"),
+		);
+		if (!items.length) {
+			indicatorHeight = 0;
+			indicatorOpacity = 0;
+			return;
+		}
+		const first = items[0];
+		const last = items[items.length - 1];
+		const listRect = list.getBoundingClientRect();
+		const firstRect = first.getBoundingClientRect();
+		const lastRect = last.getBoundingClientRect();
+		indicatorTop = firstRect.top - listRect.top;
+		indicatorHeight = lastRect.bottom - firstRect.top;
+		indicatorOpacity = 1;
+	});
+});
 
 function tocTop(item: TocItem): number {
 	const el = editorEl;
@@ -540,12 +592,25 @@ function tocTop(item: TocItem): number {
 }
 
 function jumpToToc(item: TocItem) {
+	if (activeTab === "preview") {
+		const target = [...(previewEl?.querySelectorAll("h1, h2, h3, h4, h5, h6") ?? [])].find(
+			(heading) => {
+				const text = (heading.textContent ?? "").replace(/#+$/, "").trim();
+				return text === item.text.trim() || text.startsWith(item.text.trim());
+			},
+		);
+		if (target) {
+			target.scrollIntoView({ behavior: "smooth", block: "start" });
+			visibleTocLines = [item.lineIndex];
+			return;
+		}
+	}
 	if (activeTab !== "editor") activeTab = "editor";
 	requestAnimationFrame(() => {
 		const el = editorEl;
 		if (!el) return;
 		el.scrollTop = Math.max(0, tocTop(item) - 8);
-		activeTocLine = item.lineIndex;
+		visibleTocLines = [item.lineIndex];
 	});
 }
 
@@ -553,14 +618,84 @@ function handleEditorScroll() {
 	const el = editorEl;
 	if (!el) return;
 	const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight) || 24;
-	const currentLine = Math.floor(el.scrollTop / lineHeight) + 1;
-	let idx = -1;
-	for (let i = 0; i < tocItems.length; i++) {
-		if (tocItems[i].lineIndex <= currentLine) idx = i;
-		else break;
+	const top = el.scrollTop;
+	const bottom = el.scrollTop + el.clientHeight;
+	const visible: number[] = [];
+	for (const item of tocItems) {
+		const itemTop = item.lineIndex * lineHeight;
+		const itemBottom = (item.lineIndex + 1) * lineHeight;
+		if (itemTop < bottom && itemBottom > top) visible.push(item.lineIndex);
 	}
-	activeTocLine = idx >= 0 ? tocItems[idx].lineIndex : 0;
+	if (visible.length) {
+		visibleTocLines = visible;
+		return;
+	}
+	if (!tocItems.length) return;
+	const mid = top + el.clientHeight / 2;
+	let best = tocItems[0].lineIndex;
+	let bestDist = Number.POSITIVE_INFINITY;
+	for (const item of tocItems) {
+		const d = Math.abs(item.lineIndex * lineHeight - mid);
+		if (d < bestDist) {
+			bestDist = d;
+			best = item.lineIndex;
+		}
+	}
+	visibleTocLines = [best];
 }
+
+function matchTocLine(heading: Element): number | null {
+	const text = (heading.textContent ?? "").replace(/#+$/, "").trim();
+	const item = tocItems.find(
+		(it) => text === it.text.trim() || text.startsWith(it.text.trim()),
+	);
+	return item ? item.lineIndex : null;
+}
+
+function handlePreviewScroll() {
+	const el = previewEl;
+	if (!el) return;
+	const headings = [...el.querySelectorAll("h1, h2, h3, h4, h5, h6")];
+	if (!headings.length) return;
+	const elRect = el.getBoundingClientRect();
+	const visible: number[] = [];
+	for (const h of headings) {
+		const rect = h.getBoundingClientRect();
+		const relTop = rect.top - elRect.top;
+		const relBottom = rect.bottom - elRect.top;
+		if (relTop < el.clientHeight && relBottom > 0) {
+			const line = matchTocLine(h);
+			if (line !== null) visible.push(line);
+		}
+	}
+	if (visible.length) {
+		visibleTocLines = visible;
+		return;
+	}
+	let best: number | null = null;
+	let bestDist = Number.POSITIVE_INFINITY;
+	for (const h of headings) {
+		const rect = h.getBoundingClientRect();
+		const dist = Math.abs(rect.top - elRect.top);
+		if (dist < bestDist) {
+			bestDist = dist;
+			best = matchTocLine(h);
+		}
+	}
+	visibleTocLines = best === null ? [] : [best];
+}
+
+$effect(() => {
+	if (tocItems.length && !visibleTocLines.length) {
+		visibleTocLines = [tocItems[0].lineIndex];
+	}
+});
+
+$effect(() => {
+	const tab = activeTab;
+	if (tab === "preview") handlePreviewScroll();
+	else handleEditorScroll();
+});
 </script>
 
 <div class="editor-container">
@@ -907,7 +1042,11 @@ function handleEditorScroll() {
 						class="content-editor"
 					></textarea>
 				{:else}
-					<div class="content-preview custom-md">
+					<div
+						bind:this={previewEl}
+						onscroll={handlePreviewScroll}
+						class="prose dark:prose-invert prose-base max-w-none! content-preview custom-md"
+					>
 						{@html renderedHtml}
 					</div>
 				{/if}
@@ -917,17 +1056,46 @@ function handleEditorScroll() {
 			<aside class="toc-panel">
 				<h3>{i18n(I18nKey.postToc)}</h3>
 				{#if tocItems.length > 0}
-					<nav class="toc-list">
-						{#each tocItems as item}
-							<button
-								type="button"
-								class="toc-item {`toc-level-${item.level}`}"
-								class:active={item.lineIndex === activeTocLine}
-								onclick={() => jumpToToc(item)}
+					<nav class="toc-list" bind:this={tocListEl}>
+						{#each tocItems as item, idx}
+							<a
+								href="#"
+								class="toc-item {`toc-level-${tocDepthLevel(item.level)}`}"
+								class:visible={visibleTocLines.includes(item.lineIndex)}
+								aria-label={item.text}
+								title={item.text}
+								onclick={(event) => {
+									event.preventDefault();
+									jumpToToc(item);
+								}}
 							>
-								{item.text}
-							</button>
+								<div
+									class="toc-badge {item.level === tocMinDepth
+										? "toc-badge-index"
+										: ""}"
+								>
+									{#if item.level === tocMinDepth}
+										{idx + 1}
+									{:else if item.level <= tocMinDepth + 1}
+										<span class="toc-badge-dot"></span>
+									{:else}
+										<span class="toc-badge-dot toc-badge-dot-sm"></span>
+									{/if}
+								</div>
+								<div
+									class="toc-label {item.level <= tocMinDepth + 1
+										? "toc-label-primary"
+										: "toc-label-secondary"}"
+								>
+									{item.text}
+								</div>
+							</a>
 						{/each}
+						<div
+							class="toc-active-indicator"
+							style="top: {indicatorTop}px; height: {indicatorHeight}px; opacity: {indicatorOpacity};"
+							aria-hidden="true"
+						></div>
 					</nav>
 				{:else}
 					<p class="toc-empty">{i18n(I18nKey.postTocEmpty)}</p>
@@ -1218,62 +1386,19 @@ function handleEditorScroll() {
 	}
 
 	.toc-list {
+		position: relative;
 		display: flex;
 		flex-direction: column;
-		gap: 0.125rem;
+		gap: 0.28rem;
 	}
 
-	.toc-item {
-		display: block;
-		width: 100%;
-		text-align: left;
-		border: none;
-		background: none;
-		padding: 0.3125rem 0.5rem;
-		font-size: 0.8125rem;
-		line-height: 1.4;
-		color: var(--content-meta);
-		cursor: pointer;
-		border-radius: var(--radius-sm);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		transition: background 0.15s, color 0.15s;
+	.toc-panel .toc-list .toc-item {
+		position: relative;
+		z-index: 1;
 	}
 
-	.toc-item:hover {
-		color: var(--primary);
-		background: color-mix(in srgb, var(--primary) 8%, transparent);
-	}
-
-	.toc-item.active {
-		color: var(--primary);
-		background: color-mix(in srgb, var(--primary) 14%, transparent);
-		font-weight: 500;
-	}
-
-	.toc-level-1 {
-		padding-left: 0.5rem;
-	}
-
-	.toc-level-2 {
-		padding-left: 1.25rem;
-	}
-
-	.toc-level-3 {
-		padding-left: 2rem;
-	}
-
-	.toc-level-4 {
-		padding-left: 2.75rem;
-	}
-
-	.toc-level-5 {
-		padding-left: 3.5rem;
-	}
-
-	.toc-level-6 {
-		padding-left: 4.25rem;
+	.toc-panel .toc-list .toc-active-indicator {
+		z-index: 0;
 	}
 
 	.toc-empty {
@@ -1505,26 +1630,25 @@ function handleEditorScroll() {
 	.content-preview {
 		min-height: 400px;
 		padding: 1.25rem;
-		background: var(--btn-regular-bg);
-		border-radius: var(--radius-md);
-		border: 1px solid var(--line-divider);
 		overflow-y: auto;
 	}
 
-	/* 代码块：marked.js 生成 <pre><code>，无 expressive-code 容器，需补充背景 */
-	.content-preview :global(pre) {
-		background: var(--codeblock-bg);
-		color: oklch(0.9 0 0);
-		padding: 0.875rem;
+	/* 代码块排版：对齐前台 expressive-code（one-light / one-dark）观感，
+	   并阻断 markdown.css 的 .custom-md code 内联码背景渗入 pre code */
+	:global(.content-preview pre) {
 		border-radius: var(--radius-md);
 		overflow-x: auto;
-		margin: 0.75rem 0;
+		background: oklch(0.985 0.002 275);
+		color: #383a42;
 	}
-
-	.content-preview :global(pre code) {
+	:global(.content-preview pre code) {
 		background: transparent;
-		color: oklch(0.9 0 0);
+		color: inherit;
 		padding: 0;
+	}
+	:global(.dark .content-preview pre) {
+		background: oklch(0.205 0.015 275);
+		color: #abb2bf;
 	}
 
 	.content-preview :global(.empty-preview) {
