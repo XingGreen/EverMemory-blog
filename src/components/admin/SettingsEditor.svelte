@@ -43,9 +43,7 @@ $effect(() => {
 
 // json 配置的可视表单 / 源码（真实文件）双模式
 // 远程（线上）且无快照数据时首帧即源码模式，避免 data 为空时误渲染表单组件
-let mode: "form" | "source" = $state(
-	remote && !data ? "source" : "form",
-);
+let mode: "form" | "source" = $state(remote && !data ? "source" : "form");
 let sourceDraft = $state("");
 
 // 进入源码模式：以磁盘文件原文生成草稿

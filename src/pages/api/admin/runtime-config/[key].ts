@@ -3,12 +3,13 @@
 // DELETE 清除覆盖值（回落构建期源码默认值）
 import type { APIRoute } from "astro";
 export const prerender = false;
+
 import { getConfigItem } from "@/utils/admin-settings";
 import { requireAuth } from "@/utils/auth";
 import {
-	setRuntimeConfig,
 	delRuntimeConfig,
 	isRuntimeConfigKey,
+	setRuntimeConfig,
 } from "@/utils/runtime-config";
 
 export const PUT: APIRoute = async ({ request, params }) => {
@@ -35,10 +36,9 @@ export const PUT: APIRoute = async ({ request, params }) => {
 		const message = item
 			? `「${item.label}」已保存并即时生效（无需重建）`
 			: "已保存并即时生效（无需重建）";
-		return new Response(
-			JSON.stringify({ success: true, message }),
-			{ headers: { "Content-Type": "application/json" } },
-		);
+		return new Response(JSON.stringify({ success: true, message }), {
+			headers: { "Content-Type": "application/json" },
+		});
 	} catch (err) {
 		console.error(`[PUT /api/admin/runtime-config/${key}] 保存失败:`, err);
 		return new Response(
@@ -50,7 +50,8 @@ export const PUT: APIRoute = async ({ request, params }) => {
 
 export const DELETE: APIRoute = async ({ request, params }) => {
 	const key = params.key ?? "";
-	if (!isRuntimeConfigKey(key)) return new Response("Not Found", { status: 404 });
+	if (!isRuntimeConfigKey(key))
+		return new Response("Not Found", { status: 404 });
 	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 	try {

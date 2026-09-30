@@ -84,8 +84,9 @@ const fileStore: KVStore = {
 /* ---------------- Vercel KV（Upstash REST）后端 ---------------- */
 
 function kvConfig(): { url: string; token: string } | null {
-	const metaEnv = (import.meta as unknown as Record<string, unknown>)
-		.env as Record<string, unknown> | undefined;
+	const metaEnv = (import.meta as unknown as Record<string, unknown>).env as
+		| Record<string, unknown>
+		| undefined;
 	const getEnv = (key: string): string | undefined => {
 		const fromMeta = metaEnv?.[key];
 		const fromProc = (process.env as Record<string, unknown>)[key];
@@ -116,10 +117,7 @@ function kvConfigRequired(): { url: string; token: string } {
  */
 
 /** Upstash 偶发连接重置（ECONNRESET/其他 side closed），网络层失败重试一次 */
-async function kvFetch(
-	url: string,
-	init: RequestInit,
-): Promise<Response> {
+async function kvFetch(url: string, init: RequestInit): Promise<Response> {
 	try {
 		return await fetch(url, init);
 	} catch (err) {

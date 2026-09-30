@@ -3,10 +3,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import {
-	getConfigItem,
-	type AdminConfigItem,
-} from "./admin-settings";
+import { type AdminConfigItem, getConfigItem } from "./admin-settings";
 import {
 	collectComments,
 	matchClosingBrace,
@@ -38,9 +35,7 @@ const projectRoot = process.cwd();
  */
 export function isRemoteRuntime(): boolean {
 	const env = process.env;
-	return Boolean(
-		env.VERCEL || env.CF_WORKERS || env.AWS_LAMBDA_FUNCTION_NAME,
-	);
+	return Boolean(env.VERCEL || env.CF_WORKERS || env.AWS_LAMBDA_FUNCTION_NAME);
 }
 
 /**
@@ -235,7 +230,8 @@ export function buildConfigSource(
 	}
 	const body = serializeValue(data, "", comments, "");
 	// 目标导出之后的文件内容（如 pioConfig.ts 中多个导出）也需保留，否则会被丢弃
-	const suffix = openIdx >= 0 && closeIdx > openIdx ? source.slice(closeIdx + 1) : "";
+	const suffix =
+		openIdx >= 0 && closeIdx > openIdx ? source.slice(closeIdx + 1) : "";
 	const tail = suffix || ";\n";
 	return `${prefix}export const ${item.exportName}: ${item.typeName} = ${body}${tail}`;
 }

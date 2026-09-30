@@ -34,10 +34,7 @@ export async function GET({ request, params }) {
 		if (isRemoteRuntime()) {
 			const source = await readConfigSourceFromGitHub(params.key);
 			if (source === null)
-				return json(
-					{ success: false, message: "从 GitHub 读取配置失败" },
-					500,
-				);
+				return json({ success: false, message: "从 GitHub 读取配置失败" }, 500);
 			if (item.kind === "html") {
 				return json(
 					{
@@ -151,17 +148,13 @@ export async function POST({ request, params }) {
 					return json(
 						{
 							success: false,
-							message:
-								error instanceof Error ? error.message : "保存配置失败",
+							message: error instanceof Error ? error.message : "保存配置失败",
 						},
 						500,
 					);
 				}
 			}
-			return json(
-				{ success: false, message: "配置内容格式错误" },
-				400,
-			);
+			return json({ success: false, message: "配置内容格式错误" }, 400);
 		}
 
 		// 源码模式：整份文件原文写回（TS 校验 + 失败回滚），html 同样适用

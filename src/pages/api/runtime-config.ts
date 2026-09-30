@@ -2,6 +2,7 @@
 // 前台组件加载后拉取并合并，实现"改配置即时生效、无需重建"。
 import type { APIRoute } from "astro";
 export const prerender = false;
+
 import { getAllRuntimeConfigs } from "@/utils/runtime-config";
 
 export const GET: APIRoute = async () => {

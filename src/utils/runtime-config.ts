@@ -8,8 +8,8 @@
  * 存储键：runtime-config:<key>（符合 persist-store 的键规则）。
  */
 
-import { getStore } from "./persist-store";
 import { CONFIG_ITEMS } from "./admin-settings";
+import { getStore } from "./persist-store";
 
 const PREFIX = "runtime-config:";
 
@@ -51,9 +51,7 @@ export async function delRuntimeConfig(key: string): Promise<void> {
 }
 
 /** 读取全部运行时覆盖（公开只读端点用）；键值仅在存在覆盖时出现 */
-export async function getAllRuntimeConfigs(): Promise<
-	Record<string, unknown>
-> {
+export async function getAllRuntimeConfigs(): Promise<Record<string, unknown>> {
 	const out: Record<string, unknown> = {};
 	for (const key of RUNTIME_CONFIG_KEYS) {
 		const value = await getRuntimeConfig(key);
