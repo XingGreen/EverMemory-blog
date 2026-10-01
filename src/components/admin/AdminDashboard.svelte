@@ -2177,7 +2177,6 @@ function formatDate(dateStr: string | null): string {
 		justify-content: center;
 		gap: 0.625rem;
 		padding: 1.125rem 0.75rem;
-		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-2xl);
 		background: var(--btn-regular-bg);
 		color: var(--content-meta);
@@ -2206,7 +2205,6 @@ function formatDate(dateStr: string | null): string {
 
 	/* 唯一强调项：新建文章，用极淡的 primary 底色而非全填充 */
 	.action-card.primary-action {
-		border-color: transparent;
 		background: color-mix(in oklab, var(--primary) 10%, var(--btn-regular-bg));
 		color: var(--primary);
 		font-weight: 500;
@@ -2232,7 +2230,6 @@ function formatDate(dateStr: string | null): string {
 
 	.action-card.tinted {
 		color: var(--content-meta);
-		border-color: color-mix(in oklab, var(--tone) 26%, transparent);
 		background: color-mix(in oklab, var(--tone) 14%, var(--btn-regular-bg));
 	}
 
