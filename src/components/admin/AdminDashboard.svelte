@@ -2187,17 +2187,9 @@ function formatDate(dateStr: string | null): string {
 		gap: 1rem;
 	}
 
-	/* 左列卡片撑满列高，使两列底边始终对齐（整页呈矩形） */
-	.dashboard-main-col > .recent-posts {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-	}
-
-	.dashboard-main-col > .recent-posts .post-list {
-		flex: 1;
-	}
-
+	/* 不做两列等高：右侧系统状态展开分段明细后高度会变化，
+	   若左列 flex 撑满就跟着一同拉长，在文章列表下方留下大片空白。
+	   各栏按自身内容自然高度排布即可。 */
 	.dashboard-main-col,
 	.dashboard-side-col {
 		display: flex;
