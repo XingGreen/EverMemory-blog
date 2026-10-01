@@ -743,15 +743,18 @@ function formatDate(dateStr: string | null): string {
 	</div>
 {/snippet}
 
-{#snippet statCard(label: string, value: number, icon: string, tone: string)}
-	<div class="card-base stat-card">
-		<div class="stat-icon {tone}">
-			<Icon icon={icon} class="text-2xl" />
-		</div>
-		<div class="stat-info">
-			<span class="stat-value">{value}</span>
-			<span class="stat-label">{label}</span>
-		</div>
+{#snippet statCard(label: string, value: number, icon: string)}
+	<div class="stat-card">
+		<p class="stat-title">{label}</p>
+		<p class="stat-subtitle">
+			{i18n(I18nKey.dashboardUnit).replace("{count}", String(value))}
+		</p>
+		<Icon
+			icon={icon}
+			class="stat-deco-icon"
+			style="font-size: 3rem"
+			aria-hidden="true"
+		/>
 	</div>
 {/snippet}
 
@@ -942,10 +945,10 @@ function formatDate(dateStr: string | null): string {
 		{@render welcomeBanner()}
 
 		<div class="stats-grid">
-			{@render statCard(i18n(I18nKey.dashboardTotalPosts), stats.total, "material-symbols:article-outline", "primary")}
-			{@render statCard(i18n(I18nKey.postPublished), stats.published, "material-symbols:check", "success")}
-			{@render statCard(i18n(I18nKey.dashboardDraftBox), stats.drafts, "material-symbols:folder-open-rounded", "warning")}
-			{@render statCard(i18n(I18nKey.pinned), stats.pinned, "material-symbols:pinboard", "accent")}
+			{@render statCard(i18n(I18nKey.dashboardTotalPosts), stats.total, "material-symbols:article-outline")}
+			{@render statCard(i18n(I18nKey.postPublished), stats.published, "material-symbols:check")}
+			{@render statCard(i18n(I18nKey.dashboardDraftBox), stats.drafts, "material-symbols:folder-open-rounded")}
+			{@render statCard(i18n(I18nKey.pinned), stats.pinned, "material-symbols:pinboard")}
 		</div>
 
 		<div class="dashboard-grid">
@@ -2036,69 +2039,72 @@ function formatDate(dateStr: string | null): string {
 	/* 统计卡片 */
 	.stats-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+		grid-template-columns: repeat(4, minmax(0, 1fr));
 		gap: 1rem;
 	}
 
+	/* ── MD3 统计卡片：色调底色 + 大圆角 + 右下角装饰图标 ── */
 	.stat-card {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		padding: 1.25rem;
-		transition: transform 0.2s, box-shadow 0.2s;
+		position: relative;
+		overflow: hidden;
+		min-width: 0;
+		padding: 1.25rem 1.25rem 1.75rem;
+		border-radius: var(--radius-large);
+		background: color-mix(in oklab, var(--primary) 8%, var(--card-bg));
+		transition:
+			background 0.2s ease,
+			box-shadow 0.2s ease;
 	}
 
+	/* MD3 state layer：悬浮时底色加深 */
 	.stat-card:hover {
-		transform: translateY(-2px);
+		background: color-mix(in oklab, var(--primary) 16%, var(--card-bg));
 		box-shadow: var(--shadow-card-hover);
 	}
 
-	.stat-icon {
-		width: 3rem;
-		height: 3rem;
-		border-radius: var(--radius-xl);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
+	:global(.dark) .stat-card {
+		background: color-mix(in oklab, var(--primary) 14%, var(--card-bg));
 	}
 
-	.stat-icon.primary {
-		background: color-mix(in srgb, var(--primary) 16%, transparent);
-		color: var(--primary);
+	:global(.dark) .stat-card:hover {
+		background: color-mix(in oklab, var(--primary) 22%, var(--card-bg));
 	}
 
-	.stat-icon.success {
-		background: color-mix(in srgb, var(--success) 16%, transparent);
-		color: var(--success);
-	}
-
-	.stat-icon.warning {
-		background: color-mix(in srgb, var(--warning) 16%, transparent);
-		color: var(--warning);
-	}
-
-	.stat-icon.accent {
-		background: color-mix(in srgb, var(--primary) 12%, var(--btn-regular-bg));
-		color: var(--primary);
-	}
-
-	.stat-info {
-		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
-	}
-
-	.stat-value {
-		font-size: 1.75rem;
-		font-weight: 700;
+	.stat-title {
+		position: relative;
+		z-index: 1;
+		font-size: 1rem;
+		font-weight: 600;
+		line-height: 1.3;
 		color: var(--deep-text);
-		line-height: 1;
 	}
 
-	.stat-label {
+	.stat-subtitle {
+		position: relative;
+		z-index: 1;
+		margin-top: 0.375rem;
 		font-size: 0.875rem;
+		font-weight: 500;
+		line-height: 1.3;
 		color: var(--content-meta);
+	}
+
+	/* 装饰图标：右下角、低透明度，悬浮时增强 */
+	/* 装饰图标：右下角、低透明度，悬浮时增强
+	   Icon 为子组件，其根元素需 :global 才能命中本组件 scoped 样式 */
+	:global(.stat-deco-icon) {
+		position: absolute;
+		right: 0.75rem;
+		bottom: 0.5rem;
+		line-height: 1;
+		color: var(--primary);
+		opacity: 0.32;
+		pointer-events: none;
+		transition: opacity 0.2s ease;
+	}
+
+	.stat-card:hover :global(.stat-deco-icon) {
+		opacity: 0.5;
 	}
 
 	/* Dashboard 两栏布局 */
@@ -2765,10 +2771,6 @@ function formatDate(dateStr: string | null): string {
 
 		.stats-grid {
 			grid-template-columns: 1fr;
-		}
-
-		.stat-value {
-			font-size: 1.5rem;
 		}
 
 		.actions-grid {
