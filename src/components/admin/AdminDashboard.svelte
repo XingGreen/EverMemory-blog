@@ -185,7 +185,7 @@ const recentPosts = $derived(
 				new Date(b.updated ?? b.published).getTime() -
 				new Date(a.updated ?? a.published).getTime(),
 		)
-		.slice(0, 5),
+		.slice(0, 6),
 );
 
 // 暂不使用：内容概览已注释（见 contentOverview snippet）
@@ -761,7 +761,6 @@ function formatDate(dateStr: string | null): string {
 
 {#snippet welcomeBanner()}
 	<div class="welcome-banner">
-		<div class="welcome-glow"></div>
 		<div class="welcome-content">
 			<div class="welcome-greeting">
 				<Icon icon="material-symbols:waving-hand-outline" class="welcome-icon" />
@@ -774,30 +773,6 @@ function formatDate(dateStr: string | null): string {
 			<button class="welcome-btn primary" onclick={goCreatePost}>
 				<Icon icon="material-symbols:edit-square-outline" />
 				<span>{i18n(I18nKey.adminNewPost)}</span>
-			</button>
-		</div>
-	</div>
-{/snippet}
-
-{#snippet quickActions()}
-	<div class="card-base quick-actions">
-		<h2>{i18n(I18nKey.quickActions)}</h2>
-		<div class="actions-grid">
-			<button class="action-card primary-action" onclick={goCreatePost}>
-				<Icon icon="material-symbols:edit-calendar-outline-rounded" class="action-icon" />
-				<span>{i18n(I18nKey.adminNewPost)}</span>
-			</button>
-			<button class="action-card tinted tone-success" onclick={goPostList}>
-				<Icon icon="material-symbols:format-list-bulleted" class="action-icon" />
-				<span>{i18n(I18nKey.adminPostList)}</span>
-			</button>
-			<button class="action-card tinted tone-warning" onclick={() => goSettings()}>
-				<Icon icon="material-symbols:settings" class="action-icon" />
-				<span>{i18n(I18nKey.adminSettings)}</span>
-			</button>
-			<button class="action-card tinted tone-info" onclick={handleSync} disabled={isSyncing}>
-				<Icon icon="material-symbols:cloud" class={isSyncing ? "action-icon syncing" : "action-icon"} />
-				<span>{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}</span>
 			</button>
 		</div>
 	</div>
@@ -934,6 +909,30 @@ function formatDate(dateStr: string | null): string {
 	</div>
 {/snippet}
 
+{#snippet quickActions()}
+	<div class="card-base quick-actions">
+		<h2>{i18n(I18nKey.quickActions)}</h2>
+		<div class="actions-grid">
+			<button class="action-card primary-action" onclick={goCreatePost}>
+				<Icon icon="material-symbols:edit-calendar-outline-rounded" class="action-icon" />
+				<span>{i18n(I18nKey.adminNewPost)}</span>
+			</button>
+			<button class="action-card tinted tone-success" onclick={goPostList}>
+				<Icon icon="material-symbols:format-list-bulleted" class="action-icon" />
+				<span>{i18n(I18nKey.adminPostList)}</span>
+			</button>
+			<button class="action-card tinted tone-warning" onclick={() => goSettings()}>
+				<Icon icon="material-symbols:settings" class="action-icon" />
+				<span>{i18n(I18nKey.adminSettings)}</span>
+			</button>
+			<button class="action-card tinted tone-info" onclick={handleSync} disabled={isSyncing}>
+				<Icon icon="material-symbols:cloud" class={isSyncing ? "action-icon syncing" : "action-icon"} />
+				<span>{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}</span>
+			</button>
+		</div>
+	</div>
+{/snippet}
+
 {#snippet dashboardHome()}
 	<div class="dashboard-home">
 		{@render welcomeBanner()}
@@ -947,12 +946,12 @@ function formatDate(dateStr: string | null): string {
 
 		<div class="dashboard-grid">
 			<div class="dashboard-main-col">
-				{@render quickActions()}
 				{@render recentPostsSection()}
 			</div>
 			<div class="dashboard-side-col">
 				<!-- {@render contentOverview()} -->
 				{@render systemStatus()}
+				{@render quickActions()}
 			</div>
 		</div>
 	</div>
@@ -1412,7 +1411,7 @@ function formatDate(dateStr: string | null): string {
 		/* 始终预留滚动条槽位：子菜单展开出现滚动条时内容不再向左偏移 */
 		scrollbar-gutter: stable;
 		scrollbar-width: thin;
-		scrollbar-color: color-mix(in srgb, var(--deep-text) 25%, transparent) transparent;
+		scrollbar-color: color-mix(in oklab, var(--deep-text) 25%, transparent) transparent;
 		display: flex;
 		flex-direction: column;
 		background: var(--admin-sidebar-bg);
@@ -1428,7 +1427,7 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.admin-sidebar::-webkit-scrollbar-thumb {
-		background: color-mix(in srgb, var(--deep-text) 25%, transparent);
+		background: color-mix(in oklab, var(--deep-text) 25%, transparent);
 		border-radius: 999px;
 	}
 
@@ -1448,17 +1447,16 @@ function formatDate(dateStr: string | null): string {
 		font-size: 1rem;
 	}
 
-	.brand-icon {
+.brand-icon {
 		width: 2.25rem;
 		height: 2.25rem;
-		border-radius: var(--radius-xl);
+		border-radius: var(--radius-large);
 		background: var(--primary);
 		color: var(--primary-foreground);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-		box-shadow: var(--shadow-button);
 	}
 
 	.sidebar-nav {
@@ -1485,9 +1483,9 @@ function formatDate(dateStr: string | null): string {
 		color: var(--deep-text);
 		font-size: 0.875rem;
 		font-weight: 500;
-		border-radius: var(--radius-xl);
+		border-radius: var(--radius-lg);
 		cursor: pointer;
-		transition: background 0.2s, color 0.2s, transform 0.15s;
+		transition: background 0.15s, color 0.15s;
 		font-family: inherit;
 		text-align: left;
 		line-height: 1.2;
@@ -1500,17 +1498,19 @@ function formatDate(dateStr: string | null): string {
 		outline-offset: 2px;
 	}
 
-	/* 一级菜单高亮：仅文字高亮，不涂背景 */
+	/* 一级菜单高亮：仅文字高亮，不涂背景。
+	   用前台的 --title-active（oklch 0.6 0.1）而非 --primary，
+	   后者压侧边栏淡底只有 2.35:1。 */
 	.nav-item.active {
 		background: transparent;
-		color: var(--primary);
+		color: var(--title-active);
 		font-weight: 600;
 	}
 
 	/* 有二级菜单的父级项：同样仅文字高亮 */
 	.nav-group-head.group-active {
 		background: transparent;
-		color: var(--primary);
+		color: var(--title-active);
 	}
 
 	.nav-arrow {
@@ -1568,16 +1568,15 @@ function formatDate(dateStr: string | null): string {
 
 	.nav-item.sub.active {
 		/* 二级菜单高亮：半透明主题色 */
-		background: color-mix(in srgb, var(--primary) 16%, transparent);
-		color: var(--primary);
-		box-shadow: none;
+		background: color-mix(in oklab, var(--primary) 16%, transparent);
+		color: var(--title-active);
 	}
 
 	/* 悬停高亮：中性灰色（放在 active 规则之后，保证当前选中项悬停时也变灰） */
 	.nav-item:hover,
 	.nav-item.active:hover,
 	.nav-item.sub.active:hover {
-		background: color-mix(in srgb, var(--deep-text) 8%, transparent);
+		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
 	}
 
 	.sidebar-footer {
@@ -1599,7 +1598,7 @@ function formatDate(dateStr: string | null): string {
 		background: transparent;
 		color: var(--content-meta);
 		cursor: pointer;
-		transition: background 0.2s, color 0.2s;
+		transition: background 0.15s, color 0.15s;
 		flex-shrink: 0;
 	}
 
@@ -1621,10 +1620,10 @@ function formatDate(dateStr: string | null): string {
 		max-height: min(70vh, 600px);
 		overflow-y: auto;
 		padding: 0.5rem;
-		background: var(--admin-card-bg, var(--admin-sidebar-bg));
+		background: var(--card-bg);
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-large);
-		box-shadow: 6px 12px 28px rgba(0, 0, 0, 0.2);
+		box-shadow: var(--shadow-lg);
 	}
 
 	.flyout-panel .nav-item {
@@ -1769,7 +1768,7 @@ function formatDate(dateStr: string | null): string {
 		background: var(--btn-regular-bg);
 		color: var(--deep-text);
 		cursor: pointer;
-		transition: background 0.2s;
+		transition: background 0.15s;
 	}
 
 	.menu-toggle:hover {
@@ -1785,8 +1784,7 @@ function formatDate(dateStr: string | null): string {
 		justify-content: center;
 		background: var(--primary);
 		color: var(--primary-foreground);
-		border-radius: var(--radius-xl);
-		box-shadow: var(--shadow-button);
+		border-radius: var(--radius-large);
 	}
 
 	.title-text {
@@ -1831,13 +1829,13 @@ function formatDate(dateStr: string | null): string {
 		background: var(--page-bg);
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-full);
-		transition: border-color 0.2s ease, box-shadow 0.2s ease, max-width 0.2s ease;
+		transition: border-color 0.15s, box-shadow 0.15s, max-width 0.15s;
 	}
 
 	.search-box:focus-within,
 	.search-box.focused {
 		border-color: var(--primary);
-		box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+		box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 12%, transparent);
 	}
 
 	.search-box:focus-within {
@@ -1847,7 +1845,7 @@ function formatDate(dateStr: string | null): string {
 	:global(.search-icon) {
 		color: var(--content-meta);
 		flex-shrink: 0;
-		transition: color 0.2s ease;
+		transition: color 0.15s;
 	}
 
 	.search-box:focus-within :global(.search-icon) {
@@ -1885,7 +1883,7 @@ function formatDate(dateStr: string | null): string {
 		color: var(--content-meta);
 		cursor: pointer;
 		flex-shrink: 0;
-		transition: background 0.15s ease, color 0.15s ease;
+		transition: background 0.15s, color 0.15s;
 	}
 
 	.search-clear:hover {
@@ -1900,7 +1898,7 @@ function formatDate(dateStr: string | null): string {
 		font-size: 0.875rem;
 		font-weight: 500;
 		cursor: pointer;
-		transition: all 0.2s;
+		transition: background 0.15s, color 0.15s;
 		display: flex;
 		align-items: center;
 		gap: 0.375rem;
@@ -1911,12 +1909,10 @@ function formatDate(dateStr: string | null): string {
 		background: var(--primary);
 		color: var(--primary-foreground);
 		border-radius: var(--radius-large);
-		box-shadow: var(--shadow-button);
 	}
 
 	.action-btn.primary:hover:not(:disabled) {
-		filter: brightness(1.05);
-		transform: translateY(-1px);
+		background: color-mix(in oklch, var(--primary) 88%, black);
 	}
 
 	.admin-content {
@@ -1944,29 +1940,25 @@ function formatDate(dateStr: string | null): string {
 		gap: 1.25rem;
 	}
 
-	/* 欢迎横幅 */
+	/* 欢迎横幅：MD3 primaryContainer 底 + onPrimaryContainer 文字。
+	   不使用全色渐变与 glow 光斑——那套高饱和表达与整页的克制色调冲突，
+	   且在暗色下会形成大面积高亮块。容器底 + 深色文字对比更稳定，
+	   CTA 仍用实心 primary 保持唯一强调项。 */
 	.welcome-banner {
 		position: relative;
 		overflow: hidden;
-		background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 75%, black) 100%);
-		color: var(--primary-foreground);
+		background: color-mix(in oklab, var(--primary) 22%, var(--card-bg));
+		color: var(--deep-text);
 		border-radius: var(--radius-large);
 		padding: 1.75rem 2rem;
-		box-shadow: var(--shadow-button);
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 1.5rem;
 	}
 
-	.welcome-glow {
-		position: absolute;
-		top: -50%;
-		right: -10%;
-		width: 20rem;
-		height: 20rem;
-		background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, transparent 70%);
-		pointer-events: none;
+	:global(.dark) .welcome-banner {
+		background: color-mix(in oklab, var(--primary) 20%, var(--card-bg));
 	}
 
 	.welcome-content {
@@ -1980,7 +1972,7 @@ function formatDate(dateStr: string | null): string {
 		gap: 0.5rem;
 		font-size: 0.9375rem;
 		font-weight: 500;
-		opacity: 0.95;
+		color: var(--content-meta);
 		margin-bottom: 0.5rem;
 	}
 
@@ -1996,7 +1988,7 @@ function formatDate(dateStr: string | null): string {
 
 	.welcome-content p {
 		font-size: 0.875rem;
-		opacity: 0.85;
+		color: var(--content-meta);
 	}
 
 	.welcome-actions {
@@ -2011,23 +2003,28 @@ function formatDate(dateStr: string | null): string {
 		gap: 0.5rem;
 		padding: 0.75rem 1.25rem;
 		border: none;
-		border-radius: var(--radius-large);
+		border-radius: var(--radius-2xl);
 		font-size: 0.9375rem;
 		font-weight: 600;
 		cursor: pointer;
-		transition: all 0.2s;
 		font-family: inherit;
+		transition: background 0.15s;
 	}
 
+	/* CTA 用「容器底 + primary 文字」而非「primary 底 + 白字」：
+	   --primary 是 oklch(0.70 0.14 275)≈#8696F5，白字压它只有 2.7:1 不可读，
+	   而 primary 文字压在近白底上有 3.3:1，够大字号的按钮用。 */
 	.welcome-btn.primary {
-		background: var(--primary-foreground);
-		color: var(--primary);
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+		background: var(--card-bg);
+		color: var(--on-primary-container);
 	}
 
 	.welcome-btn.primary:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+		background: color-mix(in oklab, var(--primary) 10%, var(--card-bg));
+	}
+
+	.welcome-btn.primary:active {
+		background: color-mix(in oklab, var(--primary) 28%, var(--card-bg));
 	}
 
 	/* 统计卡片 */
@@ -2037,31 +2034,23 @@ function formatDate(dateStr: string | null): string {
 		gap: 1rem;
 	}
 
-	/* ── MD3 统计卡片：色调底色 + 大圆角 + 右下角装饰图标 ── */
+	/* ── 统计卡片 ──
+	   底色用 --card-bg 而非色调：前台 .card-base 同为纯 card-bg，
+	   浅色下 8% 的 primary 混色几乎看不出卡片边界，且与其它栏目不同色显得突兀。
+	   主题色改由 hover state layer 和装饰图标体现。 */
 	.stat-card {
 		position: relative;
 		overflow: hidden;
 		min-width: 0;
 		padding: 1.25rem 1.25rem 1.75rem;
 		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--primary) 8%, var(--card-bg));
-		transition:
-			background 0.2s ease,
-			box-shadow 0.2s ease;
+		background: var(--card-bg);
+		transition: background 0.15s;
 	}
 
-	/* MD3 state layer：悬浮时底色加深 */
+	/* state layer：悬浮时才浮出淡色调 */
 	.stat-card:hover {
-		background: color-mix(in oklab, var(--primary) 16%, var(--card-bg));
-		box-shadow: var(--shadow-card-hover);
-	}
-
-	:global(.dark) .stat-card {
-		background: color-mix(in oklab, var(--primary) 14%, var(--card-bg));
-	}
-
-	:global(.dark) .stat-card:hover {
-		background: color-mix(in oklab, var(--primary) 22%, var(--card-bg));
+		background: color-mix(in oklab, var(--primary) 8%, var(--card-bg));
 	}
 
 	.stat-title {
@@ -2083,8 +2072,7 @@ function formatDate(dateStr: string | null): string {
 		color: var(--content-meta);
 	}
 
-	/* 装饰图标：右下角、低透明度，悬浮时增强 */
-	/* 装饰图标：右下角、低透明度，悬浮时增强
+	/* 装饰图标：右下角、低透明度，悬浮时增强。
 	   Icon 为子组件，其根元素需 :global 才能命中本组件 scoped 样式 */
 	:global(.stat-deco-icon) {
 		position: absolute;
@@ -2094,7 +2082,7 @@ function formatDate(dateStr: string | null): string {
 		color: var(--primary);
 		opacity: 0.32;
 		pointer-events: none;
-		transition: opacity 0.2s ease;
+		transition: opacity 0.15s;
 	}
 
 	.stat-card:hover :global(.stat-deco-icon) {
@@ -2106,7 +2094,17 @@ function formatDate(dateStr: string | null): string {
 		display: grid;
 		grid-template-columns: 1.4fr 0.6fr;
 		gap: 1rem;
-		align-items: start;
+	}
+
+	/* 左列卡片撑满列高，使两列底边始终对齐（整页呈矩形） */
+	.dashboard-main-col > .recent-posts {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.dashboard-main-col > .recent-posts .post-list {
+		flex: 1;
 	}
 
 	.dashboard-main-col,
@@ -2137,7 +2135,9 @@ function formatDate(dateStr: string | null): string {
 	.section-link {
 		font-size: 0.8125rem;
 		font-weight: 500;
-		color: var(--primary);
+		/* --primary 是 oklch(0.70 0.14 275)≈#8696F5，压白底仅 2.7:1。
+		   前台同类文字链接用 --btn-content（同色相深色版），此处对齐。 */
+		color: var(--btn-content);
 		background: transparent;
 		border: none;
 		cursor: pointer;
@@ -2148,28 +2148,30 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.section-link:hover {
-		background: color-mix(in srgb, var(--primary) 8%, transparent);
+		background: color-mix(in oklab, var(--primary) 8%, transparent);
 	}
 
-	/* 快捷操作 */
+	/* 快捷操作：现位于右侧窄栏，故 padding 与标题跟 dashboard-section 对齐 */
 	.quick-actions {
-		padding: 1.5rem;
+		padding: 1.25rem;
 	}
 
 	.quick-actions h2 {
-		font-size: 0.9375rem;
-		font-weight: 500;
-		letter-spacing: 0.03125rem;
-		color: var(--content-meta);
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--deep-text);
 		margin-bottom: 1rem;
 	}
 
 	.actions-grid {
 		display: grid;
-		grid-template-columns: repeat(4, minmax(0, 1fr));
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 0.75rem;
 	}
 
+	/* 快捷操作 = 放大的前台 .btn-regular：单一中性底色，颜色只留给图标和文字。
+	   原先四张卡各有底色（中性 / primary 10% / 三种 tone 彩底），
+	   在浅色下形成四块彩色区，抢走了整页的注意力层级。 */
 	.action-card {
 		display: flex;
 		flex-direction: column;
@@ -2179,23 +2181,23 @@ function formatDate(dateStr: string | null): string {
 		padding: 1.125rem 0.75rem;
 		border-radius: var(--radius-2xl);
 		background: var(--btn-regular-bg);
-		color: var(--content-meta);
+		/* 前台 --btn-content(0.55) 压这个底只有 4.3:1，13px 需 4.5；
+		   改用同用途且已压深的 --title-active(0.52)，4.89:1。 */
+		color: var(--title-active);
 		font-size: 0.8125rem;
 		font-weight: 400;
 		font-family: inherit;
 		cursor: pointer;
-		transition:
-			background 0.2s,
-			transform 0.1s;
+		transition: background 0.15s;
 	}
 
-	/* state layer：hover 极轻微提亮，active 轻微按下 */
+	/* state layer 三档直接复用前台的 btn-regular 三档 token */
 	.action-card:hover:not(:disabled) {
-		background: color-mix(in oklab, var(--primary) 8%, var(--btn-regular-bg));
+		background: var(--btn-regular-bg-hover);
 	}
 
 	.action-card:active:not(:disabled) {
-		transform: scale(0.97);
+		background: var(--btn-regular-bg-active);
 	}
 
 	.action-card:disabled {
@@ -2203,19 +2205,13 @@ function formatDate(dateStr: string | null): string {
 		cursor: not-allowed;
 	}
 
-	/* 唯一强调项：新建文章，用极淡的 primary 底色而非全填充 */
-	.action-card.primary-action {
-		background: color-mix(in oklab, var(--primary) 10%, var(--btn-regular-bg));
+	/* 新建文章：前台没有「强调卡片」这类概念，区分只体现在图标色上 */
+	.action-card.primary-action :global(.action-icon) {
 		color: var(--primary);
-		font-weight: 500;
+		opacity: 1;
 	}
 
-	.action-card.primary-action:hover:not(:disabled) {
-		background: color-mix(in oklab, var(--primary) 15%, var(--btn-regular-bg));
-	}
-
-	/* 其余三项：低饱和粉彩底色，安静但有功能区区分度
-	   底色淡、文字保持深色可读，仅图标带色，避免与强调项抢视线 */
+	/* 其余三项：图标保留功能色（绿/琥珀/蓝），底色与文字完全中性 */
 	.action-card.tone-success {
 		--tone: var(--success);
 	}
@@ -2228,26 +2224,9 @@ function formatDate(dateStr: string | null): string {
 		--tone: var(--info);
 	}
 
-	.action-card.tinted {
-		color: var(--content-meta);
-		background: color-mix(in oklab, var(--tone) 14%, var(--btn-regular-bg));
-	}
-
-	.action-card.tinted:hover:not(:disabled) {
-		background: color-mix(in oklab, var(--tone) 23%, var(--btn-regular-bg));
-	}
-
 	.action-card.tinted :global(.action-icon) {
 		color: var(--tone);
 		opacity: 1;
-	}
-
-	:global(.dark) .action-card.tinted {
-		background: color-mix(in oklab, var(--tone) 18%, var(--btn-regular-bg));
-	}
-
-	:global(.dark) .action-card.tinted:hover:not(:disabled) {
-		background: color-mix(in oklab, var(--tone) 27%, var(--btn-regular-bg));
 	}
 
 	:global(.action-icon) {
@@ -2286,7 +2265,7 @@ function formatDate(dateStr: string | null): string {
 		gap: 0.875rem;
 		padding: 0.875rem 0.75rem;
 		border: none;
-		border-radius: var(--radius-xl);
+		border-radius: var(--radius-lg);
 		background: transparent;
 		color: inherit;
 		font-family: inherit;
@@ -2468,7 +2447,7 @@ function formatDate(dateStr: string | null): string {
 		align-items: center;
 		gap: 0.875rem;
 		padding: 0.625rem 0.5rem;
-		border-radius: var(--radius-xl);
+		border-radius: var(--radius-lg);
 		transition: background 0.15s;
 	}
 
@@ -2539,7 +2518,7 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.connectivity-btn:active:not(:disabled) {
-		transform: translateY(1px);
+		background: var(--btn-regular-bg-active);
 	}
 
 	.connectivity-btn:disabled {
@@ -2567,7 +2546,7 @@ function formatDate(dateStr: string | null): string {
 		width: 4.5rem;
 		height: 4.5rem;
 		border-radius: 50%;
-		background: color-mix(in srgb, var(--primary) 12%, transparent);
+		background: color-mix(in oklab, var(--primary) 12%, transparent);
 		color: var(--primary);
 		display: flex;
 		align-items: center;
@@ -2603,10 +2582,10 @@ function formatDate(dateStr: string | null): string {
 		top: 5rem;
 		right: 2rem;
 		padding: 0.75rem 1.25rem;
-		border-radius: var(--radius-xl);
+		border-radius: var(--radius-lg);
 		color: white;
 		font-weight: 500;
-		box-shadow: var(--shadow-card-hover);
+		box-shadow: var(--shadow-lg);
 		animation: slideIn 0.3s ease-out;
 		z-index: 9999;
 		display: flex;
@@ -2616,11 +2595,11 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.toast.success {
-		background: color-mix(in srgb, var(--success) 92%, transparent);
+		background: color-mix(in oklab, var(--success) 92%, transparent);
 	}
 
 	.toast.error {
-		background: color-mix(in srgb, var(--destructive) 92%, transparent);
+		background: color-mix(in oklab, var(--destructive) 92%, transparent);
 	}
 
 	.toast-message {
@@ -2642,7 +2621,7 @@ function formatDate(dateStr: string | null): string {
 		color: white;
 		padding: 0;
 		flex-shrink: 0;
-		transition: background 0.2s;
+		transition: background 0.15s;
 	}
 
 	.toast-close:hover {
@@ -2678,13 +2657,12 @@ function formatDate(dateStr: string | null): string {
 			border-right: 1px solid var(--line-divider);
 			border-radius: 0;
 			transform: translateX(-100%);
-			transition: transform 0.3s ease;
-			box-shadow: none;
+			transition: transform 0.3s;
 		}
 
 		.admin-sidebar.open {
 			transform: translateX(0);
-			box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+			box-shadow: var(--shadow-lg);
 		}
 
 		.sidebar-backdrop {
@@ -2795,8 +2773,8 @@ function formatDate(dateStr: string | null): string {
 		font-size: 0.875rem;
 		line-height: 1.6;
 		color: var(--content-meta);
-		background: color-mix(in srgb, var(--primary) 8%, transparent);
-		border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+		background: color-mix(in oklab, var(--primary) 8%, transparent);
+		border: 1px solid color-mix(in oklab, var(--primary) 25%, transparent);
 	}
 
 	.settings-remote-banner :global(.icon) {
