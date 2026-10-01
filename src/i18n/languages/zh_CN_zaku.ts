@@ -340,6 +340,12 @@ export const zaku: Translation = {
 	[Key.siteStatsLastUpdate]: "上次更新",
 	[Key.siteStatsDaysAgo]: "{days}天之前",
 	[Key.siteStatsDays]: "{days}天",
+	[Key.siteStatsSummary]: "共 {value} {unit}",
+	[Key.siteStatsUnitPost]: "章",
+	[Key.siteStatsUnitCategory]: "个",
+	[Key.siteStatsUnitTag]: "个",
+	[Key.siteStatsUnitWord]: "字",
+	[Key.siteStatsUnitDay]: "天",
 	[Key.today]: "今天哦",
 
 	// 站点信息
