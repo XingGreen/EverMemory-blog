@@ -188,9 +188,10 @@ const recentPosts = $derived(
 		.slice(0, 5),
 );
 
-const publishRate = $derived(
-	stats.total > 0 ? Math.round((stats.published / stats.total) * 100) : 0,
-);
+// 暂不使用：内容概览已注释（见 contentOverview snippet）
+// const publishRate = $derived(
+// 	stats.total > 0 ? Math.round((stats.published / stats.total) * 100) : 0,
+// );
 
 // 进入编辑路由时按 slug 找到对应文章（文章列表异步加载完成后会自动再次匹配）
 $effect(() => {
@@ -834,49 +835,50 @@ function formatDate(dateStr: string | null): string {
 	</div>
 {/snippet}
 
-{#snippet contentOverview()}
-	<div class="card-base dashboard-section content-overview">
-		<div class="section-header">
-			<h2>{i18n(I18nKey.contentOverviewTitle)}</h2>
-		</div>
-		<div class="overview-chart">
-			<div class="chart-ring">
-				<svg viewBox="0 0 36 36" class="ring-svg">
-					<path
-						class="ring-bg"
-						d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-					/>
-					<path
-						class="ring-fill published"
-						stroke-dasharray="{publishRate}, 100"
-						d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-					/>
-				</svg>
-				<div class="ring-label">
-					<span class="ring-value">{publishRate}%</span>
-					<span class="ring-caption">{i18n(I18nKey.postPublished)}</span>
-				</div>
-			</div>
-			<div class="chart-legend">
-				<div class="legend-item">
-					<span class="legend-dot published"></span>
-					<span class="legend-label">{i18n(I18nKey.postPublished)}</span>
-					<span class="legend-count">{stats.published}</span>
-				</div>
-				<div class="legend-item">
-					<span class="legend-dot draft"></span>
-					<span class="legend-label">{i18n(I18nKey.postDraft)}</span>
-					<span class="legend-count">{stats.drafts}</span>
-				</div>
-				<div class="legend-item">
-					<span class="legend-dot pinned"></span>
-					<span class="legend-label">{i18n(I18nKey.pinned)}</span>
-					<span class="legend-count">{stats.pinned}</span>
-				</div>
-			</div>
-		</div>
-	</div>
-{/snippet}
+<!-- {#snippet contentOverview()}
+<!-- 	<div class="card-base dashboard-section content-overview">
+<!-- 		<div class="section-header">
+<!-- 			<h2>{i18n(I18nKey.contentOverviewTitle)}</h2>
+<!-- 		</div>
+<!-- 		<div class="overview-chart">
+<!-- 			<div class="chart-ring">
+<!-- 				<svg viewBox="0 0 36 36" class="ring-svg">
+<!-- 					<path
+<!-- 						class="ring-bg"
+<!-- 						d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+<!-- 					/>
+<!-- 					<path
+<!-- 						class="ring-fill published"
+<!-- 						stroke-dasharray="{publishRate}, 100"
+<!-- 						d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+<!-- 					/>
+<!-- 				</svg>
+<!-- 				<div class="ring-label">
+<!-- 					<span class="ring-value">{publishRate}%</span>
+<!-- 					<span class="ring-caption">{i18n(I18nKey.postPublished)}</span>
+<!-- 				</div>
+<!-- 			</div>
+<!-- 			<div class="chart-legend">
+<!-- 				<div class="legend-item">
+<!-- 					<span class="legend-dot published"></span>
+<!-- 					<span class="legend-label">{i18n(I18nKey.postPublished)}</span>
+<!-- 					<span class="legend-count">{stats.published}</span>
+<!-- 				</div>
+<!-- 				<div class="legend-item">
+<!-- 					<span class="legend-dot draft"></span>
+<!-- 					<span class="legend-label">{i18n(I18nKey.postDraft)}</span>
+<!-- 					<span class="legend-count">{stats.drafts}</span>
+<!-- 				</div>
+<!-- 				<div class="legend-item">
+<!-- 					<span class="legend-dot pinned"></span>
+<!-- 					<span class="legend-label">{i18n(I18nKey.pinned)}</span>
+<!-- 					<span class="legend-count">{stats.pinned}</span>
+<!-- 				</div>
+<!-- 			</div>
+<!-- 		</div>
+<!-- 	</div>
+<!-- {/snippet}
+-->
 
 {#snippet systemStatus()}
 	<div class="card-base dashboard-section system-status">
@@ -949,7 +951,7 @@ function formatDate(dateStr: string | null): string {
 				{@render recentPostsSection()}
 			</div>
 			<div class="dashboard-side-col">
-				{@render contentOverview()}
+				<!-- {@render contentOverview()} -->
 				{@render systemStatus()}
 			</div>
 		</div>
@@ -2371,108 +2373,93 @@ function formatDate(dateStr: string | null): string {
 		color: var(--content-meta);
 	}
 
-	/* 内容概览 */
-	.overview-chart {
-		display: flex;
-		align-items: center;
-		gap: 1.25rem;
-		padding: 0.5rem 0;
-	}
+/* 暂不使用：内容概览样式（随 contentOverview 一并注释） */
+	/* overview-chart { */
+	/* display: flex; */
+	/* align-items: center; */
+	/* gap: 1.25rem; */
+	/* padding: 0.5rem 0; */
+	/* } */
+	/* .chart-ring { */
+		/* position: relative; */
+		/* width: 6.5rem; */
+		/* height: 6.5rem; */
+		/* flex-shrink: 0; */
+	/* } */
+	/* .ring-svg { */
+		/* width: 100%; */
+		/* height: 100%; */
+		/* transform: rotate(-90deg); */
+	/* } */
+	/* .ring-bg { */
+		/* fill: none; */
+		/* stroke: var(--line-divider); */
+		/* stroke-width: 3; */
+	/* } */
+	/* .ring-fill { */
+		/* fill: none; */
+		/* stroke-width: 3; */
+		/* stroke-linecap: round; */
+		/* transition: stroke-dasharray 0.6s ease; */
+	/* } */
+	/* .ring-fill.published { */
+		/* stroke: var(--success); */
+	/* } */
+	/* .ring-label { */
+		/* position: absolute; */
+		/* inset: 0; */
+		/* display: flex; */
+		/* flex-direction: column; */
+		/* align-items: center; */
+		/* justify-content: center; */
+	/* } */
+	/* .ring-value { */
+		/* font-size: 1.25rem; */
+		/* font-weight: 700; */
+		/* color: var(--deep-text); */
+	/* } */
+	/* .ring-caption { */
+		/* font-size: 0.6875rem; */
+		/* color: var(--content-meta); */
+	/* } */
+	/* .chart-legend { */
+		/* flex: 1; */
+		/* display: flex; */
+		/* flex-direction: column; */
+		/* gap: 0.625rem; */
+	/* } */
+	/* .legend-item { */
+		/* display: flex; */
+		/* align-items: center; */
+		/* gap: 0.5rem; */
+		/* font-size: 0.875rem; */
+	/* } */
+	/* .legend-dot { */
+		/* width: 0.5rem; */
+		/* height: 0.5rem; */
+		/* border-radius: 50%; */
+		/* flex-shrink: 0; */
+	/* } */
+	/* .legend-dot.published { */
+		/* background: var(--success); */
+	/* } */
+	/* .legend-dot.draft { */
+		/* background: var(--warning); */
+	/* } */
+	/* .legend-dot.pinned { */
+		/* background: var(--primary); */
+	/* } */
+	/* .legend-label { */
+		/* color: var(--content-meta); */
+	/* } */
+	/* .legend-count { */
+		/* margin-left: auto; */
+		/* font-weight: 600; */
+		/* color: var(--deep-text); */
+	/* } */
+/*  */
 
-	.chart-ring {
-		position: relative;
-		width: 6.5rem;
-		height: 6.5rem;
-		flex-shrink: 0;
-	}
-
-	.ring-svg {
-		width: 100%;
-		height: 100%;
-		transform: rotate(-90deg);
-	}
-
-	.ring-bg {
-		fill: none;
-		stroke: var(--line-divider);
-		stroke-width: 3;
-	}
-
-	.ring-fill {
-		fill: none;
-		stroke-width: 3;
-		stroke-linecap: round;
-		transition: stroke-dasharray 0.6s ease;
-	}
-
-	.ring-fill.published {
-		stroke: var(--success);
-	}
-
-	.ring-label {
-		position: absolute;
-		inset: 0;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.ring-value {
-		font-size: 1.25rem;
-		font-weight: 700;
-		color: var(--deep-text);
-	}
-
-	.ring-caption {
-		font-size: 0.6875rem;
-		color: var(--content-meta);
-	}
-
-	.chart-legend {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 0.625rem;
-	}
-
-	.legend-item {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.875rem;
-	}
-
-	.legend-dot {
-		width: 0.5rem;
-		height: 0.5rem;
-		border-radius: 50%;
-		flex-shrink: 0;
-	}
-
-	.legend-dot.published {
-		background: var(--success);
-	}
-
-	.legend-dot.draft {
-		background: var(--warning);
-	}
-
-	.legend-dot.pinned {
-		background: var(--primary);
-	}
-
-	.legend-label {
-		color: var(--content-meta);
-	}
-
-	.legend-count {
-		margin-left: auto;
-		font-weight: 600;
-		color: var(--deep-text);
-	}
-
-	/* 系统状态 */
+/* 系统状态 */
 	.status-list {
 		display: flex;
 		flex-direction: column;
@@ -2792,10 +2779,10 @@ function formatDate(dateStr: string | null): string {
 			grid-template-columns: repeat(2, 1fr);
 		}
 
-		.overview-chart {
+		/* .overview-chart {
 			flex-direction: column;
 			align-items: flex-start;
-		}
+		} */
 	}
 .secrets-guide {
 		padding: 1.75rem;
