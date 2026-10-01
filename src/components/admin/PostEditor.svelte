@@ -1,9 +1,18 @@
 <script lang="ts">
-import { onDestroy, onMount } from "svelte";
+import { onDestroy, onMount, setContext } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import { editorConfig } from "@/config/editorConfig";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import {
+	extractTocItems,
+	POST_EDITOR_CONTEXT,
+	type PostEditorFields,
+	type PostEditorUiState,
+} from "./postEditorContext";
+import PostEditorFmPanel from "./PostEditorFmPanel.svelte";
+import PostEditorWritePanel from "./PostEditorWritePanel.svelte";
+import PostEditorTocPanel from "./PostEditorTocPanel.svelte";
 
 let {
 	post,
@@ -19,28 +28,46 @@ let {
 	onError: (msg: string) => void;
 } = $props();
 
-let title = $state("");
-let author = $state("");
-let category = $state("");
-let description = $state("");
-let content = $state("");
-let slug = $state("");
-let published = $state("");
-let updated = $state("");
-let isDraft = $state(false);
-let isPinned = $state(false);
-let image = $state("");
-let lang = $state("");
-let licenseName = $state("");
-let licenseUrl = $state("");
-let sourceLink = $state("");
-let enableComment = $state(true);
-let password = $state("");
-let passwordHint = $state("");
-let tagInput = $state("");
-let tags = $state<string[]>([]);
+/**
+ * 三栏共享的唯一状态源：字段与 UI 状态合并为一个 $state 对象，
+ * 由容器创建并通过 context 下发，各栏直接双向绑定。
+ */
+const editorState = $state({
+	title: "",
+	author: "",
+	category: "",
+	description: "",
+	content: "",
+	slug: "",
+	published: "",
+	updated: "",
+	isDraft: false,
+	isPinned: false,
+	image: "",
+	lang: "",
+	licenseName: "",
+	licenseUrl: "",
+	sourceLink: "",
+	enableComment: true,
+	password: "",
+	passwordHint: "",
+	tagInput: "",
+	tags: [] as string[],
+	activeTab: "editor" as "editor" | "preview",
+	// 左侧表单分组折叠：仅「必填基础」默认展开，其余收起以减少纵向滚动
+	openGroups: {
+		essential: true,
+		publish: false,
+		seo: false,
+		advanced: false,
+	},
+	renderedHtml: `<p class='empty-preview'>${i18n(I18nKey.postPreviewEmpty)}</p>`,
+	visibleTocLines: [] as number[],
+	editorEl: undefined as HTMLTextAreaElement | undefined,
+	previewEl: undefined as HTMLElement | undefined,
+} satisfies PostEditorFields & PostEditorUiState);
+
 let isSaving = $state(false);
-let activeTab = $state<"editor" | "preview">("editor");
 let isLoadingContent = $state(false);
 // 标记用户是否手动编辑过 slug，防止自动生成覆盖用户输入
 let slugTouched = $state(false);
@@ -57,30 +84,6 @@ let cloudTimer: ReturnType<typeof setTimeout> | null = null;
 let cloudSeq = 0;
 let lastCloudKey = "";
 
-$effect(() => {
-	title = post?.title || "";
-	author = post?.author || "";
-	category = post?.category || "";
-	description = post?.description || "";
-	slug = post?.slug || "";
-	published = post?.published
-		? formatDate(post.published)
-		: new Date().toISOString().split("T")[0];
-	updated = post?.updated ? formatDate(post.updated) : "";
-	isDraft = post?.draft || false;
-	isPinned = post?.pinned || false;
-	image = post?.image || "";
-	lang = post?.lang || "";
-	licenseName = post?.licenseName || "";
-	licenseUrl = post?.licenseUrl || "";
-	sourceLink = post?.sourceLink || "";
-	enableComment = post?.comment !== undefined ? post.comment : true;
-	password = post?.password || "";
-	passwordHint = post?.passwordHint || "";
-	tags = [...(post?.tags || [])];
-	isLoadingContent = mode === "edit";
-});
-
 function formatDate(dateStr: string): string {
 	return new Date(dateStr).toISOString().split("T")[0];
 }
@@ -93,56 +96,309 @@ function generateSlug(title: string): string {
 		.substring(0, 100);
 }
 
-$effect(() => {
-	// 仅在新建模式、用户未手动编辑过 slug、且 slug 为空时自动生成
-	if (mode === "create" && !slugTouched && !slug && title) {
-		slug = generateSlug(title);
-	}
-});
+// ── 目录（容器内派生，供滚动与跳转动作使用） ──
+const tocItems = $derived(extractTocItems(editorState.content));
+
+// ── 三栏动作 ──
+function toggleGroup(group: keyof typeof editorState.openGroups) {
+	editorState.openGroups[group] = !editorState.openGroups[group];
+}
 
 function handleSlugInput() {
 	slugTouched = true;
 }
 
+function addTag() {
+	const tag = editorState.tagInput.trim();
+	if (tag && !editorState.tags.includes(tag)) {
+		editorState.tags = [...editorState.tags, tag];
+		editorState.tagInput = "";
+	}
+}
+
+function removeTag(index: number) {
+	editorState.tags = editorState.tags.filter((_, i) => i !== index);
+}
+
+function handleTagKeydown(e: KeyboardEvent) {
+	if (e.key === "Enter" || e.key === ",") {
+		e.preventDefault();
+		addTag();
+	}
+}
+
+function setTab(tab: "editor" | "preview") {
+	editorState.activeTab = tab;
+}
+
+/** 在选区两侧包裹符号（选区为空时使用占位文本） */
+function wrapSelection(before: string, after: string, placeholder: string) {
+	const el = editorState.editorEl;
+	if (!el) return;
+	const start = el.selectionStart;
+	const end = el.selectionEnd;
+	const selected = editorState.content.slice(start, end) || placeholder;
+	editorState.content =
+		editorState.content.slice(0, start) +
+		before +
+		selected +
+		after +
+		editorState.content.slice(end);
+	requestAnimationFrame(() => {
+		el.focus();
+		const ns = start + before.length;
+		el.setSelectionRange(ns, ns + selected.length);
+	});
+}
+
+/** 在选区所在行(或每行)前加前缀；firstLineOnly 时仅作用于首行（如标题） */
+function prependLines(prefix: string, firstLineOnly = false) {
+	const el = editorState.editorEl;
+	if (!el) return;
+	const start = el.selectionStart;
+	const end = el.selectionEnd;
+	const lineStart = editorState.content.lastIndexOf("\n", start - 1) + 1;
+	let selEnd = end;
+	if (editorState.content[selEnd] !== "\n") {
+		const nl = editorState.content.indexOf("\n", selEnd);
+		selEnd = nl === -1 ? editorState.content.length : nl;
+	}
+	const block = editorState.content.slice(lineStart, selEnd);
+	const processed = block
+		.split("\n")
+		.map((line, i) => (firstLineOnly && i > 0 ? line : prefix + line))
+		.join("\n");
+	editorState.content =
+		editorState.content.slice(0, lineStart) +
+		processed +
+		"\n" +
+		editorState.content.slice(selEnd);
+	requestAnimationFrame(() => {
+		el.focus();
+		el.setSelectionRange(lineStart, lineStart + processed.length);
+	});
+}
+
+/** 在光标处插入文本 */
+function insertAtCursor(text: string) {
+	const el = editorState.editorEl;
+	if (!el) return;
+	const start = el.selectionStart;
+	const end = el.selectionEnd;
+	editorState.content =
+		editorState.content.slice(0, start) + text + editorState.content.slice(end);
+	requestAnimationFrame(() => {
+		el.focus();
+		const pos = start + text.length;
+		el.setSelectionRange(pos, pos);
+	});
+}
+
+function tocTop(item: { lineIndex: number }): number {
+	const el = editorState.editorEl;
+	if (!el) return 0;
+	const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight) || 24;
+	return item.lineIndex * lineHeight;
+}
+
+function jumpToToc(item: { lineIndex: number; text: string }) {
+	if (editorState.activeTab === "preview") {
+		const target = [
+			...(editorState.previewEl?.querySelectorAll("h1, h2, h3, h4, h5, h6") ??
+				[]),
+		].find((heading) => {
+			const text = (heading.textContent ?? "").replace(/#+$/, "").trim();
+			return text === item.text.trim() || text.startsWith(item.text.trim());
+		});
+		if (target) {
+			target.scrollIntoView({ behavior: "smooth", block: "start" });
+			editorState.visibleTocLines = [item.lineIndex];
+			return;
+		}
+	}
+	if (editorState.activeTab !== "editor") editorState.activeTab = "editor";
+	requestAnimationFrame(() => {
+		const el = editorState.editorEl;
+		if (!el) return;
+		el.scrollTop = Math.max(0, tocTop(item) - 8);
+		editorState.visibleTocLines = [item.lineIndex];
+	});
+}
+
+function handleEditorScroll() {
+	const el = editorState.editorEl;
+	if (!el) return;
+	const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight) || 24;
+	const top = el.scrollTop;
+	const bottom = el.scrollTop + el.clientHeight;
+	const visible: number[] = [];
+	for (const item of tocItems) {
+		const itemTop = item.lineIndex * lineHeight;
+		const itemBottom = (item.lineIndex + 1) * lineHeight;
+		if (itemTop < bottom && itemBottom > top) visible.push(item.lineIndex);
+	}
+	if (visible.length) {
+		editorState.visibleTocLines = visible;
+		return;
+	}
+	if (!tocItems.length) return;
+	const mid = top + el.clientHeight / 2;
+	let best = tocItems[0].lineIndex;
+	let bestDist = Number.POSITIVE_INFINITY;
+	for (const item of tocItems) {
+		const d = Math.abs(item.lineIndex * lineHeight - mid);
+		if (d < bestDist) {
+			bestDist = d;
+			best = item.lineIndex;
+		}
+	}
+	editorState.visibleTocLines = [best];
+}
+
+function matchTocLine(heading: Element): number | null {
+	const text = (heading.textContent ?? "").replace(/#+$/, "").trim();
+	const item = tocItems.find(
+		(it) => text === it.text.trim() || text.startsWith(it.text.trim()),
+	);
+	return item ? item.lineIndex : null;
+}
+
+function handlePreviewScroll() {
+	const el = editorState.previewEl;
+	if (!el) return;
+	const headings = [...el.querySelectorAll("h1, h2, h3, h4, h5, h6")];
+	if (!headings.length) return;
+	const elRect = el.getBoundingClientRect();
+	const visible: number[] = [];
+	for (const h of headings) {
+		const rect = h.getBoundingClientRect();
+		const relTop = rect.top - elRect.top;
+		const relBottom = rect.bottom - elRect.top;
+		if (relTop < el.clientHeight && relBottom > 0) {
+			const line = matchTocLine(h);
+			if (line !== null) visible.push(line);
+		}
+	}
+	if (visible.length) {
+		editorState.visibleTocLines = visible;
+		return;
+	}
+	let best: number | null = null;
+	let bestDist = Number.POSITIVE_INFINITY;
+	for (const h of headings) {
+		const rect = h.getBoundingClientRect();
+		const dist = Math.abs(rect.top - elRect.top);
+		if (dist < bestDist) {
+			bestDist = dist;
+			best = matchTocLine(h);
+		}
+	}
+	editorState.visibleTocLines = best === null ? [] : [best];
+}
+
+setContext(POST_EDITOR_CONTEXT, {
+	state: editorState,
+	actions: {
+		toggleGroup,
+		handleSlugInput,
+		addTag,
+		removeTag,
+		handleTagKeydown,
+		setTab,
+		insertBold: () => wrapSelection("**", "**", "text"),
+		insertItalic: () => wrapSelection("*", "*", "text"),
+		insertStrikethrough: () => wrapSelection("~~", "~~", "text"),
+		insertH2: () => prependLines("## ", true),
+		insertH3: () => prependLines("### ", true),
+		insertInlineCode: () => wrapSelection("`", "`", "code"),
+		insertCodeBlock: () => wrapSelection("```\n", "\n```", "code"),
+		insertLink: () => wrapSelection("[", "](url)", "text"),
+		insertImage: () => wrapSelection("![", "](url)", "alt"),
+		insertQuote: () => prependLines("> "),
+		insertUl: () => prependLines("- "),
+		insertOl: () => prependLines("1. "),
+		insertDivider: () => insertAtCursor("\n\n---\n\n"),
+		handleEditorScroll,
+		handlePreviewScroll,
+		jumpToToc,
+	},
+});
+
+$effect(() => {
+	editorState.title = post?.title || "";
+	editorState.author = post?.author || "";
+	editorState.category = post?.category || "";
+	editorState.description = post?.description || "";
+	editorState.slug = post?.slug || "";
+	editorState.published = post?.published
+		? formatDate(post.published)
+		: new Date().toISOString().split("T")[0];
+	editorState.updated = post?.updated ? formatDate(post.updated) : "";
+	editorState.isDraft = post?.draft || false;
+	editorState.isPinned = post?.pinned || false;
+	editorState.image = post?.image || "";
+	editorState.lang = post?.lang || "";
+	editorState.licenseName = post?.licenseName || "";
+	editorState.licenseUrl = post?.licenseUrl || "";
+	editorState.sourceLink = post?.sourceLink || "";
+	editorState.enableComment = post?.comment !== undefined ? post.comment : true;
+	editorState.password = post?.password || "";
+	editorState.passwordHint = post?.passwordHint || "";
+	editorState.tags = [...(post?.tags || [])];
+	isLoadingContent = mode === "edit";
+});
+
+$effect(() => {
+	// 仅在新建模式、用户未手动编辑过 slug、且 slug 为空时自动生成
+	if (
+		mode === "create" &&
+		!slugTouched &&
+		!editorState.slug &&
+		editorState.title
+	) {
+		editorState.slug = generateSlug(editorState.title);
+	}
+});
+
 /** 是否存在已输入的草稿内容（敏感字段：密码/密码提示不参与备份） */
 function hasDraftContent(): boolean {
 	return Boolean(
-		title.trim() ||
-			content.trim() ||
-			description.trim() ||
-			category.trim() ||
-			author.trim() ||
-			image.trim() ||
-			sourceLink.trim() ||
-			lang.trim() ||
-			licenseName.trim() ||
-			licenseUrl.trim() ||
-			slug.trim() ||
-			tags.length > 0 ||
-			isPinned,
+		editorState.title.trim() ||
+			editorState.content.trim() ||
+			editorState.description.trim() ||
+			editorState.category.trim() ||
+			editorState.author.trim() ||
+			editorState.image.trim() ||
+			editorState.sourceLink.trim() ||
+			editorState.lang.trim() ||
+			editorState.licenseName.trim() ||
+			editorState.licenseUrl.trim() ||
+			editorState.slug.trim() ||
+			editorState.tags.length > 0 ||
+			editorState.isPinned,
 	);
 }
 
 /** 本地持久备份 + 云端自动同步：内容变化后防抖写入 localStorage（400ms）与云端（1200ms，仅新建模式） */
 $effect(() => {
-	const draft = {
-		title,
-		author,
-		category,
-		description,
-		content,
-		slug,
-		published,
-		updated,
-		isDraft,
-		isPinned,
-		image,
-		lang,
-		licenseName,
-		licenseUrl,
-		sourceLink,
-		enableComment,
-		tags,
+	const draft: DraftFields = {
+		title: editorState.title,
+		author: editorState.author,
+		category: editorState.category,
+		description: editorState.description,
+		content: editorState.content,
+		slug: editorState.slug,
+		published: editorState.published,
+		updated: editorState.updated,
+		isDraft: editorState.isDraft,
+		isPinned: editorState.isPinned,
+		image: editorState.image,
+		lang: editorState.lang,
+		licenseName: editorState.licenseName,
+		licenseUrl: editorState.licenseUrl,
+		sourceLink: editorState.sourceLink,
+		enableComment: editorState.enableComment,
+		tags: editorState.tags,
 	};
 	if (mode !== "create") return;
 	if (!hasDraftContent()) return;
@@ -218,25 +474,26 @@ interface DraftBlob extends DraftFields {
 }
 
 function applyDraft(data: Partial<DraftBlob>) {
-	title = data.title ?? "";
-	author = data.author ?? "";
-	category = data.category ?? "";
-	description = data.description ?? "";
-	content = data.content ?? "";
-	slug = data.slug ?? "";
+	editorState.title = data.title ?? "";
+	editorState.author = data.author ?? "";
+	editorState.category = data.category ?? "";
+	editorState.description = data.description ?? "";
+	editorState.content = data.content ?? "";
+	editorState.slug = data.slug ?? "";
 	slugTouched = Boolean(data.slug);
-	published = data.published ?? new Date().toISOString().split("T")[0];
-	updated = data.updated ?? "";
-	isDraft = Boolean(data.isDraft);
-	isPinned = Boolean(data.isPinned);
-	image = data.image ?? "";
-	lang = data.lang ?? "";
-	licenseName = data.licenseName ?? "";
-	licenseUrl = data.licenseUrl ?? "";
-	sourceLink = data.sourceLink ?? "";
-	enableComment =
+	editorState.published =
+		data.published ?? new Date().toISOString().split("T")[0];
+	editorState.updated = data.updated ?? "";
+	editorState.isDraft = Boolean(data.isDraft);
+	editorState.isPinned = Boolean(data.isPinned);
+	editorState.image = data.image ?? "";
+	editorState.lang = data.lang ?? "";
+	editorState.licenseName = data.licenseName ?? "";
+	editorState.licenseUrl = data.licenseUrl ?? "";
+	editorState.sourceLink = data.sourceLink ?? "";
+	editorState.enableComment =
 		data.enableComment !== undefined ? Boolean(data.enableComment) : true;
-	tags = Array.isArray(data.tags) ? data.tags : [];
+	editorState.tags = Array.isArray(data.tags) ? data.tags : [];
 	dirty = true;
 }
 
@@ -289,12 +546,12 @@ async function loadContent() {
 			);
 			const data = await response.json();
 			if (data.success && data.content) {
-				content = data.content;
+				editorState.content = data.content;
 			} else {
-				content = "";
+				editorState.content = "";
 			}
 		} catch {
-			content = "";
+			editorState.content = "";
 		} finally {
 			isLoadingContent = false;
 		}
@@ -315,32 +572,13 @@ onDestroy(() => {
 	}
 });
 
-function addTag() {
-	const tag = tagInput.trim();
-	if (tag && !tags.includes(tag)) {
-		tags = [...tags, tag];
-		tagInput = "";
-	}
-}
-
-function removeTag(index: number) {
-	tags = tags.filter((_, i) => i !== index);
-}
-
-function handleTagKeydown(e: KeyboardEvent) {
-	if (e.key === "Enter" || e.key === ",") {
-		e.preventDefault();
-		addTag();
-	}
-}
-
 async function handleSave() {
-	if (!title.trim()) {
+	if (!editorState.title.trim()) {
 		onError(i18n(I18nKey.postTitleRequired));
 		return;
 	}
 
-	if (!slug.trim()) {
+	if (!editorState.slug.trim()) {
 		onError(i18n(I18nKey.postSlugRequired));
 		return;
 	}
@@ -352,25 +590,25 @@ async function handleSave() {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
-				slug,
-				title,
-				author,
-				category,
-				tags,
-				published,
-				updated,
-				description,
-				image,
-				lang,
-				licenseName,
-				licenseUrl,
-				sourceLink,
-				comment: enableComment,
-				password,
-				passwordHint,
-				draft: isDraft,
-				pinned: isPinned,
-				content,
+				slug: editorState.slug,
+				title: editorState.title,
+				author: editorState.author,
+				category: editorState.category,
+				tags: editorState.tags,
+				published: editorState.published,
+				updated: editorState.updated,
+				description: editorState.description,
+				image: editorState.image,
+				lang: editorState.lang,
+				licenseName: editorState.licenseName,
+				licenseUrl: editorState.licenseUrl,
+				sourceLink: editorState.sourceLink,
+				comment: editorState.enableComment,
+				password: editorState.password,
+				passwordHint: editorState.passwordHint,
+				draft: editorState.isDraft,
+				pinned: editorState.isPinned,
+				content: editorState.content,
 			}),
 		});
 
@@ -405,15 +643,14 @@ async function handleSave() {
 }
 
 // Markdown 渲染：调用服务端 API，使用与主站相同的渲染管线
-let renderedHtml = $state(
-	`<p class='empty-preview'>${i18n(I18nKey.postPreviewEmpty)}</p>`,
-);
 let renderTimer: ReturnType<typeof setTimeout> | null = null;
 let renderVersion = 0;
 
 async function fetchPreview(mdContent: string) {
 	if (!mdContent.trim()) {
-		renderedHtml = `<p class='empty-preview'>${i18n(I18nKey.postPreviewEmpty)}</p>`;
+		editorState.renderedHtml = `<p class='empty-preview'>${i18n(
+			I18nKey.postPreviewEmpty,
+		)}</p>`;
 		return;
 	}
 
@@ -428,26 +665,26 @@ async function fetchPreview(mdContent: string) {
 
 		// 防止旧请求覆盖新结果
 		if (currentVersion === renderVersion && response.ok && data.success) {
-			renderedHtml = data.html;
+			editorState.renderedHtml = data.html;
 		}
 	} catch {
 		if (currentVersion === renderVersion) {
-			renderedHtml = `<p class='empty-preview'>${i18n(I18nKey.postPreviewFailed)}</p>`;
+			editorState.renderedHtml = `<p class='empty-preview'>${i18n(
+				I18nKey.postPreviewFailed,
+			)}</p>`;
 		}
 	}
 }
 
 $effect(() => {
-	const mdContent = content;
+	const mdContent = editorState.content;
 	if (renderTimer) clearTimeout(renderTimer);
 	renderTimer = setTimeout(() => fetchPreview(mdContent), 300);
 });
 
-let previewEl: HTMLElement | undefined = $state();
-
 $effect(() => {
-	const el = previewEl;
-	const html = renderedHtml;
+	const el = editorState.previewEl;
+	const html = editorState.renderedHtml;
 	if (!el) return;
 	for (const oldScript of [...el.querySelectorAll("script[type='module']")]) {
 		const newScript = document.createElement("script");
@@ -457,296 +694,73 @@ $effect(() => {
 	}
 });
 
-// ── MD 语法快捷插入 ──
-let editorEl: HTMLTextAreaElement | undefined = $state();
-
-/** 在选区两侧包裹符号（选区为空时使用占位文本） */
-function wrapSelection(before: string, after: string, placeholder: string) {
-	const el = editorEl;
-	if (!el) return;
-	const start = el.selectionStart;
-	const end = el.selectionEnd;
-	const selected = content.slice(start, end) || placeholder;
-	content =
-		content.slice(0, start) + before + selected + after + content.slice(end);
-	requestAnimationFrame(() => {
-		el.focus();
-		const ns = start + before.length;
-		el.setSelectionRange(ns, ns + selected.length);
-	});
-}
-
-/** 在选区所在行(或每行)前加前缀；firstLineOnly 时仅作用于首行（如标题） */
-function prependLines(prefix: string, firstLineOnly = false) {
-	const el = editorEl;
-	if (!el) return;
-	const start = el.selectionStart;
-	const end = el.selectionEnd;
-	const lineStart = content.lastIndexOf("\n", start - 1) + 1;
-	let selEnd = end;
-	if (content[selEnd] !== "\n") {
-		const nl = content.indexOf("\n", selEnd);
-		selEnd = nl === -1 ? content.length : nl;
-	}
-	const block = content.slice(lineStart, selEnd);
-	const processed = block
-		.split("\n")
-		.map((line, i) => (firstLineOnly && i > 0 ? line : prefix + line))
-		.join("\n");
-	content =
-		content.slice(0, lineStart) + processed + "\n" + content.slice(selEnd);
-	requestAnimationFrame(() => {
-		el.focus();
-		el.setSelectionRange(lineStart, lineStart + processed.length);
-	});
-}
-
-/** 在光标处插入文本 */
-function insertAtCursor(text: string) {
-	const el = editorEl;
-	if (!el) return;
-	const start = el.selectionStart;
-	const end = el.selectionEnd;
-	content = content.slice(0, start) + text + content.slice(end);
-	requestAnimationFrame(() => {
-		el.focus();
-		const pos = start + text.length;
-		el.setSelectionRange(pos, pos);
-	});
-}
-
-const insertBold = () => wrapSelection("**", "**", "text");
-const insertItalic = () => wrapSelection("*", "*", "text");
-const insertStrikethrough = () => wrapSelection("~~", "~~", "text");
-const insertH2 = () => prependLines("## ", true);
-const insertH3 = () => prependLines("### ", true);
-const insertInlineCode = () => wrapSelection("`", "`", "code");
-const insertCodeBlock = () => wrapSelection("```\n", "\n```", "code");
-const insertLink = () => wrapSelection("[", "](url)", "text");
-const insertImage = () => wrapSelection("![", "](url)", "alt");
-const insertQuote = () => prependLines("> ");
-const insertUl = () => prependLines("- ");
-const insertOl = () => prependLines("1. ");
-const insertDivider = () => insertAtCursor("\n\n---\n\n");
-
-// ── 右侧目录 ──
-interface TocItem {
-	level: number;
-	text: string;
-	lineIndex: number;
-}
-
-const tocItems = $derived<TocItem[]>(
-	content.split("\n").reduce<TocItem[]>((acc, line, i) => {
-		const m = /^(#{1,6})\s+(.+)$/.exec(line);
-		if (m && m[2].trim())
-			acc.push({ level: m[1].length, text: m[2].trim(), lineIndex: i });
-		return acc;
-	}, []),
-);
-
-const tocMinDepth = $derived(
-	tocItems.length ? Math.min(...tocItems.map((i) => i.level)) : 6,
-);
-
-function tocDepthLevel(level: number): number {
-	return level === tocMinDepth ? 0 : level === tocMinDepth + 1 ? 1 : 2;
-}
-
-let visibleTocLines: number[] = $state([]);
-
-let indicatorTop = $state(0);
-let indicatorHeight = $state(0);
-let indicatorOpacity = $state(0);
-let tocListEl: HTMLElement | undefined = $state();
-
 $effect(() => {
-	const lines = visibleTocLines;
-	if (!tocListEl) return;
-	requestAnimationFrame(() => {
-		const list = tocListEl;
-		if (!list) return;
-		const items = Array.from(
-			list.querySelectorAll<HTMLElement>(".toc-item.visible"),
-		);
-		if (!items.length) {
-			indicatorHeight = 0;
-			indicatorOpacity = 0;
-			return;
-		}
-		const first = items[0];
-		const last = items[items.length - 1];
-		const listRect = list.getBoundingClientRect();
-		const firstRect = first.getBoundingClientRect();
-		const lastRect = last.getBoundingClientRect();
-		indicatorTop = firstRect.top - listRect.top;
-		indicatorHeight = lastRect.bottom - firstRect.top;
-		indicatorOpacity = 1;
-	});
-});
-
-function tocTop(item: TocItem): number {
-	const el = editorEl;
-	if (!el) return 0;
-	const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight) || 24;
-	return item.lineIndex * lineHeight;
-}
-
-function jumpToToc(item: TocItem) {
-	if (activeTab === "preview") {
-		const target = [
-			...(previewEl?.querySelectorAll("h1, h2, h3, h4, h5, h6") ?? []),
-		].find((heading) => {
-			const text = (heading.textContent ?? "").replace(/#+$/, "").trim();
-			return text === item.text.trim() || text.startsWith(item.text.trim());
-		});
-		if (target) {
-			target.scrollIntoView({ behavior: "smooth", block: "start" });
-			visibleTocLines = [item.lineIndex];
-			return;
-		}
-	}
-	if (activeTab !== "editor") activeTab = "editor";
-	requestAnimationFrame(() => {
-		const el = editorEl;
-		if (!el) return;
-		el.scrollTop = Math.max(0, tocTop(item) - 8);
-		visibleTocLines = [item.lineIndex];
-	});
-}
-
-function handleEditorScroll() {
-	const el = editorEl;
-	if (!el) return;
-	const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight) || 24;
-	const top = el.scrollTop;
-	const bottom = el.scrollTop + el.clientHeight;
-	const visible: number[] = [];
-	for (const item of tocItems) {
-		const itemTop = item.lineIndex * lineHeight;
-		const itemBottom = (item.lineIndex + 1) * lineHeight;
-		if (itemTop < bottom && itemBottom > top) visible.push(item.lineIndex);
-	}
-	if (visible.length) {
-		visibleTocLines = visible;
-		return;
-	}
-	if (!tocItems.length) return;
-	const mid = top + el.clientHeight / 2;
-	let best = tocItems[0].lineIndex;
-	let bestDist = Number.POSITIVE_INFINITY;
-	for (const item of tocItems) {
-		const d = Math.abs(item.lineIndex * lineHeight - mid);
-		if (d < bestDist) {
-			bestDist = d;
-			best = item.lineIndex;
-		}
-	}
-	visibleTocLines = [best];
-}
-
-function matchTocLine(heading: Element): number | null {
-	const text = (heading.textContent ?? "").replace(/#+$/, "").trim();
-	const item = tocItems.find(
-		(it) => text === it.text.trim() || text.startsWith(it.text.trim()),
-	);
-	return item ? item.lineIndex : null;
-}
-
-function handlePreviewScroll() {
-	const el = previewEl;
-	if (!el) return;
-	const headings = [...el.querySelectorAll("h1, h2, h3, h4, h5, h6")];
-	if (!headings.length) return;
-	const elRect = el.getBoundingClientRect();
-	const visible: number[] = [];
-	for (const h of headings) {
-		const rect = h.getBoundingClientRect();
-		const relTop = rect.top - elRect.top;
-		const relBottom = rect.bottom - elRect.top;
-		if (relTop < el.clientHeight && relBottom > 0) {
-			const line = matchTocLine(h);
-			if (line !== null) visible.push(line);
-		}
-	}
-	if (visible.length) {
-		visibleTocLines = visible;
-		return;
-	}
-	let best: number | null = null;
-	let bestDist = Number.POSITIVE_INFINITY;
-	for (const h of headings) {
-		const rect = h.getBoundingClientRect();
-		const dist = Math.abs(rect.top - elRect.top);
-		if (dist < bestDist) {
-			bestDist = dist;
-			best = matchTocLine(h);
-		}
-	}
-	visibleTocLines = best === null ? [] : [best];
-}
-
-$effect(() => {
-	if (tocItems.length && !visibleTocLines.length) {
-		visibleTocLines = [tocItems[0].lineIndex];
+	if (tocItems.length && !editorState.visibleTocLines.length) {
+		editorState.visibleTocLines = [tocItems[0].lineIndex];
 	}
 });
 
 $effect(() => {
-	const tab = activeTab;
+	const tab = editorState.activeTab;
 	if (tab === "preview") handlePreviewScroll();
 	else handleEditorScroll();
 });
 </script>
 
-<div class="editor-container">
-	<div class="editor-header">
-		<h2>{mode === "edit" ? i18n(I18nKey.adminEditPost) : i18n(I18nKey.adminNewPost)}</h2>
-		{#if mode === "create" && cloudSync !== "idle"}
-			<span
-				class="cloud-badge"
-				class:error={cloudSync === "error"}
-				class:syncing={cloudSync === "syncing"}
-			>
-				{#if cloudSync === "syncing"}
-					<span class="cloud-spinner"></span>
-					{i18n(I18nKey.cloudDraftSyncing)}
-				{:else if cloudSync === "saved"}
-					<Icon icon="material-symbols:cloud-done" class="text-sm" />
-					{i18n(I18nKey.cloudDraftSaved)}
-					{#if cloudSavedAt}
-						{new Date(cloudSavedAt).toLocaleTimeString("zh-CN", {
-							hour: "2-digit",
-							minute: "2-digit",
-						})}
+<div class="editor-shell">
+	<header class="editor-header">
+		<div class="editor-heading">
+			<h2>{mode === "edit" ? i18n(I18nKey.adminEditPost) : i18n(I18nKey.adminNewPost)}</h2>
+			{#if mode === "create" && cloudSync !== "idle"}
+				<span
+					class="cloud-badge"
+					class:error={cloudSync === "error"}
+					class:syncing={cloudSync === "syncing"}
+				>
+					{#if cloudSync === "syncing"}
+						<span class="cloud-spinner"></span>
+						{i18n(I18nKey.cloudDraftSyncing)}
+					{:else if cloudSync === "saved"}
+						<Icon icon="material-symbols:cloud-done" class="text-sm" />
+						{i18n(I18nKey.cloudDraftSaved)}
+						{#if cloudSavedAt}
+							{new Date(cloudSavedAt).toLocaleTimeString("zh-CN", {
+								hour: "2-digit",
+								minute: "2-digit",
+							})}
+						{/if}
+					{:else}
+						<Icon icon="material-symbols:cloud-off" class="text-sm" />
+						{i18n(I18nKey.cloudDraftFailed)}
+						<button
+							class="cloud-retry"
+							onclick={() =>
+								saveCloudDraft({
+									title: editorState.title,
+									author: editorState.author,
+									category: editorState.category,
+									description: editorState.description,
+									content: editorState.content,
+									slug: editorState.slug,
+									published: editorState.published,
+									updated: editorState.updated,
+									isDraft: editorState.isDraft,
+									isPinned: editorState.isPinned,
+									image: editorState.image,
+									lang: editorState.lang,
+									licenseName: editorState.licenseName,
+									licenseUrl: editorState.licenseUrl,
+									sourceLink: editorState.sourceLink,
+									enableComment: editorState.enableComment,
+									tags: editorState.tags,
+								})}
+						>
+							{i18n(I18nKey.cloudDraftRetry)}
+						</button>
 					{/if}
-				{:else}
-					<Icon icon="material-symbols:cloud-off" class="text-sm" />
-					{i18n(I18nKey.cloudDraftFailed)}
-					<button class="cloud-retry" onclick={() => saveCloudDraft({
-						title,
-						author,
-						category,
-						description,
-						content,
-						slug,
-						published,
-						updated,
-						isDraft,
-						isPinned,
-						image,
-						lang,
-						licenseName,
-						licenseUrl,
-						sourceLink,
-						enableComment,
-						tags,
-					})}>
-						{i18n(I18nKey.cloudDraftRetry)}
-					</button>
-				{/if}
-			</span>
-		{/if}
+				</span>
+			{/if}
+		</div>
 		<div class="header-actions">
 			<button class="btn btn-cancel" onclick={onCancel}>
 				<Icon icon="material-symbols:arrow-back" class="text-sm" />
@@ -762,10 +776,10 @@ $effect(() => {
 				{/if}
 			</button>
 		</div>
-	</div>
+	</header>
 
 	{#if isLoadingContent}
-		<div class="loading-state">
+		<div class="loading-editorState">
 			<div class="loader"></div>
 			<p>{i18n(I18nKey.postLoadingContent)}</p>
 		</div>
@@ -774,356 +788,41 @@ $effect(() => {
 			class="editor-layout"
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}; --editor-min-content-height: ${editorConfig.minContentHeight}; --editor-default-content-height: ${editorConfig.defaultContentHeight}; --editor-max-content-height: ${editorConfig.maxContentHeight}`}
 		>
-			<!-- 左侧：Front Matter 元数据 -->
-			<aside class="fm-panel">
-			<div class="form-section">
-					<h3>{i18n(I18nKey.postBasicInfo)}</h3>
-					<div class="form-grid">
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postTitle)} *
-								<input type="text" bind:value={title} placeholder={i18n(I18nKey.postTitlePlaceholder)} class="form-input" />
-							</label>
-						</div>
-
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postSlug)} *
-								<input
-									type="text"
-									bind:value={slug}
-									oninput={handleSlugInput}
-									placeholder={i18n(I18nKey.postSlugPlaceholder)}
-									class="form-input"
-								/>
-							</label>
-						</div>
-
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postAuthor)}
-								<input type="text" bind:value={author} placeholder={i18n(I18nKey.postAuthorPlaceholder)} class="form-input" />
-							</label>
-						</div>
-
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postCategory)}
-								<input type="text" bind:value={category} placeholder={i18n(I18nKey.postCategoryPlaceholder)} class="form-input" />
-							</label>
-						</div>
-
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postPubDate)}
-								<input type="date" bind:value={published} class="form-input" />
-							</label>
-						</div>
-
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postUpdateDate)}
-								<input type="date" bind:value={updated} class="form-input" />
-							</label>
-						</div>
-
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postLang)}
-								<input type="text" bind:value={lang} placeholder={i18n(I18nKey.postLangPlaceholder)} class="form-input" />
-							</label>
-						</div>
-
-						<div class="form-group full-width switch-row">
-							<label class="md3-switch">
-								<input type="checkbox" bind:checked={isDraft} />
-								<span class="switch-track">
-									<span class="switch-thumb"></span>
-								</span>
-								<span class="switch-label">{i18n(I18nKey.postDraft)}</span>
-							</label>
-
-							<label class="md3-switch">
-								<input type="checkbox" bind:checked={isPinned} />
-								<span class="switch-track">
-									<span class="switch-thumb"></span>
-								</span>
-								<span class="switch-label">{i18n(I18nKey.postPinned)}</span>
-							</label>
-
-							<label class="md3-switch">
-								<input type="checkbox" bind:checked={enableComment} />
-								<span class="switch-track">
-									<span class="switch-thumb"></span>
-								</span>
-								<span class="switch-label">{i18n(I18nKey.postComments)}</span>
-							</label>
-						</div>
-
-						<div class="form-group full-width">
-							<label>
-								{i18n(I18nKey.postCover)}
-								<input type="text" bind:value={image} placeholder={i18n(I18nKey.postCoverPlaceholder)} class="form-input" />
-							</label>
-						</div>
-
-						<div class="form-group full-width">
-							<label>
-								{i18n(I18nKey.postSummary)}
-								<textarea
-									bind:value={description}
-									placeholder={i18n(I18nKey.postSummaryPlaceholder)}
-									class="form-textarea"
-									rows={2}
-								></textarea>
-							</label>
-						</div>
-
-						<div class="form-group full-width">
-							<label>
-								{i18n(I18nKey.postTags)}
-								<div class="tags-input-wrapper">
-									<div class="tags-list">
-										{#each tags as tag, i}
-											<span class="tag-item">
-												{tag}
-												<button
-													class="tag-remove"
-													onclick={() => removeTag(i)}
-													aria-label={i18n(I18nKey.postTagRemove)}
-												>
-													<Icon icon="material-symbols:close" class="text-xs" />
-												</button>
-											</span>
-										{/each}
-									</div>
-									<input
-										type="text"
-										bind:value={tagInput}
-										placeholder={i18n(I18nKey.postTagPlaceholder)}
-										class="form-input tag-input"
-										onkeydown={handleTagKeydown}
-									/>
-								</div>
-							</label>
-						</div>
-					</div>
-				</div>
-
-				<!-- 密码保护 -->
-				<div class="form-section">
-					<h3>{i18n(I18nKey.postPasswordSection)}</h3>
-					<div class="form-grid">
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postPassword)}
-								<input
-									type="text"
-									bind:value={password}
-									placeholder={i18n(I18nKey.postPasswordPlaceholder)}
-									class="form-input"
-								/>
-							</label>
-						</div>
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postPasswordHint)}
-								<input
-									type="text"
-									bind:value={passwordHint}
-									placeholder={i18n(I18nKey.postPasswordHintPlaceholder)}
-									class="form-input"
-								/>
-							</label>
-						</div>
-					</div>
-				</div>
-
-				<!-- 许可证与来源 -->
-				<div class="form-section">
-					<h3>{i18n(I18nKey.postLicenseSection)}</h3>
-					<div class="form-grid">
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postLicenseName)}
-								<input type="text" bind:value={licenseName} placeholder={i18n(I18nKey.postLicenseNamePlaceholder)} class="form-input" />
-							</label>
-						</div>
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postLicenseUrl)}
-								<input type="text" bind:value={licenseUrl} placeholder={i18n(I18nKey.postLicenseUrlPlaceholder)} class="form-input" />
-							</label>
-						</div>
-						<div class="form-group full-width">
-							<label>
-								{i18n(I18nKey.postSourceLink)}
-								<input type="text" bind:value={sourceLink} placeholder={i18n(I18nKey.postSourceLinkPlaceholder)} class="form-input" />
-							</label>
-						</div>
-					</div>
-				</div>
-
-			</aside>
-
-			<!-- 中间：书写区 -->
-			<section class="write-panel">
-				<div class="tabs">
-					<button
-						class={`tab ${activeTab === "editor" ? "active" : ""}`}
-						onclick={() => {
-							activeTab = "editor";
-						}}
-					>
-						<Icon icon="material-symbols:ink-pen-outline-rounded" class="text-sm" />
-						{i18n(I18nKey.postTabEdit)}
-					</button>
-					<button
-						class={`tab ${activeTab === "preview" ? "active" : ""}`}
-						onclick={() => {
-							activeTab = "preview";
-						}}
-					>
-						<Icon icon="material-symbols:visibility-outline-rounded" class="text-sm" />
-						{i18n(I18nKey.postTabPreview)}
-					</button>
-				</div>
-
-				<!-- MD 语法快捷键 -->
-				<div class="md-toolbar" role="toolbar" aria-label={i18n(I18nKey.postMdToolbar)}>
-					<button type="button" title={i18n(I18nKey.postMdBold)} aria-label={i18n(I18nKey.postMdBold)} onclick={insertBold}>
-						<Icon icon="material-symbols:format-bold" class="text-sm" />
-					</button>
-					<button type="button" title={i18n(I18nKey.postMdItalic)} aria-label={i18n(I18nKey.postMdItalic)} onclick={insertItalic}>
-						<Icon icon="material-symbols:format-italic" class="text-sm" />
-					</button>
-					<button type="button" title={i18n(I18nKey.postMdStrikethrough)} aria-label={i18n(I18nKey.postMdStrikethrough)} onclick={insertStrikethrough}>
-						<Icon icon="material-symbols:format-strikethrough" class="text-sm" />
-					</button>
-					<span class="toolbar-sep"></span>
-					<button type="button" title={i18n(I18nKey.postMdH2)} aria-label={i18n(I18nKey.postMdH2)} onclick={insertH2}>
-						<span class="toolbar-glyph">H2</span>
-					</button>
-					<button type="button" title={i18n(I18nKey.postMdH3)} aria-label={i18n(I18nKey.postMdH3)} onclick={insertH3}>
-						<span class="toolbar-glyph">H3</span>
-					</button>
-					<span class="toolbar-sep"></span>
-					<button type="button" title={i18n(I18nKey.postMdInlineCode)} aria-label={i18n(I18nKey.postMdInlineCode)} onclick={insertInlineCode}>
-						<Icon icon="material-symbols:code" class="text-sm" />
-					</button>
-					<button type="button" title={i18n(I18nKey.postMdCodeBlock)} aria-label={i18n(I18nKey.postMdCodeBlock)} onclick={insertCodeBlock}>
-						<Icon icon="material-symbols:data-object" class="text-sm" />
-					</button>
-					<span class="toolbar-sep"></span>
-					<button type="button" title={i18n(I18nKey.postMdLink)} aria-label={i18n(I18nKey.postMdLink)} onclick={insertLink}>
-						<Icon icon="material-symbols:link" class="text-sm" />
-					</button>
-					<button type="button" title={i18n(I18nKey.postMdImage)} aria-label={i18n(I18nKey.postMdImage)} onclick={insertImage}>
-						<Icon icon="material-symbols:image" class="text-sm" />
-					</button>
-					<button type="button" title={i18n(I18nKey.postMdQuote)} aria-label={i18n(I18nKey.postMdQuote)} onclick={insertQuote}>
-						<Icon icon="material-symbols:format-quote" class="text-sm" />
-					</button>
-					<span class="toolbar-sep"></span>
-					<button type="button" title={i18n(I18nKey.postMdUl)} aria-label={i18n(I18nKey.postMdUl)} onclick={insertUl}>
-						<Icon icon="material-symbols:format-list-bulleted" class="text-sm" />
-					</button>
-					<button type="button" title={i18n(I18nKey.postMdOl)} aria-label={i18n(I18nKey.postMdOl)} onclick={insertOl}>
-						<Icon icon="material-symbols:format-list-numbered" class="text-sm" />
-					</button>
-					<span class="toolbar-sep"></span>
-					<button type="button" title={i18n(I18nKey.postMdDivider)} aria-label={i18n(I18nKey.postMdDivider)} onclick={insertDivider}>
-						<Icon icon="material-symbols:horizontal-rule" class="text-sm" />
-					</button>
-				</div>
-
-				{#if activeTab === "editor"}
-					<textarea
-						bind:this={editorEl}
-						bind:value={content}
-						onscroll={handleEditorScroll}
-						placeholder={i18n(I18nKey.postContentPlaceholder)}
-						class="content-editor"
-					></textarea>
-				{:else}
-					<div
-						bind:this={previewEl}
-						onscroll={handlePreviewScroll}
-						class="prose dark:prose-invert prose-base max-w-none! content-preview custom-md"
-					>
-						{@html renderedHtml}
-					</div>
-				{/if}
-			</section>
-
-			<!-- 右侧：目录 -->
-			<aside class="toc-panel">
-				<h3>{i18n(I18nKey.postToc)}</h3>
-				{#if tocItems.length > 0}
-					<nav class="toc-list" bind:this={tocListEl}>
-						{#each tocItems as item, idx}
-							<a
-								href="#"
-								class="toc-item {`toc-level-${tocDepthLevel(item.level)}`}"
-								class:visible={visibleTocLines.includes(item.lineIndex)}
-								aria-label={item.text}
-								title={item.text}
-								onclick={(event) => {
-									event.preventDefault();
-									jumpToToc(item);
-								}}
-							>
-								<div
-									class="toc-badge {item.level === tocMinDepth
-										? "toc-badge-index"
-										: ""}"
-								>
-									{#if item.level === tocMinDepth}
-										{idx + 1}
-									{:else if item.level <= tocMinDepth + 1}
-										<span class="toc-badge-dot"></span>
-									{:else}
-										<span class="toc-badge-dot toc-badge-dot-sm"></span>
-									{/if}
-								</div>
-								<div
-									class="toc-label {item.level <= tocMinDepth + 1
-										? "toc-label-primary"
-										: "toc-label-secondary"}"
-								>
-									{item.text}
-								</div>
-							</a>
-						{/each}
-						<div
-							class="toc-active-indicator"
-							style="top: {indicatorTop}px; height: {indicatorHeight}px; opacity: {indicatorOpacity};"
-							aria-hidden="true"
-						></div>
-					</nav>
-				{:else}
-					<p class="toc-empty">{i18n(I18nKey.postTocEmpty)}</p>
-				{/if}
-			</aside>
+			<PostEditorFmPanel />
+			<PostEditorWritePanel />
+			<PostEditorTocPanel />
 		</div>
 	{/if}
 </div>
 
 <style>
-	.editor-container {
-		background: var(--card-bg);
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-large);
-		overflow: hidden;
-		box-shadow: var(--shadow-card);
+	/* 外壳仅承担布局，不提供任何卡片外观：三栏各自是独立卡片 */
+	.editor-shell {
+		display: grid;
+		grid-template-areas:
+			"header"
+			"layout";
+		grid-template-rows: auto 1fr;
+		gap: 1.5rem;
 	}
 
 	.editor-header {
+		grid-area: header;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 1rem;
 		padding: 1.25rem 1.5rem;
-		border-bottom: 1px solid var(--line-divider);
+		background: var(--card-bg);
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-large);
+		box-shadow: var(--shadow-card);
+	}
+
+	.editor-heading {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
 	}
 
 	.editor-header h2 {
@@ -1244,7 +943,7 @@ $effect(() => {
 		}
 	}
 
-	.loading-state {
+	.loading-editorState {
 		text-align: center;
 		padding: 3rem;
 	}
@@ -1259,433 +958,25 @@ $effect(() => {
 		animation: spin 0.8s linear infinite;
 	}
 
-	.loading-state p {
+	.loading-editorState p {
 		color: var(--content-meta);
 	}
 
+	/* 仅负责三栏排布：无背景、无边框、无阴影，栏间透出页面底色 */
 	.editor-layout {
+		grid-area: layout;
 		display: grid;
 		grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) 240px;
 		gap: 1.5rem;
-		padding: 1.75rem;
 		align-items: start;
 		max-width: var(--editor-max-page-width, 96rem);
 		margin-inline: auto;
 		width: 100%;
 	}
 
-	/* ── 左侧：Front Matter 分组卡片 ── */
-	.fm-panel {
-		position: sticky;
-		top: 1rem;
-		max-height: calc(100vh - 7.5rem);
-		overflow-y: auto;
-		/* 外壳仅承担粘性定位与滚动，各分组卡片自带底色与边框 */
-		padding: 0.25rem;
-		background: none;
-		border: none;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.fm-panel .form-section {
-		gap: 1rem;
-		padding: 1.25rem;
-		background: var(--card-bg);
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-large);
-	}
-
-	.fm-panel .form-section h3 {
-		font-size: 0.9375rem;
-		padding-bottom: 0;
-		border-bottom: none;
-	}
-
-	.fm-panel .form-grid {
-		grid-template-columns: 1fr;
-		gap: 1rem;
-	}
-
-	.fm-panel .switch-row {
-		padding: 0;
-		gap: 1rem;
-	}
-
-	.fm-panel .form-input,
-	.fm-panel .form-textarea {
-		padding: 0.625rem 0.875rem;
-		font-size: 0.8125rem;
-		background: var(--btn-regular-bg);
-	}
-
-	/* ── 中间：书写区（tabs / 工具栏 / 编辑框各自独立） ── */
-	.write-panel {
-		display: flex;
-		flex-direction: column;
-		gap: 0.875rem;
-		min-width: 0;
-	}
-
-	.md-toolbar {
-		display: flex;
-		align-items: center;
-		flex-wrap: wrap;
-		gap: 0.25rem;
-		padding: 0.5rem;
-		background: var(--btn-regular-bg);
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-md);
-	}
-
-	.md-toolbar button {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2rem;
-		height: 2rem;
-		border: none;
-		border-radius: var(--radius-sm);
-		background: none;
-		color: var(--content-meta);
-		cursor: pointer;
-		font-family: inherit;
-		transition: background 0.15s, color 0.15s;
-	}
-
-	.md-toolbar button:hover {
-		background: color-mix(in srgb, var(--primary) 12%, transparent);
-		color: var(--primary);
-	}
-
-	.toolbar-glyph {
-		font-size: 0.6875rem;
-		font-weight: 700;
-	}
-
-	.toolbar-sep {
-		width: 1px;
-		height: 1.25rem;
-		background: var(--line-divider);
-		margin: 0 0.375rem;
-	}
-
-	.write-panel .content-editor,
-	.write-panel > .content-preview {
-		min-height: var(--editor-min-content-height, 26rem);
-		height: var(--editor-default-content-height, calc(100vh - 18rem));
-		max-height: var(--editor-max-content-height, calc(100vh - 10rem));
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-large);
-	}
-
-	/* ── 右侧：目录 ── */
-	.toc-panel {
-		position: sticky;
-		top: 1rem;
-		max-height: calc(100vh - 7.5rem);
-		overflow-y: auto;
-		padding: 1.5rem 1.25rem;
-		background: var(--card-bg);
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-large);
-	}
-
-	.toc-panel h3 {
-		font-size: 0.9375rem;
-		font-weight: 600;
-		color: var(--deep-text);
-		padding-bottom: 0.5rem;
-		margin-bottom: 0.75rem;
-		border-bottom: 1px solid var(--line-divider);
-	}
-
-	.toc-list {
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		gap: 0.28rem;
-	}
-
-	.toc-panel .toc-list .toc-item {
-		position: relative;
-		z-index: 1;
-	}
-
-.toc-panel .toc-list .toc-active-indicator {
-		z-index: 0;
-		background: color-mix(in oklab, var(--primary) 12%, var(--btn-regular-bg));
-	}
-
-	.toc-panel .toc-list .toc-badge-index {
-		background: color-mix(in oklab, var(--primary) 16%, var(--btn-regular-bg));
-		color: color-mix(in oklab, var(--primary) 75%, var(--deep-text));
-	}
-
-	.toc-empty {
-		font-size: 0.8125rem;
-		line-height: 1.6;
-		color: var(--content-meta);
-	}
-
-	.form-section {
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-	}
-
-	.form-section h3 {
-		font-size: 1rem;
-		font-weight: 600;
-		color: var(--deep-text);
-		padding-bottom: 0.75rem;
-		border-bottom: 1px solid var(--line-divider);
-	}
-
-	.form-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-		gap: 1rem;
-	}
-
-	.form-group {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.form-group > label {
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--deep-text);
-		display: flex;
-		flex-direction: column;
-		gap: 0.375rem;
-	}
-
-	.form-input,
-	.form-textarea,
-	.content-editor {
-		padding: 0.625rem 0.875rem;
-		border: 1px solid var(--input-border);
-		border-radius: var(--radius-md);
-		font-size: 0.875rem;
-		font-family: inherit;
-		transition: border-color 0.15s;
-		background: var(--card-bg);
-		color: var(--deep-text);
-	}
-
-	.form-input:focus,
-	.form-textarea:focus,
-	.content-editor:focus {
-		outline: none;
-		border-color: var(--primary);
-	}
-
-	.form-textarea {
-		resize: vertical;
-		min-height: 80px;
-	}
-
-	.checkbox-group {
-		justify-content: flex-end;
-	}
-
-	.full-width {
-		grid-column: 1 / -1;
-	}
-
-	/* ── MD3 Switch 行 ── */
-	.switch-row {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		gap: 1.5rem;
-		padding: 0.25rem 0;
-	}
-
-	/* ── MD3 Switch ── */
-	.md3-switch {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		cursor: pointer;
-		font-size: 0.8125rem;
-		color: var(--deep-text);
-		position: relative;
-		user-select: none;
-	}
-
-	.md3-switch input {
-		position: absolute;
-		opacity: 0;
-		width: 48px;
-		height: 48px;
-		margin: 0;
-		cursor: pointer;
-		z-index: 2;
-	}
-
-	.switch-track {
-		width: 32px;
-		height: 18px;
-		border-radius: 10px;
-		border: 2px solid var(--content-meta);
-		background: transparent;
-		position: relative;
-		transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
-		flex-shrink: 0;
-	}
-
-	.switch-thumb {
-		position: absolute;
-		top: 50%;
-		left: 4px;
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		background: var(--content-meta);
-		transform: translateY(-50%);
-		transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
-	}
-
-	.md3-switch:hover .switch-track {
-		border-color: var(--primary);
-	}
-
-	.md3-switch input:checked ~ .switch-track {
-		background: var(--primary);
-		border-color: var(--primary);
-	}
-
-	.md3-switch input:checked ~ .switch-track .switch-thumb {
-		left: 18px;
-		width: 12px;
-		height: 12px;
-		background: white;
-	}
-
-	.switch-label {
-		line-height: 1;
-	}
-
-	.tags-input-wrapper {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.tags-list {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.375rem;
-		min-height: 32px;
-	}
-
-	.tag-item {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		padding: 0.25rem 0.625rem;
-		background: color-mix(in srgb, var(--primary) 12%, transparent);
-		border-radius: var(--radius-full);
-		font-size: 0.8rem;
-		color: var(--primary);
-	}
-
-	.tag-remove {
-		border: none;
-		background: none;
-		color: var(--content-meta);
-		cursor: pointer;
-		padding: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.tag-remove:hover {
-		color: #ef4444;
-	}
-
-	.tag-input {
-		flex: 1;
-	}
-
-	.tabs {
-		display: flex;
-		gap: 0.25rem;
-		border-bottom: 1px solid var(--line-divider);
-	}
-
-	.tab {
-		padding: 0.625rem 1rem;
-		border: none;
-		background: none;
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--content-meta);
-		cursor: pointer;
-		border-bottom: 2px solid transparent;
-		margin-bottom: -1px;
-		transition: all 0.15s;
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-	}
-
-	.tab.active {
-		color: var(--primary);
-		border-bottom-color: var(--primary);
-	}
-
-	.content-editor {
-		min-height: 400px;
-		font-family: "Monaco", "Consolas", monospace;
-		font-size: 0.875rem;
-		line-height: 1.6;
-		resize: vertical;
-	}
-
-	.content-preview {
-		min-height: 400px;
-		padding: 1.25rem;
-		overflow-y: auto;
-	}
-
-	/* 代码块排版：对齐前台 expressive-code（one-light / one-dark）观感，
-	   并阻断 markdown.css 的 .custom-md code 内联码背景渗入 pre code */
-	:global(.content-preview pre) {
-		border-radius: var(--radius-md);
-		overflow-x: auto;
-		background: oklch(0.985 0.002 275);
-		color: #383a42;
-	}
-	:global(.content-preview pre code) {
-		background: transparent;
-		color: inherit;
-		padding: 0;
-	}
-	:global(.dark .content-preview pre) {
-		background: oklch(0.205 0.015 275);
-		color: #abb2bf;
-	}
-
-	.content-preview :global(.empty-preview) {
-		color: var(--content-meta);
-		text-align: center;
-		padding: 2rem;
-	}
-
 	@media (max-width: 1400px) {
 		.editor-layout {
 			grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
-		}
-
-		.toc-panel {
-			display: none;
 		}
 	}
 
@@ -1693,35 +984,16 @@ $effect(() => {
 		.editor-layout {
 			grid-template-columns: 1fr;
 		}
-
-		.fm-panel,
-		.toc-panel {
-			position: static;
-			max-height: none;
-		}
-
-		.toc-panel {
-			display: block;
-		}
-
-		.write-panel .content-editor,
-		.write-panel > .content-preview {
-			height: 60vh;
-		}
 	}
 
 	@media (max-width: 768px) {
 		.editor-header {
 			flex-direction: column;
-			gap: 1rem;
+			align-items: stretch;
 		}
 
 		.header-actions {
 			width: 100%;
-		}
-
-		.form-grid {
-			grid-template-columns: 1fr;
 		}
 	}
 </style>
