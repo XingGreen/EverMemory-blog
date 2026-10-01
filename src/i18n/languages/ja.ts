@@ -645,6 +645,9 @@ export const ja: Translation = {
 	[Key.configLicenseDesc]: "記事ライセンスの名称、リンク、表示スイッチ",
 	[Key.configCoverImage]: "カバー画像",
 	[Key.configCoverImageDesc]: "記事カバー画像（固定/ランダム）設定",
+	[Key.configEditor]: "記事エディター",
+	[Key.configEditorDesc]:
+		"記事エディターページのサイズ制限（ページ幅、本文エリアの高さ範囲）",
 	[Key.configEffects]: "エフェクト",
 	[Key.configEffectsDesc]: "ページエフェクト（桜など）のスイッチとパラメータ",
 	[Key.configPlantuml]: "PlantUML",

@@ -134,6 +134,12 @@ const ZH_LABELS: Record<string, string> = {
 	children: "子菜单",
 	pageKey: "页面标识",
 	method: "搜索方式",
+
+	// —— 文章编辑器（EditorConfig）——
+	maxPageWidth: "页面最大宽度",
+	minContentHeight: "编辑区最小高度",
+	defaultContentHeight: "编辑区默认高度",
+	maxContentHeight: "编辑区最大高度",
 };
 
 /**

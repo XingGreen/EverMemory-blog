@@ -1,6 +1,7 @@
 <script lang="ts">
 import { onDestroy, onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
+import { editorConfig } from "@/config/editorConfig";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 
@@ -593,12 +594,12 @@ function tocTop(item: TocItem): number {
 
 function jumpToToc(item: TocItem) {
 	if (activeTab === "preview") {
-		const target = [...(previewEl?.querySelectorAll("h1, h2, h3, h4, h5, h6") ?? [])].find(
-			(heading) => {
-				const text = (heading.textContent ?? "").replace(/#+$/, "").trim();
-				return text === item.text.trim() || text.startsWith(item.text.trim());
-			},
-		);
+		const target = [
+			...(previewEl?.querySelectorAll("h1, h2, h3, h4, h5, h6") ?? []),
+		].find((heading) => {
+			const text = (heading.textContent ?? "").replace(/#+$/, "").trim();
+			return text === item.text.trim() || text.startsWith(item.text.trim());
+		});
 		if (target) {
 			target.scrollIntoView({ behavior: "smooth", block: "start" });
 			visibleTocLines = [item.lineIndex];
@@ -769,7 +770,10 @@ $effect(() => {
 			<p>{i18n(I18nKey.postLoadingContent)}</p>
 		</div>
 	{:else}
-		<div class="editor-layout">
+		<div
+			class="editor-layout"
+			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}; --editor-min-content-height: ${editorConfig.minContentHeight}; --editor-default-content-height: ${editorConfig.defaultContentHeight}; --editor-max-content-height: ${editorConfig.maxContentHeight}`}
+		>
 			<!-- 左侧：Front Matter 元数据 -->
 			<aside class="fm-panel">
 			<div class="form-section">
@@ -1261,10 +1265,13 @@ $effect(() => {
 
 	.editor-layout {
 		display: grid;
-		grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) 240px;
-		gap: 1.25rem;
-		padding: 1.5rem;
+		grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) 240px;
+		gap: 1.5rem;
+		padding: 1.75rem;
 		align-items: start;
+		max-width: var(--editor-max-page-width, 96rem);
+		margin-inline: auto;
+		width: 100%;
 	}
 
 	/* ── 左侧：Front Matter 面板 ── */
@@ -1273,27 +1280,27 @@ $effect(() => {
 		top: 1rem;
 		max-height: calc(100vh - 7.5rem);
 		overflow-y: auto;
-		padding: 1.25rem;
-		background: var(--btn-regular-bg);
+		padding: 1.5rem;
+		background: var(--card-bg);
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-large);
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
+		gap: 1.5rem;
 	}
 
 	.fm-panel .form-section {
-		gap: 0.75rem;
+		gap: 1rem;
 	}
 
 	.fm-panel .form-section h3 {
 		font-size: 0.9375rem;
-		padding-bottom: 0.5rem;
+		padding-bottom: 0.75rem;
 	}
 
 	.fm-panel .form-grid {
 		grid-template-columns: 1fr;
-		gap: 0.75rem;
+		gap: 1rem;
 	}
 
 	.fm-panel .switch-row {
@@ -1303,24 +1310,28 @@ $effect(() => {
 
 	.fm-panel .form-input,
 	.fm-panel .form-textarea {
-		padding: 0.5rem 0.75rem;
+		padding: 0.625rem 0.875rem;
 		font-size: 0.8125rem;
+		background: var(--btn-regular-bg);
 	}
 
 	/* ── 中间：书写区 ── */
 	.write-panel {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 0.875rem;
 		min-width: 0;
+		padding: 1rem;
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-large);
 	}
 
 	.md-toolbar {
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
-		gap: 0.125rem;
-		padding: 0.375rem;
+		gap: 0.25rem;
+		padding: 0.5rem;
 		background: var(--btn-regular-bg);
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-md);
@@ -1360,8 +1371,9 @@ $effect(() => {
 
 	.write-panel .content-editor,
 	.write-panel > .content-preview {
-		min-height: 0;
-		height: calc(100vh - 16rem);
+		min-height: var(--editor-min-content-height, 26rem);
+		height: var(--editor-default-content-height, calc(100vh - 18rem));
+		max-height: var(--editor-max-content-height, calc(100vh - 10rem));
 	}
 
 	/* ── 右侧：目录 ── */
@@ -1370,8 +1382,8 @@ $effect(() => {
 		top: 1rem;
 		max-height: calc(100vh - 7.5rem);
 		overflow-y: auto;
-		padding: 1.25rem 1rem;
-		background: var(--btn-regular-bg);
+		padding: 1.5rem 1.25rem;
+		background: var(--card-bg);
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-large);
 	}

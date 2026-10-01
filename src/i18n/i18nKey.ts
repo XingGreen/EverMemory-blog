@@ -629,6 +629,8 @@ enum I18nKey {
 	configSponsorDesc = "configSponsorDesc",
 	configLicenseDesc = "configLicenseDesc",
 	configCoverImageDesc = "configCoverImageDesc",
+	configEditor = "configEditor",
+	configEditorDesc = "configEditorDesc",
 	configEffectsDesc = "configEffectsDesc",
 	configPlantumlDesc = "configPlantumlDesc",
 	configCodeThemeDesc = "configCodeThemeDesc",
