@@ -656,6 +656,9 @@ export const ru: Translation = {
 	[Key.configCoverImage]: "Обложка",
 	[Key.configCoverImageDesc]:
 		"Настройки обложек статей (фиксированная или случайная)",
+	[Key.configEditor]: "Редактор статей",
+	[Key.configEditorDesc]:
+		"Ограничения размера страницы редактора статей (ширина страницы, диапазон высоты области содержимого)",
 	[Key.configEffects]: "Эффекты",
 	[Key.configEffectsDesc]:
 		"Переключатели и параметры эффектов страницы (сакура и др.)",

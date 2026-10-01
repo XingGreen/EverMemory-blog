@@ -628,6 +628,9 @@ export const zh_TW: Translation = {
 	[Key.configLicenseDesc]: "文章授權名稱、連結與顯示開關",
 	[Key.configCoverImage]: "封面圖",
 	[Key.configCoverImageDesc]: "文章封面圖（固定/隨機）設定",
+	[Key.configEditor]: "文章編輯器",
+	[Key.configEditorDesc]:
+		"文章編輯器頁面的尺寸限制（頁面寬度、編輯區高度範圍）",
 	[Key.configEffects]: "特效",
 	[Key.configEffectsDesc]: "頁面特效（櫻花等）開關與參數",
 	[Key.configPlantuml]: "PlantUML",

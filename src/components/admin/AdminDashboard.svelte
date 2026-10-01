@@ -1,6 +1,7 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
+import { editorConfig } from "@/config/editorConfig";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import {
@@ -1247,7 +1248,11 @@ function formatDate(dateStr: string | null): string {
 				</div>
 			</div>
 
-			<div class="admin-content">
+			<div
+			class="admin-content"
+			class:content-wide={activePage === "posts" && viewMode !== "list"}
+			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
+		>
 				{#if activePage === "dashboard"}
 					{@render dashboardHome()}
 				{:else if activePage === "posts"}
@@ -1928,6 +1933,11 @@ function formatDate(dateStr: string | null): string {
 		width: 100%;
 		max-width: 76rem;
 		margin-inline: auto;
+	}
+
+	/* 文章编辑器视图使用独立的页面宽度限制（editorConfig.maxPageWidth） */
+	.admin-content.content-wide {
+		max-width: var(--editor-max-page-width, 96rem);
 	}
 
 	/* ── 仪表板首页 ── */

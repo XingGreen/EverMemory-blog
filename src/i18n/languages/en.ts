@@ -651,6 +651,9 @@ export const en: Translation = {
 	[Key.configLicenseDesc]: "Article license name, link and display toggle",
 	[Key.configCoverImage]: "Cover Image",
 	[Key.configCoverImageDesc]: "Article cover image (fixed or random) config",
+	[Key.configEditor]: "Article Editor",
+	[Key.configEditorDesc]:
+		"Size limits for the article editor page (page width, content area height range)",
 	[Key.configEffects]: "Effects",
 	[Key.configEffectsDesc]: "Page effects (sakura, etc.) toggles and parameters",
 	[Key.configPlantuml]: "PlantUML",
