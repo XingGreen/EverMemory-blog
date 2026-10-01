@@ -90,6 +90,22 @@ const githubIconProps: Record<
 	ok: { icon: "material-symbols:cloud-done-outline" },
 	fail: { icon: "material-symbols:cloud-off-outline" },
 };
+// 后台服务连通性状态：与 GitHub 同构
+let adminStatus = $state<"idle" | "checking" | "ok" | "fail">("idle");
+// 单次请求 + 浏览器实测的网络阶段分解，逐条 push，UI 即时呈现
+let adminProbeResults = $state<{ label: string; ms: number }[]>([]);
+// 探针端点：requireAuth 会查一次 KV，选最轻的 ping 端点，
+// 串行多端点会把耗时与 KV 查询次数成倍放大。
+const ADMIN_PROBE_URL = "/api/admin/service-ping/";
+const adminIconProps: Record<
+	"idle" | "checking" | "ok" | "fail",
+	{ icon: string }
+> = {
+	idle: { icon: "material-symbols:dns-outline" },
+	checking: { icon: "material-symbols:sync" },
+	ok: { icon: "material-symbols:check-circle-outline" },
+	fail: { icon: "material-symbols:cloud-off-outline" },
+};
 // 网站配置详情页状态（操作按钮提升到页头，由父级统一管理）
 // json 配置为对象；html 等原始文本配置为字符串
 let settingsData = $state<Record<string, any> | string | null>(null);
@@ -540,25 +556,61 @@ async function handleSync() {
 async function testConnectivity() {
 	if (githubStatus === "checking") return;
 	githubStatus = "checking";
+	let result: { ok: boolean; message: string };
 	try {
 		const res = await fetch("/api/admin/github-ping/");
 		const data = await res.json();
-		if (data.success) {
-			githubStatus = "ok";
-			showToast(`GitHub 连接正常（${data.latency}ms）`, "success", 6000);
-		} else {
-			githubStatus = "fail";
-			showToast(data.message || "GitHub 连接失败", "error", 6000);
-		}
+		result = data.success
+			? { ok: true, message: `GitHub 连接正常（${data.latency}ms）` }
+			: { ok: false, message: data.message || "GitHub 连接失败" };
 	} catch (err) {
-		githubStatus = "fail";
-		showToast(
-			`请求失败: ${err instanceof Error ? err.message : String(err)}`,
-			"error",
-			6000,
-		);
+		result = { ok: false, message: `请求失败: ${err instanceof Error ? err.message : String(err)}` };
 	}
+	githubStatus = result.ok ? "ok" : "fail";
+	showToast(result.message, result.ok ? "success" : "error", 6000);
 }
+
+async function testAdminService() {
+	if (adminStatus === "checking") return;
+	adminStatus = "checking";
+	adminProbeResults = [];
+
+	// 单次请求。分段数据全部来自浏览器对该请求的实测（PerformanceResourceTiming），
+	// 不额外发请求、不做人为延时，因此总耗时与改动前相同。
+	const href = new URL(ADMIN_PROBE_URL, location.href).href;
+	let ok = false;
+	let failure = "";
+	try {
+		const res = await fetch(href, { cache: "no-store" });
+		await res.json();
+		ok = res.ok;
+		if (!ok) failure = `HTTP ${res.status}`;
+	} catch (err) {
+		failure = err instanceof Error ? err.message : String(err);
+	}
+
+	const timing = performance.getEntriesByName(href, "resource").at(-1);
+	const total = timing ? Math.round(timing.responseEnd - timing.startTime) : 0;
+	adminProbeResults = timing
+		? [
+				{ label: i18n(I18nKey.probeDns), ms: Math.max(0, Math.round(timing.domainLookupEnd - timing.domainLookupStart)) },
+				{ label: i18n(I18nKey.probeConnect), ms: Math.max(0, Math.round(timing.connectEnd - timing.connectStart)) },
+				{ label: i18n(I18nKey.probeRequest), ms: Math.max(0, Math.round(timing.responseStart - timing.requestStart)) },
+				{ label: i18n(I18nKey.probeDownload), ms: Math.max(0, Math.round(timing.responseEnd - timing.responseStart)) },
+			]
+		: [];
+	adminProbeResults = [...adminProbeResults, { label: i18n(I18nKey.probeTotal), ms: total }];
+
+	adminStatus = ok ? "ok" : "fail";
+	showToast(
+		ok
+			? `${i18n(I18nKey.statusAdminService)}${i18n(I18nKey.statusConnected)}（${total}${i18n(I18nKey.probeUnitMs)}）`
+			: `${i18n(I18nKey.statusDisconnected)}: ${failure}`,
+		ok ? "success" : "error",
+		6000,
+	);
+}
+
 
 function handleVerify(success: boolean) {
 	if (success) {
@@ -862,11 +914,49 @@ function formatDate(dateStr: string | null): string {
 		</div>
 		<div class="status-list">
 			<div class="status-item">
-				<Icon icon="material-symbols:check-circle-outline" class="status-icon healthy" />
+				<Icon
+					{...adminIconProps[adminStatus]}
+					class="status-icon {adminStatus === 'checking' ? 'syncing' : adminStatus === 'fail' ? 'error' : 'healthy'}"
+				/>
 				<div class="status-info">
 					<span class="status-label">{i18n(I18nKey.statusAdminService)}</span>
-					<span class="status-value">{i18n(I18nKey.statusRunning)}</span>
+					<span class="status-value">
+						{adminStatus === "checking"
+							? i18n(I18nKey.statusTesting)
+							: adminStatus === "ok"
+								? i18n(I18nKey.statusConnected)
+								: adminStatus === "fail"
+									? i18n(I18nKey.statusDisconnected)
+									: i18n(I18nKey.statusRunning)}
+					</span>
 				</div>
+				<button
+					type="button"
+					class="connectivity-btn"
+					class:is-testing={adminStatus === "checking"}
+					onclick={testAdminService}
+					disabled={adminStatus === "checking"}
+				>
+					{adminStatus === "checking"
+						? i18n(I18nKey.statusTesting)
+						: i18n(I18nKey.statusTestConnectivity)}
+				</button>
+				{#if adminProbeResults.length > 0}
+					<div class="probe-list">
+						{#each adminProbeResults as step, idx (idx)}
+							<div class="probe-row" class:total={idx === adminProbeResults.length - 1}>
+								<span class="probe-label">{step.label}</span>
+								<span class="probe-bar">
+									<span
+										class="probe-bar-fill"
+										style:width={`${Math.min(100, (step.ms / Math.max(1, adminProbeResults.at(-1)?.ms ?? 1)) * 100)}%`}
+									></span>
+								</span>
+								<span class="probe-ms">{step.ms}{i18n(I18nKey.probeUnitMs)}</span>
+							</div>
+						{/each}
+					</div>
+				{/if}
 			</div>
 			<div class="status-item">
 				<Icon
@@ -890,6 +980,7 @@ function formatDate(dateStr: string | null): string {
 				<button
 					type="button"
 					class="connectivity-btn"
+					class:is-testing={githubStatus === "checking"}
 					onclick={testConnectivity}
 					disabled={isSyncing || githubStatus === "checking"}
 				>
@@ -2444,6 +2535,7 @@ function formatDate(dateStr: string | null): string {
 	.status-item {
 		display: flex;
 		align-items: center;
+		flex-wrap: wrap;
 		gap: 0.875rem;
 		padding: 0.625rem 0.5rem;
 		border-radius: var(--radius-lg);
@@ -2487,6 +2579,67 @@ function formatDate(dateStr: string | null): string {
 		color: var(--content-meta);
 	}
 
+	/* 分段探测明细：占满整行换到服务名下方 */
+	.probe-list {
+		flex-basis: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		margin-top: 0.125rem;
+		padding-left: 2.375rem;
+	}
+
+	.probe-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.75rem;
+		animation: probe-in 0.15s ease-out;
+	}
+
+	/* 各阶段占总耗时的比例条，直观看出瓶颈在哪一段 */
+	.probe-bar {
+		flex: 1;
+		height: 0.25rem;
+		border-radius: 9999px;
+		background: var(--btn-regular-bg);
+		overflow: hidden;
+	}
+
+	.probe-bar-fill {
+		display: block;
+		height: 100%;
+		border-radius: 9999px;
+		background: color-mix(in oklab, var(--primary) 55%, var(--btn-regular-bg));
+	}
+
+	.probe-row.total .probe-label,
+	.probe-row.total .probe-ms {
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	@keyframes probe-in {
+		from {
+			opacity: 0;
+			transform: translateY(-2px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.probe-label {
+		color: var(--content-meta);
+	}
+
+	.probe-ms {
+		margin-left: auto;
+		font-variant-numeric: tabular-nums;
+		color: var(--content-meta);
+	}
+
 	.status-value {
 		font-size: 0.9375rem;
 		font-weight: 600;
@@ -2514,6 +2667,32 @@ function formatDate(dateStr: string | null): string {
 	.connectivity-btn:hover:not(:disabled) {
 		background: var(--btn-regular-bg-hover);
 		border-color: var(--line-color);
+	}
+
+	/* 测试中：按钮内左侧圆环旋转，让过程不只体现在文字变化上 */
+	.connectivity-btn.is-testing::before {
+		content: "";
+		display: inline-block;
+		width: 0.75rem;
+		height: 0.75rem;
+		margin-right: 0.375rem;
+		vertical-align: -0.125rem;
+		border: 2px solid color-mix(in oklab, var(--deep-text) 25%, transparent);
+		border-top-color: var(--deep-text);
+		border-radius: 50%;
+		animation: connectivity-spin 0.7s linear infinite;
+	}
+
+	@keyframes connectivity-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.connectivity-btn.is-testing::before {
+			animation-duration: 1.6s;
+		}
 	}
 
 	.connectivity-btn:active:not(:disabled) {

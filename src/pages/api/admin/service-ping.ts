@@ -1,19 +1,20 @@
 import { requireAuth } from "@/utils/auth";
-import { testGitHubConnection } from "@/utils/github-app";
 
 export const prerender = false;
 
-// 连通性测试：真实请求一次 GitHub API（不走 token 缓存），
-// 供后台"系统状态 → GitHub 同步"卡片的"测试连通性"按钮使用。
+// 后台服务连通性测试：计时本端点处理耗时，供系统状态卡片使用。
+// 与 github-ping 对称——那个测外部依赖，这个测承载后台自身的服务端。
 export async function GET({ request }) {
 	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) {
 		return auth.response;
 	}
 
+	const started = Date.now();
 	try {
-		const latency = await testGitHubConnection();
-		return new Response(JSON.stringify({ success: true, latency }), {
+		// 保持一个 await，让延迟统计覆盖到完整的异步返回路径
+		await Promise.resolve();
+		return new Response(JSON.stringify({ success: true, latency: Date.now() - started }), {
 			status: 200,
 			headers: { "Content-Type": "application/json" },
 		});
