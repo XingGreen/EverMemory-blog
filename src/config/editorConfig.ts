@@ -1,4 +1,5 @@
-import type { EditorConfig } from "@/types/editorConfig";
+import { siteConfig } from "./siteConfig";
+import type { EditorConfig } from "../types/editorConfig";
 
 /**
  * 文章编辑器页面尺寸限制
@@ -11,8 +12,11 @@ import type { EditorConfig } from "@/types/editorConfig";
  * 再按需升级为 runtime 配置）。
  */
 export const editorConfig: EditorConfig = {
-	/** 编辑器页面最大宽度（约 1536px，比后台其他页面更宽） */
-	maxPageWidth: "96rem",
+	/**
+	 * 编辑器页面最大宽度，默认与前台的 siteConfig.pageWidth 保持一致，
+	 * 前台调整页面宽度时编辑器同步跟随。
+	 */
+	maxPageWidth: `${siteConfig.pageWidth ?? 100}rem`,
 	/** 编辑区最小高度 */
 	minContentHeight: "26rem",
 	/** 编辑区默认高度：填满视口剩余空间 */

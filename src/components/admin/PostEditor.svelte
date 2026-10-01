@@ -1274,28 +1274,33 @@ $effect(() => {
 		width: 100%;
 	}
 
-	/* ── 左侧：Front Matter 面板 ── */
+	/* ── 左侧：Front Matter 分组卡片 ── */
 	.fm-panel {
 		position: sticky;
 		top: 1rem;
 		max-height: calc(100vh - 7.5rem);
 		overflow-y: auto;
-		padding: 1.5rem;
-		background: var(--card-bg);
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-large);
+		/* 外壳仅承担粘性定位与滚动，各分组卡片自带底色与边框 */
+		padding: 0.25rem;
+		background: none;
+		border: none;
 		display: flex;
 		flex-direction: column;
-		gap: 1.5rem;
+		gap: 1rem;
 	}
 
 	.fm-panel .form-section {
 		gap: 1rem;
+		padding: 1.25rem;
+		background: var(--card-bg);
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-large);
 	}
 
 	.fm-panel .form-section h3 {
 		font-size: 0.9375rem;
-		padding-bottom: 0.75rem;
+		padding-bottom: 0;
+		border-bottom: none;
 	}
 
 	.fm-panel .form-grid {
@@ -1315,15 +1320,12 @@ $effect(() => {
 		background: var(--btn-regular-bg);
 	}
 
-	/* ── 中间：书写区 ── */
+	/* ── 中间：书写区（tabs / 工具栏 / 编辑框各自独立） ── */
 	.write-panel {
 		display: flex;
 		flex-direction: column;
 		gap: 0.875rem;
 		min-width: 0;
-		padding: 1rem;
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-large);
 	}
 
 	.md-toolbar {
@@ -1374,6 +1376,8 @@ $effect(() => {
 		min-height: var(--editor-min-content-height, 26rem);
 		height: var(--editor-default-content-height, calc(100vh - 18rem));
 		max-height: var(--editor-max-content-height, calc(100vh - 10rem));
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-large);
 	}
 
 	/* ── 右侧：目录 ── */
