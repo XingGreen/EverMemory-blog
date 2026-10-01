@@ -338,6 +338,12 @@ enum I18nKey {
 	siteStatsLastUpdate = "siteStatsLastUpdate",
 	siteStatsDaysAgo = "siteStatsDaysAgo",
 	siteStatsDays = "siteStatsDays",
+	siteStatsSummary = "siteStatsSummary",
+	siteStatsUnitPost = "siteStatsUnitPost",
+	siteStatsUnitCategory = "siteStatsUnitCategory",
+	siteStatsUnitTag = "siteStatsUnitTag",
+	siteStatsUnitWord = "siteStatsUnitWord",
+	siteStatsUnitDay = "siteStatsUnitDay",
 	today = "today",
 
 	// 站点信息

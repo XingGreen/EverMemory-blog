@@ -343,6 +343,12 @@ export const zh_CN: Translation = {
 	[Key.siteStatsLastUpdate]: "最后活动",
 	[Key.siteStatsDaysAgo]: "{days} 天前",
 	[Key.siteStatsDays]: "{days} 天",
+	[Key.siteStatsSummary]: "共 {value} {unit}",
+	[Key.siteStatsUnitPost]: "章",
+	[Key.siteStatsUnitCategory]: "个",
+	[Key.siteStatsUnitTag]: "个",
+	[Key.siteStatsUnitWord]: "字",
+	[Key.siteStatsUnitDay]: "天",
 	[Key.today]: "今天",
 
 	// 站点信息

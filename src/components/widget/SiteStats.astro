@@ -70,89 +70,160 @@ const lastPostDate = lastActivityDate ? lastActivityDate.toISOString() : null;
 
 const todayText = i18n(I18nKey.today);
 
+/** 副标题模板，如「共 {value} {unit}」 */
+const summaryTemplate = i18n(I18nKey.siteStatsSummary);
+const dayUnit = i18n(I18nKey.siteStatsUnitDay);
+const daysAgoTemplate = i18n(I18nKey.siteStatsDaysAgo);
+
+const buildSummary = (value: number | string, unit: string): string =>
+	summaryTemplate.replace("{value}", String(value)).replace("{unit}", unit);
+
 const stats = [
 	{
 		icon: "material-symbols:article-outline",
 		label: i18n(I18nKey.siteStatsPostCount),
-		value: posts.length,
+		summary: buildSummary(posts.length, i18n(I18nKey.siteStatsUnitPost)),
 	},
 	{
 		icon: "material-symbols:folder-outline",
 		label: i18n(I18nKey.siteStatsCategoryCount),
-		value: categories.length,
+		summary: buildSummary(
+			categories.length,
+			i18n(I18nKey.siteStatsUnitCategory),
+		),
 	},
 	{
 		icon: "material-symbols:label-outline",
 		label: i18n(I18nKey.siteStatsTagCount),
-		value: tags.length,
+		summary: buildSummary(tags.length, i18n(I18nKey.siteStatsUnitTag)),
 	},
 	{
 		icon: "material-symbols:text-ad-outline-rounded",
 		label: i18n(I18nKey.siteStatsTotalWords),
-		value: totalWords,
-		formatted: true,
+		summary: buildSummary(
+			formatNumber(totalWords),
+			i18n(I18nKey.siteStatsUnitWord),
+		),
 	},
 	{
+		// 数字由客户端回填，初值占位以避免布局抖动
 		icon: "material-symbols:calendar-clock-outline",
 		label: i18n(I18nKey.siteStatsRunningDays),
-		value: 0, // 将由客户端更新
-		suffix: i18n(I18nKey.siteStatsDays).replace("{days}", ""),
-		dynamic: true,
+		summary: buildSummary(0, i18n(I18nKey.siteStatsUnitDay)),
 		id: "running-days",
 	},
 	{
+		// 「最后活动」语义不同：直接展示「今天 / N 天前」，不套用量词模板
 		icon: "mingcute:heartbeat-line",
 		label: i18n(I18nKey.siteStatsLastUpdate),
-		value: 0, // 将由客户端更新
-		suffix: i18n(I18nKey.siteStatsDaysAgo).replace("{days}", ""),
-		dynamic: true,
+		summary: "",
 		id: "last-update",
 	},
 ];
 ---
 
 <WidgetLayout name={i18n(I18nKey.siteStats)} showTitle={showTitle} id="site-stats" class={className} style={style}>
-  <div class="flex flex-col gap-2">
+  <div class="stats-grid">
     {stats.map((stat) => (
-      <div class="flex items-center justify-between px-3 py-1.5">
-        <div class="flex items-center gap-2.5">
-          <div class="text-(--primary) text-xl">
-            <Icon is:inline name={stat.icon} />
-          </div>
-          <span class="text-neutral-700 dark:text-neutral-300 font-medium text-sm">
-            {stat.label}
-          </span>
-        </div>
-        <div class="flex items-center">
-          <span 
-            class="text-base font-bold text-neutral-900 dark:text-neutral-100"
-            data-stat-id={stat.id}
-          >
-            {stat.formatted ? formatNumber(stat.value) : stat.value}
-          </span>
-          {stat.suffix && (
-            <span class="text-sm text-neutral-500 dark:text-neutral-400 ml-1">
-              {stat.suffix}
-            </span>
-          )}
-        </div>
-      </div>
+      <article class="stat-card" data-stat-card={stat.id}>
+        <h4 class="stat-label">{stat.label}</h4>
+        <p class="stat-summary" data-stat-id={stat.id}>{stat.summary}</p>
+        <Icon is:inline name={stat.icon} class="stat-icon" aria-hidden="true" />
+      </article>
     ))}
   </div>
 </WidgetLayout>
 
-<script is:inline define:vars={{ siteStartDate, lastPostDate, todayText }}>
+<style>
+  /* MD3 风格统计卡片：色调化底色 + 大圆角 + 右下角装饰图标 */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+  }
+
+  .stat-card {
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    padding: 0.875rem 0.875rem 1.25rem;
+    border-radius: var(--radius-large);
+    background: color-mix(in oklab, var(--primary) 8%, var(--card-bg));
+    transition: background 0.2s ease;
+  }
+
+  /* MD3 state layer：悬浮时底色加深 */
+  .stat-card:hover {
+    background: color-mix(in oklab, var(--primary) 16%, var(--card-bg));
+  }
+
+  :global(.dark) .stat-card {
+    background: color-mix(in oklab, var(--primary) 14%, var(--card-bg));
+  }
+
+  :global(.dark) .stat-card:hover {
+    background: color-mix(in oklab, var(--primary) 22%, var(--card-bg));
+  }
+
+  .stat-label {
+    position: relative;
+    z-index: 1;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--deep-text);
+  }
+
+  .stat-summary {
+    position: relative;
+    z-index: 1;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--content-meta);
+    min-width: 0;
+  }
+
+  /* 装饰图标：右下角、低透明度，悬浮时增强 */
+  .stat-icon {
+    position: absolute;
+    right: 0.375rem;
+    bottom: 0.125rem;
+    font-size: 2.125rem;
+    line-height: 1;
+    color: var(--primary);
+    opacity: 0.35;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .stat-card:hover .stat-icon {
+    opacity: 0.55;
+  }
+
+  /* 侧边栏极窄时退回单列，避免标题折行过碎 */
+  @media (max-width: 320px) {
+    .stats-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>
+
+<script is:inline define:vars={{ siteStartDate, lastPostDate, todayText, summaryTemplate, dayUnit, daysAgoTemplate }}>
   function updateDynamicStats() {
     const today = new Date();
 
-    // 更新运行天数
+    // 更新运行天数：套用与静态卡片相同的量词模板，兼容各语言语序
     const startDate = new Date(siteStartDate);
     const diffTime = Math.abs(today.getTime() - startDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const runningSummary = summaryTemplate
+      .replace('{value}', diffDays.toString())
+      .replace('{unit}', dayUnit);
 
-    const runningDaysElements = document.querySelectorAll('[data-stat-id="running-days"]');
-    runningDaysElements.forEach((element) => {
-      element.textContent = diffDays.toString();
+    document.querySelectorAll('[data-stat-id="running-days"]').forEach((element) => {
+      element.textContent = runningSummary;
     });
 
     // 更新最后活动时间
@@ -160,20 +231,12 @@ const stats = [
       const lastPost = new Date(lastPostDate);
       const timeSinceLastPost = Math.abs(today.getTime() - lastPost.getTime());
       const daysSinceLastUpdate = Math.floor(timeSinceLastPost / (1000 * 60 * 60 * 24));
+      const lastSummary = daysSinceLastUpdate === 0
+        ? todayText
+        : daysAgoTemplate.replace('{days}', daysSinceLastUpdate.toString());
 
-      const lastUpdateElements = document.querySelectorAll('[data-stat-id="last-update"]');
-      lastUpdateElements.forEach((element) => {
-        if (daysSinceLastUpdate === 0) {
-          element.textContent = todayText;
-          if (element.nextElementSibling) {
-            element.nextElementSibling.style.display = 'none';
-          }
-        } else {
-          element.textContent = daysSinceLastUpdate.toString();
-          if (element.nextElementSibling) {
-            element.nextElementSibling.style.display = '';
-          }
-        }
+      document.querySelectorAll('[data-stat-id="last-update"]').forEach((element) => {
+        element.textContent = lastSummary;
       });
     }
   }

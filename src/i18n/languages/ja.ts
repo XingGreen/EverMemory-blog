@@ -353,6 +353,12 @@ export const ja: Translation = {
 	[Key.siteStatsLastUpdate]: "最終活動",
 	[Key.siteStatsDaysAgo]: "{days} 日前",
 	[Key.siteStatsDays]: "{days} 日",
+	[Key.siteStatsSummary]: "合計 {value} {unit}",
+	[Key.siteStatsUnitPost]: "件",
+	[Key.siteStatsUnitCategory]: "件",
+	[Key.siteStatsUnitTag]: "件",
+	[Key.siteStatsUnitWord]: "文字",
+	[Key.siteStatsUnitDay]: "日",
 	[Key.today]: "今日",
 
 	// サイト情報

@@ -345,6 +345,12 @@ export const zh_TW: Translation = {
 	[Key.siteStatsLastUpdate]: "最後活動",
 	[Key.siteStatsDaysAgo]: "{days} 天前",
 	[Key.siteStatsDays]: "{days} 天",
+	[Key.siteStatsSummary]: "共 {value} {unit}",
+	[Key.siteStatsUnitPost]: "篇",
+	[Key.siteStatsUnitCategory]: "個",
+	[Key.siteStatsUnitTag]: "個",
+	[Key.siteStatsUnitWord]: "字",
+	[Key.siteStatsUnitDay]: "天",
 	[Key.today]: "今天",
 
 	// 站點資訊
