@@ -528,7 +528,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 	}
 
 	.tag-remove:hover {
-		color: #ef4444;
+		color: var(--destructive);
 	}
 
 	.tag-input {

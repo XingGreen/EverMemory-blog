@@ -621,7 +621,7 @@ function handleTokenKeyDown(e: KeyboardEvent) {
 		background: rgba(239, 68, 68, 0.1);
 		border: 1px solid rgba(239, 68, 68, 0.3);
 		border-radius: var(--radius-sm);
-		color: #ef4444;
+		color: var(--destructive);
 		font-size: 0.8125rem;
 	}
 

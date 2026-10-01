@@ -169,7 +169,7 @@ $effect(() => {
 	}
 
 	.editor-status.error {
-		color: #ef4444;
+		color: var(--destructive);
 	}
 
 	/* ── 模式切换 ── */
