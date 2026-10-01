@@ -913,19 +913,19 @@ function formatDate(dateStr: string | null): string {
 	<div class="card-base quick-actions">
 		<h2>{i18n(I18nKey.quickActions)}</h2>
 		<div class="actions-grid">
-			<button class="action-card primary-action" onclick={goCreatePost}>
+			<button class="action-card tinted tone-sky" onclick={goCreatePost}>
 				<Icon icon="material-symbols:edit-calendar-outline-rounded" class="action-icon" />
 				<span>{i18n(I18nKey.adminNewPost)}</span>
 			</button>
-			<button class="action-card tinted tone-success" onclick={goPostList}>
+			<button class="action-card tinted tone-lily" onclick={goPostList}>
 				<Icon icon="material-symbols:format-list-bulleted" class="action-icon" />
 				<span>{i18n(I18nKey.adminPostList)}</span>
 			</button>
-			<button class="action-card tinted tone-warning" onclick={() => goSettings()}>
+			<button class="action-card tinted tone-pond" onclick={() => goSettings()}>
 				<Icon icon="material-symbols:settings" class="action-icon" />
 				<span>{i18n(I18nKey.adminSettings)}</span>
 			</button>
-			<button class="action-card tinted tone-info" onclick={handleSync} disabled={isSyncing}>
+			<button class="action-card tinted tone-wheat" onclick={handleSync} disabled={isSyncing}>
 				<Icon icon="material-symbols:cloud" class={isSyncing ? "action-icon syncing" : "action-icon"} />
 				<span>{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}</span>
 			</button>
@@ -2205,23 +2205,22 @@ function formatDate(dateStr: string | null): string {
 		cursor: not-allowed;
 	}
 
-	/* 新建文章：前台没有「强调卡片」这类概念，区分只体现在图标色上 */
-	.action-card.primary-action :global(.action-icon) {
-		color: var(--primary);
-		opacity: 1;
+	/* 四个图标各取莫奈「睡莲池」色板一色，底色与文字保持中性。
+	   前台没有「强调卡片」这类概念，故不做主次区分，仅以色相标识功能。 */
+	.action-card.tone-sky {
+		--tone: var(--monet-sky);
 	}
 
-	/* 其余三项：图标保留功能色（绿/琥珀/蓝），底色与文字完全中性 */
-	.action-card.tone-success {
-		--tone: var(--success);
+	.action-card.tone-lily {
+		--tone: var(--monet-lily);
 	}
 
-	.action-card.tone-warning {
-		--tone: var(--warning);
+	.action-card.tone-pond {
+		--tone: var(--monet-pond);
 	}
 
-	.action-card.tone-info {
-		--tone: var(--info);
+	.action-card.tone-wheat {
+		--tone: var(--monet-wheat);
 	}
 
 	.action-card.tinted :global(.action-icon) {
