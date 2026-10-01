@@ -412,8 +412,8 @@ function addItem(arr: JsonValue[]) {
 	}
 
 	.icon-btn:hover {
-		color: #ef4444;
-		border-color: #ef4444;
+		color: var(--destructive);
+		border-color: var(--destructive);
 	}
 
 	.add-btn {

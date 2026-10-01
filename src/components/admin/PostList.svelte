@@ -453,7 +453,7 @@ function formatDate(dateStr: string): string {
 	}
 
 	:global(.state-icon.error) {
-		color: #ef4444;
+		color: var(--destructive);
 	}
 
 	.state-text {
@@ -683,11 +683,11 @@ function formatDate(dateStr: string): string {
 	}
 
 	.text-action.delete {
-		color: #ef4444;
+		color: var(--destructive);
 	}
 
 	.text-action.delete:hover {
-		background: color-mix(in srgb, #ef4444 12%, transparent);
+		background: color-mix(in srgb, var(--destructive) 12%, transparent);
 	}
 
 	.sep {

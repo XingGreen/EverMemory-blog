@@ -166,18 +166,19 @@ function handleKeydown(e: KeyboardEvent) {
 		gap: 0.75rem;
 		padding: 1.5rem;
 		border-bottom: 1px solid var(--line-divider);
-		background: color-mix(in srgb, #ef4444 10%, transparent);
+		background: color-mix(in srgb, var(--destructive) 10%, transparent);
 	}
 
-	.modal-icon {
+	/* Icon 为子组件，其根元素需 :global 才能命中本组件 scoped 样式 */
+	:global(.modal-icon) {
 		font-size: 1.5rem;
-		color: #ef4444;
+		color: var(--destructive);
 	}
 
 	.modal-header h2 {
 		font-size: 1.25rem;
 		font-weight: 600;
-		color: #ef4444;
+		color: var(--destructive);
 	}
 
 	.modal-body {
@@ -212,7 +213,7 @@ function handleKeydown(e: KeyboardEvent) {
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-sm);
 		font-size: 0.8rem;
-		color: #ef4444;
+		color: var(--destructive);
 		font-family: "Monaco", "Consolas", monospace;
 		word-break: break-all;
 	}
@@ -239,7 +240,7 @@ function handleKeydown(e: KeyboardEvent) {
 
 	.confirm-input.shake {
 		animation: shake 0.5s;
-		border-color: #ef4444;
+		border-color: var(--destructive);
 	}
 
 	@keyframes shake {
