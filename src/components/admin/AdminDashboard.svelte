@@ -786,15 +786,15 @@ function formatDate(dateStr: string | null): string {
 				<Icon icon="material-symbols:edit-calendar-outline-rounded" class="action-icon" />
 				<span>{i18n(I18nKey.adminNewPost)}</span>
 			</button>
-			<button class="action-card" onclick={goPostList}>
+			<button class="action-card tinted tone-success" onclick={goPostList}>
 				<Icon icon="material-symbols:format-list-bulleted" class="action-icon" />
 				<span>{i18n(I18nKey.adminPostList)}</span>
 			</button>
-			<button class="action-card" onclick={() => goSettings()}>
+			<button class="action-card tinted tone-warning" onclick={() => goSettings()}>
 				<Icon icon="material-symbols:settings" class="action-icon" />
 				<span>{i18n(I18nKey.adminSettings)}</span>
 			</button>
-			<button class="action-card" onclick={handleSync} disabled={isSyncing}>
+			<button class="action-card tinted tone-info" onclick={handleSync} disabled={isSyncing}>
 				<Icon icon="material-symbols:cloud" class={isSyncing ? "action-icon syncing" : "action-icon"} />
 				<span>{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}</span>
 			</button>
@@ -2212,6 +2212,43 @@ function formatDate(dateStr: string | null): string {
 
 	.action-card.primary-action:hover:not(:disabled) {
 		background: color-mix(in oklab, var(--primary) 15%, var(--btn-regular-bg));
+	}
+
+	/* 其余三项：低饱和粉彩底色，安静但有功能区区分度
+	   底色淡、文字保持深色可读，仅图标带色，避免与强调项抢视线 */
+	.action-card.tone-success {
+		--tone: var(--success);
+	}
+
+	.action-card.tone-warning {
+		--tone: var(--warning);
+	}
+
+	.action-card.tone-info {
+		--tone: var(--info);
+	}
+
+	.action-card.tinted {
+		color: var(--content-meta);
+		border-color: color-mix(in oklab, var(--tone) 26%, transparent);
+		background: color-mix(in oklab, var(--tone) 14%, var(--btn-regular-bg));
+	}
+
+	.action-card.tinted:hover:not(:disabled) {
+		background: color-mix(in oklab, var(--tone) 23%, var(--btn-regular-bg));
+	}
+
+	.action-card.tinted :global(.action-icon) {
+		color: var(--tone);
+		opacity: 1;
+	}
+
+	:global(.dark) .action-card.tinted {
+		background: color-mix(in oklab, var(--tone) 18%, var(--btn-regular-bg));
+	}
+
+	:global(.dark) .action-card.tinted:hover:not(:disabled) {
+		background: color-mix(in oklab, var(--tone) 27%, var(--btn-regular-bg));
 	}
 
 	:global(.action-icon) {

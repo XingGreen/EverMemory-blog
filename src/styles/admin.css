@@ -6,6 +6,7 @@
   --destructive-foreground: #ffffff;
   --success: #16a34a;
   --warning: #d97706;
+  --info: oklch(0.62 0.13 245);
 
   /* 对齐前台 variables.styl 亮色底色（0.95），与卡片白底拉开层次 */
   --page-bg: oklch(0.95 0.01 275);
@@ -66,6 +67,7 @@
   --destructive-foreground: #ffffff;
   --success: #4ade80;
   --warning: #fbbf24;
+  --info: oklch(0.73 0.12 245);
 
   --page-bg: oklch(0.10 0.012 275);
   /* 对齐前台 variables.styl 暗色卡片色，避免后台面板过于纯黑 */
