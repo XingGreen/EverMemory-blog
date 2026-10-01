@@ -782,28 +782,20 @@ function formatDate(dateStr: string | null): string {
 	<div class="card-base quick-actions">
 		<h2>{i18n(I18nKey.quickActions)}</h2>
 		<div class="actions-grid">
-			<button class="action-card" onclick={goCreatePost}>
-				<div class="action-icon-wrap write">
-					<Icon icon="material-symbols:edit-calendar-outline-rounded" class="action-icon" />
-				</div>
+			<button class="action-card primary-action" onclick={goCreatePost}>
+				<Icon icon="material-symbols:edit-calendar-outline-rounded" class="action-icon" />
 				<span>{i18n(I18nKey.adminNewPost)}</span>
 			</button>
 			<button class="action-card" onclick={goPostList}>
-				<div class="action-icon-wrap list">
-					<Icon icon="material-symbols:format-list-bulleted" class="action-icon" />
-				</div>
+				<Icon icon="material-symbols:format-list-bulleted" class="action-icon" />
 				<span>{i18n(I18nKey.adminPostList)}</span>
 			</button>
 			<button class="action-card" onclick={() => goSettings()}>
-				<div class="action-icon-wrap settings">
-					<Icon icon="material-symbols:settings" class="action-icon" />
-				</div>
+				<Icon icon="material-symbols:settings" class="action-icon" />
 				<span>{i18n(I18nKey.adminSettings)}</span>
 			</button>
 			<button class="action-card" onclick={handleSync} disabled={isSyncing}>
-				<div class="action-icon-wrap sync" class:syncing={isSyncing}>
-					<Icon icon="material-symbols:cloud" class="action-icon" />
-				</div>
+				<Icon icon="material-symbols:cloud" class={isSyncing ? "action-icon syncing" : "action-icon"} />
 				<span>{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}</span>
 			</button>
 		</div>
@@ -2159,20 +2151,21 @@ function formatDate(dateStr: string | null): string {
 
 	/* 快捷操作 */
 	.quick-actions {
-		padding: 1.25rem;
+		padding: 1.5rem;
 	}
 
 	.quick-actions h2 {
-		font-size: 1rem;
-		font-weight: 600;
-		color: var(--deep-text);
+		font-size: 0.9375rem;
+		font-weight: 500;
+		letter-spacing: 0.03125rem;
+		color: var(--content-meta);
 		margin-bottom: 1rem;
 	}
 
 	.actions-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-		gap: 0.875rem;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 0.75rem;
 	}
 
 	.action-card {
@@ -2181,23 +2174,27 @@ function formatDate(dateStr: string | null): string {
 		align-items: center;
 		justify-content: center;
 		gap: 0.625rem;
-		padding: 1.25rem 0.75rem;
+		padding: 1.125rem 0.75rem;
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-2xl);
-		background: var(--card-bg);
-		color: var(--deep-text);
-		font-size: 0.875rem;
-		font-weight: 500;
+		background: var(--btn-regular-bg);
+		color: var(--content-meta);
+		font-size: 0.8125rem;
+		font-weight: 400;
 		font-family: inherit;
 		cursor: pointer;
-		transition: all 0.2s;
+		transition:
+			background 0.2s,
+			transform 0.1s;
 	}
 
+	/* state layer：hover 极轻微提亮，active 轻微按下 */
 	.action-card:hover:not(:disabled) {
-		border-color: var(--primary);
-		background: var(--btn-regular-bg);
-		transform: translateY(-2px);
-		box-shadow: var(--shadow-card);
+		background: color-mix(in oklab, var(--primary) 8%, var(--btn-regular-bg));
+	}
+
+	.action-card:active:not(:disabled) {
+		transform: scale(0.97);
 	}
 
 	.action-card:disabled {
@@ -2205,46 +2202,27 @@ function formatDate(dateStr: string | null): string {
 		cursor: not-allowed;
 	}
 
-	.action-icon-wrap {
-		width: 2.75rem;
-		height: 2.75rem;
-		border-radius: var(--radius-xl);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: transform 0.3s ease;
-	}
-
-	.action-icon-wrap.write {
-		background: color-mix(in srgb, var(--primary) 14%, var(--card-bg));
+	/* 唯一强调项：新建文章，用极淡的 primary 底色而非全填充 */
+	.action-card.primary-action {
+		border-color: transparent;
+		background: color-mix(in oklab, var(--primary) 10%, var(--btn-regular-bg));
 		color: var(--primary);
+		font-weight: 500;
 	}
 
-	.action-icon-wrap.list {
-		background: color-mix(in srgb, var(--success) 14%, var(--card-bg));
-		color: var(--success);
-	}
-
-	.action-icon-wrap.settings {
-		background: color-mix(in srgb, var(--warning) 14%, var(--card-bg));
-		color: var(--warning);
-	}
-
-	.action-icon-wrap.sync {
-		background: color-mix(in srgb, var(--primary) 14%, var(--card-bg));
-		color: var(--primary);
-	}
-
-	.action-icon-wrap.syncing {
-		animation: pulse-soft 1.5s ease-in-out infinite;
-	}
-
-	.action-card:hover .action-icon-wrap {
-		transform: scale(1.08);
+	.action-card.primary-action:hover:not(:disabled) {
+		background: color-mix(in oklab, var(--primary) 15%, var(--btn-regular-bg));
 	}
 
 	:global(.action-icon) {
-		font-size: 1.375rem;
+		font-size: 1.5rem;
+		opacity: 0.8;
+	}
+
+	/* 同步进行中：图标脉冲提示 */
+	:global(.action-icon.syncing) {
+		animation: pulse-soft 1.5s ease-in-out infinite;
+		opacity: 1;
 	}
 
 	@keyframes pulse-soft {
