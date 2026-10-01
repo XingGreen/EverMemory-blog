@@ -7,7 +7,8 @@
   --success: #16a34a;
   --warning: #d97706;
 
-  --page-bg: oklch(0.97 0.005 275);
+  /* 对齐前台 variables.styl 亮色底色（0.95），与卡片白底拉开层次 */
+  --page-bg: oklch(0.95 0.01 275);
   --card-bg: #ffffff;
   --admin-sidebar-bg: oklch(0.95 0.01 275);
 
