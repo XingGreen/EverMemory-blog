@@ -16,6 +16,7 @@ const STATIC_ENV_GETTERS: Record<string, () => string> = {
 	ADMIN_USERNAME: () => import.meta.env?.ADMIN_USERNAME || "",
 	ADMIN_PASSWORD: () => import.meta.env?.ADMIN_PASSWORD || "",
 	ADMIN_JWT_SECRET: () => import.meta.env?.ADMIN_JWT_SECRET || "",
+	ADMIN_SCRYPT_N: () => import.meta.env?.ADMIN_SCRYPT_N || "",
 };
 
 /** 服务端密钥类环境变量的可用键列表（供状态面板遍历展示） */

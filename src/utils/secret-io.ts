@@ -158,8 +158,21 @@ export function generateJwtSecret(): string {
 	return crypto.randomBytes(32).toString("hex");
 }
 
-/** scrypt 成本参数（迭代次数）；显式写入哈希格式便于未来升级 */
-const SCRYPT_N = 16384;
+/**
+ * scrypt 目标成本参数 N（迭代次数）。
+ * 默认 2^17，与 OWASP 推荐的 N=2^17 / r=8 / p=1 对齐；原先的 16384(2^14)
+ * 是 OWASP 的最低档，拿到哈希后可被离线爆破，成本偏低故上调。
+ *
+ * 注意内存占用 ≈ 128 × N × r = 1024 × N 字节：
+ *   N=2^14 → 16MB，N=2^15 → 32MB，N=2^17 → 128MB。
+ * Node 默认 maxmem 只有 32MB，超过就必须显式传 maxmem（见 SCRYPT_MAXMEM）；
+ * Cloudflare Workers 内存硬上限 128MB，跑 2^17 会直接 OOM，
+ * 故提供 ADMIN_SCRYPT_N 环境变量按部署环境下调。
+ */
+const SCRYPT_N = 131072;
+
+/** scrypt maxmem（字节）：需 ≥ 128 × N × r + 128 × r × p + 256 × r，2^17 时约 128MB */
+const SCRYPT_MAXMEM = 256 * 1024 * 1024;
 
 /**
  * 生成管理员密码哈希：scrypt 加盐哈希，格式 `scrypt$N$salt$hash`
@@ -167,14 +180,39 @@ const SCRYPT_N = 16384;
  * 取代早先的裸 SHA256：防彩虹表/高速破解。
  */
 export function hashAdminPassword(plain: string): string {
+	const N = targetScryptN();
 	const salt = crypto.randomBytes(16);
-	const hash = crypto.scryptSync(plain, salt, 64, { N: SCRYPT_N });
-	return `scrypt$${SCRYPT_N}$${salt.toString("base64")}$${hash.toString("base64")}`;
+	const hash = crypto.scryptSync(plain, salt, 64, { N, maxmem: SCRYPT_MAXMEM });
+	return `scrypt$${N}$${salt.toString("base64")}$${hash.toString("base64")}`;
+}
+
+/** 当前应当使用的目标 N：ADMIN_SCRYPT_N 可覆盖（供低内存环境下调） */
+function targetScryptN(): number {
+	const override = Number(readEnvValue("ADMIN_SCRYPT_N"));
+	if (Number.isFinite(override) && override >= 1024) return override;
+	return SCRYPT_N;
 }
 
 /** 是否为 scrypt 哈希格式（否则视为旧版 SHA256 hex） */
 export function isScryptHash(stored: string): boolean {
 	return typeof stored === "string" && stored.startsWith("scrypt$");
+}
+
+/**
+ * 读取已存哈希使用的 N；非 scrypt 格式返回 0（调用方据此判定需迁移）。
+ * scrypt$N$salt$hash 或兼容省略 N 的 scrypt$salt$hash。
+ */
+export function scryptCostFactor(stored: string): number {
+	if (!isScryptHash(stored)) return 0;
+	const parts = stored.split("$");
+	const hasN = parts.length === 4 && /^\d+$/.test(parts[1]);
+	return hasN ? Number(parts[1]) : 16384;
+}
+
+/** 已存哈希是否需要在下次验证成功后重算升级（非 scrypt 格式，或成本参数低于当前目标） */
+export function shouldRehash(stored: string): boolean {
+	const n = scryptCostFactor(stored);
+	return n === 0 || n < targetScryptN();
 }
 
 /**
@@ -190,9 +228,11 @@ export function verifyPasswordHash(plain: string, stored: string): boolean {
 			const hasN = parts.length === 4 && /^\d+$/.test(parts[1]);
 			const salt = Buffer.from(hasN ? parts[2] : (parts[1] ?? ""), "base64");
 			const hash = Buffer.from(hasN ? parts[3] : (parts[2] ?? ""), "base64");
-			const N = hasN ? Number(parts[1]) : SCRYPT_N;
+			// 一律按哈希里记录的 N 校验，旧哈希因此不受升级影响；
+			// maxmem 必须给足，否则 N 偏大的旧哈希会因超限直接失败
+			const N = hasN ? Number(parts[1]) : 16384;
 			if (salt.length === 0 || hash.length === 0) return false;
-			const computed = crypto.scryptSync(plain, salt, 64, { N });
+			const computed = crypto.scryptSync(plain, salt, 64, { N, maxmem: SCRYPT_MAXMEM });
 			if (computed.length !== hash.length) return false;
 			return crypto.timingSafeEqual(computed, hash);
 		}
