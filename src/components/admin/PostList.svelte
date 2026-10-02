@@ -23,8 +23,23 @@ let {
 	isSyncing?: boolean;
 } = $props();
 
+type SortKey = "newest" | "oldest" | "titleAsc" | "titleDesc";
+
 let searchTerm = $state("");
 let statusFilter = $state<"all" | "published" | "draft">("all");
+let categoryFilter = $state("");
+let tagFilter = $state("");
+let sortKey = $state<SortKey>("newest");
+
+const categories = $derived.by(() =>
+	[...new Set(posts.map((post) => post.category).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+);
+
+const tags = $derived.by(() =>
+	[...new Set(posts.flatMap((post) => post.tags ?? []).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+);
+
+const hasExtraFilter = $derived(searchTerm !== "" || statusFilter !== "all" || categoryFilter !== "" || tagFilter !== "");
 
 const filteredPosts = $derived.by(() => {
 	let result = [...posts];
@@ -46,8 +61,31 @@ const filteredPosts = $derived.by(() => {
 		result = result.filter((post) => post.draft);
 	}
 
+	if (categoryFilter) {
+		result = result.filter((post) => post.category === categoryFilter);
+	}
+
+	if (tagFilter) {
+		result = result.filter((post) => post.tags.includes(tagFilter));
+	}
+
+	const byTitle = (a: any, b: any) => a.title.localeCompare(b.title, "zh-CN");
+	const byDate = (a: any, b: any) => (a.published ? Date.parse(a.published) : 0) - (b.published ? Date.parse(b.published) : 0);
+
+	if (sortKey === "newest") result.sort((a, b) => byDate(b, a));
+	else if (sortKey === "oldest") result.sort(byDate);
+	else if (sortKey === "titleAsc") result.sort(byTitle);
+	else result.sort((a, b) => byTitle(b, a));
+
 	return result;
 });
+
+function clearAllFilters() {
+	searchTerm = "";
+	statusFilter = "all";
+	categoryFilter = "";
+	tagFilter = "";
+}
 
 function formatDate(dateStr: string): string {
 	const date = new Date(dateStr);
@@ -130,6 +168,52 @@ function formatDate(dateStr: string): string {
 		{/if}
 	</div>
 
+	<!-- 分类、标签筛选与排序 -->
+	<div class="filter-row">
+		<label class="select-field">
+			<span class="select-label">{i18n(I18nKey.postFilterCategory)}</span>
+			<div class="select-wrap">
+				<select bind:value={categoryFilter} disabled={categories.length === 0}>
+					<option value="">{i18n(I18nKey.postAll)}</option>
+					{#each categories as category (category)}
+						<option value={category}>{category}</option>
+					{/each}
+				</select>
+				<Icon icon="material-symbols:expand-more" class="select-caret" />
+			</div>
+		</label>
+
+		<label class="select-field">
+			<span class="select-label">{i18n(I18nKey.postFilterTag)}</span>
+			<div class="select-wrap">
+				<select bind:value={tagFilter} disabled={tags.length === 0}>
+					<option value="">{i18n(I18nKey.postAll)}</option>
+					{#each tags as tag (tag)}
+						<option value={tag}>{tag}</option>
+					{/each}
+				</select>
+				<Icon icon="material-symbols:expand-more" class="select-caret" />
+			</div>
+		</label>
+
+		<label class="select-field">
+			<span class="select-label">{i18n(I18nKey.postSort)}</span>
+			<div class="select-wrap">
+				<select bind:value={sortKey}>
+					<option value="newest">{i18n(I18nKey.postSortNewest)}</option>
+					<option value="oldest">{i18n(I18nKey.postSortOldest)}</option>
+					<option value="titleAsc">{i18n(I18nKey.postSortTitleAsc)}</option>
+					<option value="titleDesc">{i18n(I18nKey.postSortTitleDesc)}</option>
+				</select>
+				<Icon icon="material-symbols:expand-more" class="select-caret" />
+			</div>
+		</label>
+
+		{#if hasExtraFilter}
+			<button class="text-btn reset-btn" onclick={clearAllFilters}>{i18n(I18nKey.postClearFilter)}</button>
+		{/if}
+	</div>
+
 	<!-- 列表内容 -->
 	{#if isLoading}
 		<div class="state-container">
@@ -145,18 +229,12 @@ function formatDate(dateStr: string): string {
 	{:else if filteredPosts.length === 0}
 		<div class="state-container">
 			<Icon icon="material-symbols:folder-open" class="state-icon" />
-			<p class="state-text">{searchTerm || statusFilter !== "all" ? i18n(I18nKey.postNoMatch) : i18n(I18nKey.postNoPosts)}</p>
-			{#if searchTerm || statusFilter !== "all"}
-				<button
-					class="text-btn"
-					onclick={() => {
-						searchTerm = "";
-						statusFilter = "all";
-					}}
-				>
-					{i18n(I18nKey.postClearFilter)}
-				</button>
-			{/if}
+<p class="state-text">{hasExtraFilter ? i18n(I18nKey.postNoMatch) : i18n(I18nKey.postNoPosts)}</p>
+		{#if hasExtraFilter}
+			<button class="text-btn" onclick={clearAllFilters}>
+				{i18n(I18nKey.postClearFilter)}
+			</button>
+		{/if}
 		</div>
 	{:else}
 		<!-- 分类栏 + 列表 -->
@@ -253,9 +331,18 @@ function formatDate(dateStr: string): string {
 		--md-outline: var(--line-divider);
 		--md-primary: var(--primary);
 		--md-primary-container: color-mix(in srgb, var(--primary) 14%, var(--card-bg));
-		--md-on-primary-container: var(--primary);
+		/* 表头、选中态 chip 的文字底色是 primary-container（浅紫）而非白底，
+		   --primary 压到该底只有 2.4:1，朝 deep-text 混一档才够 4.5:1。
+		   deep-text 在亮色近黑、暗色近白，同一条式子两端同时修正。 */
+		--md-on-primary-container: color-mix(in srgb, var(--on-primary-container) 85%, var(--deep-text));
 		--md-surface-container-high: color-mix(in srgb, var(--primary) 6%, var(--card-bg));
 		--md-state-layer-hover: color-mix(in srgb, var(--deep-text) 5%, transparent);
+
+		/* 语义色当文字用时统一朝 deep-text 混一档，理由同上 */
+		--md-success-text: color-mix(in srgb, var(--success) 70%, var(--deep-text));
+		--md-warning-text: color-mix(in srgb, var(--warning) 70%, var(--deep-text));
+		--md-info-text: color-mix(in srgb, var(--info) 82%, var(--deep-text));
+		--md-destructive-text: color-mix(in srgb, var(--destructive) 88%, var(--deep-text));
 
 		padding: 1.25rem;
 		border-radius: var(--radius-large);
@@ -434,6 +521,72 @@ function formatDate(dateStr: string): string {
 		border-top-color: var(--md-primary);
 		border-radius: 50%;
 		animation: spin 0.8s linear infinite;
+	}
+
+	/* ── 分类、标签筛选与排序 ── */
+	.filter-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.75rem;
+	}
+
+	.select-field {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.select-label {
+		font-size: 0.8125rem;
+		color: var(--md-on-surface-variant);
+		white-space: nowrap;
+	}
+
+	.select-wrap {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.select-wrap select {
+		appearance: none;
+		height: 34px;
+		min-width: 130px;
+		max-width: 200px;
+		padding: 0 2rem 0 0.75rem;
+		border: 1px solid var(--md-outline);
+		border-radius: 8px;
+		background: var(--md-surface-container-high);
+		color: var(--md-on-surface);
+		font-family: inherit;
+		font-size: 0.8125rem;
+		cursor: pointer;
+		text-overflow: ellipsis;
+	}
+
+	.select-wrap select:focus-visible {
+		outline: 2px solid var(--md-primary);
+		outline-offset: 1px;
+	}
+
+	.select-wrap select:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	:global(.select-caret) {
+		position: absolute;
+		right: 0.5rem;
+		font-size: 1.125rem;
+		color: var(--md-on-surface-variant);
+		pointer-events: none;
+	}
+
+	.reset-btn {
+		padding: 0.375rem 0.875rem;
+		border-radius: 16px;
 	}
 
 	/* ── 状态容器 ── */
@@ -638,12 +791,12 @@ function formatDate(dateStr: string): string {
 
 	.status-chip[data-draft="false"] {
 		background: color-mix(in srgb, var(--success) 15%, transparent);
-		color: var(--success);
+		color: var(--md-success-text);
 	}
 
 	.status-chip[data-draft="true"] {
 		background: color-mix(in srgb, var(--warning) 15%, transparent);
-		color: var(--warning);
+		color: var(--md-warning-text);
 	}
 
 	/* 操作列 - 文字按钮 */
@@ -667,15 +820,15 @@ function formatDate(dateStr: string): string {
 	}
 
 	.text-action.view {
-		color: #3b82f6;
+		color: var(--md-info-text);
 	}
 
 	.text-action.view:hover {
-		background: color-mix(in srgb, #3b82f6 12%, transparent);
+		background: color-mix(in srgb, var(--info) 12%, transparent);
 	}
 
 	.text-action.edit {
-		color: var(--md-primary);
+		color: var(--md-on-primary-container);
 	}
 
 	.text-action.edit:hover {
@@ -683,7 +836,7 @@ function formatDate(dateStr: string): string {
 	}
 
 	.text-action.delete {
-		color: var(--destructive);
+		color: var(--md-destructive-text);
 	}
 
 	.text-action.delete:hover {
@@ -691,7 +844,7 @@ function formatDate(dateStr: string): string {
 	}
 
 	.sep {
-		color: var(--md-outline);
+		color: var(--content-meta);
 		font-size: 0.75rem;
 		user-select: none;
 	}
@@ -715,6 +868,20 @@ function formatDate(dateStr: string): string {
 		.toolbar {
 			flex-direction: column;
 			align-items: stretch;
+		}
+
+		.filter-row {
+			align-items: stretch;
+		}
+
+		.select-field {
+			justify-content: space-between;
+		}
+
+		.select-wrap,
+		.select-wrap select {
+			flex: 1;
+			max-width: none;
 		}
 
 		.filter-chips {
