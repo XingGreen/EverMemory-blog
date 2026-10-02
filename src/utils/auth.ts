@@ -5,8 +5,9 @@ import {
 	applyEnvFileUpdates,
 	hashAdminPassword,
 	isEnvFileWritable,
-	isScryptHash,
 	readSecretPreview,
+	scryptCostFactor,
+	shouldRehash,
 	verifyPasswordHash,
 } from "./secret-io";
 import { getSession, touchSession } from "./session-store";
@@ -256,14 +257,14 @@ export function verifyAdminPassword(password: string): boolean {
 		const ok = verifyPasswordHash(password, storedHash);
 		if (!ok) return false;
 
-		// 自动迁移：旧 SHA256 哈希 → scrypt（下次验证起使用新格式）
-		if (!isScryptHash(storedHash) && isEnvFileWritable()) {
+		// 自动迁移：旧 SHA256 哈希 → scrypt；或 scrypt 成本参数偏低 → 当前目标 N
+		// （重启后完全生效；文件不可写时保持原样，不影响本次验证）
+		if (shouldRehash(storedHash) && isEnvFileWritable()) {
 			try {
-				applyEnvFileUpdates([
-					{ key: "ADMIN_PASSWORD", value: hashAdminPassword(password) },
-				]);
+				const upgraded = hashAdminPassword(password);
+				applyEnvFileUpdates([{ key: "ADMIN_PASSWORD", value: upgraded }]);
 				console.log(
-					"[Auth] ADMIN_PASSWORD 已验证并自动迁移为 scrypt 哈希（重启后完全生效）",
+					`[Auth] ADMIN_PASSWORD 已验证并自动升级为 scrypt$${scryptCostFactor(upgraded)} 哈希（重启后完全生效）`,
 				);
 			} catch {
 				// 文件系统不可写：保持旧格式，不影响本次验证
