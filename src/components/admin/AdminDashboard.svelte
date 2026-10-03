@@ -1066,22 +1066,31 @@ function formatDate(dateStr: string | null): string {
 		<!-- 左侧导航栏 -->
 		<aside class="admin-sidebar" class:open={isSidebarOpen} class:collapsed={sidebarCollapsed}>
 			<div class="sidebar-brand">
-				<div class="brand-icon">
-					<Icon icon="material-symbols:apps" class="text-lg" />
-				</div>
-				<span>{i18n(I18nKey.adminDashboard)}</span>
 				<button
-					class="sidebar-collapse-btn"
+					class="brand-toggle"
 					onclick={toggleCollapseSidebar}
 					aria-label={i18n(sidebarCollapsed ? I18nKey.adminExpandSidebar : I18nKey.adminCollapseSidebar)}
 					title={i18n(sidebarCollapsed ? I18nKey.adminExpandSidebar : I18nKey.adminCollapseSidebar)}
 				>
-					{#if sidebarCollapsed}
-						<Icon icon="material-symbols:menu-rounded" />
-					{:else}
-						<Icon icon="material-symbols:menu-open-rounded" />
-					{/if}
+					<span class="brand-avatar">
+						{#if avatarUrl}
+							<img src={avatarUrl} alt="" class="brand-avatar-img" />
+						{:else}
+							<Icon icon="material-symbols:person-rounded" class="text-2xl" />
+						{/if}
+						<span class="brand-toggle-overlay" aria-hidden="true">
+							{#if sidebarCollapsed}
+								<Icon icon="material-symbols:menu-rounded" />
+							{:else}
+								<Icon icon="material-symbols:menu-open-rounded" />
+							{/if}
+						</span>
+					</span>
 				</button>
+				<div class="brand-text">
+					<span class="brand-title">Good Day</span>
+					<span class="brand-subtitle">EverMemory</span>
+				</div>
 			</div>
 
 			<nav class="sidebar-nav">
@@ -1495,7 +1504,11 @@ function formatDate(dateStr: string | null): string {
 
 	/* ── 左侧导航栏 ── */
 	.admin-sidebar {
-		width: 216px;
+		/* 240px：品牌区的折叠/展开入口复用头像本身（不再另设按钮），
+		   因此横向只需容纳 48px 头像 + 12px 间距 + 文字。
+		   实测最宽字体 system-ui 下 "EverMemory" @20px/600 约 128.7px，
+		   240px 可留 19px 余量，且已明显窄于此前的 280px */
+		width: 240px;
 		flex-shrink: 0;
 		height: 100%;
 		overflow-y: auto;
@@ -1529,38 +1542,79 @@ function formatDate(dateStr: string | null): string {
 	.sidebar-brand {
 		display: flex;
 		align-items: center;
+		/* 水平内边距由 .admin-sidebar 提供，此处不重复，否则会挤占品牌名宽度 */
 		gap: 0.75rem;
-		padding: 0.5rem 1rem 1rem;
+		padding: 0.5rem 0 1rem;
 		border-bottom: 1px solid var(--line-divider);
 		margin-bottom: 0.75rem;
-		font-weight: 600;
-		color: var(--deep-text);
-		font-size: 1rem;
 	}
 
-.brand-icon {
-		width: 2.25rem;
-		height: 2.25rem;
-		border-radius: var(--radius-large);
+	.brand-avatar {
+		position: relative;
+		width: 3rem;
+		height: 3rem;
+		border-radius: 50%;
 		background: var(--primary);
 		color: var(--primary-foreground);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
+		overflow: hidden;
+		/* 浅色描边：用 box-shadow 而非 border，避免 2px 边框挤占头像尺寸 */
+		box-shadow: 0 0 0 2px var(--line-color);
+	}
+
+	.brand-avatar-img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.brand-text {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.brand-title,
+	.brand-subtitle {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		line-height: 1.45;
+	}
+
+	.brand-title {
+		/* 问候语：Regular(400) + 次要色，辅助信息层级。
+		   实测系统仅 300 / 400-500 / 600-700 三档可用字重，
+		   用 400 而非 300 可避免与品牌名的字重落差过大 */
+		font-weight: 400;
+		color: var(--content-meta);
+		font-size: 14px;
+	}
+
+	.brand-subtitle {
+		/* 品牌名：SemiBold(600) + 主色，主体信息层级。
+		   注意 600 与 700 在多数系统上渲染相同（无更细的中间档），
+		   品牌名的"重"主要由字号与主色承担 */
+		font-weight: 600;
+		color: var(--deep-text);
+		font-size: 20px;
 	}
 
 	.sidebar-nav {
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: 0.375rem;
 		flex: 1;
 	}
 
 	.nav-group {
 		display: flex;
 		flex-direction: column;
-		gap: 0.125rem;
+		gap: 0.25rem;
 	}
 
 	.nav-item {
@@ -1568,10 +1622,13 @@ function formatDate(dateStr: string | null): string {
 		display: flex;
 		align-items: center;
 		gap: 0.625rem;
-		padding: 0.75rem 1rem;
+		padding: 0.875rem 1rem;
 		border: none;
 		background: transparent;
 		color: var(--deep-text);
+		/* 保持 14px（0.875rem）不放大：一级项还要容纳展开箭头，
+		   240px 侧栏内文字可用仅 160px，而俄文「Управление статьями」
+		   需 150px、英文「Post Management」需 122px，提到 15px 会溢出换行 */
 		font-size: 0.875rem;
 		font-weight: 500;
 		border-radius: var(--radius-lg);
@@ -1579,9 +1636,30 @@ function formatDate(dateStr: string | null): string {
 		transition: background 0.15s, color 0.15s;
 		font-family: inherit;
 		text-align: left;
-		line-height: 1.2;
+		line-height: 1.3;
 		/* 侧边栏内的链接项（返回首页）去除下划线 */
 		text-decoration: none;
+	}
+
+	/* 导航图标统一 24px（MD3 drawer leading icon 规范值）。
+	   Icon 组件默认 text-base（16px）偏小，这里统一由导航项控制尺寸；
+	   一二级不再区分图标大小，层级改由颜色（一级 --deep-text、二级
+	   --content-meta）与缩进承担，符合 MD3 同层级图标等宽的约定。 */
+	.nav-item :global(.inline-icon) {
+		font-size: 1.5rem;
+	}
+
+	/* 展开/收起箭头保持 16px：它是状态指示器而非导航图标，
+	   过大会与主图标争夺注意力，同时挤占文字宽度 */
+	.nav-item :global(.nav-arrow) {
+		font-size: 1rem;
+	}
+
+	/* 导航文字超宽时折行，不做省略号截断（截断会让用户认不出当前所在项）。
+	   min-width: 0 解除 flex 子项的 min-content 锁定，文字才能收缩到容器宽度内换行。
+	   :not(.nav-arrow) 排除箭头——Icon 组件渲染的也是 span。 */
+	.nav-item > span:not(.nav-arrow) {
+		min-width: 0;
 	}
 
 	.nav-item:focus-visible {
@@ -1628,18 +1706,18 @@ function formatDate(dateStr: string | null): string {
 	.nav-submenu {
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
-		margin-left: 1rem;
-		padding-left: 0.75rem;
+		gap: 0.375rem;
+		margin-left: 1.25rem;
+		padding-left: 0.875rem;
 		border-left: 2px solid var(--line-divider);
 	}
 
 	/* 配置分组小标题（侧边栏"网站配置"二级菜单） */
 	.nav-group-label {
 		margin-top: 0.5rem;
-		margin-bottom: 0.125rem;
-		padding: 0.25rem 0.75rem 0.125rem;
-		font-size: 0.6875rem;
+		margin-bottom: 0.25rem;
+		padding: 0.25rem 0.875rem 0.125rem;
+		font-size: 0.75rem;
 		font-weight: 600;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
@@ -1651,8 +1729,9 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.nav-item.sub {
-		padding: 0.625rem 0.875rem;
-		font-size: 0.8125rem;
+		padding: 0.75rem 0.875rem;
+		/* 二级项无箭头，可用宽度更充裕（108px），文字可安全放大到 14px */
+		font-size: 0.875rem;
 		color: var(--content-meta);
 		border-radius: var(--radius-lg);
 	}
@@ -1676,26 +1755,40 @@ function formatDate(dateStr: string | null): string {
 		margin-top: 0.5rem;
 	}
 
-	/* 侧边栏折叠/展开按钮（位于品牌区右侧） */
-	.sidebar-collapse-btn {
-		margin-left: auto;
+	/* 折叠/展开入口：复用头像本身，不额外占横向空间 */
+	.brand-toggle {
 		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2rem;
-		height: 2rem;
+		padding: 0;
 		border: none;
-		border-radius: var(--radius-lg);
 		background: transparent;
-		color: var(--content-meta);
 		cursor: pointer;
-		transition: background 0.15s, color 0.15s;
+		border-radius: 50%;
 		flex-shrink: 0;
 	}
 
-	.sidebar-collapse-btn:hover {
-		background: var(--btn-regular-bg);
-		color: var(--deep-text);
+	.brand-toggle:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	/* 悬停/聚焦时用遮罩 + 图标提示当前点击将折叠或展开侧边栏 */
+	.brand-toggle-overlay {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 50%;
+		background: rgba(0, 0, 0, 0.55);
+		color: #fff;
+		opacity: 0;
+		transition: opacity 0.2s ease;
+		pointer-events: none;
+	}
+
+	.brand-toggle:hover .brand-toggle-overlay,
+	.brand-toggle:focus-visible .brand-toggle-overlay {
+		opacity: 1;
 	}
 
 	/* 折叠态滑出的二级菜单面板（仅折叠时悬停一级图标显示） */
@@ -1735,7 +1828,9 @@ function formatDate(dateStr: string | null): string {
 	/* 桌面端折叠模式：仅图标，悬停滑出二级菜单 */
 	@media (min-width: 1024px) {
 		.admin-sidebar.collapsed {
-			width: 56px;
+			/* 64px：需完整容纳 48px 头像 + 左右各 0.5rem 内边距，
+			   头像即折叠/展开入口，折叠后依然保留可见 */
+			width: 64px;
 			padding: 1rem 0.5rem;
 			/* flyout 面板超出侧栏右边界，必须关掉滚动裁切才能显示 */
 			overflow: visible;
@@ -1743,7 +1838,7 @@ function formatDate(dateStr: string | null): string {
 
 		/* 折叠时隐藏文字与内联子菜单（flyout 面板内的文字不受影响） */
 		.admin-sidebar.collapsed :not(.flyout-panel) > .nav-item > span,
-		.admin-sidebar.collapsed .sidebar-brand > span,
+		.admin-sidebar.collapsed .brand-text,
 		.admin-sidebar.collapsed .nav-submenu-wrap {
 			display: none;
 		}
@@ -1751,15 +1846,6 @@ function formatDate(dateStr: string | null): string {
 		.admin-sidebar.collapsed .sidebar-brand {
 			justify-content: center;
 			padding: 0.5rem 0 1rem;
-		}
-
-		/* 折叠态品牌图标让位：仅保留折叠按钮居中（避免与图标并排溢出） */
-		.admin-sidebar.collapsed .brand-icon {
-			display: none;
-		}
-
-		.admin-sidebar.collapsed .sidebar-collapse-btn {
-			margin-left: 0;
 		}
 
 		.admin-sidebar.collapsed .nav-item {
@@ -2821,7 +2907,8 @@ function formatDate(dateStr: string | null): string {
 			top: 0;
 			left: 0;
 			bottom: 0;
-			width: 216px;
+			/* 与桌面态保持一致，否则移动端抽屉会截断品牌名 */
+			width: 240px;
 			z-index: 120;
 			border: none;
 			border-right: 1px solid var(--line-divider);
@@ -2845,6 +2932,17 @@ function formatDate(dateStr: string | null): string {
 
 		.menu-toggle {
 			display: inline-flex;
+		}
+
+		/* 移动端抽屉没有折叠态概念（由遮罩与 X 按钮关闭），
+		   禁用头像上的 hover 覆盖层，避免误触发桌面端折叠逻辑 */
+		.brand-toggle {
+			pointer-events: none;
+			cursor: default;
+		}
+
+		.brand-toggle-overlay {
+			display: none;
 		}
 	}
 
