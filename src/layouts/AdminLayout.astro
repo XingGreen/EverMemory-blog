@@ -61,6 +61,17 @@ if (import.meta.env.PROD) {
 </style>
 
 <style is:global>
+	/* ── 后台整页滚动锁定（仅控制面板）──
+	   .admin-content 自身即内部滚动容器，配合 AdminDashboard 的 height: calc(100vh - 3rem)
+	   约束，设计上整页不应再出现滚动范围。一旦文档层出现可滚动范围，滚轮会滚动文档
+	   而非内容区，表现为「页面能上下滑动，但列表底部永远到不了」。
+	   用 :has(.admin-layout) 限定作用域，登录页等独立后台页不受影响。 */
+	html.admin-page:has(.admin-layout),
+	html.admin-page:has(.admin-layout) body {
+		height: 100%;
+		overflow: hidden;
+	}
+
 	/* ── 后台控制面板自定义滚动条 ──
 	只作用于 .admin-shell 内（后台面板/编辑器/列表/弹窗）与 admin-page 页面的根滚动条 */
 	.admin-shell,
