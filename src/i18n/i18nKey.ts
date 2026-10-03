@@ -515,6 +515,15 @@ enum I18nKey {
 	postEdit = "postEdit",
 	postDelete = "postDelete",
 	postListCount = "postListCount",
+	postSearchLabel = "postSearchLabel",
+	postStatusFilterGroup = "postStatusFilterGroup",
+	postFilterGroup = "postFilterGroup",
+	postTableLabel = "postTableLabel",
+	postActionLabel = "postActionLabel",
+	postMoreTags = "postMoreTags",
+	postResultCount = "postResultCount",
+	postSortAsc = "postSortAsc",
+	postSortDesc = "postSortDesc",
 
 	// 文章编辑器
 	postSave = "postSave",

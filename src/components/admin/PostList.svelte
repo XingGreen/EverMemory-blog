@@ -32,14 +32,23 @@ let tagFilter = $state("");
 let sortKey = $state<SortKey>("newest");
 
 const categories = $derived.by(() =>
-	[...new Set(posts.map((post) => post.category).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+	[...new Set(posts.map((post) => post.category).filter(Boolean))].sort(
+		(a, b) => a.localeCompare(b),
+	),
 );
 
 const tags = $derived.by(() =>
-	[...new Set(posts.flatMap((post) => post.tags ?? []).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+	[...new Set(posts.flatMap((post) => post.tags ?? []).filter(Boolean))].sort(
+		(a, b) => a.localeCompare(b),
+	),
 );
 
-const hasExtraFilter = $derived(searchTerm !== "" || statusFilter !== "all" || categoryFilter !== "" || tagFilter !== "");
+const hasExtraFilter = $derived(
+	searchTerm !== "" ||
+		statusFilter !== "all" ||
+		categoryFilter !== "" ||
+		tagFilter !== "",
+);
 
 const filteredPosts = $derived.by(() => {
 	let result = [...posts];
@@ -70,7 +79,9 @@ const filteredPosts = $derived.by(() => {
 	}
 
 	const byTitle = (a: any, b: any) => a.title.localeCompare(b.title, "zh-CN");
-	const byDate = (a: any, b: any) => (a.published ? Date.parse(a.published) : 0) - (b.published ? Date.parse(b.published) : 0);
+	const byDate = (a: any, b: any) =>
+		(a.published ? Date.parse(a.published) : 0) -
+		(b.published ? Date.parse(b.published) : 0);
 
 	if (sortKey === "newest") result.sort((a, b) => byDate(b, a));
 	else if (sortKey === "oldest") result.sort(byDate);
@@ -95,6 +106,25 @@ function formatDate(dateStr: string): string {
 		day: "numeric",
 	});
 }
+
+/** 当前排序落在哪一列、什么方向，供表头 aria-sort 使用 */
+const sortColumn = $derived(
+	sortKey === "titleAsc" || sortKey === "titleDesc" ? "title" : "date",
+);
+const sortAscending = $derived(sortKey === "oldest" || sortKey === "titleAsc");
+
+function ariaSortFor(
+	column: "title" | "date",
+): "ascending" | "descending" | "none" {
+	if (sortColumn !== column) return "none";
+	return sortAscending ? "ascending" : "descending";
+}
+
+function actionLabel(action: string, title: string): string {
+	return i18n(I18nKey.postActionLabel)
+		.replace("{action}", action)
+		.replace("{title}", title);
+}
 </script>
 
 <div class="md3-list-container card-base">
@@ -103,20 +133,30 @@ function formatDate(dateStr: string): string {
 		<div class="search-bar">
 			<Icon icon="material-symbols:search" class="leading-icon" />
 			<input
-				type="text"
+				type="search"
 				bind:value={searchTerm}
 				placeholder={i18n(I18nKey.postSearchPlaceholder)}
+				aria-label={i18n(I18nKey.postSearchLabel)}
 				class="search-input"
 			/>
 			{#if searchTerm}
-				<button class="trailing-icon-btn" onclick={() => (searchTerm = "")} aria-label={i18n(I18nKey.postSearchClear)}>
+				<button
+					class="trailing-icon-btn"
+					onclick={() => (searchTerm = "")}
+					aria-label={i18n(I18nKey.postSearchClear)}
+				>
 					<Icon icon="material-symbols:close" />
 				</button>
 			{/if}
 		</div>
 
-		<div class="filter-chips">
-			<button class="chip" class:selected={statusFilter === "all"} onclick={() => (statusFilter = "all")}>
+		<div class="filter-chips" role="group" aria-label={i18n(I18nKey.postStatusFilterGroup)}>
+			<button
+				class="chip"
+				class:selected={statusFilter === "all"}
+				aria-pressed={statusFilter === "all"}
+				onclick={() => (statusFilter = "all")}
+			>
 				{#if statusFilter === "all"}
 					<Icon icon="material-symbols:check" class="chip-check" />
 				{/if}
@@ -126,6 +166,7 @@ function formatDate(dateStr: string): string {
 			<button
 				class="chip"
 				class:selected={statusFilter === "published"}
+				aria-pressed={statusFilter === "published"}
 				onclick={() => (statusFilter = "published")}
 			>
 				{#if statusFilter === "published"}
@@ -137,6 +178,7 @@ function formatDate(dateStr: string): string {
 			<button
 				class="chip"
 				class:selected={statusFilter === "draft"}
+				aria-pressed={statusFilter === "draft"}
 				onclick={() => (statusFilter = "draft")}
 			>
 				{#if statusFilter === "draft"}
@@ -147,29 +189,31 @@ function formatDate(dateStr: string): string {
 			</button>
 		</div>
 
-		<button class="icon-text-btn" onclick={onRefresh} disabled={isLoading || isSyncing}>
-			{#if isLoading}
-				<span class="spinner"></span>
-			{:else}
-				<Icon icon="material-symbols:update-rounded" />
-			{/if}
-			{i18n(I18nKey.postRefresh)}
-		</button>
-
-		{#if onSync}
-			<button class="icon-text-btn sync-btn" onclick={onSync} disabled={isLoading || isSyncing}>
-				{#if isSyncing}
-					<span class="spinner"></span>
+		<div class="toolbar-actions">
+			<button class="icon-text-btn" onclick={onRefresh} disabled={isLoading || isSyncing}>
+				{#if isLoading}
+					<span class="spinner" aria-hidden="true"></span>
 				{:else}
-					<Icon icon="material-symbols:cloud" />
+					<Icon icon="material-symbols:update-rounded" />
 				{/if}
-				{i18n(I18nKey.postSync)}
+				{i18n(I18nKey.postRefresh)}
 			</button>
-		{/if}
+
+			{#if onSync}
+				<button class="icon-text-btn sync-btn" onclick={onSync} disabled={isLoading || isSyncing}>
+					{#if isSyncing}
+						<span class="spinner" aria-hidden="true"></span>
+					{:else}
+						<Icon icon="material-symbols:cloud" />
+					{/if}
+					{i18n(I18nKey.postSync)}
+				</button>
+			{/if}
+		</div>
 	</div>
 
 	<!-- 分类、标签筛选与排序 -->
-	<div class="filter-row">
+	<div class="filter-row" role="group" aria-label={i18n(I18nKey.postFilterGroup)}>
 		<label class="select-field">
 			<span class="select-label">{i18n(I18nKey.postFilterCategory)}</span>
 			<div class="select-wrap">
@@ -216,51 +260,59 @@ function formatDate(dateStr: string): string {
 
 	<!-- 列表内容 -->
 	{#if isLoading}
-		<div class="state-container">
-			<div class="circular-progress"></div>
+		<div class="state-container" role="status" aria-live="polite">
+			<div class="circular-progress" aria-hidden="true"></div>
 			<p class="state-text">{i18n(I18nKey.postLoading)}</p>
 		</div>
 	{:else if error}
-		<div class="state-container">
+		<div class="state-container" role="alert">
 			<Icon icon="material-symbols:error-outline" class="state-icon error" />
-			<p class="state-text">{error}</p>
-			<button class="filled-btn" onclick={onRefresh}>{i18n(I18nKey.postRetry)}</button>
+			<p class="state-text" id="post-list-error">{error}</p>
+			<button class="filled-btn" onclick={onRefresh} aria-describedby="post-list-error">
+				{i18n(I18nKey.postRetry)}
+			</button>
 		</div>
 	{:else if filteredPosts.length === 0}
 		<div class="state-container">
 			<Icon icon="material-symbols:folder-open" class="state-icon" />
-<p class="state-text">{hasExtraFilter ? i18n(I18nKey.postNoMatch) : i18n(I18nKey.postNoPosts)}</p>
-		{#if hasExtraFilter}
-			<button class="text-btn" onclick={clearAllFilters}>
-				{i18n(I18nKey.postClearFilter)}
-			</button>
-		{/if}
+			<p class="state-text">{hasExtraFilter ? i18n(I18nKey.postNoMatch) : i18n(I18nKey.postNoPosts)}</p>
+			{#if hasExtraFilter}
+				<button class="text-btn" onclick={clearAllFilters}>
+					{i18n(I18nKey.postClearFilter)}
+				</button>
+			{/if}
 		</div>
 	{:else}
-		<!-- 分类栏 + 列表 -->
-		<div class="md3-table">
+		<div class="md3-table" role="table" aria-label={i18n(I18nKey.postTableLabel)}>
 			<!-- 分类栏（表头） -->
-			<div class="header-row">
-				<div class="col col-title">{i18n(I18nKey.postColTitle)}</div>
-				<div class="col col-author">{i18n(I18nKey.postColAuthor)}</div>
-				<div class="col col-category">{i18n(I18nKey.postColCategory)}</div>
-				<div class="col col-date">{i18n(I18nKey.postColDate)}</div>
-				<div class="col col-status">{i18n(I18nKey.postColStatus)}</div>
-				<div class="col col-actions">{i18n(I18nKey.postColActions)}</div>
+			<div class="header-row" role="rowgroup">
+				<div class="col col-title" role="columnheader" aria-sort={ariaSortFor("title")}>
+					{i18n(I18nKey.postColTitle)}
+				</div>
+				<div class="col col-author" role="columnheader">{i18n(I18nKey.postColAuthor)}</div>
+				<div class="col col-category" role="columnheader">{i18n(I18nKey.postColCategory)}</div>
+				<div class="col col-date" role="columnheader" aria-sort={ariaSortFor("date")}>
+					{i18n(I18nKey.postColDate)}
+				</div>
+				<div class="col col-status" role="columnheader">{i18n(I18nKey.postColStatus)}</div>
+				<div class="col col-actions" role="columnheader">{i18n(I18nKey.postColActions)}</div>
 			</div>
 
 			<!-- 列表项 -->
-			<div class="md3-list" role="list">
+			<div class="md3-list" role="rowgroup">
 				{#each filteredPosts as post (post.id)}
-					<div class="list-item" role="listitem">
+					<div class="list-item" role="row">
 						<!-- 标题 -->
-						<div class="col col-title">
+						<div class="col col-title" role="cell" data-label={i18n(I18nKey.postColTitle)}>
 							<div class="title-cell">
 								<div class="title-row">
 									{#if post.pinned}
-										<Icon icon="material-symbols:pinboard" class="pin-icon" />
+										<span class="pin-wrap">
+											<Icon icon="material-symbols:pinboard" class="pin-icon" />
+											<span class="sr-only">{i18n(I18nKey.postPinned)}</span>
+										</span>
 									{/if}
-									<span class="title">{post.title}</span>
+									<span class="title" title={post.title}>{post.title}</span>
 								</div>
 								{#if post.tags && post.tags.length > 0}
 									<div class="tags">
@@ -268,7 +320,12 @@ function formatDate(dateStr: string): string {
 											<span class="tag">{tag}</span>
 										{/each}
 										{#if post.tags.length > 3}
-											<span class="tag-more">+{post.tags.length - 3}</span>
+											<span
+												class="tag-more"
+												aria-label={i18n(I18nKey.postMoreTags).replace("{count}", String(post.tags.length - 3))}
+											>
+												+{post.tags.length - 3}
+											</span>
 										{/if}
 									</div>
 								{/if}
@@ -276,39 +333,55 @@ function formatDate(dateStr: string): string {
 						</div>
 
 						<!-- 作者 -->
-						<div class="col col-author">
-							<span class="text-meta">{post.author || "—"}</span>
+						<div class="col col-author" role="cell" data-label={i18n(I18nKey.postColAuthor)}>
+							<span class="text-meta" title={post.author || ""}>{post.author || "—"}</span>
 						</div>
 
 						<!-- 分类 -->
-						<div class="col col-category">
+						<div class="col col-category" role="cell" data-label={i18n(I18nKey.postColCategory)}>
 							<span class="text-meta">{post.category || "—"}</span>
 						</div>
 
 						<!-- 发布日期 -->
-						<div class="col col-date">
+						<div class="col col-date" role="cell" data-label={i18n(I18nKey.postColDate)}>
 							<span class="text-meta">{post.published ? formatDate(post.published) : "—"}</span>
 						</div>
 
 						<!-- 状态 -->
-						<div class="col col-status">
+						<div class="col col-status" role="cell" data-label={i18n(I18nKey.postColStatus)}>
 							<span class="status-chip" data-draft={post.draft}>
+								<Icon
+									icon={post.draft ? "material-symbols:edit-note" : "material-symbols:check-circle-outline"}
+									class="status-icon"
+								/>
 								{post.draft ? i18n(I18nKey.postDraft) : i18n(I18nKey.postPublished)}
 							</span>
 						</div>
 
 						<!-- 操作（文字按钮） -->
-						<div class="col col-actions">
+						<div class="col col-actions" role="cell" data-label={i18n(I18nKey.postColActions)}>
 							<div class="text-actions">
-								<a class="text-action view" href={`/posts/${post.slug}`} target="_blank">
+								<a
+									class="text-action view"
+									href={`/posts/${post.slug}`}
+									target="_blank"
+									rel="noopener noreferrer"
+									aria-label={actionLabel(i18n(I18nKey.postView), post.title)}
+								>
 									{i18n(I18nKey.postView)}
 								</a>
-								<span class="sep">|</span>
-								<button class="text-action edit" onclick={() => onEdit(post)}>
+								<button
+									class="text-action edit"
+									onclick={() => onEdit(post)}
+									aria-label={actionLabel(i18n(I18nKey.postEdit), post.title)}
+								>
 									{i18n(I18nKey.postEdit)}
 								</button>
-								<span class="sep">|</span>
-								<button class="text-action delete" onclick={() => onDelete(post)}>
+								<button
+									class="text-action delete"
+									onclick={() => onDelete(post)}
+									aria-label={actionLabel(i18n(I18nKey.postDelete), post.title)}
+								>
 									{i18n(I18nKey.postDelete)}
 								</button>
 							</div>
@@ -321,31 +394,62 @@ function formatDate(dateStr: string): string {
 		<div class="list-footer">
 			<span>{i18n(I18nKey.postListCount).replace("{count}", String(filteredPosts.length))}</span>
 		</div>
+		<p class="sr-only" role="status" aria-live="polite">
+			{i18n(I18nKey.postResultCount).replace("{count}", String(filteredPosts.length))}
+		</p>
 	{/if}
 </div>
 
 <style>
 	.md3-list-container {
+		/* M3 语义角色 → 项目 token 映射。刻意不引入官方默认紫色，
+		   保持品牌紫（hue 275）+ 莫奈柔彩的整体语言。 */
 		--md-on-surface: var(--deep-text);
 		--md-on-surface-variant: var(--content-meta);
 		--md-outline: var(--line-divider);
 		--md-primary: var(--primary);
 		--md-primary-container: color-mix(in srgb, var(--primary) 14%, var(--card-bg));
+
 		/* 表头、选中态 chip 的文字底色是 primary-container（浅紫）而非白底，
-		   --primary 压到该底只有 2.4:1，朝 deep-text 混一档才够 4.5:1。
+		   --primary 压到该底只有 2.7:1，朝 deep-text 混一档才够 4.5:1。
 		   deep-text 在亮色近黑、暗色近白，同一条式子两端同时修正。 */
 		--md-on-primary-container: color-mix(in srgb, var(--on-primary-container) 85%, var(--deep-text));
+
+		/* primary 直接当文字色只有 2.7:1（暗色 7.4:1 尚可，亮色不达标），
+		   朝 deep-text 混 42% 后亮色 7.4:1、暗色 11.1:1，两端都稳过 AA。 */
+		--md-primary-text: color-mix(in srgb, var(--primary) 42%, var(--deep-text));
+
+		/* filled button 是「primary 底 + on-primary 字」，而本项目 primary 是浅紫，
+		   白字只有 1.6:1，on-primary 必须取深色（亮色 7.2:1、暗色 8.5:1）。 */
+		--md-on-primary: oklch(0.16 0.08 275);
+
 		--md-surface-container-high: color-mix(in srgb, var(--primary) 6%, var(--card-bg));
 		--md-state-layer-hover: color-mix(in srgb, var(--deep-text) 5%, transparent);
 
-		/* 语义色当文字用时统一朝 deep-text 混一档，理由同上 */
-		--md-success-text: color-mix(in srgb, var(--success) 70%, var(--deep-text));
-		--md-warning-text: color-mix(in srgb, var(--warning) 70%, var(--deep-text));
-		--md-info-text: color-mix(in srgb, var(--info) 82%, var(--deep-text));
+		/* 语义色当文字用时统一朝 deep-text 混一档，理由同上。
+		   徽章文字底色是「语义色 15% over 行底」，比行底更饱和，
+		   所以权重须低于 70%（70% 时徽章只有 4.34:1），取 55% 得 5.6:1。
+		   info 同理：82% 在 surfHigh 上只剩 4.40:1，降到 72% 补齐。 */
+		--md-success-text: color-mix(in srgb, var(--success) 55%, var(--deep-text));
+		--md-warning-text: color-mix(in srgb, var(--warning) 55%, var(--deep-text));
+		--md-info-text: color-mix(in srgb, var(--info) 72%, var(--deep-text));
 		--md-destructive-text: color-mix(in srgb, var(--destructive) 88%, var(--deep-text));
 
 		padding: 1.25rem;
 		border-radius: var(--radius-large);
+	}
+
+	/* 视觉隐藏但保留给屏幕阅读器（置顶说明、标签溢出数、筛选结果播报） */
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		padding: 0;
+		border: 0;
+		margin-inline-start: -1px;
+		overflow: hidden;
+		white-space: nowrap;
 	}
 
 	/* ── 工具栏 ── */
@@ -355,6 +459,13 @@ function formatDate(dateStr: string): string {
 		gap: 0.75rem;
 		flex-wrap: wrap;
 		margin-bottom: 0.75rem;
+	}
+
+	.toolbar-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		margin-left: auto;
 	}
 
 	.search-bar {
@@ -371,7 +482,7 @@ function formatDate(dateStr: string): string {
 
 	.search-bar:focus-within {
 		background: color-mix(in srgb, var(--primary) 12%, var(--card-bg));
-		outline: 2px solid var(--md-primary);
+		outline: 2px solid var(--md-primary-text);
 		outline-offset: -2px;
 	}
 
@@ -383,6 +494,7 @@ function formatDate(dateStr: string): string {
 
 	.search-input {
 		flex: 1;
+		min-width: 0;
 		border: none;
 		background: transparent;
 		font-size: 0.9375rem;
@@ -398,9 +510,13 @@ function formatDate(dateStr: string): string {
 		color: var(--md-on-surface-variant);
 	}
 
+	.search-input::-webkit-search-cancel-button {
+		display: none;
+	}
+
 	.trailing-icon-btn {
-		width: 40px;
-		height: 40px;
+		width: 48px;
+		height: 48px;
 		border: none;
 		border-radius: 50%;
 		background: transparent;
@@ -410,13 +526,19 @@ function formatDate(dateStr: string): string {
 		align-items: center;
 		justify-content: center;
 		transition: background 0.15s;
+		flex-shrink: 0;
 	}
 
 	.trailing-icon-btn:hover {
 		background: var(--md-state-layer-hover);
 	}
 
-	/* MD3 FilterChip */
+	.trailing-icon-btn:focus-visible {
+		outline: 2px solid var(--md-primary-text);
+		outline-offset: -2px;
+	}
+
+	/* M3 FilterChip */
 	.filter-chips {
 		display: flex;
 		gap: 0.5rem;
@@ -426,7 +548,7 @@ function formatDate(dateStr: string): string {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.375rem;
-		height: 32px;
+		height: 40px;
 		padding: 0 1rem;
 		border: 1px solid var(--md-outline);
 		border-radius: var(--radius-lg);
@@ -434,14 +556,17 @@ function formatDate(dateStr: string): string {
 		color: var(--md-on-surface-variant);
 		font-size: 0.8125rem;
 		font-weight: 500;
+		font-family: inherit;
 		cursor: pointer;
-		transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+		transition:
+			background-color 0.18s cubic-bezier(0.2, 0, 0, 1),
+			border-color 0.18s cubic-bezier(0.2, 0, 0, 1);
 		overflow: hidden;
 		position: relative;
 	}
 
 	.chip:focus-visible {
-		outline: 2px solid var(--md-primary);
+		outline: 2px solid var(--md-primary-text);
 		outline-offset: 2px;
 	}
 
@@ -459,10 +584,6 @@ function formatDate(dateStr: string): string {
 		opacity: 1;
 	}
 
-	.chip:focus-visible {
-		outline: none;
-	}
-
 	.chip.selected {
 		background: var(--md-primary-container);
 		border-color: transparent;
@@ -471,7 +592,7 @@ function formatDate(dateStr: string): string {
 	}
 
 	.chip.selected::after {
-		background: color-mix(in srgb, var(--md-primary) 12%, transparent);
+		background: color-mix(in srgb, var(--primary) 12%, transparent);
 	}
 
 	:global(.chip-check) {
@@ -483,30 +604,42 @@ function formatDate(dateStr: string): string {
 		line-height: 1;
 	}
 
+	/* 计数不用 opacity 压暗——opacity 0.7 在 surfHigh 上只剩 4.12:1，
+	   改用朝 deep-text 混色，亮色 8.5:1、暗色 6.8:1。 */
 	.chip-count {
 		font-size: 0.6875rem;
-		opacity: 0.7;
+		color: color-mix(in srgb, var(--md-on-surface-variant) 35%, var(--md-on-surface));
 		line-height: 1;
+	}
+
+	.chip.selected .chip-count {
+		color: var(--md-on-primary-container);
 	}
 
 	.icon-text-btn {
 		display: flex;
 		align-items: center;
 		gap: 0.375rem;
-		height: 40px;
+		height: 44px;
 		padding: 0 1rem;
 		border: none;
-		border-radius: 20px;
+		border-radius: 22px;
 		background: transparent;
-		color: var(--md-primary);
+		color: var(--md-primary-text);
 		font-size: 0.875rem;
 		font-weight: 500;
+		font-family: inherit;
 		cursor: pointer;
 		transition: background 0.15s;
 	}
 
 	.icon-text-btn:hover:not(:disabled) {
 		background: color-mix(in srgb, var(--primary) 8%, transparent);
+	}
+
+	.icon-text-btn:focus-visible {
+		outline: 2px solid var(--md-primary-text);
+		outline-offset: -2px;
 	}
 
 	.icon-text-btn:disabled {
@@ -517,8 +650,8 @@ function formatDate(dateStr: string): string {
 	.spinner {
 		width: 16px;
 		height: 16px;
-		border: 2px solid color-mix(in srgb, var(--md-primary) 30%, transparent);
-		border-top-color: var(--md-primary);
+		border: 2px solid color-mix(in srgb, var(--md-primary-text) 30%, transparent);
+		border-top-color: var(--md-primary-text);
 		border-radius: 50%;
 		animation: spin 0.8s linear infinite;
 	}
@@ -552,9 +685,9 @@ function formatDate(dateStr: string): string {
 
 	.select-wrap select {
 		appearance: none;
-		height: 34px;
+		height: 40px;
 		min-width: 130px;
-		max-width: 200px;
+		max-width: 220px;
 		padding: 0 2rem 0 0.75rem;
 		border: 1px solid var(--md-outline);
 		border-radius: 8px;
@@ -567,7 +700,7 @@ function formatDate(dateStr: string): string {
 	}
 
 	.select-wrap select:focus-visible {
-		outline: 2px solid var(--md-primary);
+		outline: 2px solid var(--md-primary-text);
 		outline-offset: 1px;
 	}
 
@@ -585,8 +718,8 @@ function formatDate(dateStr: string): string {
 	}
 
 	.reset-btn {
-		padding: 0.375rem 0.875rem;
-		border-radius: 16px;
+		padding: 0.5rem 1rem;
+		border-radius: 20px;
 	}
 
 	/* ── 状态容器 ── */
@@ -606,7 +739,7 @@ function formatDate(dateStr: string): string {
 	}
 
 	:global(.state-icon.error) {
-		color: var(--destructive);
+		color: var(--md-destructive-text);
 	}
 
 	.state-text {
@@ -618,19 +751,21 @@ function formatDate(dateStr: string): string {
 		width: 36px;
 		height: 36px;
 		border: 3px solid var(--md-outline);
-		border-top-color: var(--md-primary);
+		border-top-color: var(--md-primary-text);
 		border-radius: 50%;
 		animation: spin 0.8s linear infinite;
 	}
 
 	.filled-btn {
+		min-height: 40px;
 		padding: 0.5rem 1.5rem;
 		border: none;
 		border-radius: 20px;
 		background: var(--md-primary);
-		color: white;
+		color: var(--md-on-primary);
 		font-size: 0.875rem;
 		font-weight: 500;
+		font-family: inherit;
 		cursor: pointer;
 		transition: filter 0.15s;
 	}
@@ -639,24 +774,39 @@ function formatDate(dateStr: string): string {
 		filter: brightness(1.08);
 	}
 
+	.filled-btn:focus-visible {
+		outline: 2px solid var(--md-primary-text);
+		outline-offset: 2px;
+	}
+
 	.text-btn {
+		min-height: 40px;
 		padding: 0.5rem 1rem;
 		border: none;
 		background: transparent;
-		color: var(--md-primary);
+		color: var(--md-primary-text);
 		font-size: 0.875rem;
 		font-weight: 500;
+		font-family: inherit;
 		cursor: pointer;
+		border-radius: 20px;
+		transition: background 0.15s;
 	}
 
 	.text-btn:hover {
 		background: color-mix(in srgb, var(--primary) 8%, transparent);
-		border-radius: 20px;
 	}
 
-	/* ── 分类栏 + 列表 ── */
+	.text-btn:focus-visible {
+		outline: 2px solid var(--md-primary-text);
+		outline-offset: -2px;
+	}
+
+	/* ── 数据表 ── */
+	/* 外层 .card-base 已提供容器语义，内层不再叠第二层描边圆角，
+	   否则就是「卡片里再套卡片」——分隔交给行间 divider。 */
 	.md3-table {
-		border-radius: var(--radius-large);
+		border-radius: var(--radius-md);
 		overflow: hidden;
 		border: 1px solid var(--md-outline);
 	}
@@ -675,6 +825,21 @@ function formatDate(dateStr: string): string {
 
 	.header-row .col {
 		padding: 0 0.25rem;
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	/* 当前排序列给出方向箭头，aria-sort 之外的视觉冗余，
+	   避免「只靠颜色/语义」传达排序状态 */
+	.header-row [aria-sort="ascending"]::after {
+		content: "↑";
+		font-size: 0.875rem;
+	}
+
+	.header-row [aria-sort="descending"]::after {
+		content: "↓";
+		font-size: 0.875rem;
 	}
 
 	/* 列表项 */
@@ -708,11 +873,6 @@ function formatDate(dateStr: string): string {
 		background: var(--md-state-layer-hover);
 	}
 
-	.list-item:focus-visible {
-		outline: none;
-		background: color-mix(in srgb, var(--primary) 10%, transparent);
-	}
-
 	.col {
 		padding: 0 0.25rem;
 		min-width: 0;
@@ -731,13 +891,19 @@ function formatDate(dateStr: string): string {
 
 	.title-row {
 		display: flex;
-		align-items: center;
+		align-items: baseline;
 		gap: 0.375rem;
+	}
+
+	.pin-wrap {
+		display: inline-flex;
+		align-items: center;
+		flex-shrink: 0;
 	}
 
 	:global(.pin-icon) {
 		font-size: 0.875rem;
-		color: var(--md-primary);
+		color: var(--md-primary-text);
 		flex-shrink: 0;
 	}
 
@@ -779,14 +945,19 @@ function formatDate(dateStr: string): string {
 		white-space: nowrap;
 	}
 
-	/* 状态徽章 */
+	/* 状态徽章：图标 + 文字双通道，不靠颜色单独表意 */
 	.status-chip {
 		display: inline-flex;
 		align-items: center;
+		gap: 0.25rem;
 		padding: 0.125rem 0.625rem;
 		border-radius: 8px;
 		font-size: 0.75rem;
 		font-weight: 500;
+	}
+
+	:global(.status-icon) {
+		font-size: 0.875rem;
 	}
 
 	.status-chip[data-draft="false"] {
@@ -803,20 +974,33 @@ function formatDate(dateStr: string): string {
 	.text-actions {
 		display: flex;
 		align-items: center;
-		gap: 0.375rem;
+		gap: 0.5rem;
 	}
 
+	/* 视觉紧凑但命中区撑到 44px：用伪元素外扩，不改变行的 56px 高度 */
 	.text-action {
+		position: relative;
 		border: none;
 		background: transparent;
 		font-size: 0.8125rem;
 		font-weight: 500;
 		cursor: pointer;
-		padding: 0.25rem 0.375rem;
-		border-radius: 6px;
-		transition: all 0.15s;
+		padding: 0.375rem 0.5rem;
+		border-radius: 8px;
+		transition: background-color 0.15s;
 		text-decoration: none;
 		font-family: inherit;
+	}
+
+	.text-action::after {
+		content: "";
+		position: absolute;
+		inset: -0.5rem -0.25rem;
+	}
+
+	.text-action:focus-visible {
+		outline: 2px solid currentcolor;
+		outline-offset: 1px;
 	}
 
 	.text-action.view {
@@ -843,12 +1027,6 @@ function formatDate(dateStr: string): string {
 		background: color-mix(in srgb, var(--destructive) 12%, transparent);
 	}
 
-	.sep {
-		color: var(--content-meta);
-		font-size: 0.75rem;
-		user-select: none;
-	}
-
 	/* Footer */
 	.list-footer {
 		padding: 0.75rem 1rem 0;
@@ -863,11 +1041,35 @@ function formatDate(dateStr: string): string {
 		}
 	}
 
-	/* 响应式 */
-	@media (max-width: 768px) {
+	/* ── 自适应：按可用宽度而非设备类别切换 ── */
+
+	/* 中等宽度：作者/分类列先让位给标题与操作 */
+	@media (max-width: 1100px) {
+		.header-row,
+		.list-item {
+			grid-template-columns: 2.2fr 0.9fr 1.2fr 0.9fr 1.4fr;
+		}
+
+		.col-category {
+			display: none;
+		}
+	}
+
+	/* 紧凑宽度：表格降级为堆叠列表项，而不是拉出 700px 横向滚动条。
+	   横向滚动会把「状态/操作」推到屏外，窄屏下等于隐藏关键操作。 */
+	@media (max-width: 860px) {
 		.toolbar {
-			flex-direction: column;
-			align-items: stretch;
+			flex-wrap: wrap;
+		}
+
+		.toolbar-actions {
+			margin-left: 0;
+			width: 100%;
+		}
+
+		.icon-text-btn {
+			flex: 1;
+			justify-content: center;
 		}
 
 		.filter-row {
@@ -876,6 +1078,7 @@ function formatDate(dateStr: string): string {
 
 		.select-field {
 			justify-content: space-between;
+			flex: 1 1 100%;
 		}
 
 		.select-wrap,
@@ -890,16 +1093,72 @@ function formatDate(dateStr: string): string {
 		}
 
 		.md3-table {
-			overflow-x: auto;
-		}
-
-		.header-row,
-		.list-item {
-			min-width: 700px;
+			border: none;
+			border-radius: 0;
+			overflow: visible;
 		}
 
 		.header-row {
+			display: none;
+		}
+
+		.list-item {
+			display: grid;
+			grid-template-columns: 1fr auto;
+			grid-template-areas:
+				"title status"
+				"meta  actions";
+			gap: 0.5rem 0.75rem;
+			padding: 1rem 0.25rem;
+			min-width: 0;
+		}
+
+		.list-item:not(:last-child)::after {
+			left: 0.25rem;
+			right: 0.25rem;
+		}
+
+		.col-title {
+			grid-area: title;
+		}
+
+		.col-status {
+			grid-area: status;
+			justify-self: end;
+			padding: 0;
+		}
+
+		.col-author,
+		.col-category,
+		.col-date {
+			grid-area: meta;
+			grid-row: 2;
+		}
+
+		.col-author,
+		.col-category {
+			display: none;
+		}
+
+		.col-actions {
+			grid-area: actions;
+			justify-self: end;
+			align-self: end;
+			padding: 0;
+		}
+
+		/* 堆叠态补回表头丢失的列名 */
+		.col-date::before {
+			content: attr(data-label);
 			font-size: 0.75rem;
+			color: var(--md-on-surface-variant);
+			margin-right: 0.375rem;
+		}
+
+		.title {
+			white-space: normal;
+			overflow-wrap: anywhere;
 		}
 	}
 </style>
+
