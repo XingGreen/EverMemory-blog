@@ -157,9 +157,7 @@ function actionLabel(action: string, title: string): string {
 				aria-pressed={statusFilter === "all"}
 				onclick={() => (statusFilter = "all")}
 			>
-				{#if statusFilter === "all"}
-					<Icon icon="material-symbols:check" class="chip-check" />
-				{/if}
+				<Icon icon="material-symbols:check" class="chip-check" />
 				<span class="chip-label">{i18n(I18nKey.postAll)}</span>
 				<span class="chip-count">{posts.length}</span>
 			</button>
@@ -169,9 +167,7 @@ function actionLabel(action: string, title: string): string {
 				aria-pressed={statusFilter === "published"}
 				onclick={() => (statusFilter = "published")}
 			>
-				{#if statusFilter === "published"}
-					<Icon icon="material-symbols:check" class="chip-check" />
-				{/if}
+				<Icon icon="material-symbols:check" class="chip-check" />
 				<span class="chip-label">{i18n(I18nKey.postPublished)}</span>
 				<span class="chip-count">{posts.filter((p) => !p.draft).length}</span>
 			</button>
@@ -181,9 +177,7 @@ function actionLabel(action: string, title: string): string {
 				aria-pressed={statusFilter === "draft"}
 				onclick={() => (statusFilter = "draft")}
 			>
-				{#if statusFilter === "draft"}
-					<Icon icon="material-symbols:check" class="chip-check" />
-				{/if}
+				<Icon icon="material-symbols:check" class="chip-check" />
 				<span class="chip-label">{i18n(I18nKey.postDraft)}</span>
 				<span class="chip-count">{posts.filter((p) => p.draft).length}</span>
 			</button>
@@ -317,7 +311,7 @@ function actionLabel(action: string, title: string): string {
 								{#if post.tags && post.tags.length > 0}
 									<div class="tags">
 										{#each post.tags.slice(0, 3) as tag}
-											<span class="tag">{tag}</span>
+											<span class="tag">#{tag}</span>
 										{/each}
 										{#if post.tags.length > 3}
 											<span
@@ -350,39 +344,39 @@ function actionLabel(action: string, title: string): string {
 						<!-- 状态 -->
 						<div class="col col-status" role="cell" data-label={i18n(I18nKey.postColStatus)}>
 							<span class="status-chip" data-draft={post.draft}>
-								<Icon
-									icon={post.draft ? "material-symbols:edit-note" : "material-symbols:check-circle-outline"}
-									class="status-icon"
-								/>
+								<span class="status-dot" aria-hidden="true"></span>
 								{post.draft ? i18n(I18nKey.postDraft) : i18n(I18nKey.postPublished)}
 							</span>
 						</div>
 
-						<!-- 操作（文字按钮） -->
+						<!-- 操作（图标按钮） -->
 						<div class="col col-actions" role="cell" data-label={i18n(I18nKey.postColActions)}>
-							<div class="text-actions">
+							<div class="icon-actions">
 								<a
-									class="text-action view"
+									class="icon-action view"
 									href={`/posts/${post.slug}`}
 									target="_blank"
 									rel="noopener noreferrer"
 									aria-label={actionLabel(i18n(I18nKey.postView), post.title)}
+									title={i18n(I18nKey.postView)}
 								>
-									{i18n(I18nKey.postView)}
+									<Icon icon="material-symbols:visibility-outline-rounded" class="action-icon" />
 								</a>
 								<button
-									class="text-action edit"
+									class="icon-action edit"
 									onclick={() => onEdit(post)}
 									aria-label={actionLabel(i18n(I18nKey.postEdit), post.title)}
+									title={i18n(I18nKey.postEdit)}
 								>
-									{i18n(I18nKey.postEdit)}
+									<Icon icon="material-symbols:edit" class="action-icon" />
 								</button>
 								<button
-									class="text-action delete"
+									class="icon-action delete"
 									onclick={() => onDelete(post)}
 									aria-label={actionLabel(i18n(I18nKey.postDelete), post.title)}
+									title={i18n(I18nKey.postDelete)}
 								>
-									{i18n(I18nKey.postDelete)}
+									<Icon icon="material-symbols:delete-outline" class="action-icon" />
 								</button>
 							</div>
 						</div>
@@ -425,6 +419,9 @@ function actionLabel(action: string, title: string): string {
 
 		--md-surface-container-high: color-mix(in srgb, var(--primary) 6%, var(--card-bg));
 		--md-state-layer-hover: color-mix(in srgb, var(--deep-text) 5%, transparent);
+		/* 行悬停单独一档：行面积大、需要比小控件（5%）更明确的反馈，
+		   8% 实测红通道偏移 15%，清晰可见但仍克制。 */
+		--md-row-hover: color-mix(in srgb, var(--deep-text) 8%, transparent);
 
 		/* 语义色当文字用时统一朝 deep-text 混一档，理由同上。
 		   徽章文字底色是「语义色 15% over 行底」，比行底更饱和，
@@ -437,6 +434,13 @@ function actionLabel(action: string, title: string): string {
 
 		padding: 1.25rem;
 		border-radius: var(--radius-large);
+
+		/* 统一控件规格：工具栏内所有控件共用高度、圆角、间距。
+		   此前搜索框 48px / 按钮 44px / chip 40px 三种高度、28/22/20/8px 四种圆角
+		   混排，视觉上参差不齐，这里收敛为一套 token。 */
+		--md-control-h: 40px;
+		--md-control-r: 20px;
+		--md-control-gap: 0.5rem;
 	}
 
 	/* 视觉隐藏但保留给屏幕阅读器（置顶说明、标签溢出数、筛选结果播报） */
@@ -456,7 +460,7 @@ function actionLabel(action: string, title: string): string {
 	.toolbar {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: var(--md-control-gap);
 		flex-wrap: wrap;
 		margin-bottom: 0.75rem;
 	}
@@ -464,7 +468,7 @@ function actionLabel(action: string, title: string): string {
 	.toolbar-actions {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
+		gap: var(--md-control-gap);
 		margin-left: auto;
 	}
 
@@ -473,10 +477,10 @@ function actionLabel(action: string, title: string): string {
 		min-width: 200px;
 		display: flex;
 		align-items: center;
-		height: 48px;
-		padding: 0 0.5rem 0 1rem;
+		height: var(--md-control-h);
+		padding: 0 0.25rem 0 0.875rem;
 		background: var(--md-surface-container-high);
-		border-radius: 28px;
+		border-radius: var(--md-control-r);
 		transition: background 0.2s;
 	}
 
@@ -514,9 +518,12 @@ function actionLabel(action: string, title: string): string {
 		display: none;
 	}
 
+	/* 视觉 40px 与搜索框等高，命中区用伪元素外扩到 48dp，
+	   避免撑破搜索框又保住触控目标 */
 	.trailing-icon-btn {
-		width: 48px;
-		height: 48px;
+		position: relative;
+		width: var(--md-control-h);
+		height: var(--md-control-h);
 		border: none;
 		border-radius: 50%;
 		background: transparent;
@@ -529,6 +536,13 @@ function actionLabel(action: string, title: string): string {
 		flex-shrink: 0;
 	}
 
+	.trailing-icon-btn::after {
+		content: "";
+		position: absolute;
+		inset: -4px;
+		border-radius: 50%;
+	}
+
 	.trailing-icon-btn:hover {
 		background: var(--md-state-layer-hover);
 	}
@@ -538,20 +552,26 @@ function actionLabel(action: string, title: string): string {
 		outline-offset: -2px;
 	}
 
-	/* M3 FilterChip */
+	/* M3 FilterChip
+	   三片等宽：「全部/已发布/草稿」及英文、俄文译文长度差异很大，
+	   用 flex 自然宽度会宽窄不齐，这里等分网格保证整排等宽等高。 */
 	.filter-chips {
-		display: flex;
-		gap: 0.5rem;
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: var(--md-control-gap);
 	}
 
 	.chip {
 		display: inline-flex;
 		align-items: center;
+		justify-content: center;
 		gap: 0.375rem;
-		height: 40px;
-		padding: 0 1rem;
+		height: var(--md-control-h);
+		/* 左侧预留 check 图标位：选中时用 opacity 显隐而非增删元素，
+		   否则切换筛选会让 chip 宽度跳 16px，整排控件跟着抖。 */
+		padding: 0 0.875rem 0 0.875rem;
 		border: 1px solid var(--md-outline);
-		border-radius: var(--radius-lg);
+		border-radius: var(--md-control-r);
 		background: transparent;
 		color: var(--md-on-surface-variant);
 		font-size: 0.8125rem;
@@ -588,20 +608,30 @@ function actionLabel(action: string, title: string): string {
 		background: var(--md-primary-container);
 		border-color: transparent;
 		color: var(--md-on-primary-container);
-		padding-left: 0.5rem;
 	}
 
 	.chip.selected::after {
 		background: color-mix(in srgb, var(--primary) 12%, transparent);
 	}
 
+	/* check 图标常驻占位，仅显隐，避免 chip 宽度随选中态跳变 */
 	:global(.chip-check) {
 		font-size: 1.125rem;
 		flex-shrink: 0;
+		opacity: 0;
+		transition: opacity 0.15s;
+	}
+
+	.chip.selected :global(.chip-check) {
+		opacity: 1;
 	}
 
 	.chip-label {
 		line-height: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	/* 计数不用 opacity 压暗——opacity 0.7 在 surfHigh 上只剩 4.12:1，
@@ -619,17 +649,19 @@ function actionLabel(action: string, title: string): string {
 	.icon-text-btn {
 		display: flex;
 		align-items: center;
+		justify-content: center;
 		gap: 0.375rem;
-		height: 44px;
+		height: var(--md-control-h);
 		padding: 0 1rem;
 		border: none;
-		border-radius: 22px;
+		border-radius: var(--md-control-r);
 		background: transparent;
 		color: var(--md-primary-text);
 		font-size: 0.875rem;
 		font-weight: 500;
 		font-family: inherit;
 		cursor: pointer;
+		white-space: nowrap;
 		transition: background 0.15s;
 	}
 
@@ -660,7 +692,7 @@ function actionLabel(action: string, title: string): string {
 	.filter-row {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: var(--md-control-gap);
 		flex-wrap: wrap;
 		margin-bottom: 0.75rem;
 	}
@@ -685,12 +717,12 @@ function actionLabel(action: string, title: string): string {
 
 	.select-wrap select {
 		appearance: none;
-		height: 40px;
+		height: var(--md-control-h);
 		min-width: 130px;
 		max-width: 220px;
-		padding: 0 2rem 0 0.75rem;
+		padding: 0 2rem 0 0.875rem;
 		border: 1px solid var(--md-outline);
-		border-radius: 8px;
+		border-radius: var(--md-control-r);
 		background: var(--md-surface-container-high);
 		color: var(--md-on-surface);
 		font-family: inherit;
@@ -711,15 +743,14 @@ function actionLabel(action: string, title: string): string {
 
 	:global(.select-caret) {
 		position: absolute;
-		right: 0.5rem;
+		right: 0.875rem;
 		font-size: 1.125rem;
 		color: var(--md-on-surface-variant);
 		pointer-events: none;
 	}
 
 	.reset-btn {
-		padding: 0.5rem 1rem;
-		border-radius: 20px;
+		margin-left: auto;
 	}
 
 	/* ── 状态容器 ── */
@@ -757,10 +788,10 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.filled-btn {
-		min-height: 40px;
-		padding: 0.5rem 1.5rem;
+		height: var(--md-control-h);
+		padding: 0 1.5rem;
 		border: none;
-		border-radius: 20px;
+		border-radius: var(--md-control-r);
 		background: var(--md-primary);
 		color: var(--md-on-primary);
 		font-size: 0.875rem;
@@ -780,8 +811,11 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.text-btn {
-		min-height: 40px;
-		padding: 0.5rem 1rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		height: var(--md-control-h);
+		padding: 0 1rem;
 		border: none;
 		background: transparent;
 		color: var(--md-primary-text);
@@ -789,7 +823,7 @@ function actionLabel(action: string, title: string): string {
 		font-weight: 500;
 		font-family: inherit;
 		cursor: pointer;
-		border-radius: 20px;
+		border-radius: var(--md-control-r);
 		transition: background 0.15s;
 	}
 
@@ -805,22 +839,32 @@ function actionLabel(action: string, title: string): string {
 	/* ── 数据表 ── */
 	/* 外层 .card-base 已提供容器语义，内层不再叠第二层描边圆角，
 	   否则就是「卡片里再套卡片」——分隔交给行间 divider。 */
+	/* 表格容器
+	   圆角从 radius-md(6px) 提到 radius-large(16px)：6px 在 70px 行高下显得生硬，
+	   16px 贴近 MD3 卡片圆角，和外层容器内边距（1.25rem）不冲突。 */
 	.md3-table {
-		border-radius: var(--radius-md);
+		border-radius: var(--radius-large);
 		overflow: hidden;
 		border: 1px solid var(--md-outline);
 	}
 
-	/* 表头行 */
+	/* 表头行
+	   底色用 on-surface 混入 card-bg：方向随主题自动正确 —— 亮色下 on-surface 是
+	   深色，表头因此比正文行更深；暗色下是近白，表头凸起更亮，两个主题都能与正文
+	   明确分层。不用「叠黑」是因为暗色下叠黑会让表头底趋近纯黑、反而更贴近卡片底。
+	   再叠一条下边框，字号/字重/字距/大写同时收敛，分层不只依赖底色。 */
 	.header-row {
 		display: grid;
-		grid-template-columns: 2.5fr 1fr 1fr 1.2fr 0.9fr 1.5fr;
+		grid-template-columns: 2.9fr 0.9fr 0.9fr 1.1fr 0.9fr 1.2fr;
 		align-items: center;
-		padding: 0.75rem 1rem;
-		background: var(--md-primary-container);
-		color: var(--md-on-primary-container);
-		font-size: 0.8125rem;
+		padding: 0.875rem 1rem;
+		background: color-mix(in srgb, var(--md-on-surface) 10%, var(--card-bg));
+		border-bottom: 1px solid var(--md-outline);
+		color: var(--md-on-surface-variant);
+		font-size: 0.75rem;
 		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
 	}
 
 	.header-row .col {
@@ -848,29 +892,25 @@ function actionLabel(action: string, title: string): string {
 		flex-direction: column;
 	}
 
+	/* 列表项
+	   行高约 63px → 70px：标题 + 标签两行内容原本挤在 12px 上下内边距里，
+	   上下留白不足让相邻行视觉粘连。padding 取 1rem 而非 1.125rem，
+	   使「有标签」与「无标签」两种行高都落在 70~71px，整列不被个别行撑歪。 */
 	.list-item {
 		display: grid;
-		grid-template-columns: 2.5fr 1fr 1fr 1.2fr 0.9fr 1.5fr;
+		grid-template-columns: 2.9fr 0.9fr 0.9fr 1.1fr 0.9fr 1.2fr;
 		align-items: center;
-		padding: 0.75rem 1rem;
-		min-height: 56px;
+		padding: 1rem;
+		min-height: 70px;
 		transition: background 0.15s;
 		cursor: default;
-		position: relative;
 	}
 
-	.list-item:not(:last-child)::after {
-		content: "";
-		position: absolute;
-		bottom: 0;
-		left: 1rem;
-		right: 1rem;
-		height: 1px;
-		background: var(--md-outline);
-	}
-
+	/* 行间分割线已移除，改为纯靠 70px 行高 + 悬停高亮分隔。
+   除了视觉更透气，保留分割线还有个实际问题：它不会跟随悬停变色，
+   鼠标扫过一行时横线仍是原色，把高亮区切成两段，悬停反馈显得破碎。 */
 	.list-item:hover {
-		background: var(--md-state-layer-hover);
+		background: var(--md-row-hover);
 	}
 
 	.col {
@@ -881,6 +921,15 @@ function actionLabel(action: string, title: string): string {
 	/* 标题列 */
 	.col-title {
 		min-width: 0;
+	}
+
+	/* 操作列额外右内边距：仅靠 .list-item 的 1rem 容器留白时，
+	   图标组仍显得贴边，这里补一档并让按钮在该列内居中。 */
+	.col-actions {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding-right: 0.75rem;
 	}
 
 	.title-cell {
@@ -907,9 +956,12 @@ function actionLabel(action: string, title: string): string {
 		flex-shrink: 0;
 	}
 
+	/* 标题是列表的视觉锚点：加大加粗，并用 on-surface（暗色下接近纯白），
+	   亮色主题下 on-surface 是深色，符合「最亮/最重」的层级意图而非硬编码纯白。 */
 	.title {
-		font-size: 0.9375rem;
-		font-weight: 500;
+		font-size: 1.0625rem;
+		font-weight: 600;
+		letter-spacing: 0.01em;
 		color: var(--md-on-surface);
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -918,46 +970,67 @@ function actionLabel(action: string, title: string): string {
 
 	.tags {
 		display: flex;
-		gap: 0.25rem;
+		gap: 0.5rem;
 		flex-wrap: wrap;
+		align-items: baseline;
 	}
 
+	/* 标签退为灰色纯文本（#tag），去掉背景色块、圆角与内边距：
+	   多色方块在一屏内互相竞争注意力，弱化后标题层级才立得住。
+	   颜色沿用 on-surface-variant（不再额外压暗）——标签已是 12px 小字，
+	   继续压到 4.5:1 以下会牺牲可读性，弱化交给「去色块 + 缩小」即可。 */
 	.tag {
-		padding: 0.0625rem 0.5rem;
-		background: var(--md-surface-container-high);
-		border-radius: 4px;
-		font-size: 0.6875rem;
+		font-size: 0.75rem;
+		font-weight: 400;
 		color: var(--md-on-surface-variant);
+		letter-spacing: 0.01em;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.tag-more {
-		font-size: 0.6875rem;
+		font-size: 0.75rem;
 		color: var(--md-on-surface-variant);
 		align-self: center;
 	}
 
-	/* 元信息文本 */
+	/* 元信息文本（作者/分类/日期）
+	   调小到 12px，与 17px/600 的标题拉开两级字号层级。
+	   颜色沿用 on-surface-variant 不再压暗，也不用 opacity：opacity 会连带
+	   拉低与卡片的实际对比度（项目此前在 chip-count 上实测 0.7 只剩 4.12:1），
+	   12px 小字必须守住 4.5:1，弱化交给字号而非明度。 */
 	.text-meta {
-		font-size: 0.8125rem;
+		font-size: 0.75rem;
+		font-weight: 400;
 		color: var(--md-on-surface-variant);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
-	/* 状态徽章：图标 + 文字双通道，不靠颜色单独表意 */
+	/* 状态徽章：圆点 + 文字
+	   原先「勾/编辑笔记」图标把状态列撑到约 83px，收窄为 6px 圆点后降到约 70px。
+   圆角取 6px（radius-md）而非 999px 胶囊：徽章高度仅 20px，胶囊过于圆润，
+   6px 与表格容器 16px 的圆角语言更协调，也避免一排胶囊抢走标题的注意力。
+   语义仍由文字承载（圆点是纯装饰），未退化为「只靠颜色表意」。 */
 	.status-chip {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.25rem;
-		padding: 0.125rem 0.625rem;
-		border-radius: 8px;
+		gap: 0.375rem;
+		padding: 0.1875rem 0.5rem;
+		border-radius: var(--radius-md);
 		font-size: 0.75rem;
 		font-weight: 500;
+		white-space: nowrap;
 	}
 
-	:global(.status-icon) {
-		font-size: 0.875rem;
+	.status-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		flex-shrink: 0;
+		background: currentcolor;
 	}
 
 	.status-chip[data-draft="false"] {
@@ -970,61 +1043,76 @@ function actionLabel(action: string, title: string): string {
 		color: var(--md-warning-text);
 	}
 
-	/* 操作列 - 文字按钮 */
-	.text-actions {
+	/* 操作列 - 图标按钮
+	   文字按钮退到图标后，红色「删除」不再抢占整行视线，删除与编辑之间也有独立
+	   命中区（原先两个纯文本按钮相邻，容易误点）。视觉 34px + 伪元素外扩到 44dp，
+	   触控目标达标又不撑高行。 */
+	.icon-actions {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		justify-content: center;
+		/* 12px 间距 + 伪元素外扩 4px：命中区之间净留 4px 间隙。
+		   原先 gap 4px 配外扩 5px，相邻命中区反而重叠 6px，确易误点。 */
+		gap: 0.75rem;
 	}
 
-	/* 视觉紧凑但命中区撑到 44px：用伪元素外扩，不改变行的 56px 高度 */
-	.text-action {
+	.icon-action {
 		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 34px;
+		height: 34px;
 		border: none;
+		border-radius: 50%;
 		background: transparent;
-		font-size: 0.8125rem;
-		font-weight: 500;
+		color: var(--md-on-surface-variant);
 		cursor: pointer;
-		padding: 0.375rem 0.5rem;
-		border-radius: 8px;
-		transition: background-color 0.15s;
 		text-decoration: none;
-		font-family: inherit;
+		transition:
+			background-color 0.15s,
+			color 0.15s;
 	}
 
-	.text-action::after {
+	/* 命中区外扩到 42dp：与 12px 间距配合后相邻命中区不重叠（净间隙 4px），
+	   既保住触控目标又不会让两个按钮的热区串在一起 */
+	.icon-action::after {
 		content: "";
 		position: absolute;
-		inset: -0.5rem -0.25rem;
+		inset: -4px;
+		border-radius: 50%;
 	}
 
-	.text-action:focus-visible {
+	.icon-action:hover {
+		background: var(--md-state-layer-hover);
+		color: var(--md-on-surface);
+	}
+
+	.icon-action:focus-visible {
 		outline: 2px solid currentcolor;
 		outline-offset: 1px;
 	}
 
-	.text-action.view {
+	:global(.action-icon) {
+		font-size: 1.25rem;
+	}
+
+	/* 悬停时才显出语义色，静止状态三枚图标同为中性灰 */
+	.icon-action.view:hover {
+		background: color-mix(in srgb, var(--info) 14%, transparent);
 		color: var(--md-info-text);
 	}
 
-	.text-action.view:hover {
-		background: color-mix(in srgb, var(--info) 12%, transparent);
+	.icon-action.edit:hover {
+		background: color-mix(in srgb, var(--primary) 14%, transparent);
+		color: var(--md-primary-text);
 	}
 
-	.text-action.edit {
-		color: var(--md-on-primary-container);
-	}
-
-	.text-action.edit:hover {
-		background: color-mix(in srgb, var(--primary) 12%, transparent);
-	}
-
-	.text-action.delete {
-		color: var(--md-destructive-text);
-	}
-
-	.text-action.delete:hover {
-		background: color-mix(in srgb, var(--destructive) 12%, transparent);
+	/* 删除不用 --md-destructive-text（高饱和红，静止态过于抢眼），
+	   改为中性灰，仅在悬停/聚焦时才显出暗红，符合「破坏性操作不主动吸引注意」。 */
+	.icon-action.delete:hover {
+		background: color-mix(in srgb, var(--destructive) 16%, transparent);
+		color: color-mix(in srgb, var(--destructive) 75%, var(--md-on-surface));
 	}
 
 	/* Footer */
@@ -1047,7 +1135,7 @@ function actionLabel(action: string, title: string): string {
 	@media (max-width: 1100px) {
 		.header-row,
 		.list-item {
-			grid-template-columns: 2.2fr 0.9fr 1.2fr 0.9fr 1.4fr;
+			grid-template-columns: 2.6fr 0.9fr 1.1fr 0.9fr 1.2fr;
 		}
 
 		.col-category {
@@ -1060,6 +1148,16 @@ function actionLabel(action: string, title: string): string {
 	@media (max-width: 860px) {
 		.toolbar {
 			flex-wrap: wrap;
+		}
+
+		/* 窄屏下三列等宽会把长译文压到截断，回退自然宽度并独占一行横向滚动 */
+		.filter-chips {
+			grid-template-columns: none;
+			grid-auto-flow: column;
+			grid-auto-columns: max-content;
+			flex: 1 1 100%;
+			min-width: 0;
+			overflow-x: auto;
 		}
 
 		.toolbar-actions {
@@ -1104,35 +1202,31 @@ function actionLabel(action: string, title: string): string {
 
 		.list-item {
 			display: grid;
-			grid-template-columns: 1fr auto;
+			grid-template-columns: minmax(0, 1fr) auto;
 			grid-template-areas:
 				"title status"
 				"meta  actions";
-			gap: 0.5rem 0.75rem;
-			padding: 1rem 0.25rem;
+			align-items: center;
+			gap: 0.625rem 0.75rem;
+			padding: 1.125rem 0.25rem;
 			min-width: 0;
-		}
-
-		.list-item:not(:last-child)::after {
-			left: 0.25rem;
-			right: 0.25rem;
 		}
 
 		.col-title {
 			grid-area: title;
+			align-self: center;
 		}
 
 		.col-status {
 			grid-area: status;
 			justify-self: end;
+			align-self: center;
 			padding: 0;
 		}
 
-		.col-author,
-		.col-category,
 		.col-date {
 			grid-area: meta;
-			grid-row: 2;
+			align-self: center;
 		}
 
 		.col-author,
@@ -1143,8 +1237,10 @@ function actionLabel(action: string, title: string): string {
 		.col-actions {
 			grid-area: actions;
 			justify-self: end;
-			align-self: end;
+			align-self: center;
 			padding: 0;
+			width: 100%;
+			max-width: 220px;
 		}
 
 		/* 堆叠态补回表头丢失的列名 */
