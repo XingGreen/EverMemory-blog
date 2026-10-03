@@ -67,6 +67,13 @@ Defined in `src/content.config.ts`:
 - Relaxed rules for `.svelte`/`.astro` files (useConst off, noUnusedVariables off)
 - Commit convention: **Conventional Commits** (`feat:`, `fix:`, `chore:`, etc.)
 
+### 提交约定
+
+- **每次改动完成后立即提交一次，无需等用户提醒。** 一个可验证的改动单元对应一个 commit。
+- 提交前先跑 `pnpm check`（必要时 `pnpm build`）确认通过，并在 commit body 中说明改动要点与取舍原因。
+- 仅暂存本次改动涉及的文件（`git add <path>`），不要 `git add -A` 混入无关改动。
+- 除非用户明确要求，否则**不 push、不 amend**。
+
 ## Markdown 渲染约定
 
 任何 Markdown 渲染/预览（前台文章、后台编辑器预览、相关 API）**必须复用项目既有管线**，优先级高于任何自建/手写方案：
