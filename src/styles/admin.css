@@ -15,7 +15,12 @@
 
   --page-bg: oklch(0.95 0.01 275);
   --card-bg: oklch(1 0.01 275);
-  --admin-sidebar-bg: oklch(0.95 0.01 275);
+  /* 侧边栏底色必须与 --page-bg 拉开一档，否则导航栏会与页面背景完全融为一体。
+     引用 --card-bg 而非写死色值：两种模式都取「比页面更亮的卡片色」保持同一套
+     凸起语义，且只需在各自模式下改 --card-bg 一处，不会再出现两模式不同步。
+     （曾把暗色写成 oklch(0.08) 下沉，换算后仅 #010203，与 #0b0d13 的页面底色
+       肉眼无法分辨，等同于没修） */
+  --admin-sidebar-bg: var(--card-bg);
 
   --deep-text: oklch(0.25 0.02 275);
   /* 前台用 rgba(0,0,0,0.7) 而非固定灰：靠 alpha 叠加到不同底色上都能保持层次 */
@@ -92,7 +97,7 @@
 
   --page-bg: oklch(0.16 0.014 275);
   --card-bg: oklch(0.23 0.015 275);
-  --admin-sidebar-bg: oklch(0.08 0.01 275);
+  /* --admin-sidebar-bg 引用 --card-bg，深色下自动跟随，无需在此重复定义 */
 
   --deep-text: oklch(0.95 0.01 275);
   --content-meta: rgba(255, 255, 255, 0.6);
