@@ -43,7 +43,7 @@ export async function POST({ request }) {
 		}
 
 		// 暴力破解防护：连续失败达到阈值后锁定该客户端
-		const { locked, retryAfterSeconds } = checkLockout(clientKey);
+		const { locked, retryAfterSeconds } = await checkLockout(clientKey);
 		if (locked) {
 			writeAuditLog({
 				event: "login_locked",
@@ -74,7 +74,7 @@ export async function POST({ request }) {
 		);
 
 		if (usernameOk && passwordOk) {
-			clearFailures(clientKey);
+			await clearFailures(clientKey);
 			writeAuditLog({
 				event: "login_success",
 				client: clientKey,
@@ -104,14 +104,15 @@ export async function POST({ request }) {
 		}
 
 		// 至少一项失败：统一提示（不泄露哪一项失败），并累计锁定
-		const lockInfo = registerFailure(clientKey);
+		const lockInfo = await registerFailure(clientKey);
+		const failures = await failureCount(clientKey);
 		writeAuditLog({
 			event: "login_failure",
 			client: clientKey,
 			username,
 			detail: lockInfo.locked
 				? `locked for ${lockInfo.retryAfterSeconds}s`
-				: `failures=${failureCount(clientKey)}`,
+				: `failures=${failures}`,
 		});
 		const failHeaders = new Headers({ "Content-Type": "application/json" });
 		clearAuthCookie(failHeaders);
