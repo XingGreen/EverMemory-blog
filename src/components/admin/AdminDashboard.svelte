@@ -1100,7 +1100,11 @@ function formatDate(dateStr: string | null): string {
 					class:active={activePage === "dashboard"}
 					onclick={goDashboard}
 				>
-					<Icon icon="material-symbols:home-outline-rounded" />
+					{#if activePage === "dashboard"}
+						<Icon icon="material-symbols:home-rounded" />
+					{:else}
+						<Icon icon="material-symbols:home-outline-rounded" />
+					{/if}
 					<span>{i18n(I18nKey.adminHome)}</span>
 				</button>
 
@@ -1112,8 +1116,12 @@ function formatDate(dateStr: string | null): string {
 						onclick={togglePostsSubmenu}
 						aria-expanded={postsSubOpen}
 					>
+{#if activePage === "posts"}
+						<Icon icon="material-symbols:article" />
+					{:else}
 						<Icon icon="material-symbols:article-outline" />
-						<span>{i18n(I18nKey.adminPosts)}</span>
+					{/if}
+					<span>{i18n(I18nKey.adminPosts)}</span>
 						{#if !sidebarCollapsed}
 							<Icon
 								icon={postsSubOpen ? "material-symbols:keyboard-arrow-up-rounded" : "material-symbols:keyboard-arrow-down-rounded"}
@@ -1128,7 +1136,11 @@ function formatDate(dateStr: string | null): string {
 								class:active={activePage === "posts" && (viewMode === "list" || viewMode === "edit")}
 								onclick={goPostList}
 							>
-								<Icon icon="material-symbols:format-list-bulleted" />
+								{#if activePage === "posts" && (viewMode === "list" || viewMode === "edit")}
+									<Icon icon="material-symbols:list-alt-rounded" />
+								{:else}
+									<Icon icon="material-symbols:list-alt-outline" />
+								{/if}
 								<span>{i18n(I18nKey.adminPostList)}</span>
 							</button>
 							<button
@@ -1136,7 +1148,11 @@ function formatDate(dateStr: string | null): string {
 								class:active={activePage === "posts" && viewMode === "create"}
 								onclick={goCreatePost}
 							>
-								<Icon icon="material-symbols:edit-calendar-outline-rounded" />
+								{#if activePage === "posts" && viewMode === "create"}
+									<Icon icon="material-symbols:edit-calendar-rounded" />
+								{:else}
+									<Icon icon="material-symbols:edit-calendar-outline-rounded" />
+								{/if}
 								<span>{i18n(I18nKey.adminNewPost)}</span>
 							</button>
 						</div>
@@ -1148,7 +1164,11 @@ function formatDate(dateStr: string | null): string {
 							class:active={activePage === "posts" && (viewMode === "list" || viewMode === "edit")}
 							onclick={goPostList}
 						>
-							<Icon icon="material-symbols:format-list-bulleted" />
+							{#if activePage === "posts" && (viewMode === "list" || viewMode === "edit")}
+								<Icon icon="material-symbols:list-alt-rounded" />
+							{:else}
+								<Icon icon="material-symbols:list-alt-outline" />
+							{/if}
 							<span>{i18n(I18nKey.adminPostList)}</span>
 						</button>
 						<button
@@ -1156,7 +1176,11 @@ function formatDate(dateStr: string | null): string {
 							class:active={activePage === "posts" && viewMode === "create"}
 							onclick={goCreatePost}
 						>
-							<Icon icon="material-symbols:edit-calendar-outline-rounded" />
+							{#if activePage === "posts" && viewMode === "create"}
+								<Icon icon="material-symbols:edit-calendar-rounded" />
+							{:else}
+								<Icon icon="material-symbols:edit-calendar-outline-rounded" />
+							{/if}
 							<span>{i18n(I18nKey.adminNewPost)}</span>
 						</button>
 					</div>
@@ -1170,8 +1194,12 @@ function formatDate(dateStr: string | null): string {
 						onclick={toggleSettingsSubmenu}
 						aria-expanded={settingsSubOpen}
 					>
+{#if activePage === "settings"}
 						<Icon icon="material-symbols:settings" />
-						<span>{i18n(I18nKey.adminSettings)}</span>
+					{:else}
+						<Icon icon="material-symbols:settings-outline" />
+					{/if}
+					<span>{i18n(I18nKey.adminSettings)}</span>
 						{#if !sidebarCollapsed}
 							<Icon
 								icon={settingsSubOpen ? "material-symbols:keyboard-arrow-up-rounded" : "material-symbols:keyboard-arrow-down-rounded"}
@@ -1186,7 +1214,11 @@ function formatDate(dateStr: string | null): string {
 								class:active={activePage === "settings" && !settingsSection}
 								onclick={() => goSettings()}
 							>
-								<Icon icon="material-symbols:apps" />
+								{#if activePage === "settings" && !settingsSection}
+									<Icon icon="material-symbols:extension-rounded" />
+								{:else}
+									<Icon icon="material-symbols:extension-outline" />
+								{/if}
 								<span>{i18n(I18nKey.adminSettingsOverview)}</span>
 							</button>
 							{#each CONFIG_GROUPS as group}
@@ -1216,7 +1248,11 @@ function formatDate(dateStr: string | null): string {
 							class:active={activePage === "settings" && !settingsSection}
 							onclick={() => goSettings()}
 						>
-							<Icon icon="material-symbols:apps" />
+							{#if activePage === "settings" && !settingsSection}
+								<Icon icon="material-symbols:extension-rounded" />
+							{:else}
+								<Icon icon="material-symbols:extension-outline" />
+							{/if}
 							<span>{i18n(I18nKey.adminSettingsOverview)}</span>
 						</button>
 						{#each CONFIG_GROUPS as group}
@@ -1246,8 +1282,12 @@ function formatDate(dateStr: string | null): string {
 					class:active={activePage === "secrets"}
 					onclick={goSecrets}
 				>
+					{#if activePage === "secrets"}
 					<Icon icon="material-symbols:shield-lock" />
-					<span>{i18n(I18nKey.adminSecrets)}</span>
+				{:else}
+					<Icon icon="material-symbols:shield-lock-outline" />
+				{/if}
+				<span>{i18n(I18nKey.adminSecrets)}</span>
 				</button>
 
 				<!-- 会话管理 -->
@@ -1256,8 +1296,12 @@ function formatDate(dateStr: string | null): string {
 					class:active={activePage === "sessions"}
 					onclick={goSessions}
 				>
+					{#if activePage === "sessions"}
 					<Icon icon="material-symbols:devices" />
-					<span>{i18n(I18nKey.adminSessions)}</span>
+				{:else}
+					<Icon icon="material-symbols:devices-outline" />
+				{/if}
+				<span>{i18n(I18nKey.adminSessions)}</span>
 				</button>
 			</nav>
 
@@ -1667,19 +1711,21 @@ function formatDate(dateStr: string | null): string {
 		outline-offset: 2px;
 	}
 
-	/* 一级菜单高亮：仅文字高亮，不涂背景。
-	   用前台的 --title-active（oklch 0.6 0.1）而非 --primary，
-	   后者压侧边栏淡底只有 2.35:1。 */
+	/* 一级导航项选中：涂主题色背景 + 主色文字。
+	   适用于「没有子菜单」的一级项——它们本身就是导航目标，
+	   选中后必须给出明确反馈（此前为 transparent，导致首页等项看不出选中）。 */
 	.nav-item.active {
-		background: transparent;
+		background: color-mix(in oklab, var(--primary) 16%, transparent);
 		color: var(--title-active);
 		font-weight: 600;
 	}
 
-	/* 有二级菜单的父级项：同样仅文字高亮 */
+	/* 有子菜单的父级项：子项选中时仅文字高亮，不涂背景。
+	   父级点击是展开/收起子菜单而非导航，若同样涂背景会与真正选中的子项混淆。 */
 	.nav-group-head.group-active {
 		background: transparent;
 		color: var(--title-active);
+		font-weight: 600;
 	}
 
 	.nav-arrow {
@@ -1742,10 +1788,15 @@ function formatDate(dateStr: string | null): string {
 		color: var(--title-active);
 	}
 
-	/* 悬停高亮：中性灰色（放在 active 规则之后，保证当前选中项悬停时也变灰） */
-	.nav-item:hover,
+	/* 悬停：已选中项加深主题色背景（保持选中标识不被灰色冲掉），
+	   未选中项用中性灰，避免与选中态混淆。 */
 	.nav-item.active:hover,
 	.nav-item.sub.active:hover {
+		background: color-mix(in oklab, var(--primary) 26%, transparent);
+	}
+
+	.nav-item:hover:not(.active),
+	.nav-group-head:hover:not(.group-active) {
 		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
 	}
 
