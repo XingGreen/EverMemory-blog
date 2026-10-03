@@ -531,6 +531,16 @@ export const ru: Translation = {
 	[Key.postEdit]: "Редактировать",
 	[Key.postDelete]: "Удалить",
 	[Key.postListCount]: "Всего {count} шт.",
+	[Key.postSearchLabel]:
+		"Поиск статей по заголовку, автору, категории или тегу",
+	[Key.postStatusFilterGroup]: "Фильтр по статусу публикации",
+	[Key.postFilterGroup]: "Фильтр по категории и тегу, сортировка",
+	[Key.postTableLabel]: "Список статей",
+	[Key.postActionLabel]: "{action}: {title}",
+	[Key.postMoreTags]: "ещё {count} тегов",
+	[Key.postResultCount]: "после фильтра {count} статей",
+	[Key.postSortAsc]: "сортировка по возрастанию",
+	[Key.postSortDesc]: "сортировка по убыванию",
 
 	[Key.postSave]: "Сохранить статью",
 	[Key.postSaving]: "Сохранение...",
