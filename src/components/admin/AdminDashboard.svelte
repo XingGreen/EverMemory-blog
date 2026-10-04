@@ -101,6 +101,8 @@ let adminProbeResults = $state<
 // 当前所处测试步骤的文案：测试过程中替换掉「测试中/连接正常」，
 // 使状态区高度恒定，同时让用户看到进展到哪一步
 let adminProbeStage = $state("");
+// 当前步骤序号：驱动步骤指示条逐段点亮
+let adminProbeStageIndex = $state(0);
 // 是否已完成过一次完整探测：决定按钮是「测试连通性」还是「查看详情」
 let adminProbeDone = $state(false);
 // 详情视图开关：在卡片内容区内部切换，不跳转路由
@@ -108,6 +110,21 @@ let adminStatusDetail = $state(false);
 // 探针端点：requireAuth 会查一次 KV，选最轻的 ping 端点，
 // 串行多端点会把耗时与 KV 查询次数成倍放大。
 const ADMIN_PROBE_URL = "/api/admin/service-ping/";
+// 探测步骤序列：文案复用既有 probe* key，保证与详情页分段行完全一致。
+// 顺序对应 PerformanceResourceTiming 的四个阶段。
+const ADMIN_PROBE_STAGES = [
+	I18nKey.probeDns,
+	I18nKey.probeConnect,
+	I18nKey.probeRequest,
+	I18nKey.probeDownload,
+] as const;
+// 每一步的最短驻留时间(ms)。本地回环请求常常几十毫秒就返回，
+// 步骤文案还没来得及渲染就被结果覆盖，因此请求与推进并行、
+// 并为每步保底驻留时长：再快的请求也能看清逐步推进，
+// 慢请求则自然由真实耗时接续，不额外拖慢。
+const ADMIN_STAGE_MIN_DWELL = 180;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const adminIconProps: Record<
 	"idle" | "checking" | "ok" | "fail",
 	{ icon: string }
@@ -601,28 +618,43 @@ async function testAdminService() {
 	if (adminStatus === "checking") return;
 	adminStatus = "checking";
 	adminStatusDetail = false;
-	adminProbeStage = i18n(I18nKey.probeDns);
 	adminProbeResults = [];
 	adminProbeDone = false;
+	adminProbeStageIndex = 0;
+	adminProbeStage = i18n(ADMIN_PROBE_STAGES[0]);
 
 	// 单次请求。分段数据全部来自浏览器对该请求的实测（PerformanceResourceTiming），
 	// 不额外发请求，测得的耗时与改动前完全一致。
 	const href = new URL(ADMIN_PROBE_URL, location.href).href;
-	let ok = false;
-	let failure = "";
-	let serverMs = 0;
-	try {
-		adminProbeStage = i18n(I18nKey.probeRequest);
-		const res = await fetch(href, { cache: "no-store" });
-		adminProbeStage = i18n(I18nKey.probeDownload);
-		const data = await res.json();
-		// 服务端自报的处理耗时：覆盖鉴权与端点逻辑，与浏览器侧的网络分段互补
-		serverMs = typeof data?.latency === "number" ? data.latency : 0;
-		ok = res.ok;
-		if (!ok) failure = `HTTP ${res.status}`;
-	} catch (err) {
-		failure = err instanceof Error ? err.message : String(err);
-	}
+
+	// 请求与步骤推进并行：请求照常发，UI 侧按最短驻留时间逐步推进文案，
+	// 二者互不阻塞——请求慢时由真实耗时接续，请求快时步骤仍完整可见。
+	const request = (async () => {
+		let ok = false;
+		let failure = "";
+		let serverMs = 0;
+		try {
+			const res = await fetch(href, { cache: "no-store" });
+			const data = await res.json();
+			// 服务端自报的处理耗时：覆盖鉴权与端点逻辑，与浏览器侧的网络分段互补
+			serverMs = typeof data?.latency === "number" ? data.latency : 0;
+			ok = res.ok;
+			if (!ok) failure = `HTTP ${res.status}`;
+		} catch (err) {
+			failure = err instanceof Error ? err.message : String(err);
+		}
+		return { ok, failure, serverMs };
+	})();
+
+	const stepper = (async () => {
+		for (let i = 1; i < ADMIN_PROBE_STAGES.length; i++) {
+			await sleep(ADMIN_STAGE_MIN_DWELL);
+			adminProbeStageIndex = i;
+			adminProbeStage = i18n(ADMIN_PROBE_STAGES[i]);
+		}
+	})();
+
+	const { ok, failure, serverMs } = await Promise.all([request, stepper]);
 
 	const timing = performance.getEntriesByName(href, "resource").at(-1);
 	const total = timing ? Math.round(timing.responseEnd - timing.startTime) : 0;
@@ -1023,6 +1055,18 @@ function formatDate(dateStr: string | null): string {
 									: adminStatus === "fail"
 										? i18n(I18nKey.statusDisconnected)
 										: i18n(I18nKey.statusRunning)}
+						</span>
+						<!-- 步骤指示条：常驻占位但仅测试中可见，
+						     非测试时 opacity 0，高度不变，
+						     给「正在第几步」一个稳定的视觉锚点 -->
+						<span
+							class="stage-track"
+							class:running={adminStatus === "checking"}
+							aria-hidden="true"
+						>
+							{#each ADMIN_PROBE_STAGES as _, i (i)}
+								<span class="stage-seg" class:on={i <= adminProbeStageIndex}></span>
+							{/each}
 						</span>
 					</div>
 					<button
@@ -2802,6 +2846,33 @@ function formatDate(dateStr: string | null): string {
 		flex-direction: column;
 		gap: 0.5rem;
 		padding: 0.25rem 0 0.25rem 2.375rem;
+	}
+
+	/* 步骤指示条：常驻占位，仅测试中点亮。
+	   高度固定 3px，非测试时透明，故测试开始/结束都不会改变状态行高度。 */
+	.stage-track {
+		display: flex;
+		gap: 3px;
+		height: 3px;
+		margin-top: 2px;
+		opacity: 0;
+		transition: opacity 0.15s ease;
+	}
+
+	.stage-track.running {
+		opacity: 1;
+	}
+
+	.stage-seg {
+		flex: 1;
+		min-width: 0;
+		border-radius: 9999px;
+		background: var(--line-divider);
+		transition: background-color 0.2s ease;
+	}
+
+	.stage-seg.on {
+		background: var(--primary);
 	}
 
 	/* 详情视图容器：与默认状态列表同级切换 */
