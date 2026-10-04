@@ -1228,12 +1228,14 @@ function formatDate(dateStr: string | null): string {
 							{#if groupItems.length > 0}
 								<div class="nav-group-label">{i18n(group.labelKey)}</div>
 								{#each groupItems as item (item.key)}
+									{@const itemActive =
+										activePage === "settings" && settingsSection === item.key}
 									<button
 										class="nav-item sub"
-										class:active={activePage === "settings" && settingsSection === item.key}
+										class:active={itemActive}
 										onclick={() => goSettings(item.key)}
 									>
-										<Icon icon={item.icon} />
+										<Icon icon={itemActive ? item.icon : item.iconOutline} />
 										<span>{i18n(getConfigLabelKey(item.key))}</span>
 									</button>
 								{/each}
@@ -1262,12 +1264,14 @@ function formatDate(dateStr: string | null): string {
 						{#if groupItems.length > 0}
 							<div class="nav-group-label">{i18n(group.labelKey)}</div>
 							{#each groupItems as item (item.key)}
+								{@const itemActive =
+									activePage === "settings" && settingsSection === item.key}
 								<button
 									class="nav-item sub"
-									class:active={activePage === "settings" && settingsSection === item.key}
+									class:active={itemActive}
 									onclick={() => goSettings(item.key)}
 								>
-									<Icon icon={item.icon} />
+									<Icon icon={itemActive ? item.icon : item.iconOutline} />
 									<span>{i18n(getConfigLabelKey(item.key))}</span>
 								</button>
 							{/each}

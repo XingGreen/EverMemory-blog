@@ -71,7 +71,10 @@ function extractIconNames(content) {
 		// icon="xxx:yyy" 或 icon='xxx:yyy'
 		/icon=["']([a-z0-9-]+:[a-z0-9-]+)["']/gi,
 		// icon: "xxx:yyy" 或 icon: 'xxx:yyy' (TS/JS 配置对象)
-		/icon\s*:\s*["']([a-z0-9-]+:[a-z0-9-]+)["']/gi,
+		// 同时覆盖 iconOutline / iconFilled 等以 icon 开头的成对状态字段，
+		// 使空心/实心两态都能被离线预生成（值必须是 "图标集:图标名" 才会命中，
+		// 因此 iconSize: "24" 之类不会误匹配）
+		/\bicon\w*\s*:\s*["']([a-z0-9-]+:[a-z0-9-]+)["']/gi,
 		// icon={`xxx:yyy`}
 		/icon=\{[`"']([a-z0-9-]+:[a-z0-9-]+)[`"']\}/gi,
 		// name="xxx:yyy" (Astro 组件)
