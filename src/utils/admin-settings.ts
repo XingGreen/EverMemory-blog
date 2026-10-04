@@ -15,8 +15,15 @@ export type AdminConfigItem = {
 	kind?: "json" | "html";
 	/** 后台显示的配置名称 */
 	label: string;
-	/** iconify 图标 */
+	/** iconify 图标（实心态，选中时显示） */
 	icon: string;
+	/**
+	 * 与 icon 配对的空心态图标（未选中时显示）。
+	 * material-symbols 并非每个图标都有 -outline 变体，此处为缺少变体的项
+	 * 统一改用了语义最接近、且确实具备双态的图标，
+	 * 保证侧边导航每一项在选中/未选中时都有明确的空心→实心变化。
+	 */
+	iconOutline: string;
 	/** 后台显示的配置描述 */
 	description: string;
 	/**
@@ -33,7 +40,8 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		exportName: "siteConfig",
 		typeName: "SiteConfig",
 		label: "站点配置",
-		icon: "material-symbols:language",
+		icon: "material-symbols:info",
+		iconOutline: "material-symbols:info-outline",
 		description: "站点标题、描述、主题色、页面开关、文章列表布局等基础信息",
 	},
 	{
@@ -43,6 +51,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "ProfileConfig",
 		label: "个人资料",
 		icon: "material-symbols:person",
+		iconOutline: "material-symbols:person-outline",
 		description: "头像、昵称、个人签名与社交链接",
 	},
 	{
@@ -51,7 +60,8 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		exportName: "navBarConfig",
 		typeName: "NavBarConfig",
 		label: "导航栏",
-		icon: "material-symbols:menu",
+		icon: "material-symbols:navigation",
+		iconOutline: "material-symbols:navigation-outline",
 		description: "顶部导航栏的菜单链接与子菜单",
 	},
 	{
@@ -61,6 +71,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "FooterConfig",
 		label: "页脚",
 		icon: "material-symbols:widgets",
+		iconOutline: "material-symbols:widgets-outline",
 		description: "页脚显示开关等配置",
 	},
 	{
@@ -70,7 +81,8 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "",
 		kind: "html",
 		label: "页脚自定义内容",
-		icon: "material-symbols:code",
+		icon: "material-symbols:description",
+		iconOutline: "material-symbols:description-outline",
 		description: "页脚底部注入的自定义 HTML（备案号、认证徽章等）",
 	},
 	{
@@ -79,7 +91,8 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		exportName: "musicPlayerConfig",
 		typeName: "MusicPlayerConfig",
 		label: "音乐",
-		icon: "material-symbols:music-note",
+		icon: "material-symbols:album",
+		iconOutline: "material-symbols:album-outline",
 		description: "音乐播放器配置（网易云音乐等）",
 	},
 	{
@@ -88,7 +101,8 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		exportName: "friendsPageConfig",
 		typeName: "FriendsPageConfig",
 		label: "友链",
-		icon: "material-symbols:link",
+		icon: "material-symbols:hub",
+		iconOutline: "material-symbols:hub-outline",
 		description: "友链页面配置与友情链接列表",
 		runtime: true,
 	},
@@ -99,6 +113,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "CommentConfig",
 		label: "评论",
 		icon: "material-symbols:mode-comment",
+		iconOutline: "material-symbols:mode-comment-outline",
 		description: "评论系统类型与各提供方配置",
 	},
 	{
@@ -107,7 +122,8 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		exportName: "fontConfig",
 		typeName: "FontSelectionConfig",
 		label: "字体",
-		icon: "material-symbols:format-letter-spacing",
+		icon: "material-symbols:font-download",
+		iconOutline: "material-symbols:font-download-outline",
 		description: "站点字体选择与局部覆盖",
 	},
 	{
@@ -116,7 +132,8 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		exportName: "backgroundWallpaper",
 		typeName: "BackgroundWallpaperConfig",
 		label: "背景壁纸",
-		icon: "material-symbols:wallpaper",
+		icon: "material-symbols:landscape",
+		iconOutline: "material-symbols:landscape-outline",
 		description: "背景壁纸模式与壁纸列表配置",
 	},
 	{
@@ -126,6 +143,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "AnnouncementConfig",
 		label: "公告",
 		icon: "material-symbols:campaign",
+		iconOutline: "material-symbols:campaign-outline",
 		description: "公告标题与公告内容",
 		runtime: true,
 	},
@@ -135,7 +153,8 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		exportName: "analyticsConfig",
 		typeName: "AnalyticsConfig",
 		label: "统计",
-		icon: "material-symbols:monitoring",
+		icon: "material-symbols:analytics",
+		iconOutline: "material-symbols:analytics-outline",
 		description: "网站统计（Google Analytics、Clarity、Umami 等）",
 	},
 	{
@@ -145,6 +164,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "GalleryConfig",
 		label: "相册",
 		icon: "material-symbols:photo-library",
+		iconOutline: "material-symbols:photo-library-outline-rounded",
 		description: "相册列表与图片配置",
 	},
 	{
@@ -153,7 +173,8 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		exportName: "appConfig",
 		typeName: "AppConfig",
 		label: "软件推荐",
-		icon: "material-symbols:apps",
+		icon: "material-symbols:package",
+		iconOutline: "material-symbols:package-outline",
 		description: "软件推荐页面与推荐软件列表",
 		runtime: true,
 	},
@@ -164,6 +185,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "SponsorConfig",
 		label: "打赏",
 		icon: "material-symbols:volunteer-activism",
+		iconOutline: "material-symbols:volunteer-activism-outline",
 		description: "打赏页面配置（标题、描述与打赏链接）",
 	},
 	{
@@ -173,6 +195,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "LicenseConfig",
 		label: "许可证",
 		icon: "material-symbols:policy",
+		iconOutline: "material-symbols:policy-outline",
 		description: "文章许可证名称、链接与显示开关",
 	},
 	{
@@ -182,6 +205,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "CoverImageConfig",
 		label: "封面图",
 		icon: "material-symbols:image",
+		iconOutline: "material-symbols:image-outline",
 		description: "文章封面图（固定/随机图片）配置",
 	},
 	{
@@ -191,6 +215,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "EditorConfig",
 		label: "文章编辑器",
 		icon: "material-symbols:edit-note",
+		iconOutline: "material-symbols:edit-note-outline",
 		description: "文章编辑器页面的尺寸限制（页面宽度、编辑区高度区间）",
 	},
 	{
@@ -200,6 +225,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "SakuraConfig",
 		label: "特效",
 		icon: "material-symbols:auto-awesome",
+		iconOutline: "material-symbols:auto-awesome-outline",
 		description: "页面特效（樱花等）开关与参数",
 	},
 	{
@@ -209,6 +235,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "PlantUMLConfig",
 		label: "PlantUML",
 		icon: "material-symbols:account-tree",
+		iconOutline: "material-symbols:account-tree-outline",
 		description: "PlantUML 图表渲染与明暗主题配置",
 	},
 	{
@@ -218,6 +245,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "ExpressiveCodeConfig",
 		label: "代码主题",
 		icon: "material-symbols:code-blocks",
+		iconOutline: "material-symbols:code-blocks-outline",
 		description: "expressive-code 代码高亮主题配置（修改后需重启服务）",
 	},
 	{
@@ -226,7 +254,8 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		exportName: "spineModelConfig",
 		typeName: "SpineModelConfig",
 		label: "看板娘（Spine）",
-		icon: "material-symbols:accessibility-new",
+		icon: "material-symbols:face",
+		iconOutline: "material-symbols:face-outline",
 		description: "Spine 看板娘开关与模型配置",
 	},
 	{
@@ -236,6 +265,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "Live2DWidgetConfig",
 		label: "看板娘（Live2D）",
 		icon: "material-symbols:robot-2",
+		iconOutline: "material-symbols:robot-2-outline",
 		description: "Live2D 看板娘开关与模型配置",
 	},
 	{
@@ -245,6 +275,7 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		typeName: "SidebarLayoutConfig",
 		label: "侧边栏",
 		icon: "material-symbols:view-list",
+		iconOutline: "material-symbols:view-list-outline",
 		description: "左右侧边栏的组件排列与移动端底部组件",
 	},
 ];
