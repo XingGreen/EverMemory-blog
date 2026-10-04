@@ -32,7 +32,6 @@ const FAVICON_VERSION = "20260927";
 
 import { isHomePage } from "@/utils/layout-utils";
 import { url } from "@/utils/url-utils";
-import { ANIM_SPEED_KEY } from "@/utils/anim-speed";
 
 import "@/styles/main.css";
 import "@/styles/variables.styl";
@@ -263,27 +262,8 @@ const siteLang = lang.replace("_", "-");
         lightTheme: expressiveCodeConfig.lightTheme,
         baseUrl: import.meta.env.BASE_URL,
         cardTransparentOpacity: backgroundWallpaper.overlay?.cardOpacity ?? 0.6,
-        animSpeedKey: ANIM_SPEED_KEY,
       }}
     >
-      // 动画速度倍率：必须与主题初始化一样在首屏绘制前落到 <html>，
-      // 否则会先播一段原速动画再跳变成用户设定速度。
-      // 读取失败时保持 variables.styl 中的默认值 1（原速）。
-      try {
-        const raw = localStorage.getItem(animSpeedKey);
-        if (raw !== null) {
-          const speed = Number.parseFloat(raw);
-          if (Number.isFinite(speed) && speed >= 0 && speed <= 2) {
-            document.documentElement.style.setProperty(
-              "--anim-speed",
-              String(speed),
-            );
-          }
-        }
-      } catch {
-        /* localStorage 不可用时沿用默认速度 */
-      }
-
       // 主题初始化 - 与setting-utils.ts保持一致
       const LIGHT_MODE = "light";
       const DARK_MODE = "dark";

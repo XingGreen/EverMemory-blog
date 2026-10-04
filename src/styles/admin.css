@@ -134,8 +134,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .admin-shell * {
-    animation-duration: calc(0.01ms * var(--anim-speed, 1)) !important;
+    animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: calc(0.01ms * var(--anim-speed, 1)) !important;
+    transition-duration: 0.01ms !important;
   }
 }

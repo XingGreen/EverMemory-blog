@@ -13,13 +13,11 @@ import {
 	getConfigLabelKey,
 } from "@/utils/admin-settings";
 import { isTourDone, resetTour } from "@/utils/onboarding";
-import { applyAnimSpeed, readAnimSpeed } from "@/utils/anim-speed";
 import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
 import OnboardingTour from "./OnboardingTour.svelte";
 import PostEditor from "./PostEditor.svelte";
 import PostList from "./PostList.svelte";
 import SecretManager from "./SecretManager.svelte";
-import ConsoleSettings from "./ConsoleSettings.svelte";
 import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
 import SettingsOverview from "./SettingsOverview.svelte";
@@ -42,13 +40,7 @@ type Post = {
 };
 
 type ViewMode = "list" | "edit" | "create";
-type Page =
-	| "dashboard"
-	| "posts"
-	| "settings"
-	| "console"
-	| "secrets"
-	| "sessions";
+type Page = "dashboard" | "posts" | "settings" | "secrets" | "sessions";
 
 // 基于 URL 路径的真实路由（History API）：
 //   /admin/dashboard/                      → 首页
@@ -57,7 +49,6 @@ type Page =
 //   /admin/dashboard/articles/edit/:slug/  → 编辑文章
 //   /admin/dashboard/settings/             → 网站配置（概览）
 //   /admin/dashboard/settings/:key/        → 网站配置（具体配置文件子页）
-//   /admin/dashboard/console/              → 控制台设置（控制台自身行为，不改站点内容）
 type Route =
 	| { page: "login" }
 	| { page: "dashboard" }
@@ -65,7 +56,6 @@ type Route =
 	| { page: "create" }
 	| { page: "edit"; slug: string }
 	| { page: "settings"; section?: string }
-	| { page: "console" }
 	| { page: "secrets" }
 	| { page: "sessions" };
 
@@ -205,13 +195,11 @@ const activePage = $derived<Page>(
 		? "dashboard"
 		: route.page === "settings"
 			? "settings"
-			: route.page === "console"
-				? "console"
-				: route.page === "secrets"
-					? "secrets"
-					: route.page === "sessions"
-						? "sessions"
-						: "posts",
+			: route.page === "secrets"
+				? "secrets"
+				: route.page === "sessions"
+					? "sessions"
+					: "posts",
 );
 
 const viewMode = $derived<ViewMode>(
@@ -293,8 +281,6 @@ function parseRoute(pathname: string): Route {
 					: undefined;
 			return { page: "settings", section };
 		}
-		case "console":
-			return { page: "console" };
 		case "secrets":
 			return { page: "secrets" };
 		case "sessions":
@@ -330,8 +316,6 @@ function startAdmin() {
 onMount(async () => {
 	// 同步当前主题状态（深浅切换按钮图标）
 	isDark = document.documentElement.classList.contains("dark");
-	// 后台页同样套用已保存的动画速度偏好，保证与前台表现一致
-	applyAnimSpeed(readAnimSpeed());
 	if (!isVerified) {
 		// 未登录访问后台页：先尝试"记住我"Cookie，有效则免登录进入
 		try {
@@ -787,10 +771,6 @@ function goSettings(section?: string) {
 			? `${DASHBOARD_PATH}settings/${section}/`
 			: `${DASHBOARD_PATH}settings/`,
 	);
-}
-
-function goConsole() {
-	navigate(`${DASHBOARD_PATH}console/`);
 }
 
 function goSecrets() {
@@ -1465,20 +1445,6 @@ function formatDate(dateStr: string | null): string {
 					</div>
 				</div>
 
-				<!-- 控制台设置 -->
-				<button
-					class="nav-item"
-					class:active={activePage === "console"}
-					onclick={goConsole}
-				>
-					{#if activePage === "console"}
-						<Icon icon="material-symbols:speed-rounded" />
-					{:else}
-						<Icon icon="material-symbols:speed-outline" />
-					{/if}
-					<span>{i18n(I18nKey.consoleSettings)}</span>
-				</button>
-
 				<!-- 密钥配置 -->
 				<button
 					class="nav-item"
@@ -1657,8 +1623,6 @@ function formatDate(dateStr: string | null): string {
 							onSearchChange={(value) => (settingsSearchTerm = value)}
 						/>
 					{/if}
-{:else if activePage === "console"}
-				<ConsoleSettings />
 {:else if activePage === "secrets"}
 				{#if import.meta.env.PROD}
 					<section class="card-base secrets-guide">

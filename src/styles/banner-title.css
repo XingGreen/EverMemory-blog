@@ -43,7 +43,7 @@
 
 .banner-page-title-text {
     line-height: 1.2;
-    transition: opacity calc(0.25s * var(--anim-speed, 1)) ease;
+    transition: opacity 0.25s ease;
 }
 
 .banner-post-meta-list {

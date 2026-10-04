@@ -33,9 +33,9 @@
 	color: inherit;
 	border-radius: 0.875rem;
 	transition:
-		background-color calc(0.14s * var(--anim-speed, 1)) ease,
-		transform calc(0.14s * var(--anim-speed, 1)) ease,
-		color calc(0.14s * var(--anim-speed, 1)) ease;
+		background-color 0.14s ease,
+		transform 0.14s ease,
+		color 0.14s ease;
 	width: 100%;
 	min-width: 0;
 	flex-shrink: 0;
@@ -132,7 +132,7 @@
 	right: 0;
 	background: color-mix(in oklab, var(--toc-indicator-bg), transparent);
 	border-radius: 0.875rem;
-	transition: top calc(0.18s * var(--anim-speed, 1)) ease, height calc(0.18s * var(--anim-speed, 1)) ease, opacity calc(0.14s * var(--anim-speed, 1)) ease;
+	transition: top 0.18s ease, height 0.18s ease, opacity 0.14s ease;
 	box-shadow: 0 6px 18px -14px color-mix(in oklab, var(--primary) 55%, transparent);
 	z-index: -1;
 }
