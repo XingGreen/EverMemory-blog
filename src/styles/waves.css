@@ -51,27 +51,27 @@ html[data-waves-enabled="true"] #header-waves {
 }
 
 .waves > .parallax use {
-    animation: wave calc(25s * var(--anim-speed, 1)) cubic-bezier(0.5, 0.5, 0.45, 0.5) infinite;
+    animation: wave 25s cubic-bezier(0.5, 0.5, 0.45, 0.5) infinite;
 }
 
 .waves > .parallax use:nth-child(1) {
-    animation-delay: -calc(2s * var(--anim-speed, 1));
-    animation-duration: calc(7s * var(--anim-speed, 1));
+    animation-delay: -2s;
+    animation-duration: 7s;
 }
 
 .waves > .parallax use:nth-child(2) {
-    animation-delay: -calc(3s * var(--anim-speed, 1));
-    animation-duration: calc(10s * var(--anim-speed, 1));
+    animation-delay: -3s;
+    animation-duration: 10s;
 }
 
 .waves > .parallax use:nth-child(3) {
-    animation-delay: -calc(4s * var(--anim-speed, 1));
-    animation-duration: calc(13s * var(--anim-speed, 1));
+    animation-delay: -4s;
+    animation-duration: 13s;
 }
 
 .waves > .parallax use:nth-child(4) {
-    animation-delay: -calc(5s * var(--anim-speed, 1));
-    animation-duration: calc(20s * var(--anim-speed, 1));
+    animation-delay: -5s;
+    animation-duration: 20s;
 }
 
 @keyframes wave {
@@ -121,14 +121,14 @@ html.is-page-transitioning #header-waves {
     #header-waves {
         overflow: visible;
         z-index: 25;
-        transition: transform calc(0.3s * var(--anim-speed, 1)) ease-in, opacity calc(0.2s * var(--anim-speed, 1)) ease-in;
+        transition: transform 0.3s ease-in, opacity 0.2s ease-in;
     }
 
     .mobile-hide-banner #header-waves {
         display: none !important;
         transform: translateY(-100%);
         opacity: 0;
-        transition: transform calc(0.25s * var(--anim-speed, 1)) ease-in, opacity calc(0.15s * var(--anim-speed, 1)) ease-in;
+        transition: transform 0.25s ease-in, opacity 0.15s ease-in;
     }
 
     .waves svg {
@@ -186,7 +186,7 @@ html[data-waves-enabled="true"] #wallpaper-gradient {
    -------------------------------------------------------------------------- */
 #wallpaper-gradient {
     z-index: 12;
-    transition: opacity calc(0.3s * var(--anim-speed, 1)) ease;
+    transition: opacity 0.3s ease;
 }
 
 /* --------------------------------------------------------------------------

@@ -42,7 +42,7 @@
     border-radius: inherit;
     scale: 0.85;
     z-index: -10;
-    transition: all calc(0.15s * var(--anim-speed, 1)) ease-out;
+    transition: all 0.15s ease-out;
   }
   &:hover::before {
     background-color: var(--btn-plain-bg-hover);
@@ -84,7 +84,7 @@ html {
     /* 为整个文档根元素设置视图过渡 */
     ::view-transition-old(root),
     ::view-transition-new(root) {
-        animation-duration: calc(0.5s * var(--anim-speed, 1));
+        animation-duration: 0.5s;
         animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
         /* 使用混合模式使颜色过渡更平滑 */
         mix-blend-mode: normal;
@@ -92,7 +92,7 @@ html {
     
     /* 视图过渡组 - 使用交叉淡化效果 */
     ::view-transition-group(root) {
-        animation-duration: calc(0.5s * var(--anim-speed, 1));
+        animation-duration: 0.5s;
         animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     }
     
@@ -136,7 +136,7 @@ html {
     [class*="transition"] {
         transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
         transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: calc(0.15s * var(--anim-speed, 1));
+        transition-duration: 0.15s;
     }
     
     /* 主题过渡保护类 - 仅在非 View Transitions 模式下使用 */
@@ -222,7 +222,7 @@ html {
     /* LQIP 占位渐变 */
     .lqip-placeholder {
         z-index: 0;
-        transition: opacity calc(0.5s * var(--anim-speed, 1)) ease-out;
+        transition: opacity 0.5s ease-out;
     }
     .lqip-placeholder.loaded {
         opacity: 0;
@@ -481,7 +481,7 @@ html {
     left: calc(50% - 1px);
     border-left: 2px dashed var(--line-color);
     pointer-events: none;
-    transition: all calc(0.3s * var(--anim-speed, 1));
+    transition: all 0.3s;
     transform: translateY(-50%);
 }
 
@@ -609,7 +609,7 @@ html {
   background: rgba(12, 7, 3, 0.62);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
-  animation: elc-fade-in calc(0.18s * var(--anim-speed, 1)) ease-out;
+  animation: elc-fade-in 0.18s ease-out;
 }
 
 .elc-card {
@@ -619,7 +619,7 @@ html {
   border-radius: 1.25rem;
   background: #2b2015;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35);
-  animation: elc-pop-in calc(0.22s * var(--anim-speed, 1)) ease-out;
+  animation: elc-pop-in 0.22s ease-out;
 }
 
 /* 头部标题区 */
@@ -730,8 +730,8 @@ html {
   font-weight: 600;
   cursor: pointer;
   transition:
-    background calc(0.15s * var(--anim-speed, 1)),
-    transform calc(0.05s * var(--anim-speed, 1));
+    background 0.15s,
+    transform 0.05s;
 }
 
 .elc-btn:active {
@@ -747,7 +747,7 @@ html {
 .elc-cancel {
   background: rgba(255, 255, 255, 0.09);
   color: rgba(246, 241, 233, 0.78);
-  transition: background calc(0.15s * var(--anim-speed, 1));
+  transition: background 0.15s;
 }
 
 .elc-cancel:hover {
