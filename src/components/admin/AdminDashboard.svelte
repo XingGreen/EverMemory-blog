@@ -92,8 +92,19 @@ const githubIconProps: Record<
 };
 // 后台服务连通性状态：与 GitHub 同构
 let adminStatus = $state<"idle" | "checking" | "ok" | "fail">("idle");
-// 单次请求 + 浏览器实测的网络阶段分解，逐条 push，UI 即时呈现
-let adminProbeResults = $state<{ label: string; ms: number }[]>([]);
+// 单次请求 + 浏览器实测的网络阶段分解。
+// 结果不内联在状态行里，改由「查看详情」进入内嵌详情页展示，
+// 避免探测完成后卡片被动增高、左右两栏高度失衡。
+let adminProbeResults = $state<
+	{ label: string; ms: number; isTotal?: boolean }[]
+>([]);
+// 当前所处测试步骤的文案：测试过程中替换掉「测试中/连接正常」，
+// 使状态区高度恒定，同时让用户看到进展到哪一步
+let adminProbeStage = $state("");
+// 是否已完成过一次完整探测：决定按钮是「测试连通性」还是「查看详情」
+let adminProbeDone = $state(false);
+// 详情视图开关：在卡片内容区内部切换，不跳转路由
+let adminStatusDetail = $state(false);
 // 探针端点：requireAuth 会查一次 KV，选最轻的 ping 端点，
 // 串行多端点会把耗时与 KV 查询次数成倍放大。
 const ADMIN_PROBE_URL = "/api/admin/service-ping/";
@@ -570,19 +581,43 @@ async function testConnectivity() {
 	showToast(result.message, result.ok ? "success" : "error", 6000);
 }
 
+/**
+ * 「后台服务」行按钮：未测过就发起探测，已测过则进入内嵌详情页。
+ * 两种行为共用一个按钮位，避免卡片高度与按钮位置在测试前后发生位移。
+ */
+function openStatusAction() {
+	if (adminProbeDone) {
+		adminStatusDetail = true;
+		return;
+	}
+	testAdminService();
+}
+
+function closeStatusDetail() {
+	adminStatusDetail = false;
+}
+
 async function testAdminService() {
 	if (adminStatus === "checking") return;
 	adminStatus = "checking";
+	adminStatusDetail = false;
+	adminProbeStage = i18n(I18nKey.probeDns);
 	adminProbeResults = [];
+	adminProbeDone = false;
 
 	// 单次请求。分段数据全部来自浏览器对该请求的实测（PerformanceResourceTiming），
-	// 不额外发请求、不做人为延时，因此总耗时与改动前相同。
+	// 不额外发请求，测得的耗时与改动前完全一致。
 	const href = new URL(ADMIN_PROBE_URL, location.href).href;
 	let ok = false;
 	let failure = "";
+	let serverMs = 0;
 	try {
+		adminProbeStage = i18n(I18nKey.probeRequest);
 		const res = await fetch(href, { cache: "no-store" });
-		await res.json();
+		adminProbeStage = i18n(I18nKey.probeDownload);
+		const data = await res.json();
+		// 服务端自报的处理耗时：覆盖鉴权与端点逻辑，与浏览器侧的网络分段互补
+		serverMs = typeof data?.latency === "number" ? data.latency : 0;
 		ok = res.ok;
 		if (!ok) failure = `HTTP ${res.status}`;
 	} catch (err) {
@@ -591,16 +626,22 @@ async function testAdminService() {
 
 	const timing = performance.getEntriesByName(href, "resource").at(-1);
 	const total = timing ? Math.round(timing.responseEnd - timing.startTime) : 0;
+	// 分段耗时仅在请求结束后才可从 PerformanceResourceTiming 读到，
+	// 故失败或条目缺失时不再渲染残缺列表，避免出现「只有总耗时」的孤立行。
 	adminProbeResults = timing
 		? [
 				{ label: i18n(I18nKey.probeDns), ms: Math.max(0, Math.round(timing.domainLookupEnd - timing.domainLookupStart)) },
 				{ label: i18n(I18nKey.probeConnect), ms: Math.max(0, Math.round(timing.connectEnd - timing.connectStart)) },
 				{ label: i18n(I18nKey.probeRequest), ms: Math.max(0, Math.round(timing.responseStart - timing.requestStart)) },
 				{ label: i18n(I18nKey.probeDownload), ms: Math.max(0, Math.round(timing.responseEnd - timing.responseStart)) },
+				...(serverMs > 0
+					? [{ label: i18n(I18nKey.probeServerTime), ms: serverMs }]
+					: []),
+				{ label: i18n(I18nKey.probeTotal), ms: total, isTotal: true },
 			]
 		: [];
-	adminProbeResults = [...adminProbeResults, { label: i18n(I18nKey.probeTotal), ms: total }];
-
+	adminProbeDone = true;
+	adminProbeStage = "";
 	adminStatus = ok ? "ok" : "fail";
 	showToast(
 		ok
@@ -911,92 +952,135 @@ function formatDate(dateStr: string | null): string {
 	<div class="card-base dashboard-section system-status">
 		<div class="section-header">
 			<h2>{i18n(I18nKey.systemStatus)}</h2>
-		</div>
-		<div class="status-list">
-			<div class="status-item">
-				<Icon
-					{...adminIconProps[adminStatus]}
-					class="status-icon {adminStatus === 'checking' ? 'syncing' : adminStatus === 'fail' ? 'error' : 'healthy'}"
-				/>
-				<div class="status-info">
-					<span class="status-label">{i18n(I18nKey.statusAdminService)}</span>
-					<span class="status-value">
-						{adminStatus === "checking"
-							? i18n(I18nKey.statusTesting)
-							: adminStatus === "ok"
-								? i18n(I18nKey.statusConnected)
-								: adminStatus === "fail"
-									? i18n(I18nKey.statusDisconnected)
-									: i18n(I18nKey.statusRunning)}
-					</span>
-				</div>
-				<button
-					type="button"
-					class="connectivity-btn"
-					class:is-testing={adminStatus === "checking"}
-					onclick={testAdminService}
-					disabled={adminStatus === "checking"}
-				>
-					{adminStatus === "checking"
-						? i18n(I18nKey.statusTesting)
-						: i18n(I18nKey.statusTestConnectivity)}
+			{#if adminStatusDetail}
+				<button type="button" class="section-link" onclick={closeStatusDetail}>
+					<Icon icon="material-symbols:arrow-back" />
+					{i18n(I18nKey.statusDetailBack)}
 				</button>
+			{/if}
+		</div>
+		{#if adminStatusDetail}
+			<!-- 内嵌详情视图：仅在用户主动点击「查看详情」后进入，
+			     高度变化由用户触发，不会再有探测完成时突然增高的割裂感 -->
+			<div class="status-detail">
+				<div class="status-detail-head">
+					<Icon
+						{...adminIconProps[adminStatus]}
+						class="status-icon {adminStatus === 'fail' ? 'error' : 'healthy'}"
+					/>
+					<div class="status-info">
+						<span class="status-label">{i18n(I18nKey.statusAdminService)}</span>
+						<span class="status-value">
+							{adminStatus === "ok"
+								? i18n(I18nKey.statusConnected)
+								: i18n(I18nKey.statusDisconnected)}
+						</span>
+					</div>
+					<button
+						type="button"
+						class="connectivity-btn"
+						onclick={testAdminService}
+						disabled={adminStatus === "checking"}
+					>
+						{i18n(I18nKey.statusTestConnectivity)}
+					</button>
+				</div>
 				{#if adminProbeResults.length > 0}
 					<div class="probe-list">
 						{#each adminProbeResults as step, idx (idx)}
-							<div class="probe-row" class:total={idx === adminProbeResults.length - 1}>
+							<div class="probe-row" class:total={step.isTotal}>
 								<span class="probe-label">{step.label}</span>
 								<span class="probe-bar">
 									<span
 										class="probe-bar-fill"
-										style:width={`${Math.min(100, (step.ms / Math.max(1, adminProbeResults.at(-1)?.ms ?? 1)) * 100)}%`}
+										style:width={`${Math.min(100, (step.ms / Math.max(1, adminProbeResults.find((s) => s.isTotal)?.ms ?? 1)) * 100)}%`}
 									></span>
 								</span>
 								<span class="probe-ms">{step.ms}{i18n(I18nKey.probeUnitMs)}</span>
 							</div>
 						{/each}
 					</div>
+				{:else}
+					<p class="status-detail-empty">{i18n(I18nKey.statusDetailNoData)}</p>
 				{/if}
 			</div>
-			<div class="status-item">
-				<Icon
-					{...githubIconProps[githubStatus]}
-					class="status-icon {githubStatus === 'checking' ? 'syncing' : githubStatus === 'fail' ? 'error' : 'healthy'}"
-				/>
-				<div class="status-info">
-					<span class="status-label">{i18n(I18nKey.statusGithubSync)}</span>
-					<span class="status-value">
-						{isSyncing
-							? i18n(I18nKey.postSyncing)
-							: githubStatus === "checking"
-								? i18n(I18nKey.statusTesting)
-								: githubStatus === "ok"
+		{:else}
+			<div class="status-list">
+				<div class="status-item">
+					<Icon
+						{...adminIconProps[adminStatus]}
+						class="status-icon {adminStatus === 'checking' ? 'syncing' : adminStatus === 'fail' ? 'error' : 'healthy'}"
+					/>
+					<div class="status-info">
+						<span class="status-label">{i18n(I18nKey.statusAdminService)}</span>
+						<span class="status-value">
+							<!-- 测试过程中显示当前步骤而非「测试中」，
+							     文案长度与最终态接近，状态区高度恒定 -->
+							{adminProbeStage
+								? adminProbeStage
+								: adminStatus === "ok"
 									? i18n(I18nKey.statusConnected)
-									: githubStatus === "fail"
+									: adminStatus === "fail"
 										? i18n(I18nKey.statusDisconnected)
-										: i18n(I18nKey.statusReady)}
-					</span>
+										: i18n(I18nKey.statusRunning)}
+						</span>
+					</div>
+					<button
+						type="button"
+						class="connectivity-btn"
+						class:is-testing={adminStatus === "checking"}
+						onclick={openStatusAction}
+						disabled={adminStatus === "checking"}
+					>
+						{#if adminStatus === "checking"}
+							{i18n(I18nKey.statusTesting)}
+						{:else if adminProbeDone}
+							{i18n(I18nKey.statusViewDetail)}
+						{:else}
+							{i18n(I18nKey.statusTestConnectivity)}
+						{/if}
+					</button>
 				</div>
-				<button
-					type="button"
-					class="connectivity-btn"
-					class:is-testing={githubStatus === "checking"}
-					onclick={testConnectivity}
-					disabled={isSyncing || githubStatus === "checking"}
-				>
-					{githubStatus === "checking"
-						? i18n(I18nKey.statusTesting)
-						: i18n(I18nKey.statusTestConnectivity)}
-				</button>
-			</div>
-			<div class="status-item">
-				<Icon icon="material-symbols:article-outline" class="status-icon info" />
-				<div class="status-info">
-					<span class="status-label">{i18n(I18nKey.dashboardTotalPosts)}</span>
-					<span class="status-value">{i18n(I18nKey.dashboardUnit).replace("{count}", String(stats.total))}</span>
+				<div class="status-item">
+					<Icon
+						{...githubIconProps[githubStatus]}
+						class="status-icon {githubStatus === 'checking' ? 'syncing' : githubStatus === 'fail' ? 'error' : 'healthy'}"
+					/>
+					<div class="status-info">
+						<span class="status-label">{i18n(I18nKey.statusGithubSync)}</span>
+						<span class="status-value">
+							{isSyncing
+								? i18n(I18nKey.postSyncing)
+								: githubStatus === "checking"
+									? i18n(I18nKey.statusTesting)
+									: githubStatus === "ok"
+										? i18n(I18nKey.statusConnected)
+										: githubStatus === "fail"
+											? i18n(I18nKey.statusDisconnected)
+											: i18n(I18nKey.statusReady)}
+						</span>
+					</div>
+					<button
+						type="button"
+						class="connectivity-btn"
+						class:is-testing={githubStatus === "checking"}
+						onclick={testConnectivity}
+						disabled={isSyncing || githubStatus === "checking"}
+					>
+						{githubStatus === "checking"
+							? i18n(I18nKey.statusTesting)
+							: i18n(I18nKey.statusTestConnectivity)}
+					</button>
+				</div>
+				<div class="status-item">
+					<Icon icon="material-symbols:article-outline" class="status-icon info" />
+					<div class="status-info">
+						<span class="status-label">{i18n(I18nKey.dashboardTotalPosts)}</span>
+						<span class="status-value">{i18n(I18nKey.dashboardUnit).replace("{count}", String(stats.total))}</span>
+					</div>
 				</div>
 			</div>
-		</div>
+		{/if}
 	</div>
 {/snippet}
 
@@ -2712,14 +2796,35 @@ function formatDate(dateStr: string | null): string {
 		color: var(--content-meta);
 	}
 
-	/* 分段探测明细：占满整行换到服务名下方 */
+	/* 分段探测明细：只存在于内嵌详情视图内，卡片默认视图不再撑高 */
 	.probe-list {
-		flex-basis: 100%;
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
-		margin-top: 0.125rem;
-		padding-left: 2.375rem;
+		gap: 0.5rem;
+		padding: 0.25rem 0 0.25rem 2.375rem;
+	}
+
+	/* 详情视图容器：与默认状态列表同级切换 */
+	.status-detail {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.status-detail-head {
+		display: flex;
+		align-items: center;
+		gap: 0.875rem;
+		padding: 0.625rem 0.5rem;
+		border-radius: var(--radius-lg);
+		background: var(--btn-regular-bg);
+	}
+
+	.status-detail-empty {
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+		text-align: center;
+		padding: 1.25rem 0.5rem;
 	}
 
 	.probe-row {
