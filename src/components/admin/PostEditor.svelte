@@ -201,6 +201,9 @@ function tocTop(item: { lineIndex: number }): number {
 	return item.lineIndex * lineHeight;
 }
 
+// 目录跳转后标题与容器顶部保留的留白，编辑态与预览态共用
+const TOC_SCROLL_HEADROOM = 8;
+
 function jumpToToc(item: { lineIndex: number; text: string }) {
 	if (editorState.activeTab === "preview") {
 		const target = [
@@ -210,8 +213,22 @@ function jumpToToc(item: { lineIndex: number; text: string }) {
 			const text = (heading.textContent ?? "").replace(/#+$/, "").trim();
 			return text === item.text.trim() || text.startsWith(item.text.trim());
 		});
-		if (target) {
-			target.scrollIntoView({ behavior: "smooth", block: "start" });
+		const container = editorState.previewEl;
+		if (target && container) {
+			// 只能滚动预览容器自身，不能用 scrollIntoView：
+			// 它会连带滚动所有可滚动祖先，而后台整页被锁
+			// (AdminLayout 里 html/body 为 overflow:hidden)，
+			// 文档层一旦被程序化滚动就再也滚不回去，
+			// 表现为页面上部被推走、下部被截断且无法恢复。
+			const offset =
+				target.getBoundingClientRect().top -
+				container.getBoundingClientRect().top +
+				container.scrollTop -
+				TOC_SCROLL_HEADROOM;
+			container.scrollTo({
+				top: Math.max(0, offset),
+				behavior: "smooth",
+			});
 			editorState.visibleTocLines = [item.lineIndex];
 			return;
 		}
@@ -220,7 +237,7 @@ function jumpToToc(item: { lineIndex: number; text: string }) {
 	requestAnimationFrame(() => {
 		const el = editorState.editorEl;
 		if (!el) return;
-		el.scrollTop = Math.max(0, tocTop(item) - 8);
+		el.scrollTop = Math.max(0, tocTop(item) - TOC_SCROLL_HEADROOM);
 		editorState.visibleTocLines = [item.lineIndex];
 	});
 }
