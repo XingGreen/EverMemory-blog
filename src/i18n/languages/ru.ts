@@ -874,6 +874,8 @@ export const ru: Translation = {
 	[Key.statusTesting]: "Проверка…",
 	[Key.statusConnected]: "Подключено",
 	[Key.probeUnitMs]: "мс",
+	[Key.probeNetworkError]: "Сетевой запрос не удался, проверьте соединение",
+	[Key.probeBadResponse]: "Неожиданный ответ",
 	[Key.probeDns]: "DNS-запрос",
 	[Key.probeConnect]: "Соединение",
 	[Key.probeRequest]: "Ожидание",

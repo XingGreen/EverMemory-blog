@@ -824,6 +824,8 @@ export const zaku: Translation = {
 	[Key.statusTesting]: "测试中…",
 	[Key.statusConnected]: "连接正常",
 	[Key.probeUnitMs]: "ms",
+	[Key.probeNetworkError]: "网络请求失败，请检查连接后重试",
+	[Key.probeBadResponse]: "响应格式异常",
 	[Key.probeDns]: "DNS 解析",
 	[Key.probeConnect]: "建立连接",
 	[Key.probeRequest]: "等待响应",

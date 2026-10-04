@@ -135,6 +135,18 @@ const ADMIN_PROBE_STAGES = [
 const ADMIN_STAGE_MIN_DWELL = 180;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * 把任意 catch 到的值转成可读文案。
+ * 浏览器在部分失败场景下抛出的并非 Error，甚至可能是 undefined，
+ * 直接 String(err) 会得到「undefined」这种毫无信息量的提示，
+ * 因此这里逐层兜底并给出可执行的说明。
+ */
+function describeProbeError(err: unknown): string {
+	if (err instanceof Error && err.message) return err.message;
+	if (typeof err === "string" && err) return err;
+	return i18n(I18nKey.probeNetworkError);
+}
 const adminIconProps: Record<
 	"idle" | "checking" | "ok" | "fail",
 	{ icon: string }
@@ -646,20 +658,45 @@ async function testAdminService() {
 	// 请求与步骤推进并行：请求照常发，UI 侧按最短驻留时间逐步推进文案，
 	// 二者互不阻塞——请求慢时由真实耗时接续，请求快时步骤仍完整可见。
 	const request = (async () => {
-		let ok = false;
-		let failure = "";
-		let serverMs = 0;
 		try {
 			const res = await fetch(href, { cache: "no-store" });
-			const data = await res.json();
-			// 服务端自报的处理耗时：覆盖鉴权与端点逻辑，与浏览器侧的网络分段互补
-			serverMs = typeof data?.latency === "number" ? data.latency : 0;
-			ok = res.ok;
-			if (!ok) failure = `HTTP ${res.status}`;
+			// 先取文本再自行解析：端点在鉴权失败时返回的仍是 JSON，
+			// 但 dev 代理/中间件异常时会返回 HTML 错误页，
+			// 直接 res.json() 抛出的 SyntaxError 无法说明真实原因。
+			const raw = await res.text();
+			let data: { latency?: number; message?: string } | null = null;
+			try {
+				data = raw ? JSON.parse(raw) : null;
+			} catch {
+				data = null;
+			}
+			const serverMs = typeof data?.latency === "number" ? data.latency : 0;
+
+			if (!res.ok) {
+				// 优先展示后端给出的原因（如「未授权或会话已失效」），
+				// 否则回退到状态码，避免只看到无信息量的 HTTP 401
+				console.warn("[Admin] service-ping 返回异常", {
+					status: res.status,
+					contentType: res.headers.get("content-type"),
+					body: raw.slice(0, 200),
+				});
+				return {
+					ok: false,
+					failure: data?.message || `HTTP ${res.status}`,
+					serverMs: 0,
+				};
+			}
+			if (data === null) {
+				return {
+					ok: false,
+					failure: `${i18n(I18nKey.probeBadResponse)}: ${raw.slice(0, 80)}`,
+					serverMs: 0,
+				};
+			}
+			return { ok: true, failure: "", serverMs };
 		} catch (err) {
-			failure = err instanceof Error ? err.message : String(err);
+			return { ok: false, failure: describeProbeError(err), serverMs: 0 };
 		}
-		return { ok, failure, serverMs };
 	})();
 
 	const stepper = (async () => {

@@ -861,6 +861,8 @@ export const ja: Translation = {
 	[Key.statusTesting]: "テスト中…",
 	[Key.statusConnected]: "接続OK",
 	[Key.probeUnitMs]: "ms",
+	[Key.probeNetworkError]: "ネットワーク要求に失敗しました。接続を確認して再試行してください",
+	[Key.probeBadResponse]: "応答形式が不正です",
 	[Key.probeDns]: "DNS 解決",
 	[Key.probeConnect]: "接続確立",
 	[Key.probeRequest]: "応答待ち",
