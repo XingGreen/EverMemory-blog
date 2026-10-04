@@ -864,6 +864,8 @@ export const en: Translation = {
 	[Key.statusTesting]: "Testing…",
 	[Key.statusConnected]: "Connected",
 	[Key.probeUnitMs]: "ms",
+	[Key.probeNetworkError]: "Network request failed, check your connection and retry",
+	[Key.probeBadResponse]: "Unexpected response",
 	[Key.probeDns]: "DNS lookup",
 	[Key.probeConnect]: "Connect",
 	[Key.probeRequest]: "Waiting",

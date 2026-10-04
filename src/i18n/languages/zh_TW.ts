@@ -832,6 +832,8 @@ export const zh_TW: Translation = {
 	[Key.statusTesting]: "測試中…",
 	[Key.statusConnected]: "連接正常",
 	[Key.probeUnitMs]: "ms",
+	[Key.probeNetworkError]: "網路請求失敗，請檢查連線後重試",
+	[Key.probeBadResponse]: "回應格式異常",
 	[Key.probeDns]: "DNS 解析",
 	[Key.probeConnect]: "建立連線",
 	[Key.probeRequest]: "等待回應",

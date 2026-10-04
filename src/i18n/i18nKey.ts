@@ -818,6 +818,8 @@ enum I18nKey {
 	probeServerTime = "probeServerTime",
 	probeTotal = "probeTotal",
 	probeUnitMs = "probeUnitMs",
+	probeBadResponse = "probeBadResponse",
+	probeNetworkError = "probeNetworkError",
 	statusDisconnected = "statusDisconnected",
 	statusViewDetail = "statusViewDetail",
 	statusDetailBack = "statusDetailBack",
