@@ -21,7 +21,7 @@ html.is-page-transitioning .banner-home-text-overlay {
 /* Banner text styles */
 .banner-title {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-    animation: banner-fadeInUp 0.3s ease-out;
+    animation: banner-fadeInUp calc(0.3s * var(--anim-speed, 1)) ease-out;
     font-weight: bold;
     /* 防止大字体标题溢出容器 */
     overflow-wrap: break-word;
@@ -30,7 +30,7 @@ html.is-page-transitioning .banner-home-text-overlay {
 
 .banner-subtitle {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
-    animation: banner-fadeInUp 0.3s ease-out 0.3s both;
+    animation: banner-fadeInUp calc(0.3s * var(--anim-speed, 1)) ease-out calc(0.3s * var(--anim-speed, 1)) both;
 }
 
 @keyframes banner-fadeInUp {
@@ -271,7 +271,7 @@ html.is-page-transitioning .banner-home-text-overlay {
     
     /* 背景图片优化 */
     #banner img {
-        transition: transform 1s ease-out !important;
+        transition: transform calc(1s * var(--anim-speed, 1)) ease-out !important;
     }
     
 }
@@ -280,14 +280,14 @@ html.is-page-transitioning .banner-home-text-overlay {
 @media (max-width: 1023px) {
     /* 移动端背景图片优化 */
     #banner img {
-        transition: transform 0.5s ease-out !important;
+        transition: transform calc(0.5s * var(--anim-speed, 1)) ease-out !important;
     }
 }
 
 /* 平板和手机端非首页隐藏banner - 改进的分阶段动画 (1024px以下) */
 @media (max-width: 1023px) {
     #wallpaper-wrapper {
-        transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease-out;
+        transition: transform calc(0.5s * var(--anim-speed, 1)) cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity calc(0.3s * var(--anim-speed, 1)) ease-out;
         transform-origin: top center;
         /* 硬件加速优化 */
         will-change: transform, opacity;
@@ -302,12 +302,12 @@ html.is-page-transitioning .banner-home-text-overlay {
         opacity: 0 !important;
         pointer-events: none !important;
         /* 快速消失 */
-        transition: transform 0.3s ease-in, opacity 0.2s ease-in !important;
+        transition: transform calc(0.3s * var(--anim-speed, 1)) ease-in, opacity calc(0.2s * var(--anim-speed, 1)) ease-in !important;
     }
     
     /* 手机端非首页时主内容区域从顶部开始 - 延迟出现的动画 */
     .absolute.w-full.z-30 {
-        transition: top 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s;
+        transition: top calc(0.4s * var(--anim-speed, 1)) cubic-bezier(0.25, 0.46, 0.45, 0.94) calc(0.1s * var(--anim-speed, 1));
         /* 硬件加速优化 */
         will-change: top;
         /* 禁用transform以保证back to top 按钮可以显示
@@ -320,7 +320,7 @@ html.is-page-transitioning .banner-home-text-overlay {
         top: 5.5rem !important;
         min-height: calc(100vh - 5.5rem) !important;
         /* 内容区域快速上移 */
-        transition: top 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s !important;
+        transition: top calc(0.3s * var(--anim-speed, 1)) cubic-bezier(0.25, 0.46, 0.45, 0.94) calc(0.2s * var(--anim-speed, 1)) !important;
     }
 
     /* 移动端非首页隐藏横幅时，移除main-grid的transform偏移 */
@@ -402,7 +402,7 @@ html.is-page-transitioning .banner-home-text-overlay {
     opacity: 0;
     z-index: 2;
     transition-property: opacity, transform;
-    transition-duration: 1000ms;
+    transition-duration: calc(1000ms * var(--anim-speed, 1));
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
 }
@@ -444,7 +444,7 @@ html.is-page-transitioning .banner-home-text-overlay {
     transition-property: opacity;
 }
 .effect-kenburns .slide-item.active {
-    animation: kenburns var(--carousel-interval, 5000ms) ease-out forwards;
+    animation: kenburns var(--carousel-interval, calc(5000ms * var(--anim-speed, 1))) ease-out forwards;
 }
 
 /* 当banner被禁用时的布局样式 */
@@ -684,7 +684,7 @@ html[data-wallpaper-mode="fullscreen"] .absolute.w-full.z-30.no-banner-layout {
     min-height: unset !important;
     max-height: unset !important;
     transform: none !important;
-    transition: opacity 0.6s ease !important;
+    transition: opacity calc(0.6s * var(--anim-speed, 1)) ease !important;
 }
 
 /* Overlay 模式下图片模糊效果 */
@@ -774,7 +774,7 @@ html[data-wallpaper-mode="fullscreen"] body:not(.sticky-navbar) #top-row {
     cursor: pointer;
     pointer-events: auto;
     color: rgba(255, 255, 255, 0.8);
-    transition: opacity 0.4s ease, transform 0.4s ease;
+    transition: opacity calc(0.4s * var(--anim-speed, 1)) ease, transform calc(0.4s * var(--anim-speed, 1)) ease;
 }
 
 @media (max-width: 1023px) {
@@ -785,7 +785,7 @@ html[data-wallpaper-mode="fullscreen"] body:not(.sticky-navbar) #top-row {
 
 #wallpaper-wrapper.wallpaper-fullscreen .scroll-down-indicator .scroll-down-icon {
     font-size: 5rem;
-    animation: scroll-down-bounce 2s ease-in-out infinite;
+    animation: scroll-down-bounce calc(2s * var(--anim-speed, 1)) ease-in-out infinite;
     filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
 }
 
@@ -825,6 +825,6 @@ html[data-wallpaper-mode="fullscreen"] body:not(.wallpaper-initialized) .w-full.
     .w-full.z-30.pointer-events-none.mobile-main-no-banner {
         top: 5.5rem !important;
         min-height: calc(100vh - 5.5rem) !important;
-        transition: top 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s !important;
+        transition: top calc(0.3s * var(--anim-speed, 1)) cubic-bezier(0.25, 0.46, 0.45, 0.94) calc(0.2s * var(--anim-speed, 1)) !important;
     }
 }

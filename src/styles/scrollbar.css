@@ -1,13 +1,13 @@
 .scrollbar-base.os-scrollbar {
   transition:
-    width 0.15s ease-in-out,
-    height 0.15s ease-in-out,
-    opacity 0.15s,
-    visibility 0.15s,
-    top 0.15s,
-    right 0.15s,
-    bottom 0.15s,
-    left 0.15s;
+    width calc(0.15s * var(--anim-speed, 1)) ease-in-out,
+    height calc(0.15s * var(--anim-speed, 1)) ease-in-out,
+    opacity calc(0.15s * var(--anim-speed, 1)),
+    visibility calc(0.15s * var(--anim-speed, 1)),
+    top calc(0.15s * var(--anim-speed, 1)),
+    right calc(0.15s * var(--anim-speed, 1)),
+    bottom calc(0.15s * var(--anim-speed, 1)),
+    left calc(0.15s * var(--anim-speed, 1));
   pointer-events: unset;
 }
 
