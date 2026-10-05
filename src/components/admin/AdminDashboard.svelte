@@ -703,7 +703,10 @@ async function testAdminService() {
 		}
 	})();
 
-	const { ok, failure, serverMs } = await Promise.all([request, stepper]);
+	// Promise.all 返回的是数组 [探测结果, undefined]（stepper 无返回值），
+	// 必须先取出第 0 项再解构；直接对数组做对象解构会得到全 undefined。
+	const [probe] = await Promise.all([request, stepper]);
+	const { ok, failure, serverMs } = probe;
 
 	// 成败都打印：ok/failure/type 三者足以定位失败落在哪条分支，
 	// 避免只能看到最终文案而无法反推中间过程。
