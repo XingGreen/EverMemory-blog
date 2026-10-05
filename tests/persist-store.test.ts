@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -419,13 +422,187 @@ describe("KV 写入与删除", () => {
 	});
 });
 
-describe("未配置 KV 时访问 KV 专属路径", () => {
-	it("isKvBackend 为 false，但 getStore 仍返回可用的文件后端", async () => {
+/**
+ * 文件后端：真实 fs 往返。
+ *
+ * FILE_PERSIST_DIR 在模块加载时由 process.cwd() 求值，因此把 cwd 指向临时
+ * 目录后再动态 import，即可跑真实的 readFile/mkdir/writeFile/unlink 语义，
+ * 同时不会污染项目的 .data/persist/。
+ */
+describe("文件后端（真实 fs 往返）", () => {
+	let tmpDir = "";
+
+	beforeEach(() => {
 		setKvEnv(false);
-		const { getStore, isKvBackend } = await loadStore();
+		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "persist-store-test-"));
+		vi.resetModules();
+		// 必须在 import 之前生效：常量在模块求值时就固化了
+		vi.spyOn(process, "cwd").mockReturnValue(tmpDir);
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+		if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
+	});
+
+	const loadFileStore = () => import("@utils/persist-store");
+	const dataDir = () => path.join(tmpDir, ".data", "persist");
+	const fileOf = (key: string) => path.join(dataDir(), `${key}.json`);
+
+	it("set 后 get 返回原值", async () => {
+		const { getStore } = await loadFileStore();
+
+		await getStore().set("admin_sessions", { sid: "abc", n: 1 });
+		expect(await getStore().get("admin_sessions")).toEqual({ sid: "abc", n: 1 });
+	});
+
+	it("写入时按需创建 .data/persist 目录", async () => {
+		const { getStore } = await loadFileStore();
+
+		// 目录不存在时 mkdir(recursive) 才能成功，否则首次写入即 ENOENT
+		expect(fs.existsSync(dataDir())).toBe(false);
+		await getStore().set("k", 1);
+		expect(fs.existsSync(dataDir())).toBe(true);
+	});
+
+	it("set 覆盖旧值", async () => {
+		const { getStore } = await loadFileStore();
+
+		await getStore().set("k", "old");
+		await getStore().set("k", "new");
+		expect(await getStore().get("k")).toBe("new");
+	});
+
+	it("get 不存在的键返回 null", async () => {
+		const { getStore } = await loadFileStore();
+
+		expect(await getStore().get("never_written")).toBeNull();
+	});
+
+	it("值含嵌套结构与特殊字符时正确往返", async () => {
+		const { getStore } = await loadFileStore();
+		const value = {
+			nested: { list: [1, 2, { deep: true }] },
+			zh: "中文 · 引号\"与\\反斜杠",
+			empty: null,
+			zero: 0,
+			emptyStr: "",
+		};
+
+		await getStore().set("k", value);
+		expect(await getStore().get("k")).toEqual(value);
+	});
+
+	it("文件内容损坏时返回 null 而不抛出", async () => {
+		const { getStore } = await loadFileStore();
+		await getStore().set("k", 1);
+		fs.writeFileSync(fileOf("k"), "{ 这不是合法 JSON", "utf-8");
+
+		// 手工改坏 .data 文件时不能让请求 500
+		expect(await getStore().get("k")).toBeNull();
+	});
+
+	it("带 ttl 写入时文件内记录过期时间戳", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+		const { getStore } = await loadFileStore();
+
+		await getStore().set("k", "v", 60);
+
+		const envelope = JSON.parse(fs.readFileSync(fileOf("k"), "utf-8"));
+		expect(envelope.e).toBe(Date.now() + 60_000);
+		expect(envelope.v).toBe("v");
+	});
+
+	it("不带 ttl 时不写过期字段（永不过期）", async () => {
+		const { getStore } = await loadFileStore();
+
+		await getStore().set("k", "v");
+
+		const envelope = JSON.parse(fs.readFileSync(fileOf("k"), "utf-8"));
+		expect(envelope.e).toBeUndefined();
+	});
+
+	it("ttl 未到期时仍能读到", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+		const { getStore } = await loadFileStore();
+		await getStore().set("k", "v", 60);
+
+		vi.setSystemTime(new Date("2026-01-01T00:00:59Z"));
+		expect(await getStore().get("k")).toBe("v");
+	});
+
+	it("ttl 传 0 视为不过期而非立即过期", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+		const { getStore } = await loadFileStore();
+
+		// 0 的语义是「不设过期」。若误判成需要写 e，会得到 e = now，
+		// 紧接着读取时 e <= now 立刻判定过期——数据等于没存。
+		await getStore().set("k", "v", 0);
+		expect(JSON.parse(fs.readFileSync(fileOf("k"), "utf-8")).e).toBeUndefined();
+
+		vi.setSystemTime(new Date("2026-01-01T01:00:00Z"));
+		expect(await getStore().get("k")).toBe("v");
+	});
+
+	it("ttl 到期后返回 null 并删除文件", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+		const { getStore } = await loadFileStore();
+		await getStore().set("k", "v", 60);
+		expect(fs.existsSync(fileOf("k"))).toBe(true);
+
+		vi.setSystemTime(new Date("2026-01-01T00:01:01Z"));
+		expect(await getStore().get("k")).toBeNull();
+
+		// 过期条目必须落盘删除，否则 .data 会无限堆积
+		expect(fs.existsSync(fileOf("k"))).toBe(false);
+	});
+
+	it("过期时刻恰好相等时即视为过期", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+		const { getStore } = await loadFileStore();
+		await getStore().set("k", "v", 60);
+
+		// 源码是 env.e <= Date.now()，边界取等号语义为「已过期」
+		vi.setSystemTime(new Date("2026-01-01T00:01:00Z"));
+		expect(await getStore().get("k")).toBeNull();
+	});
+
+	it("del 删除文件，之后 get 返回 null", async () => {
+		const { getStore } = await loadFileStore();
+		await getStore().set("k", "v");
+
+		await getStore().del("k");
+		expect(fs.existsSync(fileOf("k"))).toBe(false);
+		expect(await getStore().get("k")).toBeNull();
+	});
+
+	it("del 不存在的键静默成功", async () => {
+		const { getStore } = await loadFileStore();
+
+		// 会话清理会对不存在的 sid 调 del，不能抛错中断批量清理
+		await expect(getStore().del("never_written")).resolves.toBeUndefined();
+	});
+
+	it("路径穿越的键被拒绝且不落地任何文件", async () => {
+		const { getStore } = await loadFileStore();
+
+		// key 会被拼进 ${key}.json，漏校验即可写出 .data/persist 之外
+		await expect(getStore().set("../escaped", "pwn")).rejects.toThrow(/非法存储键/);
+		expect(fs.existsSync(path.join(tmpDir, ".data", "escaped.json"))).toBe(false);
+		expect(fs.existsSync(fileOf("../escaped"))).toBe(false);
+	});
+
+	it("未配置 KV 时确实走文件后端", async () => {
+		const { getStore, isKvBackend } = await loadFileStore();
 
 		expect(isKvBackend()).toBe(false);
-		// 文件后端不需要 KV 配置，不应抛「KV 后端未配置」
-		await expect(getStore().get("k")).resolves.not.toThrow();
+		await getStore().set("probe", { ok: true });
+		// 证明真的落到了磁盘，而不是被 KV 分支静默处理
+		expect(fs.existsSync(fileOf("probe"))).toBe(true);
 	});
 });
