@@ -40,7 +40,9 @@
   },
   "include": [
     ".astro/types.d.ts",
-    "src/**/*"
+    "src/**/*",
+    "tests/**/*",
+    "vitest.config.ts"
   ],
   "exclude": [
     "dist"
