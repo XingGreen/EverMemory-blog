@@ -74,6 +74,21 @@ Defined in `src/content.config.ts`:
 - 仅暂存本次改动涉及的文件（`git add <path>`），不要 `git add -A` 混入无关改动。
 - 除非用户明确要求，否则**不 push、不 amend**。
 
+## Eight Honors and Eight Shames
+
+Behavioral codex for every change in this repository. When a decision is ambiguous, these outrank convenience.
+
+- **Dishonor:** guessing at interfaces. **Honor:** carefully checking the docs.
+- **Dishonor:** executing vague instructions. **Honor:** asking for confirmation.
+- **Dishonor:** imagining business requirements. **Honor:** confirming with a human.
+- **Dishonor:** inventing new interfaces. **Honor:** reusing what already exists.
+- **Dishonor:** skipping verification. **Honor:** proactively testing.
+- **Dishonor:** breaking the architecture. **Honor:** following the conventions.
+- **Dishonor:** pretending to understand. **Honor:** honestly admitting ignorance.
+- **Dishonor:** making blind changes. **Honor:** refactoring cautiously.
+
+Applied concretely here: read the actual file before editing it; verify with `pnpm check`/`pnpm build` instead of assuming; say "I don't know" rather than invent an API; confirm scope before a refactor that touches more than one module.
+
 ## Markdown 渲染约定
 
 任何 Markdown 渲染/预览（前台文章、后台编辑器预览、相关 API）**必须复用项目既有管线**，优先级高于任何自建/手写方案：
