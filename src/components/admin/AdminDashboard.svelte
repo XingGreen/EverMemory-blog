@@ -12,6 +12,7 @@ import {
 	getConfigItem,
 	getConfigLabelKey,
 } from "@/utils/admin-settings";
+import { probeAdminService, runProbeWithStages } from "@/utils/admin-probe";
 import { isTourDone, resetTour } from "@/utils/onboarding";
 import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
 import OnboardingTour from "./OnboardingTour.svelte";
@@ -126,17 +127,6 @@ const ADMIN_STAGE_MIN_DWELL = 180;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/**
- * 把任意 catch 到的值转成可读文案。
- * 浏览器在部分失败场景下抛出的并非 Error，甚至可能是 undefined，
- * 直接 String(err) 会得到「undefined」这种毫无信息量的提示，
- * 因此这里逐层兜底并给出可执行的说明。
- */
-function describeProbeError(err: unknown): string {
-	if (err instanceof Error && err.message) return err.message;
-	if (typeof err === "string" && err) return err;
-	return i18n(I18nKey.probeNetworkError);
-}
 const adminIconProps: Record<
 	"idle" | "checking" | "ok" | "fail",
 	{ icon: string }
@@ -619,6 +609,7 @@ function openStatusAction() {
 		adminStatusDetail = true;
 		return;
 	}
+	adminStatusDetail = false;
 	testAdminService();
 }
 
@@ -629,85 +620,23 @@ function closeStatusDetail() {
 async function testAdminService() {
 	if (adminStatus === "checking") return;
 	adminStatus = "checking";
-	adminStatusDetail = false;
+	// 不在此处关闭详情：详情面板内的「重新测试」也走这里，
+	// 关掉会让用户在测试过程中被踢回列表。是否进入详情由调用方决定。
 	adminProbeResults = [];
 	adminProbeDone = false;
 	adminProbeStageIndex = 0;
 	adminProbeStage = i18n(ADMIN_PROBE_STAGES[0]);
 
-	// 单次请求。分段数据全部来自浏览器对该请求的实测（PerformanceResourceTiming），
+// 单次请求。分段数据全部来自浏览器对该请求的实测（PerformanceResourceTiming），
 	// 不额外发请求，测得的耗时与改动前完全一致。
 	const href = new URL(ADMIN_PROBE_URL, location.href).href;
 
 	// 请求与步骤推进并行：请求照常发，UI 侧按最短驻留时间逐步推进文案，
 	// 二者互不阻塞——请求慢时由真实耗时接续，请求快时步骤仍完整可见。
-	const request = (async () => {
-		try {
-			const res = await fetch(href, { cache: "no-store" });
-			// 先取文本再自行解析：端点在鉴权失败时返回的仍是 JSON，
-			// 但 dev 代理/中间件异常时会返回 HTML 错误页，
-			// 直接 res.json() 抛出的 SyntaxError 无法说明真实原因。
-			const raw = await res.text();
-			let data: {
-				latency?: number;
-				min?: number;
-				median?: number;
-				max?: number;
-				message?: string;
-			} | null = null;
-			try {
-				data = raw ? JSON.parse(raw) : null;
-			} catch {
-				data = null;
-			}
-			const serverMs = typeof data?.latency === "number" ? data.latency : 0;
-			// 服务端已对 KV 往返做多次采样，此处只取中位数展示：
-			// 单次耗时会随抖动大幅波动，取中位更能反映常态水平。
-			// 旧版端点不返回这些字段，此时回退为单值。
-			const serverMedian =
-				typeof data?.median === "number" ? data.median : serverMs;
-			const serverMin = typeof data?.min === "number" ? data.min : serverMs;
-			const serverMax = typeof data?.max === "number" ? data.max : serverMs;
-
-			if (!res.ok) {
-				// 优先展示后端给出的原因（如「未授权或会话已失效」），
-				// 否则回退到状态码，避免只看到无信息量的 HTTP 401
-				console.warn("[Admin] service-ping 返回异常", {
-					status: res.status,
-					contentType: res.headers.get("content-type"),
-					body: raw.slice(0, 200),
-				});
-				return {
-					ok: false,
-					failure: data?.message || `HTTP ${res.status}`,
-					serverMs: 0,
-					serverMin: 0,
-					serverMedian: 0,
-					serverMax: 0,
-				};
-			}
-			if (data === null) {
-				return {
-					ok: false,
-					failure: `${i18n(I18nKey.probeBadResponse)}: ${raw.slice(0, 80)}`,
-					serverMs: 0,
-					serverMin: 0,
-					serverMedian: 0,
-					serverMax: 0,
-				};
-			}
-			return {
-				ok: true,
-				failure: "",
-				serverMs,
-				serverMin,
-				serverMedian,
-				serverMax,
-			};
-		} catch (err) {
-			return { ok: false, failure: describeProbeError(err), serverMs: 0, serverMin: 0, serverMedian: 0, serverMax: 0 };
-		}
-	})();
+	const request = probeAdminService(href, {
+		badResponse: i18n(I18nKey.probeBadResponse),
+		networkError: i18n(I18nKey.probeNetworkError),
+	});
 
 	const stepper = (async () => {
 		for (let i = 1; i < ADMIN_PROBE_STAGES.length; i++) {
@@ -717,9 +646,10 @@ async function testAdminService() {
 		}
 	})();
 
-	// Promise.all 返回的是数组 [探测结果, undefined]（stepper 无返回值），
-	// 必须先取出第 0 项再解构；直接对数组做对象解构会得到全 undefined。
-	const [probe] = await Promise.all([request, stepper]);
+	// 结果取自 request 而非 stepper（后者只推进 UI，无返回值）；
+	// 这一约定由 runProbeWithStages 固化，曾在此处因误按对象解构
+	// 而让线上显示「无法连接: undefined」
+	const probe = await runProbeWithStages(request, stepper);
 	const { ok, failure, serverMs, serverMin, serverMedian, serverMax } = probe;
 
 	// 只在失败时打印：失败时能直接看到原始 failure，
@@ -1086,11 +1016,18 @@ function formatDate(dateStr: string | null): string {
 					/>
 					<div class="status-info">
 						<span class="status-label">{i18n(I18nKey.statusAdminService)}</span>
-						<span class="status-value">
-							{adminStatus === "ok"
+<span class="status-value">
+						<!-- 与下方状态列表保持一致的三分支：idle（尚未测试）与
+						     checking（测试中）都不是「无法连接」。此前这里只有
+						     ok/fail 两分支，会把「从未测过」误报成「服务已断」 -->
+						{adminProbeStage
+							? adminProbeStage
+							: adminStatus === "ok"
 								? i18n(I18nKey.statusConnected)
-								: i18n(I18nKey.statusDisconnected)}
-						</span>
+								: adminStatus === "fail"
+									? i18n(I18nKey.statusDisconnected)
+									: i18n(I18nKey.statusRunning)}
+					</span>
 					</div>
 					<button
 						type="button"
