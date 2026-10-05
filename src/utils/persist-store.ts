@@ -131,6 +131,10 @@ async function parseUpstashResult(
 	res: Response,
 	key: string,
 ): Promise<unknown | null> {
+	// 404/204 是「键不存在」的正常响应，不属于异常：不记 error 日志。
+	// 这看似与下面的 !res.ok 重复（404/204 的 res.ok 也是 false），但二者
+	// 副作用不同——删掉这里会让每次查询已过期 sid 都刷一条 error 日志，
+	// 正常流量淹没真实故障。注意 delete 后紧接着读会命中 204。
 	if (res.status === 404 || res.status === 204) return null;
 	if (!res.ok) {
 		console.error(`[PersistStore] KV ${res.status} (键 ${key})`);
