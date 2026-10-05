@@ -687,11 +687,6 @@ async function testAdminService() {
 				};
 			}
 			if (data === null) {
-				console.warn("[Probe] 响应体无法解析为 JSON", {
-					status: res.status,
-					contentType: res.headers.get("content-type"),
-					body: raw.slice(0, 200),
-				});
 				return {
 					ok: false,
 					failure: `${i18n(I18nKey.probeBadResponse)}: ${raw.slice(0, 80)}`,
@@ -710,13 +705,6 @@ async function testAdminService() {
 				serverMax,
 			};
 		} catch (err) {
-			// 打印原始抛出值：describeProbeError 兜底会把它转成文案，
-			// 转换后无法区分「fetch 抛错」与「响应异常」两条路径。
-			console.warn("[Probe] fetch 抛出异常", {
-				err,
-				errType: typeof err,
-				isError: err instanceof Error,
-			});
 			return { ok: false, failure: describeProbeError(err), serverMs: 0, serverMin: 0, serverMedian: 0, serverMax: 0 };
 		}
 	})();
@@ -734,15 +722,11 @@ async function testAdminService() {
 	const [probe] = await Promise.all([request, stepper]);
 	const { ok, failure, serverMs, serverMin, serverMedian, serverMax } = probe;
 
-	// 成败都打印：ok/failure/type 三者足以定位失败落在哪条分支，
-	// 避免只能看到最终文案而无法反推中间过程。
-	console.warn("[Probe] 探测结果", {
-		ok,
-		failure,
-		failureType: typeof failure,
-		serverMs,
-		href,
-	});
+	// 只在失败时打印：失败时能直接看到原始 failure，
+	// 比只读 toast 文案更容易判断是网络问题还是端点返回异常。
+	if (!ok) {
+		console.warn("[Probe] 探测失败", { failure, href });
+	}
 
 	const timing = performance.getEntriesByName(href, "resource").at(-1);
 	const total = timing ? Math.round(timing.responseEnd - timing.startTime) : 0;
