@@ -60,3 +60,6 @@ src/constants/admin-config-snapshot.ts
 
 # Turborepo 本地缓存
 .turbo/
+
+# 测试覆盖率报告
+coverage/

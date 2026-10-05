@@ -5,12 +5,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * 测试里替换为可编程的取值，从而覆盖「改密/改钥后旧令牌立即失效」这条链路。
  */
 let tokenVersion = "0";
+/**
+ * 可编程的密钥取值。只有「读 .env.local」这一层是边界，值得 mock；
+ * verifyPasswordHash / shouldRehash / hashAdminPassword 等真实加密逻辑
+ * 保持原样，否则测的就不是生产代码了。
+ */
+let secrets: Record<string, string> = {};
+/** 捕获 applyEnvFileUpdates 的写回，避免测试触碰真实 .env.local */
+let envWrites: { key: string; value: string }[] = [];
+let envWritable = true;
+/** 让 applyEnvFileUpdates 抛错，模拟 isEnvFileWritable 检查通过但写入仍失败的场景 */
+let envWriteThrows = false;
+
 vi.mock("@utils/secret-io", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@utils/secret-io")>()),
-	readSecretPreview: (key: string) => (key === "ADMIN_TOKEN_VER" ? tokenVersion : ""),
+	readSecretPreview: (key: string) =>
+		key === "ADMIN_TOKEN_VER" ? tokenVersion : (secrets[key] ?? ""),
 	incrementTokenVersion: () => {
 		tokenVersion = String(Number(tokenVersion) + 1);
 		return Number(tokenVersion);
+	},
+	isEnvFileWritable: () => envWritable,
+	applyEnvFileUpdates: (updates: { key: string; value: string }[]) => {
+		if (envWriteThrows) throw new Error("EACCES: .env.local 只读");
+		envWrites.push(...updates);
 	},
 }));
 
@@ -68,6 +86,15 @@ async function signRaw(payload: Record<string, unknown>): Promise<string> {
 
 beforeEach(() => {
 	tokenVersion = "0";
+	secrets = {};
+envWrites = [];
+	envWritable = true;
+	envWriteThrows = false;
+delete process.env.ADMIN_USERNAME;
+	// 生产目标 N=131072，单次 scrypt 约 1s、整文件会跑到 7s。
+	// 官方提供 ADMIN_SCRYPT_N 覆盖（见 targetScryptN），这里降到 2048：
+	// 覆盖的是「成本不足则升级」这条逻辑本身，成本大小与结论无关。
+	process.env.ADMIN_SCRYPT_N = "2048";
 	sessions.clear();
 	vi.resetModules();
 });
@@ -395,5 +422,264 @@ describe("会话 Cookie 属性", () => {
 		expect(cookie).toContain("admin_session=");
 		expect(cookie).toContain("Max-Age=0");
 		expect(cookie).toContain("Expires=Thu, 01 Jan 1970");
+	});
+});
+describe("verifyAdminPassword 管理员密码验证", () => {
+	/** 真实 scrypt 哈希，密码学部分不 mock */
+	const hashOf = async (plain: string) => {
+		const { hashAdminPassword } = await import("@utils/secret-io");
+		return hashAdminPassword(plain);
+	};
+
+	it("正确的 scrypt 密码通过验证", async () => {
+		secrets.ADMIN_PASSWORD = await hashOf("correct-horse");
+		const auth = await loadAuth();
+
+		expect(auth.verifyAdminPassword("correct-horse")).toBe(true);
+	});
+
+	it("错误密码被拒绝", async () => {
+		secrets.ADMIN_PASSWORD = await hashOf("correct-horse");
+		const auth = await loadAuth();
+
+		expect(auth.verifyAdminPassword("wrong-password")).toBe(false);
+	});
+
+	it("空密码被拒绝且不触碰哈希", async () => {
+		secrets.ADMIN_PASSWORD = await hashOf("correct-horse");
+		const auth = await loadAuth();
+
+		// 空密码若漏判会绕过校验直接进 catch 分支返回 false，
+		// 表面结果相同——必须断言「没有发生 rehash 写回」才能证明提前拦截
+		expect(auth.verifyAdminPassword("")).toBe(false);
+		expect(envWrites).toHaveLength(0);
+	});
+
+	it("未配置 ADMIN_PASSWORD 时拒绝并记录错误", async () => {
+		const auth = await loadAuth();
+		const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		expect(auth.verifyAdminPassword("anything")).toBe(false);
+		expect(spy).toHaveBeenCalledWith(
+			expect.stringContaining("ADMIN_PASSWORD 环境变量未配置"),
+		);
+	});
+
+	it("兼容旧版 SHA256 hex 密码", async () => {
+		const nodeCrypto = await import("node:crypto");
+		secrets.ADMIN_PASSWORD = nodeCrypto
+			.createHash("sha256")
+			.update("legacy-pass", "utf8")
+			.digest("hex");
+		const auth = await loadAuth();
+
+		// 存量站点仍是 SHA256，验证失败会导致无法登录
+		expect(auth.verifyAdminPassword("legacy-pass")).toBe(true);
+	});
+
+	it("旧版 SHA256 验证通过后自动升级写回 scrypt", async () => {
+		const nodeCrypto = await import("node:crypto");
+		secrets.ADMIN_PASSWORD = nodeCrypto
+			.createHash("sha256")
+			.update("legacy-pass", "utf8")
+			.digest("hex");
+		const auth = await loadAuth();
+
+		expect(auth.verifyAdminPassword("legacy-pass")).toBe(true);
+
+		expect(envWrites).toHaveLength(1);
+		const [update] = envWrites;
+		expect(update.key).toBe("ADMIN_PASSWORD");
+		expect(update.value).toMatch(/^scrypt\$\d+\$/);
+		// 写回的新哈希必须能验证同一密码，否则用户会被自己锁在门外
+		expect(update.value).not.toBe(secrets.ADMIN_PASSWORD);
+	});
+
+	it("已是目标成本的 scrypt 哈希不再重复写回", async () => {
+		secrets.ADMIN_PASSWORD = await hashOf("stable-pass");
+		const auth = await loadAuth();
+
+		expect(auth.verifyAdminPassword("stable-pass")).toBe(true);
+		// 无谓写回会在每次登录时都改写 .env.local
+		expect(envWrites).toHaveLength(0);
+	});
+
+it("成本参数偏低的 scrypt 哈希会被升级到目标 N", async () => {
+		// 模拟历史低 N 哈希（1024 < 目标 2048）
+		const nodeCrypto = await import("node:crypto");
+		const salt = nodeCrypto.randomBytes(16);
+		const computed = nodeCrypto.scryptSync("low-cost", salt, 64, {
+			N: 1024,
+			maxmem: 64 * 1024 * 1024,
+		});
+		secrets.ADMIN_PASSWORD = `scrypt$1024$${salt.toString("base64")}$${computed.toString("base64")}`;
+		const auth = await loadAuth();
+
+		expect(auth.verifyAdminPassword("low-cost")).toBe(true);
+		expect(envWrites).toHaveLength(1);
+		expect(envWrites[0].value).toMatch(/^scrypt\$2048\$/);
+	});
+
+	it("写回的新哈希仍能验证同一密码", async () => {
+		// 防止「升级后把自己锁在门外」：升级路径一旦算错，用户下次登录即失效
+		const nodeCrypto = await import("node:crypto");
+		const salt = nodeCrypto.randomBytes(16);
+		const computed = nodeCrypto.scryptSync("low-cost", salt, 64, {
+			N: 1024,
+			maxmem: 64 * 1024 * 1024,
+		});
+		secrets.ADMIN_PASSWORD = `scrypt$1024$${salt.toString("base64")}$${computed.toString("base64")}`;
+		const auth = await loadAuth();
+
+		auth.verifyAdminPassword("low-cost");
+		const { verifyPasswordHash } = await import("@utils/secret-io");
+
+		expect(verifyPasswordHash("low-cost", envWrites[0].value)).toBe(true);
+	});
+
+	it(".env.local 不可写时验证仍通过但不写回", async () => {
+		const nodeCrypto = await import("node:crypto");
+		secrets.ADMIN_PASSWORD = nodeCrypto
+			.createHash("sha256")
+			.update("legacy-pass", "utf8")
+			.digest("hex");
+		envWritable = false;
+		const auth = await loadAuth();
+
+		// 文件不可写不能变成登录失败——否则只读部署会全员被锁
+		expect(auth.verifyAdminPassword("legacy-pass")).toBe(true);
+		expect(envWrites).toHaveLength(0);
+	});
+
+it("写回抛错时验证仍返回 true", async () => {
+		const nodeCrypto = await import("node:crypto");
+		secrets.ADMIN_PASSWORD = nodeCrypto
+			.createHash("sha256")
+			.update("legacy-pass", "utf8")
+			.digest("hex");
+		envWritable = true;
+		envWriteThrows = true;
+		const auth = await loadAuth();
+
+		// isEnvFileWritable 说可写、但写入过程中失败的真实情况。
+		// 写回只是优化，失败绝不能连带把登录也判失败，否则用户会被锁在门外。
+		expect(auth.verifyAdminPassword("legacy-pass")).toBe(true);
+		expect(envWrites).toHaveLength(0);
+	});
+
+it("格式损坏的哈希返回 false 而不抛出", async () => {
+		// .env.local 被手工改坏时不能让登录接口 500，也不能误判为通过
+		secrets.ADMIN_PASSWORD = "scrypt$notanumber$!!!$???";
+		const auth = await loadAuth();
+
+		expect(() => auth.verifyAdminPassword("anything")).not.toThrow();
+		expect(auth.verifyAdminPassword("anything")).toBe(false);
+	});
+
+	it("scrypt 段数不全的哈希被拒绝", async () => {
+		secrets.ADMIN_PASSWORD = "scrypt$";
+		const auth = await loadAuth();
+		const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		expect(auth.verifyAdminPassword("anything")).toBe(false);
+		// 空盐/空哈希由 verifyPasswordHash 内部提前 return false 拒绝，
+		// 不该冒泡到 auth 的 catch（那意味着内部防护漏了）
+		expect(spy).not.toHaveBeenCalled();
+	});
+
+	it("省略 N 的旧版 scrypt 哈希按 16384 校验", async () => {
+		// scrypt$salt$hash 是早期格式，省略 N 时按 16384 计算
+		const nodeCrypto = await import("node:crypto");
+		const salt = nodeCrypto.randomBytes(16);
+		const computed = nodeCrypto.scryptSync("old-format", salt, 64, {
+			N: 16384,
+			maxmem: 256 * 1024 * 1024,
+		});
+		secrets.ADMIN_PASSWORD = `scrypt$${salt.toString("base64")}$${computed.toString("base64")}`;
+		const auth = await loadAuth();
+
+		expect(auth.verifyAdminPassword("old-format")).toBe(true);
+		// 16384 < 目标 2048？不，16384 > 2048，故不需要升级
+		expect(envWrites).toHaveLength(0);
+	});
+});
+
+describe("verifyAdminUsername 管理员用户名验证", () => {
+	it("默认用户名为 admin", async () => {
+		const auth = await loadAuth();
+
+		expect(auth.verifyAdminUsername("admin")).toBe(true);
+		expect(auth.verifyAdminUsername("root")).toBe(false);
+	});
+
+	it("未设置 ADMIN_USERNAME 时回退到 admin", async () => {
+		process.env.ADMIN_USERNAME = "";
+		const auth = await loadAuth();
+
+		expect(auth.verifyAdminUsername("admin")).toBe(true);
+	});
+
+	it("自定义用户名生效", async () => {
+		process.env.ADMIN_USERNAME = "editor";
+		const auth = await loadAuth();
+
+		expect(auth.verifyAdminUsername("editor")).toBe(true);
+		expect(auth.verifyAdminUsername("admin")).toBe(false);
+	});
+
+it("长度不同的输入被拒绝", async () => {
+		process.env.ADMIN_USERNAME = "admin";
+		const auth = await loadAuth();
+
+		// 长度不等时 timingSafeEqual 会抛错，必须提前 return false
+		expect(auth.verifyAdminUsername("adm")).toBe(false);
+		expect(auth.verifyAdminUsername("administrator")).toBe(false);
+	});
+
+	it("长度不等是主动拒绝，不产生异常日志", async () => {
+		// 变异测试发现：删掉长度检查后，timingSafeEqual 抛 RangeError 被外层
+		// catch 吞掉，最终仍返回 false —— 只断言返回值无法区分两者。
+		// 「无错误日志」才说明这是设计内的拒绝，而非靠异常兜底。
+		process.env.ADMIN_USERNAME = "admin";
+		const auth = await loadAuth();
+		const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		expect(auth.verifyAdminUsername("adm")).toBe(false);
+		expect(spy).not.toHaveBeenCalled();
+	});
+
+	it("使用 timingSafeEqual 而非普通比较", async () => {
+		// 二者返回同样的布尔值，只能靠「是否调用了常量时间比较」区分。
+		// 这是代码注释里明确声明的防时序攻击意图，值得钉住。
+		process.env.ADMIN_USERNAME = "admin";
+		const auth = await loadAuth();
+		const nodeCrypto = await import("node:crypto");
+		const spy = vi.spyOn(nodeCrypto.default, "timingSafeEqual");
+
+		auth.verifyAdminUsername("admin");
+
+		expect(spy).toHaveBeenCalled();
+	});
+
+	it("大小写敏感", async () => {
+		process.env.ADMIN_USERNAME = "admin";
+		const auth = await loadAuth();
+
+		expect(auth.verifyAdminUsername("Admin")).toBe(false);
+		expect(auth.verifyAdminUsername("ADMIN")).toBe(false);
+	});
+
+	it("空用户名被拒绝", async () => {
+		const auth = await loadAuth();
+
+		expect(auth.verifyAdminUsername("")).toBe(false);
+	});
+
+	it("多字节字符按字节长度比较", async () => {
+		process.env.ADMIN_USERNAME = "管理员";
+		const auth = await loadAuth();
+
+		expect(auth.verifyAdminUsername("管理员")).toBe(true);
+		expect(auth.verifyAdminUsername("管理")).toBe(false);
 	});
 });
