@@ -17,6 +17,8 @@ Firefly is a feature-rich static blog theme built on **Astro 6** with **Svelte 5
 | `pnpm type-check` | `tsc --noEmit --isolatedDeclarations` |
 | `pnpm lint` | Biome lint + auto-fix |
 | `pnpm format` | Biome format |
+| `pnpm test` | Vitest watch mode |
+| `pnpm test:run` | Vitest single run (CI / 提交前) |
 | `pnpm new-post <filename>` | Scaffold a new blog post |
 
 Package manager is **pnpm** (enforced). Node.js >= 22 required.
@@ -60,6 +62,22 @@ Defined in `src/content.config.ts`:
 ### Path Aliases (tsconfig.json)
 
 `@components/*`, `@assets/*`, `@constants/*`, `@utils/*`, `@i18n/*`, `@layouts/*` → `./src/<dir>/*`; `@/*` → `./src/*`
+
+`vitest.config.ts` 的 alias 必须与上表保持一致，缺一个别名会直接解析失败。
+
+## Tests
+
+Vitest（`tests/`，Node 环境）。当前覆盖后台工具链中出错代价最高的部分：
+
+- `tests/auth.test.ts` — JWT 签发/验签、签名与payload 篡改、过期边界、token 版本失效、sid 缺失、角色校验、`requireAuth` 的 401 分支、Cookie 属性
+- `tests/session-store.test.ts` — 会话注册/过期清理、踢下线、touch 节流与合并、`describeDevice` 解析、删除竞态下的 `verifyDeleted`
+
+约定：
+
+- **测真实代码，不mock 被测对象**。只 mock 边界（存储后端、`.env.local` 读取）；`tests/helpers/memory-store.ts` 提供与 `persist-store` 等价的内存双工，让 `session-store` 跑完整逻辑。
+- **`.astro` / `.svelte` 组件暂不测**。组件需要 DOM 环境，当前 vitest 配为 `node`；贸然加入会迫使引入 jsdom 并显著拉长搭建成本。
+- **新增测试必须验证其有效性**。写完用变异测试确认：手动改坏被测代码的关键分支，测试必须失败。断言只覆盖「最终结果」时会漏判——例如移除 `if (!payload.sid) return null` 后，`getSession(undefined)` 仍会返回 `null` 使断言通过，必须额外断言「该层是否被调用」。
+- 新增 alias、tsconfig `include` 或 vitest 配置后，`pnpm type-check` 的错误数不应变化（当前基线 51 处 `isolatedDeclarations` 报错属既有问题，不要顺手「修」）。
 
 ## Code Style
 
