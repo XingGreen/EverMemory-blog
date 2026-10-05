@@ -870,7 +870,7 @@ export const en: Translation = {
 	[Key.probeConnect]: "Connect",
 	[Key.probeRequest]: "Waiting",
 	[Key.probeDownload]: "Download",
-	[Key.probeServerTime]: "Server time",
+	[Key.probeStoreRoundTrip]: "Store round-trip",
 	[Key.probeTotal]: "Total",
 	[Key.statusDisconnected]: "Disconnected",
 	[Key.statusViewDetail]: "View details",

@@ -96,7 +96,7 @@ let adminStatus = $state<"idle" | "checking" | "ok" | "fail">("idle");
 // 结果不内联在状态行里，改由「查看详情」进入内嵌详情页展示，
 // 避免探测完成后卡片被动增高、左右两栏高度失衡。
 let adminProbeResults = $state<
-	{ label: string; ms: number; isTotal?: boolean }[]
+	{ label: string; ms: number; isTotal?: boolean; detail?: string }[]
 >([]);
 // 当前所处测试步骤的文案：测试过程中替换掉「测试中/连接正常」，
 // 使状态区高度恒定，同时让用户看到进展到哪一步
@@ -648,13 +648,26 @@ async function testAdminService() {
 			// 但 dev 代理/中间件异常时会返回 HTML 错误页，
 			// 直接 res.json() 抛出的 SyntaxError 无法说明真实原因。
 			const raw = await res.text();
-			let data: { latency?: number; message?: string } | null = null;
+			let data: {
+				latency?: number;
+				min?: number;
+				median?: number;
+				max?: number;
+				message?: string;
+			} | null = null;
 			try {
 				data = raw ? JSON.parse(raw) : null;
 			} catch {
 				data = null;
 			}
 			const serverMs = typeof data?.latency === "number" ? data.latency : 0;
+			// 服务端已对 KV 往返做多次采样，此处只取中位数展示：
+			// 单次耗时会随抖动大幅波动，取中位更能反映常态水平。
+			// 旧版端点不返回这些字段，此时回退为单值。
+			const serverMedian =
+				typeof data?.median === "number" ? data.median : serverMs;
+			const serverMin = typeof data?.min === "number" ? data.min : serverMs;
+			const serverMax = typeof data?.max === "number" ? data.max : serverMs;
 
 			if (!res.ok) {
 				// 优先展示后端给出的原因（如「未授权或会话已失效」），
@@ -668,6 +681,9 @@ async function testAdminService() {
 					ok: false,
 					failure: data?.message || `HTTP ${res.status}`,
 					serverMs: 0,
+					serverMin: 0,
+					serverMedian: 0,
+					serverMax: 0,
 				};
 			}
 			if (data === null) {
@@ -680,9 +696,19 @@ async function testAdminService() {
 					ok: false,
 					failure: `${i18n(I18nKey.probeBadResponse)}: ${raw.slice(0, 80)}`,
 					serverMs: 0,
+					serverMin: 0,
+					serverMedian: 0,
+					serverMax: 0,
 				};
 			}
-			return { ok: true, failure: "", serverMs };
+			return {
+				ok: true,
+				failure: "",
+				serverMs,
+				serverMin,
+				serverMedian,
+				serverMax,
+			};
 		} catch (err) {
 			// 打印原始抛出值：describeProbeError 兜底会把它转成文案，
 			// 转换后无法区分「fetch 抛错」与「响应异常」两条路径。
@@ -691,7 +717,7 @@ async function testAdminService() {
 				errType: typeof err,
 				isError: err instanceof Error,
 			});
-			return { ok: false, failure: describeProbeError(err), serverMs: 0 };
+			return { ok: false, failure: describeProbeError(err), serverMs: 0, serverMin: 0, serverMedian: 0, serverMax: 0 };
 		}
 	})();
 
@@ -706,7 +732,7 @@ async function testAdminService() {
 	// Promise.all 返回的是数组 [探测结果, undefined]（stepper 无返回值），
 	// 必须先取出第 0 项再解构；直接对数组做对象解构会得到全 undefined。
 	const [probe] = await Promise.all([request, stepper]);
-	const { ok, failure, serverMs } = probe;
+	const { ok, failure, serverMs, serverMin, serverMedian, serverMax } = probe;
 
 	// 成败都打印：ok/failure/type 三者足以定位失败落在哪条分支，
 	// 避免只能看到最终文案而无法反推中间过程。
@@ -729,7 +755,19 @@ async function testAdminService() {
 				{ label: i18n(I18nKey.probeRequest), ms: Math.max(0, Math.round(timing.responseStart - timing.requestStart)) },
 				{ label: i18n(I18nKey.probeDownload), ms: Math.max(0, Math.round(timing.responseEnd - timing.responseStart)) },
 				...(serverMs > 0
-					? [{ label: i18n(I18nKey.probeServerTime), ms: serverMs }]
+					? [
+							{
+								label: i18n(I18nKey.probeStoreRoundTrip),
+								ms: serverMedian,
+								// 展示 min～max 区间而非单值：KV 延迟实测在 280–800ms
+								// 间波动，单个数字无法说明后端是否稳定。
+								// min === max 说明无波动，无需标注。
+								detail:
+									serverMin < serverMax
+										? `${serverMin}–${serverMax}`
+										: "",
+							},
+						]
 					: []),
 				{ label: i18n(I18nKey.probeTotal), ms: total, isTotal: true },
 			]
@@ -1090,7 +1128,9 @@ function formatDate(dateStr: string | null): string {
 										style:width={`${Math.min(100, (step.ms / Math.max(1, adminProbeResults.find((s) => s.isTotal)?.ms ?? 1)) * 100)}%`}
 									></span>
 								</span>
-								<span class="probe-ms">{step.ms}{i18n(I18nKey.probeUnitMs)}</span>
+								<span class="probe-ms">
+									{#if step.detail}<span class="probe-detail">{step.detail}</span>{/if}{step.ms}{i18n(I18nKey.probeUnitMs)}
+								</span>
 							</div>
 						{/each}
 					</div>
@@ -3009,6 +3049,13 @@ function formatDate(dateStr: string | null): string {
 		margin-left: auto;
 		font-variant-numeric: tabular-nums;
 		color: var(--content-meta);
+	}
+
+	.probe-detail {
+		margin-right: 0.375rem;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+		opacity: 0.75;
 	}
 
 	.status-value {

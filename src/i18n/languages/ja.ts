@@ -867,7 +867,7 @@ export const ja: Translation = {
 	[Key.probeConnect]: "接続確立",
 	[Key.probeRequest]: "応答待ち",
 	[Key.probeDownload]: "転送",
-	[Key.probeServerTime]: "サーバー処理",
+	[Key.probeStoreRoundTrip]: "ストレージ往復",
 	[Key.probeTotal]: "合計",
 	[Key.statusDisconnected]: "接続できません",
 	[Key.statusViewDetail]: "詳細を見る",

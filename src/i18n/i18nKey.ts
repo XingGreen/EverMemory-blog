@@ -815,7 +815,7 @@ enum I18nKey {
 	probeConnect = "probeConnect",
 	probeRequest = "probeRequest",
 	probeDownload = "probeDownload",
-	probeServerTime = "probeServerTime",
+	probeStoreRoundTrip = "probeStoreRoundTrip",
 	probeTotal = "probeTotal",
 	probeUnitMs = "probeUnitMs",
 	probeBadResponse = "probeBadResponse",
