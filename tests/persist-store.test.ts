@@ -254,6 +254,21 @@ beforeEach(() => {
 		expect(await getStore().get("k")).toBeNull();
 	});
 
+	it("404/204 是正常的键不存在，不记错误日志", async () => {
+		// Upstash 对不存在的键返回 404，而「查询一个已过期/已踢下线的 sid」
+		// 在后台是常态流量。若把它与 500 同等记为 error，线上日志会被正常
+		// 流量刷满，真正的故障反而淹没其中——故这处分支不是冗余代码。
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => new Response(null, { status: 404 })),
+		);
+		const { getStore } = await loadStore();
+		const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		expect(await getStore().get("expired_sid")).toBeNull();
+		expect(spy).not.toHaveBeenCalled();
+	});
+
 	it("被拒的请求会记录错误日志，便于线上定位", async () => {
 		vi.stubGlobal(
 			"fetch",
