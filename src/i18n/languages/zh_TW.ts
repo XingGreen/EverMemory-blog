@@ -838,7 +838,7 @@ export const zh_TW: Translation = {
 	[Key.probeConnect]: "建立連線",
 	[Key.probeRequest]: "等待回應",
 	[Key.probeDownload]: "傳輸資料",
-	[Key.probeServerTime]: "伺服器處理",
+	[Key.probeStoreRoundTrip]: "儲存往返",
 	[Key.probeTotal]: "總耗時",
 	[Key.statusDisconnected]: "無法連接",
 	[Key.statusViewDetail]: "查看詳情",

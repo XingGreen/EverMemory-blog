@@ -880,7 +880,7 @@ export const ru: Translation = {
 	[Key.probeConnect]: "Соединение",
 	[Key.probeRequest]: "Ожидание",
 	[Key.probeDownload]: "Загрузка",
-	[Key.probeServerTime]: "Обработка на сервере",
+	[Key.probeStoreRoundTrip]: "Обращение к хранилищу",
 	[Key.probeTotal]: "Всего",
 	[Key.statusDisconnected]: "Нет соединения",
 	[Key.statusViewDetail]: "Подробнее",
