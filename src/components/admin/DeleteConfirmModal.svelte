@@ -16,6 +16,13 @@ let {
 let confirmText = $state("");
 let isSubmitting = $state(false);
 let shakeError = $state(false);
+let inputEl = $state<HTMLInputElement | null>(null);
+
+/* 挂载时把焦点送进对话框，否则回车会继续触发遮罩后的删除按钮。
+   焦点归还交给调用方：只有它知道删除成功后触发它的那一行是否还在。 */
+$effect(() => {
+	inputEl?.focus();
+});
 
 function handleConfirm() {
 	if (confirmText !== title) {
@@ -75,6 +82,7 @@ function handleKeydown(e: KeyboardEvent) {
 
 			<input
 				type="text"
+				bind:this={inputEl}
 				bind:value={confirmText}
 				placeholder={i18n(I18nKey.deletePlaceholder)}
 				class={`confirm-input ${shakeError ? "shake" : ""} ${confirmText === title ? "matched" : ""}`}

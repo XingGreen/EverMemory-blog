@@ -31,6 +31,16 @@ let categoryFilter = $state("");
 let tagFilter = $state("");
 let sortKey = $state<SortKey>("newest");
 
+/** 骨架行：列结构与真实行一致，只占位、不填充，加载完成后行高不变 */
+const SKELETON_ROWS = [
+	{ titleWidth: "78%", tags: true },
+	{ titleWidth: "52%", tags: false },
+	{ titleWidth: "66%", tags: true },
+	{ titleWidth: "84%", tags: false },
+	{ titleWidth: "44%", tags: true },
+	{ titleWidth: "70%", tags: false },
+];
+
 const categories = $derived.by(() =>
 	[...new Set(posts.map((post) => post.category).filter(Boolean))].sort(
 		(a, b) => a.localeCompare(b),
@@ -138,6 +148,7 @@ function actionLabel(action: string, title: string): string {
 				placeholder={i18n(I18nKey.postSearchPlaceholder)}
 				aria-label={i18n(I18nKey.postSearchLabel)}
 				class="search-input"
+				data-post-list-search
 			/>
 			{#if searchTerm}
 				<button
@@ -252,13 +263,24 @@ function actionLabel(action: string, title: string): string {
 		{/if}
 	</div>
 
-	<!-- 列表内容 -->
-	{#if isLoading}
-		<div class="state-container" role="status" aria-live="polite">
-			<div class="circular-progress" aria-hidden="true"></div>
-			<p class="state-text">{i18n(I18nKey.postLoading)}</p>
+	<!-- 分类栏（表头） -->
+	{#snippet headerRow()}
+		<div class="header-row" role="rowgroup">
+			<div class="col col-title" role="columnheader" aria-sort={ariaSortFor("title")}>
+				{i18n(I18nKey.postColTitle)}
+			</div>
+			<div class="col col-author" role="columnheader">{i18n(I18nKey.postColAuthor)}</div>
+			<div class="col col-category" role="columnheader">{i18n(I18nKey.postColCategory)}</div>
+			<div class="col col-date" role="columnheader" aria-sort={ariaSortFor("date")}>
+				{i18n(I18nKey.postColDate)}
+			</div>
+			<div class="col col-status" role="columnheader">{i18n(I18nKey.postColStatus)}</div>
+			<div class="col col-actions" role="columnheader">{i18n(I18nKey.postColActions)}</div>
 		</div>
-	{:else if error}
+	{/snippet}
+
+	<!-- 列表内容 -->
+	{#if error}
 		<div class="state-container" role="alert">
 			<Icon icon="material-symbols:error-outline" class="state-icon error" />
 			<p class="state-text" id="post-list-error">{error}</p>
@@ -266,7 +288,7 @@ function actionLabel(action: string, title: string): string {
 				{i18n(I18nKey.postRetry)}
 			</button>
 		</div>
-	{:else if filteredPosts.length === 0}
+	{:else if !isLoading && filteredPosts.length === 0}
 		<div class="state-container">
 			<Icon icon="material-symbols:folder-open" class="state-icon" />
 			<p class="state-text">{hasExtraFilter ? i18n(I18nKey.postNoMatch) : i18n(I18nKey.postNoPosts)}</p>
@@ -277,21 +299,46 @@ function actionLabel(action: string, title: string): string {
 			{/if}
 		</div>
 	{:else}
-		<div class="md3-table" role="table" aria-label={i18n(I18nKey.postTableLabel)}>
-			<!-- 分类栏（表头） -->
-			<div class="header-row" role="rowgroup">
-				<div class="col col-title" role="columnheader" aria-sort={ariaSortFor("title")}>
-					{i18n(I18nKey.postColTitle)}
-				</div>
-				<div class="col col-author" role="columnheader">{i18n(I18nKey.postColAuthor)}</div>
-				<div class="col col-category" role="columnheader">{i18n(I18nKey.postColCategory)}</div>
-				<div class="col col-date" role="columnheader" aria-sort={ariaSortFor("date")}>
-					{i18n(I18nKey.postColDate)}
-				</div>
-				<div class="col col-status" role="columnheader">{i18n(I18nKey.postColStatus)}</div>
-				<div class="col col-actions" role="columnheader">{i18n(I18nKey.postColActions)}</div>
-			</div>
+		<div
+			class="md3-table"
+			role="table"
+			aria-label={i18n(I18nKey.postTableLabel)}
+			aria-busy={isLoading}
+		>
+			{@render headerRow()}
 
+			{#if isLoading}
+				<div class="md3-list skeleton-list" role="rowgroup" aria-hidden="true">
+					{#each SKELETON_ROWS as row, i (i)}
+						<div class="list-item" role="row">
+							<div class="col col-title" role="cell">
+								<div class="title-cell">
+									<div class="title-row">
+										<span class="sk sk-title" style:width={row.titleWidth}></span>
+									</div>
+									{#if row.tags}
+										<div class="tags">
+											<span class="sk sk-tag"></span>
+											<span class="sk sk-tag short"></span>
+										</div>
+									{/if}
+								</div>
+							</div>
+							<div class="col col-author" role="cell"><span class="sk sk-line"></span></div>
+							<div class="col col-category" role="cell"><span class="sk sk-line short"></span></div>
+							<div class="col col-date" role="cell"><span class="sk sk-line"></span></div>
+							<div class="col col-status" role="cell"><span class="sk sk-chip"></span></div>
+							<div class="col col-actions" role="cell">
+								<div class="icon-actions">
+									<span class="sk sk-dot"></span>
+									<span class="sk sk-dot"></span>
+									<span class="sk sk-dot"></span>
+								</div>
+							</div>
+						</div>
+					{/each}
+				</div>
+			{:else}
 			<!-- 列表项 -->
 			<div class="md3-list" role="rowgroup">
 				{#each filteredPosts as post (post.id)}
@@ -383,14 +430,21 @@ function actionLabel(action: string, title: string): string {
 					</div>
 				{/each}
 			</div>
+			{/if}
 		</div>
 
-		<div class="list-footer">
-			<span>{i18n(I18nKey.postListCount).replace("{count}", String(filteredPosts.length))}</span>
-		</div>
-		<p class="sr-only" role="status" aria-live="polite">
-			{i18n(I18nKey.postResultCount).replace("{count}", String(filteredPosts.length))}
-		</p>
+		{#if isLoading}
+			<p class="sr-only" role="status" aria-live="polite">
+				{i18n(I18nKey.postLoading)}
+			</p>
+		{:else}
+			<div class="list-footer">
+				<span>{i18n(I18nKey.postListCount).replace("{count}", String(filteredPosts.length))}</span>
+			</div>
+			<p class="sr-only" role="status" aria-live="polite">
+				{i18n(I18nKey.postResultCount).replace("{count}", String(filteredPosts.length))}
+			</p>
+		{/if}
 	{/if}
 </div>
 
@@ -778,13 +832,70 @@ function actionLabel(action: string, title: string): string {
 		font-size: 0.875rem;
 	}
 
-	.circular-progress {
-		width: 36px;
-		height: 36px;
-		border: 3px solid var(--md-outline);
-		border-top-color: var(--md-primary-text);
+	/* 加载骨架：占位块与真实行共用 .list-item 的列网格与 min-height，
+	   列宽行高在加载前后不变，内容到位时页脚与下方内容不位移。
+	   底色用 on-surface 与透明度混色，明暗主题下分层方向自动正确。 */
+	.sk {
+		display: block;
+		background: color-mix(in srgb, var(--md-on-surface) 12%, transparent);
+		border-radius: 6px;
+		animation: skPulse 1.4s ease-in-out infinite;
+	}
+
+	.sk-title {
+		max-width: 100%;
+		height: 20px;
+	}
+
+	.sk-tag {
+		width: 48px;
+		height: 14px;
+		border-radius: 4px;
+	}
+
+	.sk-tag.short {
+		width: 32px;
+	}
+
+	.sk-line {
+		width: 80%;
+		height: 12px;
+	}
+
+	.sk-line.short {
+		width: 55%;
+	}
+
+	.sk-chip {
+		width: 56px;
+		height: 20px;
+	}
+
+	.sk-dot {
+		width: 34px;
+		height: 34px;
 		border-radius: 50%;
-		animation: spin 0.8s linear infinite;
+	}
+
+	/* 占位行没有可点内容，响应 hover 会让人以为它能点 */
+	.skeleton-list .list-item:hover {
+		background: none;
+	}
+
+	@keyframes skPulse {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.4;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.sk {
+			animation: none;
+		}
 	}
 
 	.filled-btn {
