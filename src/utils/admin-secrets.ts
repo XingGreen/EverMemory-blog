@@ -4,7 +4,7 @@
  * 因此不要在此文件中引入任何 node 或浏览器运行时依赖，也不要访问 import.meta.env。
  */
 
-export type SecretGroup = "github" | "auth";
+export type SecretGroup = "github" | "auth" | "turnstile";
 
 export type AdminSecretItem = {
 	/** 环境变量名 */
@@ -30,6 +30,11 @@ export const SECRET_GROUPS: readonly {
 }[] = [
 	{ id: "github", label: "GitHub App 凭据", icon: "material-symbols:cloud" },
 	{ id: "auth", label: "管理员认证", icon: "material-symbols:shield-lock" },
+	{
+		id: "turnstile",
+		label: "人机验证（可选）",
+		icon: "material-symbols:verified-user",
+	},
 ];
 
 export const ADMIN_SECRETS: AdminSecretItem[] = [
@@ -129,6 +134,28 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "password",
 		sensitive: true,
 		required: true,
+	},
+
+	// ── Cloudflare Turnstile 人机验证（可选，未配置则完全跳过） ──
+	{
+		key: "TURNSTILE_SITE_KEY",
+		group: "turnstile",
+		label: "Turnstile Site Key",
+		description:
+			"Cloudflare Turnstile 的 site key（公开值，登录页据此渲染验证码）。需与 Secret Key 成对配置",
+		kind: "text",
+		sensitive: false,
+		required: false,
+	},
+	{
+		key: "TURNSTILE_SECRET_KEY",
+		group: "turnstile",
+		label: "Turnstile Secret Key",
+		description:
+			"服务端用于向 Cloudflare 校验 token 的私钥。只配 Site Key 而不配此项会导致登录被拒（不做假验证）",
+		kind: "password",
+		sensitive: true,
+		required: false,
 	},
 ];
 
