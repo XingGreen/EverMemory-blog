@@ -711,7 +711,10 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.search-bar {
-		flex: 0 1 260px;
+		/* 前台的宽度展开动画（Search.svelte：w-40 focus:w-60）：
+		   失焦窄、聚焦/输入时放宽 flex-basis，配合兄弟控件 shrink:0
+		   平滑让位；hover 背景微深同前台 hover:bg-black/6 */
+		flex: 0 1 200px;
 		min-width: 140px;
 		display: flex;
 		align-items: center;
@@ -722,11 +725,19 @@ function actionLabel(action: string, title: string): string {
 		border-radius: var(--md-control-r);
 		transition:
 			background 0.2s,
-			border-color 0.2s;
+			border-color 0.2s,
+			flex-basis 0.2s;
+	}
+
+	.search-bar:hover {
+		background: color-mix(in srgb, var(--md-on-surface) 4%, var(--md-surface-container-high));
+		border-color: color-mix(in srgb, var(--md-on-surface) 30%, var(--md-outline));
 	}
 
 	.search-bar:focus-within {
+		flex-basis: 280px;
 		background: color-mix(in srgb, var(--primary) 12%, var(--card-bg));
+		border-color: var(--md-primary-text);
 		outline: 2px solid var(--md-primary-text);
 		outline-offset: -2px;
 	}
