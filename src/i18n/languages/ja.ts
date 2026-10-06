@@ -472,6 +472,7 @@ export const ja: Translation = {
 	[Key.verifyPassword]: "パスワード",
 	[Key.verifyLogin]: "ログイン",
 	[Key.verifyLoggingIn]: "ログイン中...",
+	[Key.verifyLockedCountdown]: "{seconds} 秒後に再試行",
 	[Key.verifyAvatarAlt]: "管理者アバター",
 	[Key.verifyRememberMe]: "ログインを記憶",
 	[Key.verifyPasswordShow]: "パスワードを表示",

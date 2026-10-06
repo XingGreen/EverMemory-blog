@@ -475,6 +475,7 @@ export const en: Translation = {
 	[Key.verifyPassword]: "Password",
 	[Key.verifyLogin]: "Log In",
 	[Key.verifyLoggingIn]: "Logging in...",
+	[Key.verifyLockedCountdown]: "Retry in {seconds}s",
 	[Key.verifyAvatarAlt]: "Admin avatar",
 	[Key.verifyRememberMe]: "Remember me",
 	[Key.verifyPasswordShow]: "Show password",
