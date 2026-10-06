@@ -23,13 +23,18 @@ let {
 	isSyncing?: boolean;
 } = $props();
 
-type SortKey = "newest" | "oldest" | "titleAsc" | "titleDesc";
+type SortKey = "updated" | "newest" | "oldest" | "titleAsc" | "titleDesc";
+
+/** 参与时间排序/时间列展示所需字段 */
+type TimeFields = { updated?: string | null; published?: string };
 
 let searchTerm = $state("");
 let statusFilter = $state<"all" | "published" | "draft">("all");
 let categoryFilter = $state("");
 let tagFilter = $state("");
-let sortKey = $state<SortKey>("newest");
+/* 默认按最近修改排：草稿没有 published，按发布时间排会全部沉底，
+   「我刚写到哪」永远翻不到。 */
+let sortKey = $state<SortKey>("updated");
 
 /** 骨架行：列结构与真实行一致，只占位、不填充，加载完成后行高不变 */
 const SKELETON_ROWS = [
@@ -92,8 +97,10 @@ const filteredPosts = $derived.by(() => {
 	const byDate = (a: any, b: any) =>
 		(a.published ? Date.parse(a.published) : 0) -
 		(b.published ? Date.parse(b.published) : 0);
+	const byUpdated = (a: TimeFields, b: TimeFields) => timeOf(a) - timeOf(b);
 
-	if (sortKey === "newest") result.sort((a, b) => byDate(b, a));
+	if (sortKey === "updated") result.sort((a, b) => byUpdated(b, a));
+	else if (sortKey === "newest") result.sort((a, b) => byDate(b, a));
 	else if (sortKey === "oldest") result.sort(byDate);
 	else if (sortKey === "titleAsc") result.sort(byTitle);
 	else result.sort((a, b) => byTitle(b, a));
@@ -117,6 +124,14 @@ function formatDate(dateStr: string): string {
 	});
 }
 
+/* 排序用的统一时间戳：优先 updated，取不到退回 published。
+   Date.parse 失败返回 NaN（假值），|| 因此自然落到下一支。 */
+function timeOf(post: TimeFields): number {
+	return (
+		Date.parse(post.updated || "") || Date.parse(post.published || "") || 0
+	);
+}
+
 /** 当前排序落在哪一列、什么方向，供表头 aria-sort 使用 */
 const sortColumn = $derived(
 	sortKey === "titleAsc" || sortKey === "titleDesc" ? "title" : "date",
@@ -128,6 +143,20 @@ function ariaSortFor(
 ): "ascending" | "descending" | "none" {
 	if (sortColumn !== column) return "none";
 	return sortAscending ? "ascending" : "descending";
+}
+
+/* 日期列的表头与单元格都要跟随排序字段：按「最近修改」排序却显示发布日期，
+   列表看上去是乱序的。 */
+const dateColLabel = $derived(
+	sortKey === "updated"
+		? i18n(I18nKey.postSortUpdated)
+		: i18n(I18nKey.postColDate),
+);
+
+function dateShown(post: TimeFields): string {
+	const raw =
+		sortKey === "updated" ? post.updated || post.published : post.published;
+	return raw ? formatDate(raw) : "—";
 }
 
 function actionLabel(action: string, title: string): string {
@@ -249,6 +278,7 @@ function actionLabel(action: string, title: string): string {
 			<span class="select-label">{i18n(I18nKey.postSort)}</span>
 			<div class="select-wrap">
 				<select bind:value={sortKey}>
+					<option value="updated">{i18n(I18nKey.postSortUpdated)}</option>
 					<option value="newest">{i18n(I18nKey.postSortNewest)}</option>
 					<option value="oldest">{i18n(I18nKey.postSortOldest)}</option>
 					<option value="titleAsc">{i18n(I18nKey.postSortTitleAsc)}</option>
@@ -272,7 +302,7 @@ function actionLabel(action: string, title: string): string {
 			<div class="col col-author" role="columnheader">{i18n(I18nKey.postColAuthor)}</div>
 			<div class="col col-category" role="columnheader">{i18n(I18nKey.postColCategory)}</div>
 			<div class="col col-date" role="columnheader" aria-sort={ariaSortFor("date")}>
-				{i18n(I18nKey.postColDate)}
+				{dateColLabel}
 			</div>
 			<div class="col col-status" role="columnheader">{i18n(I18nKey.postColStatus)}</div>
 			<div class="col col-actions" role="columnheader">{i18n(I18nKey.postColActions)}</div>
@@ -383,9 +413,9 @@ function actionLabel(action: string, title: string): string {
 							<span class="text-meta">{post.category || "—"}</span>
 						</div>
 
-						<!-- 发布日期 -->
-						<div class="col col-date" role="cell" data-label={i18n(I18nKey.postColDate)}>
-							<span class="text-meta">{post.published ? formatDate(post.published) : "—"}</span>
+						<!-- 发布/修改日期，跟随当前排序字段 -->
+						<div class="col col-date" role="cell" data-label={dateColLabel}>
+							<span class="text-meta">{dateShown(post)}</span>
 						</div>
 
 						<!-- 状态 -->

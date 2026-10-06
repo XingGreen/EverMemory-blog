@@ -520,6 +520,7 @@ export const en: Translation = {
 	[Key.postSort]: "Sort",
 	[Key.postSortNewest]: "Newest first",
 	[Key.postSortOldest]: "Oldest first",
+	[Key.postSortUpdated]: "Recently updated",
 	[Key.postSortTitleAsc]: "Title A→Z",
 	[Key.postSortTitleDesc]: "Title Z→A",
 	[Key.postColTitle]: "Title",
@@ -865,7 +866,8 @@ export const en: Translation = {
 	[Key.statusTesting]: "Testing…",
 	[Key.statusConnected]: "Connected",
 	[Key.probeUnitMs]: "ms",
-	[Key.probeNetworkError]: "Network request failed, check your connection and retry",
+	[Key.probeNetworkError]:
+		"Network request failed, check your connection and retry",
 	[Key.probeBadResponse]: "Unexpected response",
 	[Key.probeDns]: "DNS lookup",
 	[Key.probeConnect]: "Connect",
