@@ -2259,7 +2259,7 @@ function formatDate(dateStr: string | null): string {
 		padding: 0 0.625rem 0 0.875rem;
 		background: var(--page-bg);
 		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-full);
+		border-radius: 10px;
 		transition: border-color 0.15s, box-shadow 0.15s, max-width 0.15s;
 	}
 
@@ -3040,7 +3040,7 @@ function formatDate(dateStr: string | null): string {
 		font-weight: 600;
 		line-height: 1;
 		padding: 0.375rem 0.75rem;
-		border-radius: 9999px;
+		border-radius: 10px;
 		background: var(--btn-regular-bg);
 		color: var(--deep-text);
 		border: 1px solid var(--line-divider);

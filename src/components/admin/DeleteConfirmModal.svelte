@@ -327,7 +327,7 @@ function handleKeydown(e: KeyboardEvent) {
 		background: var(--destructive);
 		color: var(--destructive-foreground);
 		cursor: pointer;
-		border-radius: var(--radius-large);
+		border-radius: 0.625rem;
 		box-shadow: 0 4px 12px color-mix(in srgb, var(--destructive) 40%, transparent);
 	}
 

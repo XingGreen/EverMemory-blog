@@ -656,9 +656,11 @@ function actionLabel(action: string, title: string): string {
 
 		/* 统一控件规格：工具栏内所有控件共用高度、圆角、间距。
 		   此前搜索框 48px / 按钮 44px / chip 40px 三种高度、28/22/20/8px 四种圆角
-		   混排，视觉上参差不齐，这里收敛为一套 token。 */
+		   混排，视觉上参差不齐，这里收敛为一套 token。
+		   圆角取 10px 方角而非胶囊：与参考项目（flare-stack-blog）后台
+		   post-manager 的控件圆角一致，40px 高配 10px 圆角是方形按钮观感。 */
 		--md-control-h: 40px;
-		--md-control-r: 20px;
+		--md-control-r: 10px;
 		--md-control-gap: 0.5rem;
 	}
 
@@ -744,7 +746,7 @@ function actionLabel(action: string, title: string): string {
 		width: var(--md-control-h);
 		height: var(--md-control-h);
 		border: none;
-		border-radius: 50%;
+		border-radius: 10px;
 		background: transparent;
 		color: var(--md-on-surface-variant);
 		cursor: pointer;
@@ -759,7 +761,7 @@ function actionLabel(action: string, title: string): string {
 		content: "";
 		position: absolute;
 		inset: -4px;
-		border-radius: 50%;
+		border-radius: 10px;
 	}
 
 	.trailing-icon-btn:hover {
@@ -1299,7 +1301,7 @@ function actionLabel(action: string, title: string): string {
 		width: 34px;
 		height: 34px;
 		border: none;
-		border-radius: 50%;
+		border-radius: 10px;
 		background: transparent;
 		color: var(--md-on-surface-variant);
 		cursor: pointer;
@@ -1315,7 +1317,7 @@ function actionLabel(action: string, title: string): string {
 		content: "";
 		position: absolute;
 		inset: -4px;
-		border-radius: 50%;
+		border-radius: 10px;
 	}
 
 	:global(.icon-action:hover) {
