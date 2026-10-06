@@ -1,4 +1,5 @@
 <script lang="ts">
+import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -28,13 +29,37 @@ type SortKey = "updated" | "newest" | "oldest" | "titleAsc" | "titleDesc";
 /** 参与时间排序/时间列展示所需字段 */
 type TimeFields = { updated?: string | null; published?: string };
 
+type StatusFilter = "all" | "published" | "draft";
+
+/** 一份筛选条件快照，URL query 与 sessionStorage 共用同一形状 */
+type SavedFilters = {
+	q: string;
+	status: StatusFilter;
+	category: string;
+	tag: string;
+	sort: SortKey;
+};
+
+const FILTER_STORAGE_KEY = "admin_posts_filters";
+const DEFAULT_SORT: SortKey = "updated";
+const STATUS_VALUES = new Set<string>(["all", "published", "draft"]);
+const SORT_VALUES = new Set<string>([
+	"updated",
+	"newest",
+	"oldest",
+	"titleAsc",
+	"titleDesc",
+]);
+
 let searchTerm = $state("");
-let statusFilter = $state<"all" | "published" | "draft">("all");
+let statusFilter = $state<StatusFilter>("all");
 let categoryFilter = $state("");
 let tagFilter = $state("");
 /* 默认按最近修改排：草稿没有 published，按发布时间排会全部沉底，
    「我刚写到哪」永远翻不到。 */
-let sortKey = $state<SortKey>("updated");
+let sortKey = $state<SortKey>(DEFAULT_SORT);
+/* 回填完成前不写回，否则刚挂载就会用默认值盖掉已保存的筛选 */
+let filtersReady = $state(false);
 
 /** 骨架行：列结构与真实行一致，只占位、不填充，加载完成后行高不变 */
 const SKELETON_ROWS = [
@@ -114,6 +139,84 @@ function clearAllFilters() {
 	categoryFilter = "";
 	tagFilter = "";
 }
+
+function normalizeFilters(input: Record<string, unknown>): SavedFilters {
+	const status = String(input.status ?? "");
+	const sort = String(input.sort ?? "");
+	return {
+		q: String(input.q ?? ""),
+		status: STATUS_VALUES.has(status) ? (status as StatusFilter) : "all",
+		category: String(input.category ?? ""),
+		tag: String(input.tag ?? ""),
+		sort: SORT_VALUES.has(sort) ? (sort as SortKey) : DEFAULT_SORT,
+	};
+}
+
+/* 恢复顺序：URL 优先（分享链接或浏览器后退带来的参数），
+   再退到 sessionStorage —— 「编辑 → 返回列表」走的是 navigate()，
+   会把 query 一起冲掉，只有 sessionStorage 接得住。 */
+function restoreFilters(): SavedFilters | null {
+	const sp = new URLSearchParams(window.location.search);
+	if (
+		sp.has("q") ||
+		sp.has("status") ||
+		sp.has("category") ||
+		sp.has("tag") ||
+		sp.has("sort")
+	) {
+		return normalizeFilters(Object.fromEntries(sp));
+	}
+	try {
+		const raw = sessionStorage.getItem(FILTER_STORAGE_KEY);
+		if (!raw) return null;
+		const parsed: unknown = JSON.parse(raw);
+		if (!parsed || typeof parsed !== "object") return null;
+		return normalizeFilters(parsed as Record<string, unknown>);
+	} catch {
+		return null;
+	}
+}
+
+onMount(() => {
+	const saved = restoreFilters();
+	if (saved) {
+		searchTerm = saved.q;
+		statusFilter = saved.status;
+		categoryFilter = saved.category;
+		tagFilter = saved.tag;
+		sortKey = saved.sort;
+	}
+	filtersReady = true;
+});
+
+/* 筛选一变就同时落两处：URL 用 replaceState（不产生历史记录，后退键不会
+   被每次输入打乱），sessionStorage 负责 navigate() 跳转后的恢复。
+   默认值不写进 URL，保证地址栏干净。 */
+$effect(() => {
+	if (!filtersReady) return;
+	const saved: SavedFilters = {
+		q: searchTerm,
+		status: statusFilter,
+		category: categoryFilter,
+		tag: tagFilter,
+		sort: sortKey,
+	};
+	try {
+		sessionStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(saved));
+	} catch {
+		// 隐私模式等场景写不进去，忽略即可
+	}
+	const sp = new URLSearchParams();
+	if (saved.q) sp.set("q", saved.q);
+	if (saved.status !== "all") sp.set("status", saved.status);
+	if (saved.category) sp.set("category", saved.category);
+	if (saved.tag) sp.set("tag", saved.tag);
+	if (saved.sort !== DEFAULT_SORT) sp.set("sort", saved.sort);
+	const query = sp.toString();
+	const next = window.location.pathname + (query ? `?${query}` : "");
+	const current = window.location.pathname + window.location.search;
+	if (next !== current) history.replaceState(history.state, "", next);
+});
 
 function formatDate(dateStr: string): string {
 	const date = new Date(dateStr);
