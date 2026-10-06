@@ -8,10 +8,13 @@ import {
 	verifyAdminUsername,
 } from "@/utils/auth";
 import {
+	checkAttemptRate,
 	checkLockout,
+	clearAttempts,
 	clearFailures,
 	failureCount,
 	getClientIp,
+	registerAttempt,
 	registerFailure,
 	writeAuditLog,
 } from "@/utils/login-guard";
@@ -57,14 +60,14 @@ export async function POST({ request }) {
 			);
 		}
 
-		// 暴力破解防护：连续失败达到阈值后锁定该客户端
-		const { locked, retryAfterSeconds } = await checkLockout(clientKey);
-		if (locked) {
+		// 频次闸门（与成败无关）：先于锁定检查，二者独立生效
+		const { limited, retryAfterSeconds } = await checkAttemptRate(clientKey);
+		if (limited) {
 			writeAuditLog({
 				event: "login_locked",
 				client: clientKey,
 				username,
-				detail: `locked for ${retryAfterSeconds}s`,
+				detail: `rate limited for ${retryAfterSeconds}s`,
 			});
 			return new Response(
 				JSON.stringify({
@@ -75,6 +78,28 @@ export async function POST({ request }) {
 			);
 		}
 
+		// 暴力破解防护：连续失败达到阈值后锁定该客户端
+		const { locked, retryAfterSeconds: lockRetryAfterSeconds } =
+			await checkLockout(clientKey);
+		if (locked) {
+			writeAuditLog({
+				event: "login_locked",
+				client: clientKey,
+				username,
+				detail: `locked for ${lockRetryAfterSeconds}s`,
+			});
+			return new Response(
+				JSON.stringify({
+					success: false,
+					message: `尝试过于频繁，请 ${lockRetryAfterSeconds} 秒后重试`,
+				}),
+				{ status: 429, headers: lockedHeaders(lockRetryAfterSeconds) },
+			);
+		}
+
+		// 通过闸门后才计数：被拒的请求不应把窗口无限往后推
+		await registerAttempt(clientKey);
+
 		// 双重验证：用户名 + 密码，全部通过才签发会话
 		// 私钥由服务端环境变量持有，用于 GitHub API 操作，前端不传输
 		// 两个校验都无条件执行（不短路）：否则用户名错误时会跳过耗时的
@@ -84,6 +109,7 @@ export async function POST({ request }) {
 
 		if (usernameOk && passwordOk) {
 			await clearFailures(clientKey);
+			await clearAttempts(clientKey);
 			writeAuditLog({
 				event: "login_success",
 				client: clientKey,
