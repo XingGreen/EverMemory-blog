@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// 只替换环境读取边界，被测的 turnstile.ts 本身完全真实执行。
+// 只替换密钥读取边界，被测的 turnstile.ts 本身完全真实执行。
+//
+// 刻意 mock 的是 secret-io 而非 env：真实链路里 Turnstile 的值来自
+// .env.local 文件（后台密钥页写入），getEnv 读不到它——Vite 只把 VITE_
+// 前缀的变量注入 import.meta.env。这个 mock 位置本身就是回归防线。
 const env: Record<string, string> = {};
-vi.mock("@utils/env", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@utils/env")>()),
-	getEnv: (key: string) => env[key] ?? "",
+vi.mock("@utils/secret-io", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@utils/secret-io")>()),
+	readSecretValue: (key: string) => env[key] ?? "",
 }));
 
 const { getTurnstileConfig, verifyTurnstileToken } = await import(
