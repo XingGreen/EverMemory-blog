@@ -500,6 +500,7 @@ export const zh_CN: Translation = {
 	[Key.postNoMatch]: "无匹配文章",
 	[Key.postNoPosts]: "暂无文章",
 	[Key.postClearFilter]: "清除筛选",
+	[Key.postFilter]: "筛选",
 	[Key.postFilterCategory]: "分类",
 	[Key.postFilterTag]: "标签",
 	[Key.postSort]: "排序",

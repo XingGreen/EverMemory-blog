@@ -499,6 +499,7 @@ enum I18nKey {
 	postNoMatch = "postNoMatch",
 	postNoPosts = "postNoPosts",
 	postClearFilter = "postClearFilter",
+	postFilter = "postFilter",
 	postFilterCategory = "postFilterCategory",
 	postFilterTag = "postFilterTag",
 	postSort = "postSort",

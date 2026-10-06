@@ -515,6 +515,7 @@ export const ru: Translation = {
 	[Key.postNoMatch]: "Соответствующих статей не найдено",
 	[Key.postNoPosts]: "Статей нет",
 	[Key.postClearFilter]: "Сбросить фильтр",
+	[Key.postFilter]: "Фильтр",
 	[Key.postFilterCategory]: "Категория",
 	[Key.postFilterTag]: "Тег",
 	[Key.postSort]: "Сортировка",

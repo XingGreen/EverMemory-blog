@@ -502,6 +502,7 @@ export const zh_TW: Translation = {
 	[Key.postNoMatch]: "無匹配文章",
 	[Key.postNoPosts]: "暫無文章",
 	[Key.postClearFilter]: "清除篩選",
+	[Key.postFilter]: "篩選",
 	[Key.postFilterCategory]: "分類",
 	[Key.postFilterTag]: "標籤",
 	[Key.postSort]: "排序",

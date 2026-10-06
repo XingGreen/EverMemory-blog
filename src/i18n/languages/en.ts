@@ -515,6 +515,7 @@ export const en: Translation = {
 	[Key.postNoMatch]: "No matching posts",
 	[Key.postNoPosts]: "No posts yet",
 	[Key.postClearFilter]: "Clear Filters",
+	[Key.postFilter]: "Filter",
 	[Key.postFilterCategory]: "Category",
 	[Key.postFilterTag]: "Tag",
 	[Key.postSort]: "Sort",
