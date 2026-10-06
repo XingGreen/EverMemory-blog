@@ -107,6 +107,29 @@ Behavioral codex for every change in this repository. When a decision is ambiguo
 
 Applied concretely here: read the actual file before editing it; verify with `pnpm check`/`pnpm build` instead of assuming; say "I don't know" rather than invent an API; confirm scope before a refactor that touches more than one module.
 
+## 实现前先找现成方案
+
+自研一行代码前，按顺序做完这三步再动手。跳过任何一步都算「Dishonor: reinventing what exists」：
+
+1. **查现有依赖**——先在 `node_modules` 和 `package.json` 里找。官方库能用的就别手写。
+2. **查参考项目**——`E:\flare-stack-blog` 是同类项目（better-auth + Cloudflare），先看它怎么处理同类问题。
+3. **确认是否值得引入新依赖**——引入要在 commit body 里写清取舍（省多少手工代码 / 增加多少依赖与体积）。
+
+### 为什么这条优先级这么高
+
+自研的代价不只是时间，是**没人踩过坑**。2026-10 手工实现 Turnstile 时连续出的两个问题：
+
+- 用 `getEnv` 读密钥，只查 `process.env` 和 `import.meta.env`；而 Vite 只把 `VITE_` 前缀的变量注入 `import.meta.env`，后台密钥页写入的 `.env.local` 永远读不到，功能实际从未启用。**21 个测试全绿**——因为测试 mock 了错误的边界，测的是一个不存在的调用路径。
+- 用 PowerShell 的 `Set-Content` 做批量替换，文件被写成 GBK，中文注释全毁，`pnpm build` 直接失败（`stream did not contain valid UTF-8`）。
+
+对照：flare-stack-blog 的限流用 Durable Objects `checkLimit`、Turnstile 用官方 JS 库，这些坑别人已经踩过了。
+
+### 但不要为复用而重构架构
+
+`better-auth` 是多用户系统（user/session/account/verification 四表、邮箱验证、OAuth）。本项目是单管理员 + scrypt 凭据 + KV 会话表，换过去要重写整个认证与存储层——**那是换赛道，不是省时间**。
+
+判断标准：**小件直接借（官方 snippet、纯函数、独立可换），大件先评估架构成本再定。**
+
 ## Markdown 渲染约定
 
 任何 Markdown 渲染/预览（前台文章、后台编辑器预览、相关 API）**必须复用项目既有管线**，优先级高于任何自建/手写方案：
