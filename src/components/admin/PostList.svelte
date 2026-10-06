@@ -343,7 +343,6 @@ function actionLabel(action: string, title: string): string {
 			aria-pressed={statusFilter === "all"}
 			onclick={() => (statusFilter = "all")}
 		>
-			<Icon icon="material-symbols:check" class="chip-check" />
 			<span class="chip-label">{i18n(I18nKey.postAll)}</span>
 			<span class="chip-count">{posts.length}</span>
 		</button>
@@ -353,7 +352,6 @@ function actionLabel(action: string, title: string): string {
 			aria-pressed={statusFilter === "published"}
 			onclick={() => (statusFilter = "published")}
 		>
-			<Icon icon="material-symbols:check" class="chip-check" />
 			<span class="chip-label">{i18n(I18nKey.postPublished)}</span>
 			<span class="chip-count">{posts.filter((p) => !p.draft).length}</span>
 		</button>
@@ -363,7 +361,6 @@ function actionLabel(action: string, title: string): string {
 			aria-pressed={statusFilter === "draft"}
 			onclick={() => (statusFilter = "draft")}
 		>
-			<Icon icon="material-symbols:check" class="chip-check" />
 			<span class="chip-label">{i18n(I18nKey.postDraft)}</span>
 			<span class="chip-count">{posts.filter((p) => p.draft).length}</span>
 		</button>
@@ -774,38 +771,38 @@ function actionLabel(action: string, title: string): string {
 		outline-offset: -2px;
 	}
 
-	/* M3 FilterChip（第二行：状态筛选）
-	   三片等宽：「全部/已发布/草稿」及英文、俄文译文长度差异很大，
-	   用 flex 自然宽度会宽窄不齐，这里等分网格保证整排等宽等高。 */
+	/* 状态筛选（第一行）：文字下划线 tab，对齐参考项目 post-list-tabs。
+   不做等宽——译文长短不齐时按内容自然宽度排，选中项靠 2px 主色
+   底线指示，容器自带一条 1px 分隔线。 */
 	.filter-chips {
-		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: var(--md-control-gap);
+		display: flex;
+		align-items: center;
+		gap: 2rem;
+		border-bottom: 1px solid var(--md-outline);
 		margin-bottom: 0.75rem;
 	}
 
 	.chip {
 		display: inline-flex;
 		align-items: center;
-		justify-content: center;
-		gap: 0.375rem;
-		height: var(--md-control-h);
-		/* 左侧预留 check 图标位：选中时用 opacity 显隐而非增删元素，
-		   否则切换筛选会让 chip 宽度跳 16px，整排控件跟着抖。 */
-		padding: 0 0.875rem 0 0.875rem;
-		border: 1px solid var(--md-outline);
-		border-radius: var(--md-control-r);
+		gap: 0.5rem;
+		min-height: 2.875rem;
+		padding: 0 0.375rem;
+		border: none;
+		border-bottom: 2px solid transparent;
 		background: transparent;
 		color: var(--md-on-surface-variant);
-		font-size: 0.8125rem;
+		font-size: 0.875rem;
 		font-weight: 500;
 		font-family: inherit;
 		cursor: pointer;
 		transition:
-			background-color 0.18s cubic-bezier(0.2, 0, 0, 1),
-			border-color 0.18s cubic-bezier(0.2, 0, 0, 1);
-		overflow: hidden;
-		position: relative;
+			color 0.15s,
+			border-color 0.15s;
+	}
+
+	.chip:hover {
+		color: var(--md-primary-text);
 	}
 
 	.chip:focus-visible {
@@ -813,40 +810,9 @@ function actionLabel(action: string, title: string): string {
 		outline-offset: 2px;
 	}
 
-	.chip::after {
-		content: "";
-		position: absolute;
-		inset: 0;
-		background: var(--md-state-layer-hover);
-		opacity: 0;
-		transition: opacity 0.15s;
-		pointer-events: none;
-	}
-
-	.chip:hover::after {
-		opacity: 1;
-	}
-
 	.chip.selected {
-		background: var(--md-primary-container);
-		border-color: transparent;
-		color: var(--md-on-primary-container);
-	}
-
-	.chip.selected::after {
-		background: color-mix(in srgb, var(--primary) 12%, transparent);
-	}
-
-	/* check 图标常驻占位，仅显隐，避免 chip 宽度随选中态跳变 */
-	:global(.chip-check) {
-		font-size: 1.125rem;
-		flex-shrink: 0;
-		opacity: 0;
-		transition: opacity 0.15s;
-	}
-
-	.chip.selected :global(.chip-check) {
-		opacity: 1;
+		border-bottom-color: var(--md-primary-text);
+		color: var(--md-primary-text);
 	}
 
 	.chip-label {
@@ -857,16 +823,11 @@ function actionLabel(action: string, title: string): string {
 		white-space: nowrap;
 	}
 
-	/* 计数不用 opacity 压暗——opacity 0.7 在 surfHigh 上只剩 4.12:1，
-	   改用朝 deep-text 混色，亮色 8.5:1、暗色 6.8:1。 */
+	/* 计数继承 tab 文字色，选中时随主色一起变亮 */
 	.chip-count {
-		font-size: 0.6875rem;
-		color: color-mix(in srgb, var(--md-on-surface-variant) 35%, var(--md-on-surface));
+		font-size: 0.8125rem;
 		line-height: 1;
-	}
-
-	.chip.selected .chip-count {
-		color: var(--md-on-primary-container);
+		font-variant-numeric: tabular-nums;
 	}
 
 	:global(.icon-text-btn) {
@@ -1445,14 +1406,12 @@ function actionLabel(action: string, title: string): string {
 			flex-wrap: wrap;
 		}
 
-		/* 窄屏下三列等宽会把长译文压到截断，回退自然宽度并独占一行横向滚动 */
+		/* 窄屏下 tab 不被压扁，超出部分横向滚动 */
 		.filter-chips {
-			grid-template-columns: none;
-			grid-auto-flow: column;
-			grid-auto-columns: max-content;
-			flex: 1 1 100%;
+			flex-wrap: nowrap;
 			min-width: 0;
 			overflow-x: auto;
+			padding-bottom: 0.25rem;
 		}
 
 		.toolbar-actions {
@@ -1474,11 +1433,6 @@ function actionLabel(action: string, title: string): string {
 		.toolbar-sort .select-wrap select {
 			flex: 1;
 			max-width: none;
-		}
-
-		.filter-chips {
-			overflow-x: auto;
-			padding-bottom: 0.25rem;
 		}
 
 		.md3-table {
