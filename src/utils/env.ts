@@ -17,6 +17,8 @@ const STATIC_ENV_GETTERS: Record<string, () => string> = {
 	ADMIN_PASSWORD: () => import.meta.env?.ADMIN_PASSWORD || "",
 	ADMIN_JWT_SECRET: () => import.meta.env?.ADMIN_JWT_SECRET || "",
 	ADMIN_SCRYPT_N: () => import.meta.env?.ADMIN_SCRYPT_N || "",
+	TURNSTILE_SITE_KEY: () => import.meta.env?.TURNSTILE_SITE_KEY || "",
+	TURNSTILE_SECRET_KEY: () => import.meta.env?.TURNSTILE_SECRET_KEY || "",
 };
 
 /** 服务端密钥类环境变量的可用键列表（供状态面板遍历展示） */

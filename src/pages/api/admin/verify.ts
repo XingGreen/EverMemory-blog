@@ -19,6 +19,7 @@ import {
 	writeAuditLog,
 } from "@/utils/login-guard";
 import { registerSession } from "@/utils/session-store";
+import { verifyTurnstileToken } from "@/utils/turnstile";
 
 export const prerender = false;
 
@@ -41,8 +42,31 @@ export async function POST({ request }) {
 	try {
 		const text = await request.text();
 		const body = JSON.parse(text);
-		const { username, password, rememberMe } = body;
+		const { username, password, rememberMe, turnstileToken } = body;
 		const clientKey = getClientIp(request);
+
+		// 人机验证置于所有闸门之前：验证码本身有成本，能显著削减后续
+		// scrypt 的调用量，不必等通过频次闸门之后才拦
+		const turnstile = await verifyTurnstileToken(
+			typeof turnstileToken === "string" ? turnstileToken : "",
+			clientKey === "unknown" ? undefined : clientKey,
+		);
+		if (!turnstile.ok) {
+			console.warn(`[Admin Verify] Turnstile rejected: ${turnstile.reason}`);
+			writeAuditLog({
+				event: "login_failure",
+				client: clientKey,
+				username,
+				detail: `turnstile: ${turnstile.reason}`,
+			});
+			return new Response(
+				JSON.stringify({
+					success: false,
+					message: "人机验证未通过，请重试",
+				}),
+				{ status: 400, headers: { "Content-Type": "application/json" } },
+			);
+		}
 
 		// 参数完整性检查
 		const missing: string[] = [];
