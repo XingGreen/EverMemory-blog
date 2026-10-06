@@ -821,15 +821,17 @@ function handleCancelEdit() {
 	goPostList();
 }
 
-function handleDeleteClick(post: Post) {
+function handleDeleteClick(post: Post, trigger?: HTMLElement | null) {
 	deletingPost = post;
-	/* 点击事件里 activeElement 就是那一行的删除按钮，此刻列表尚未变动。
-	   记下它，关闭对话框后焦点才有地方可回。 */
+	/* 删除入口是 ··· 菜单里的一项，菜单收起时该项会从 DOM 移除，
+	   所以由 PostRowMenu 直接把 ··· 触发器传过来——只要那一行还在它就在。
+	   没传触发器时退回 activeElement，保持原行为。 */
 	deleteTrigger =
-		typeof document !== "undefined" &&
+		trigger ??
+		(typeof document !== "undefined" &&
 		document.activeElement instanceof HTMLElement
 			? document.activeElement
-			: null;
+			: null);
 	showDeleteModal = true;
 }
 
