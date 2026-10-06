@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount } from "svelte";
+import FilterPopover from "@/components/admin/FilterPopover.svelte";
 import PostRowMenu from "@/components/admin/PostRowMenu.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
@@ -357,40 +358,31 @@ function actionLabel(action: string, title: string): string {
 			{/if}
 		</div>
 
-		<div class="filter-chips" role="group" aria-label={i18n(I18nKey.postStatusFilterGroup)}>
-			<button
-				class="chip"
-				class:selected={statusFilter === "all"}
-				aria-pressed={statusFilter === "all"}
-				onclick={() => (statusFilter = "all")}
-			>
-				<Icon icon="material-symbols:check" class="chip-check" />
-				<span class="chip-label">{i18n(I18nKey.postAll)}</span>
-				<span class="chip-count">{posts.length}</span>
-			</button>
-			<button
-				class="chip"
-				class:selected={statusFilter === "published"}
-				aria-pressed={statusFilter === "published"}
-				onclick={() => (statusFilter = "published")}
-			>
-				<Icon icon="material-symbols:check" class="chip-check" />
-				<span class="chip-label">{i18n(I18nKey.postPublished)}</span>
-				<span class="chip-count">{posts.filter((p) => !p.draft).length}</span>
-			</button>
-			<button
-				class="chip"
-				class:selected={statusFilter === "draft"}
-				aria-pressed={statusFilter === "draft"}
-				onclick={() => (statusFilter = "draft")}
-			>
-				<Icon icon="material-symbols:check" class="chip-check" />
-				<span class="chip-label">{i18n(I18nKey.postDraft)}</span>
-				<span class="chip-count">{posts.filter((p) => p.draft).length}</span>
-			</button>
-		</div>
+		<!-- 排序：与搜索同行常驻，随时切视图角度（对齐参考项目 post-list-sort） -->
+		<label class="toolbar-sort">
+			<span class="sort-label">{i18n(I18nKey.postSort)}</span>
+			<div class="select-wrap">
+				<select bind:value={sortKey} aria-label={i18n(I18nKey.postSort)}>
+					<option value="updated">{i18n(I18nKey.postSortUpdated)}</option>
+					<option value="newest">{i18n(I18nKey.postSortNewest)}</option>
+					<option value="oldest">{i18n(I18nKey.postSortOldest)}</option>
+					<option value="titleAsc">{i18n(I18nKey.postSortTitleAsc)}</option>
+					<option value="titleDesc">{i18n(I18nKey.postSortTitleDesc)}</option>
+				</select>
+				<Icon icon="material-symbols:expand-more" class="select-caret" />
+			</div>
+		</label>
 
 		<div class="toolbar-actions">
+			<FilterPopover
+				{categories}
+				{tags}
+				{categoryFilter}
+				{tagFilter}
+				onCategoryChange={(value) => (categoryFilter = value)}
+				onTagChange={(value) => (tagFilter = value)}
+			/>
+
 			<button class="icon-text-btn" onclick={onRefresh} disabled={isLoading || isSyncing}>
 				{#if isLoading}
 					<span class="spinner" aria-hidden="true"></span>
@@ -413,51 +405,38 @@ function actionLabel(action: string, title: string): string {
 		</div>
 	</div>
 
-	<!-- 分类、标签筛选与排序 -->
-	<div class="filter-row" role="group" aria-label={i18n(I18nKey.postFilterGroup)}>
-		<label class="select-field">
-			<span class="select-label">{i18n(I18nKey.postFilterCategory)}</span>
-			<div class="select-wrap">
-				<select bind:value={categoryFilter} disabled={categories.length === 0}>
-					<option value="">{i18n(I18nKey.postAll)}</option>
-					{#each categories as category (category)}
-						<option value={category}>{category}</option>
-					{/each}
-				</select>
-				<Icon icon="material-symbols:expand-more" class="select-caret" />
-			</div>
-		</label>
-
-		<label class="select-field">
-			<span class="select-label">{i18n(I18nKey.postFilterTag)}</span>
-			<div class="select-wrap">
-				<select bind:value={tagFilter} disabled={tags.length === 0}>
-					<option value="">{i18n(I18nKey.postAll)}</option>
-					{#each tags as tag (tag)}
-						<option value={tag}>{tag}</option>
-					{/each}
-				</select>
-				<Icon icon="material-symbols:expand-more" class="select-caret" />
-			</div>
-		</label>
-
-		<label class="select-field">
-			<span class="select-label">{i18n(I18nKey.postSort)}</span>
-			<div class="select-wrap">
-				<select bind:value={sortKey}>
-					<option value="updated">{i18n(I18nKey.postSortUpdated)}</option>
-					<option value="newest">{i18n(I18nKey.postSortNewest)}</option>
-					<option value="oldest">{i18n(I18nKey.postSortOldest)}</option>
-					<option value="titleAsc">{i18n(I18nKey.postSortTitleAsc)}</option>
-					<option value="titleDesc">{i18n(I18nKey.postSortTitleDesc)}</option>
-				</select>
-				<Icon icon="material-symbols:expand-more" class="select-caret" />
-			</div>
-		</label>
-
-		{#if hasExtraFilter}
-			<button class="text-btn reset-btn" onclick={clearAllFilters}>{i18n(I18nKey.postClearFilter)}</button>
-		{/if}
+	<!-- 状态筛选（第二行） -->
+	<div class="filter-chips" role="group" aria-label={i18n(I18nKey.postStatusFilterGroup)}>
+		<button
+			class="chip"
+			class:selected={statusFilter === "all"}
+			aria-pressed={statusFilter === "all"}
+			onclick={() => (statusFilter = "all")}
+		>
+			<Icon icon="material-symbols:check" class="chip-check" />
+			<span class="chip-label">{i18n(I18nKey.postAll)}</span>
+			<span class="chip-count">{posts.length}</span>
+		</button>
+		<button
+			class="chip"
+			class:selected={statusFilter === "published"}
+			aria-pressed={statusFilter === "published"}
+			onclick={() => (statusFilter = "published")}
+		>
+			<Icon icon="material-symbols:check" class="chip-check" />
+			<span class="chip-label">{i18n(I18nKey.postPublished)}</span>
+			<span class="chip-count">{posts.filter((p) => !p.draft).length}</span>
+		</button>
+		<button
+			class="chip"
+			class:selected={statusFilter === "draft"}
+			aria-pressed={statusFilter === "draft"}
+			onclick={() => (statusFilter = "draft")}
+		>
+			<Icon icon="material-symbols:check" class="chip-check" />
+			<span class="chip-label">{i18n(I18nKey.postDraft)}</span>
+			<span class="chip-count">{posts.filter((p) => p.draft).length}</span>
+		</button>
 	</div>
 
 	<!-- 分类栏（表头） -->
@@ -633,6 +612,11 @@ function actionLabel(action: string, title: string): string {
 		{:else}
 			<div class="list-footer">
 				<span>{i18n(I18nKey.postListCount).replace("{count}", String(filteredPosts.length))}</span>
+				{#if hasExtraFilter}
+					<button type="button" class="footer-reset" onclick={clearAllFilters}>
+						{i18n(I18nKey.postClearFilter)}
+					</button>
+				{/if}
 			</div>
 			<p class="sr-only" role="status" aria-live="polite">
 				{i18n(I18nKey.postResultCount).replace("{count}", String(filteredPosts.length))}
@@ -799,13 +783,14 @@ function actionLabel(action: string, title: string): string {
 		outline-offset: -2px;
 	}
 
-	/* M3 FilterChip
+	/* M3 FilterChip（第二行：状态筛选）
 	   三片等宽：「全部/已发布/草稿」及英文、俄文译文长度差异很大，
 	   用 flex 自然宽度会宽窄不齐，这里等分网格保证整排等宽等高。 */
 	.filter-chips {
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 		gap: var(--md-control-gap);
+		margin-bottom: 0.75rem;
 	}
 
 	.chip {
@@ -893,7 +878,7 @@ function actionLabel(action: string, title: string): string {
 		color: var(--md-on-primary-container);
 	}
 
-	.icon-text-btn {
+	:global(.icon-text-btn) {
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -912,16 +897,16 @@ function actionLabel(action: string, title: string): string {
 		transition: background 0.15s;
 	}
 
-	.icon-text-btn:hover:not(:disabled) {
+	:global(.icon-text-btn):hover:not(:disabled) {
 		background: color-mix(in srgb, var(--primary) 8%, transparent);
 	}
 
-	.icon-text-btn:focus-visible {
+	:global(.icon-text-btn):focus-visible {
 		outline: 2px solid var(--md-primary-text);
 		outline-offset: -2px;
 	}
 
-	.icon-text-btn:disabled {
+	:global(.icon-text-btn):disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
@@ -935,22 +920,15 @@ function actionLabel(action: string, title: string): string {
 		animation: spin 0.8s linear infinite;
 	}
 
-	/* ── 分类、标签筛选与排序 ── */
-	.filter-row {
-		display: flex;
-		align-items: center;
-		gap: var(--md-control-gap);
-		flex-wrap: wrap;
-		margin-bottom: 0.75rem;
-	}
-
-	.select-field {
+	/* ── 排序：常驻工具栏，label + select 同高同轴 ── */
+	.toolbar-sort {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+		flex-shrink: 0;
 	}
 
-	.select-label {
+	.sort-label {
 		font-size: 0.8125rem;
 		color: var(--md-on-surface-variant);
 		white-space: nowrap;
@@ -994,10 +972,6 @@ function actionLabel(action: string, title: string): string {
 		font-size: 1.125rem;
 		color: var(--md-on-surface-variant);
 		pointer-events: none;
-	}
-
-	.reset-btn {
-		margin-left: auto;
 	}
 
 	/* ── 状态容器 ── */
@@ -1419,10 +1393,38 @@ function actionLabel(action: string, title: string): string {
 
 	/* Footer */
 	.list-footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
 		padding: 0.75rem 1rem 0;
-		text-align: right;
 		color: var(--md-on-surface-variant);
 		font-size: 0.75rem;
+	}
+
+	.footer-reset {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.25rem 0.5rem;
+		border: none;
+		border-radius: var(--radius-sm, 0.375rem);
+		background: transparent;
+		color: var(--md-primary-text);
+		font: inherit;
+		font-size: 0.75rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: background 0.15s;
+	}
+
+	.footer-reset:hover {
+		background: color-mix(in srgb, var(--primary) 8%, transparent);
+	}
+
+	.footer-reset:focus-visible {
+		outline: 2px solid var(--md-primary-text);
+		outline-offset: -2px;
 	}
 
 	@keyframes spin {
@@ -1467,22 +1469,18 @@ function actionLabel(action: string, title: string): string {
 			width: 100%;
 		}
 
-		.icon-text-btn {
+		:global(.icon-text-btn) {
 			flex: 1;
 			justify-content: center;
 		}
 
-		.filter-row {
-			align-items: stretch;
-		}
-
-		.select-field {
-			justify-content: space-between;
+		/* 排序整行占满，select 跟着拉宽 */
+		.toolbar-sort {
 			flex: 1 1 100%;
 		}
 
-		.select-wrap,
-		.select-wrap select {
+		.toolbar-sort .select-wrap,
+		.toolbar-sort .select-wrap select {
 			flex: 1;
 			max-width: none;
 		}

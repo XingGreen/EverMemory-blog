@@ -512,6 +512,7 @@ export const ja: Translation = {
 	[Key.postNoMatch]: "一致する記事がありません",
 	[Key.postNoPosts]: "記事がありません",
 	[Key.postClearFilter]: "フィルターをクリア",
+	[Key.postFilter]: "絞り込み",
 	[Key.postFilterCategory]: "カテゴリ",
 	[Key.postFilterTag]: "タグ",
 	[Key.postSort]: "並び替え",
