@@ -504,6 +504,7 @@ enum I18nKey {
 	postSort = "postSort",
 	postSortNewest = "postSortNewest",
 	postSortOldest = "postSortOldest",
+	postSortUpdated = "postSortUpdated",
 	postSortTitleAsc = "postSortTitleAsc",
 	postSortTitleDesc = "postSortTitleDesc",
 	postColTitle = "postColTitle",

@@ -505,6 +505,7 @@ export const zh_CN: Translation = {
 	[Key.postSort]: "排序",
 	[Key.postSortNewest]: "最新发布",
 	[Key.postSortOldest]: "最早发布",
+	[Key.postSortUpdated]: "最近修改",
 	[Key.postSortTitleAsc]: "标题 A→Z",
 	[Key.postSortTitleDesc]: "标题 Z→A",
 	[Key.postColTitle]: "标题",

@@ -520,6 +520,7 @@ export const ru: Translation = {
 	[Key.postSort]: "Сортировка",
 	[Key.postSortNewest]: "Сначала новые",
 	[Key.postSortOldest]: "Сначала старые",
+	[Key.postSortUpdated]: "Сначала обновлённые",
 	[Key.postSortTitleAsc]: "Заголовок А→Я",
 	[Key.postSortTitleDesc]: "Заголовок Я→А",
 	[Key.postColTitle]: "Заголовок",

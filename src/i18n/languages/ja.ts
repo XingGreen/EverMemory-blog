@@ -517,6 +517,7 @@ export const ja: Translation = {
 	[Key.postSort]: "並び替え",
 	[Key.postSortNewest]: "新着順",
 	[Key.postSortOldest]: "古い順",
+	[Key.postSortUpdated]: "更新が新しい順",
 	[Key.postSortTitleAsc]: "タイトル A→Z",
 	[Key.postSortTitleDesc]: "タイトル Z→A",
 	[Key.postColTitle]: "タイトル",
@@ -862,7 +863,8 @@ export const ja: Translation = {
 	[Key.statusTesting]: "テスト中…",
 	[Key.statusConnected]: "接続OK",
 	[Key.probeUnitMs]: "ms",
-	[Key.probeNetworkError]: "ネットワーク要求に失敗しました。接続を確認して再試行してください",
+	[Key.probeNetworkError]:
+		"ネットワーク要求に失敗しました。接続を確認して再試行してください",
 	[Key.probeBadResponse]: "応答形式が不正です",
 	[Key.probeDns]: "DNS 解決",
 	[Key.probeConnect]: "接続確立",
@@ -873,7 +875,8 @@ export const ja: Translation = {
 	[Key.statusDisconnected]: "接続できません",
 	[Key.statusViewDetail]: "詳細を見る",
 	[Key.statusDetailBack]: "戻る",
-	[Key.statusDetailNoData]: "計測データがありません。まずテストを実行してください",
+	[Key.statusDetailNoData]:
+		"計測データがありません。まずテストを実行してください",
 	[Key.dashboardTotalPosts]: "記事総数",
 	[Key.dashboardDraftBox]: "下書き",
 	[Key.placeholderBadge]: "準備中",
