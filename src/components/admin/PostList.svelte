@@ -1,6 +1,5 @@
 <script lang="ts">
 import { onMount } from "svelte";
-import FilterPopover from "@/components/admin/FilterPopover.svelte";
 import PostRowMenu from "@/components/admin/PostRowMenu.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
@@ -389,9 +388,36 @@ function actionLabel(action: string, title: string): string {
 			{/if}
 		</div>
 
-		<!-- 排序：与搜索同行常驻，随时切视图角度（对齐参考项目 post-list-sort） -->
-		<label class="toolbar-sort">
-			<span class="sort-label">{i18n(I18nKey.postSort)}</span>
+		<!-- 分类、标签、排序：常驻一行直接可点，不做二次点击收折。
+		   搜索框缩短宽度给它们让位 -->
+		<label class="toolbar-field">
+			<span class="field-label">{i18n(I18nKey.postFilterCategory)}</span>
+			<div class="select-wrap">
+				<select bind:value={categoryFilter} disabled={categories.length === 0}>
+					<option value="">{i18n(I18nKey.postAll)}</option>
+					{#each categories as category (category)}
+						<option value={category}>{category}</option>
+					{/each}
+				</select>
+				<Icon icon="material-symbols:expand-more" class="select-caret" />
+			</div>
+		</label>
+
+		<label class="toolbar-field">
+			<span class="field-label">{i18n(I18nKey.postFilterTag)}</span>
+			<div class="select-wrap">
+				<select bind:value={tagFilter} disabled={tags.length === 0}>
+					<option value="">{i18n(I18nKey.postAll)}</option>
+					{#each tags as tag (tag)}
+						<option value={tag}>{tag}</option>
+					{/each}
+				</select>
+				<Icon icon="material-symbols:expand-more" class="select-caret" />
+			</div>
+		</label>
+
+		<label class="toolbar-field">
+			<span class="field-label">{i18n(I18nKey.postSort)}</span>
 			<div class="select-wrap">
 				<select bind:value={sortKey} aria-label={i18n(I18nKey.postSort)}>
 					<option value="updated">{i18n(I18nKey.postSortUpdated)}</option>
@@ -405,15 +431,6 @@ function actionLabel(action: string, title: string): string {
 		</label>
 
 		<div class="toolbar-actions">
-			<FilterPopover
-				{categories}
-				{tags}
-				{categoryFilter}
-				{tagFilter}
-				onCategoryChange={(value) => (categoryFilter = value)}
-				onTagChange={(value) => (tagFilter = value)}
-			/>
-
 			{#if onSync}
 				<button class="icon-text-btn sync-btn" onclick={onSync} disabled={isLoading || isSyncing}>
 					{#if isSyncing}
@@ -694,15 +711,18 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.search-bar {
-		flex: 1;
-		min-width: 200px;
+		flex: 0 1 260px;
+		min-width: 140px;
 		display: flex;
 		align-items: center;
 		height: var(--md-control-h);
 		padding: 0 0.25rem 0 0.875rem;
 		background: var(--md-surface-container-high);
+		border: 1px solid var(--md-outline);
 		border-radius: var(--md-control-r);
-		transition: background 0.2s;
+		transition:
+			background 0.2s,
+			border-color 0.2s;
 	}
 
 	.search-bar:focus-within {
@@ -874,15 +894,15 @@ function actionLabel(action: string, title: string): string {
 		animation: spin 0.8s linear infinite;
 	}
 
-	/* ── 排序：常驻工具栏，label + select 同高同轴 ── */
-	.toolbar-sort {
+	/* ── 分类/标签/排序：常驻工具栏，label + select 同高同轴 ── */
+	.toolbar-field {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		flex-shrink: 0;
 	}
 
-	.sort-label {
+	.field-label {
 		font-size: 0.8125rem;
 		color: var(--md-on-surface-variant);
 		white-space: nowrap;
@@ -1426,13 +1446,13 @@ function actionLabel(action: string, title: string): string {
 			justify-content: center;
 		}
 
-		/* 排序整行占满，select 跟着拉宽 */
-		.toolbar-sort {
+		/* 分类/标签/排序整行占满，select 跟着拉宽 */
+		.toolbar-field {
 			flex: 1 1 100%;
 		}
 
-		.toolbar-sort .select-wrap,
-		.toolbar-sort .select-wrap select {
+		.toolbar-field .select-wrap,
+		.toolbar-field .select-wrap select {
 			flex: 1;
 			max-width: none;
 		}
