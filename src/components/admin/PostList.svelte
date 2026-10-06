@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount } from "svelte";
+import PostRowMenu from "@/components/admin/PostRowMenu.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -18,7 +19,7 @@ let {
 	isLoading: boolean;
 	error: string;
 	onEdit: (post: any) => void;
-	onDelete: (post: any) => void;
+	onDelete: (post: any, trigger?: HTMLElement | null) => void;
 	onRefresh: () => void;
 	onSync?: () => void;
 	isSyncing?: boolean;
@@ -613,14 +614,10 @@ function actionLabel(action: string, title: string): string {
 								>
 									<Icon icon="material-symbols:edit" class="action-icon" />
 								</button>
-								<button
-									class="icon-action delete"
-									onclick={() => onDelete(post)}
-									aria-label={actionLabel(i18n(I18nKey.postDelete), post.title)}
-									title={i18n(I18nKey.postDelete)}
-								>
-									<Icon icon="material-symbols:delete-outline" class="action-icon" />
-								</button>
+								<PostRowMenu
+									title={post.title}
+									onDelete={(trigger) => onDelete(post, trigger)}
+								/>
 							</div>
 						</div>
 					</div>
@@ -1354,6 +1351,11 @@ function actionLabel(action: string, title: string): string {
 	   文字按钮退到图标后，红色「删除」不再抢占整行视线，删除与编辑之间也有独立
 	   命中区（原先两个纯文本按钮相邻，容易误点）。视觉 34px + 伪元素外扩到 44dp，
 	   触控目标达标又不撑高行。 */
+	/* 操作列 - 图标按钮
+	   查看/编辑保持常驻，删除收进 PostRowMenu 的 ··· 菜单：红色删除不再抢占整行
+	   视线，也不再与编辑相邻留下直接命中区。视觉 34px + 伪元素外扩到 44dp，
+	   触控目标达标又不撑高行。
+	   .icon-action 一族写成 :global —— ··· 触发器在 PostRowMenu 里，要同一副形状。 */
 	.icon-actions {
 		display: flex;
 		align-items: center;
@@ -1363,7 +1365,7 @@ function actionLabel(action: string, title: string): string {
 		gap: 0.75rem;
 	}
 
-	.icon-action {
+	:global(.icon-action) {
 		position: relative;
 		display: inline-flex;
 		align-items: center;
@@ -1383,19 +1385,19 @@ function actionLabel(action: string, title: string): string {
 
 	/* 命中区外扩到 42dp：与 12px 间距配合后相邻命中区不重叠（净间隙 4px），
 	   既保住触控目标又不会让两个按钮的热区串在一起 */
-	.icon-action::after {
+	:global(.icon-action::after) {
 		content: "";
 		position: absolute;
 		inset: -4px;
 		border-radius: 50%;
 	}
 
-	.icon-action:hover {
+	:global(.icon-action:hover) {
 		background: var(--md-state-layer-hover);
 		color: var(--md-on-surface);
 	}
 
-	.icon-action:focus-visible {
+	:global(.icon-action:focus-visible) {
 		outline: 2px solid currentcolor;
 		outline-offset: 1px;
 	}
@@ -1404,7 +1406,7 @@ function actionLabel(action: string, title: string): string {
 		font-size: 1.25rem;
 	}
 
-	/* 悬停时才显出语义色，静止状态三枚图标同为中性灰 */
+	/* 悬停时才显出语义色，静止状态两枚图标同为中性灰 */
 	.icon-action.view:hover {
 		background: color-mix(in srgb, var(--info) 14%, transparent);
 		color: var(--md-info-text);
@@ -1413,13 +1415,6 @@ function actionLabel(action: string, title: string): string {
 	.icon-action.edit:hover {
 		background: color-mix(in srgb, var(--primary) 14%, transparent);
 		color: var(--md-primary-text);
-	}
-
-	/* 删除不用 --md-destructive-text（高饱和红，静止态过于抢眼），
-	   改为中性灰，仅在悬停/聚焦时才显出暗红，符合「破坏性操作不主动吸引注意」。 */
-	.icon-action.delete:hover {
-		background: color-mix(in srgb, var(--destructive) 16%, transparent);
-		color: color-mix(in srgb, var(--destructive) 75%, var(--md-on-surface));
 	}
 
 	/* Footer */
