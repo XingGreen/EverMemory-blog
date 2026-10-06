@@ -4,6 +4,7 @@ import Icon from "@/components/common/Icon.svelte";
 import { editorConfig } from "@/config/editorConfig";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import { probeAdminService, runProbeWithStages } from "@/utils/admin-probe";
 import {
 	CONFIG_GROUPS,
 	CONFIG_ITEMS,
@@ -12,7 +13,6 @@ import {
 	getConfigItem,
 	getConfigLabelKey,
 } from "@/utils/admin-settings";
-import { probeAdminService, runProbeWithStages } from "@/utils/admin-probe";
 import { isTourDone, resetTour } from "@/utils/onboarding";
 import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
 import OnboardingTour from "./OnboardingTour.svelte";
@@ -594,7 +594,10 @@ async function testConnectivity() {
 			? { ok: true, message: `GitHub 连接正常（${data.latency}ms）` }
 			: { ok: false, message: data.message || "GitHub 连接失败" };
 	} catch (err) {
-		result = { ok: false, message: `请求失败: ${err instanceof Error ? err.message : String(err)}` };
+		result = {
+			ok: false,
+			message: `请求失败: ${err instanceof Error ? err.message : String(err)}`,
+		};
 	}
 	githubStatus = result.ok ? "ok" : "fail";
 	showToast(result.message, result.ok ? "success" : "error", 6000);
@@ -627,7 +630,7 @@ async function testAdminService() {
 	adminProbeStageIndex = 0;
 	adminProbeStage = i18n(ADMIN_PROBE_STAGES[0]);
 
-// 单次请求。分段数据全部来自浏览器对该请求的实测（PerformanceResourceTiming），
+	// 单次请求。分段数据全部来自浏览器对该请求的实测（PerformanceResourceTiming），
 	// 不额外发请求，测得的耗时与改动前完全一致。
 	const href = new URL(ADMIN_PROBE_URL, location.href).href;
 
@@ -664,10 +667,31 @@ async function testAdminService() {
 	// 故失败或条目缺失时不再渲染残缺列表，避免出现「只有总耗时」的孤立行。
 	adminProbeResults = timing
 		? [
-				{ label: i18n(I18nKey.probeDns), ms: Math.max(0, Math.round(timing.domainLookupEnd - timing.domainLookupStart)) },
-				{ label: i18n(I18nKey.probeConnect), ms: Math.max(0, Math.round(timing.connectEnd - timing.connectStart)) },
-				{ label: i18n(I18nKey.probeRequest), ms: Math.max(0, Math.round(timing.responseStart - timing.requestStart)) },
-				{ label: i18n(I18nKey.probeDownload), ms: Math.max(0, Math.round(timing.responseEnd - timing.responseStart)) },
+				{
+					label: i18n(I18nKey.probeDns),
+					ms: Math.max(
+						0,
+						Math.round(timing.domainLookupEnd - timing.domainLookupStart),
+					),
+				},
+				{
+					label: i18n(I18nKey.probeConnect),
+					ms: Math.max(0, Math.round(timing.connectEnd - timing.connectStart)),
+				},
+				{
+					label: i18n(I18nKey.probeRequest),
+					ms: Math.max(
+						0,
+						Math.round(timing.responseStart - timing.requestStart),
+					),
+				},
+				{
+					label: i18n(I18nKey.probeDownload),
+					ms: Math.max(
+						0,
+						Math.round(timing.responseEnd - timing.responseStart),
+					),
+				},
 				...(serverMs > 0
 					? [
 							{
@@ -677,9 +701,7 @@ async function testAdminService() {
 								// 间波动，单个数字无法说明后端是否稳定。
 								// min === max 说明无波动，无需标注。
 								detail:
-									serverMin < serverMax
-										? `${serverMin}–${serverMax}`
-										: "",
+									serverMin < serverMax ? `${serverMin}–${serverMax}` : "",
 							},
 						]
 					: []),
@@ -697,7 +719,6 @@ async function testAdminService() {
 		6000,
 	);
 }
-
 
 function handleVerify(success: boolean) {
 	if (success) {
