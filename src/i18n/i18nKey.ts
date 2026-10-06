@@ -458,6 +458,7 @@ enum I18nKey {
 	verifyPassword = "verifyPassword",
 	verifyLogin = "verifyLogin",
 	verifyLoggingIn = "verifyLoggingIn",
+	verifyLockedCountdown = "verifyLockedCountdown",
 	verifyAvatarAlt = "verifyAvatarAlt",
 	verifyRememberMe = "verifyRememberMe",
 	verifyPasswordShow = "verifyPasswordShow",

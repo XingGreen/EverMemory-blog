@@ -475,6 +475,7 @@ export const ru: Translation = {
 	[Key.verifyPassword]: "Пароль",
 	[Key.verifyLogin]: "Войти",
 	[Key.verifyLoggingIn]: "Вход...",
+	[Key.verifyLockedCountdown]: "Повторите через {seconds} с",
 	[Key.verifyAvatarAlt]: "Аватар администратора",
 	[Key.verifyRememberMe]: "Запомнить меня",
 	[Key.verifyPasswordShow]: "Показать пароль",

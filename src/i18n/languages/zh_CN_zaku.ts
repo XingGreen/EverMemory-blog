@@ -457,6 +457,7 @@ export const zaku: Translation = {
 	[Key.verifyPassword]: "密码",
 	[Key.verifyLogin]: "登录",
 	[Key.verifyLoggingIn]: "登录中...",
+	[Key.verifyLockedCountdown]: "请 {seconds} 秒后重试",
 	[Key.verifyAvatarAlt]: "管理员头像",
 	[Key.verifyRememberMe]: "记住我",
 	[Key.verifyPasswordShow]: "显示密码",

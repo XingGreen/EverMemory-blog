@@ -12,10 +12,11 @@
  * 不配置就不会改变任何登录行为。
  */
 
-import { getEnv } from "./env";
+import { readSecretValue } from "./secret-io";
 
 /** Cloudflare 的站点校验端点 */
-const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+const SITEVERIFY_URL =
+	"https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 /** 校验请求超时（毫秒）。挂起会让登录接口被拖住，故必须设上限 */
 const VERIFY_TIMEOUT_MS = 5000;
@@ -32,10 +33,16 @@ export interface TurnstileConfig {
 	incomplete: boolean;
 }
 
-/** 读取当前 Turnstile 配置 */
+/**
+ * 读取当前 Turnstile 配置。
+ *
+ * 走 readSecretValue 而非 getEnv：密钥的实际来源是 .env.local 文件
+ * （后台密钥页写入），而 getEnv 只查 process.env 与 import.meta.env，
+ * 后者拿不到无 VITE_ 前缀的变量——那样配完密钥页会一直读不到配置。
+ */
 export function getTurnstileConfig(): TurnstileConfig {
-	const siteKey = getEnv("TURNSTILE_SITE_KEY").trim();
-	const secretKey = getEnv("TURNSTILE_SECRET_KEY").trim();
+	const siteKey = readSecretValue("TURNSTILE_SITE_KEY").trim();
+	const secretKey = readSecretValue("TURNSTILE_SECRET_KEY").trim();
 	const hasSite = siteKey.length > 0;
 	const hasSecret = secretKey.length > 0;
 	return {
@@ -83,7 +90,7 @@ export async function verifyTurnstileToken(
 		return { ok: false, skipped: false, reason: "TURNSTILE_MISSING_TOKEN" };
 	}
 
-	const secretKey = getEnv("TURNSTILE_SECRET_KEY").trim();
+	const secretKey = readSecretValue("TURNSTILE_SECRET_KEY").trim();
 	const body = new URLSearchParams({ secret: secretKey, response: token });
 	if (remoteip) body.set("remoteip", remoteip);
 
@@ -113,7 +120,8 @@ export async function verifyTurnstileToken(
 	if (payload?.success === true) return { ok: true, skipped: false, reason: "" };
 
 	const codes = payload?.["error-codes"];
-	const detail = Array.isArray(codes) && codes.length > 0 ? codes.join(",") : "unknown";
+	const detail =
+		Array.isArray(codes) && codes.length > 0 ? codes.join(",") : "unknown";
 	return { ok: false, skipped: false, reason: `TURNSTILE_REJECTED: ${detail}` };
 }
 

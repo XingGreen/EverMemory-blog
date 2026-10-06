@@ -82,6 +82,17 @@ export function readSecretPreview(key: string): string {
 	return readEnvValue(key);
 }
 
+/**
+ * 读取单个密钥的真实值，不区分敏感性。
+ *
+ * 仅供服务端内部判定使用（例如 Turnstile 是否已启用）。调用方不得把
+ * sensitive 字段的值回传给浏览器——面向前端的回显请走 readSecretPreview，
+ * 它只用于非敏感项。
+ */
+export function readSecretValue(key: string): string {
+	return readEnvValue(key);
+}
+
 /** 值转义：私钥原文自动转 Base64（与 github-app.ts 读取逻辑兼容），含特殊字符时加引号 */
 function quoteEnvValue(raw: string): string {
 	let value = raw;

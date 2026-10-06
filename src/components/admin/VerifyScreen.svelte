@@ -1,6 +1,7 @@
 <script lang="ts">
-import { onMount } from "svelte";
+import { onMount, onDestroy } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
+import TurnstileWidget from "@/components/admin/TurnstileWidget.svelte";
 import { DARK_MODE, LIGHT_MODE } from "@/constants/constants";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -32,6 +33,46 @@ function toggleTheme() {
 let usernameFocused = $state(false);
 let passwordFocused = $state(false);
 
+// ── Turnstile 人机验证（未配置则整个功能不启用）──
+let turnstileSiteKey = $state("");
+let turnstileToken = $state("");
+// 自增以要求 widget 清空旧 token 并重新出题
+let turnstileResetToken = $state(0);
+let turnstileLoadFailed = $state(false);
+
+async function loadTurnstileConfig() {
+	try {
+		const res = await fetch("/api/admin/turnstile/");
+		if (!res.ok) return;
+		const data = await res.json();
+		if (data?.enabled && data.siteKey) {
+			turnstileSiteKey = data.siteKey;
+		}
+	} catch {
+		// 配置拉取失败视为未启用，不阻塞登录
+	}
+}
+
+// ── 429 锁定倒计时：优先读标准 Retry-After 头，不去解析中文文案 ──
+let lockoutSeconds = $state(0);
+let countdownTimer: ReturnType<typeof setInterval> | undefined;
+
+function startLockoutCountdown(seconds: number) {
+	lockoutSeconds = Math.max(0, seconds);
+	clearInterval(countdownTimer);
+	if (lockoutSeconds <= 0) return;
+	countdownTimer = setInterval(() => {
+		lockoutSeconds -= 1;
+		if (lockoutSeconds <= 0) clearInterval(countdownTimer);
+	}, 1000);
+}
+
+onDestroy(() => clearInterval(countdownTimer));
+
+onMount(() => {
+	loadTurnstileConfig();
+});
+
 async function handleSubmit() {
 	const missing: string[] = [];
 	if (!username.trim()) missing.push(i18n(I18nKey.verifyUsername));
@@ -45,6 +86,12 @@ async function handleSubmit() {
 		return;
 	}
 
+	// 已配置验证码但尚未出题时直接拦在前端，避免一次注定失败的往返
+	if (turnstileSiteKey && !turnstileLoadFailed && !turnstileToken) {
+		error = "请先完成人机验证";
+		return;
+	}
+
 	isSubmitting = true;
 	error = "";
 
@@ -52,27 +99,44 @@ async function handleSubmit() {
 		const response = await fetch("/api/admin/verify/", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ username, password, rememberMe }),
+			body: JSON.stringify({
+				username,
+				password,
+				rememberMe,
+				turnstileToken,
+			}),
 		});
 
 		const data = await response.json();
 
 		if (response.ok && data.success) {
 			onVerify(true);
-		} else {
-			error = data.message || "验证失败";
-			onVerify(false);
+			return;
+		}
+
+		error = data.message || "验证失败";
+		onVerify(false);
+
+		// 锁定/限流：按头里的秒数开始倒计时并禁用提交按钮
+		if (response.status === 429) {
+			const header = response.headers.get("Retry-After");
+			const seconds = header ? Number(header) : 0;
+			if (Number.isFinite(seconds) && seconds > 0) {
+				startLockoutCountdown(seconds);
+			}
 		}
 	} catch {
 		error = "网络请求失败";
 		onVerify(false);
 	} finally {
 		isSubmitting = false;
+		// token 一次性，无论成败都必须换新，否则重试会被服务端判为无效
+		turnstileResetToken += 1;
 	}
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-	if (e.key === "Enter" && !isSubmitting) {
+	if (e.key === "Enter" && !isSubmitting && lockoutSeconds <= 0) {
 		handleSubmit();
 	}
 }
@@ -181,15 +245,35 @@ function handleKeyDown(e: KeyboardEvent) {
 				</div>
 			{/if}
 
+			{#if turnstileSiteKey}
+				<TurnstileWidget
+					siteKey={turnstileSiteKey}
+					resetToken={turnstileResetToken}
+					onToken={(token) => (turnstileToken = token)}
+					onError={() => {
+						turnstileLoadFailed = true;
+						error = "人机验证加载失败，请刷新页面重试";
+					}}
+				/>
+			{/if}
+
 			<button
 				class="submit-btn"
 				class:loading={isSubmitting}
 				onclick={handleSubmit}
-				disabled={isSubmitting || !username.trim() || !password.trim()}
+				disabled={isSubmitting ||
+					lockoutSeconds > 0 ||
+					!username.trim() ||
+					!password.trim()}
 			>
 				{#if isSubmitting}
 					<span class="spinner"></span>
 					{i18n(I18nKey.verifyLoggingIn)}
+				{:else if lockoutSeconds > 0}
+					{i18n(I18nKey.verifyLockedCountdown).replace(
+						"{seconds}",
+						String(lockoutSeconds),
+					)}
 				{:else}
 					{i18n(I18nKey.verifyLogin)}
 				{/if}

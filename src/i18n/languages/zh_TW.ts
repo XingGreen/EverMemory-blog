@@ -462,6 +462,7 @@ export const zh_TW: Translation = {
 	[Key.verifyPassword]: "密碼",
 	[Key.verifyLogin]: "登入",
 	[Key.verifyLoggingIn]: "登入中...",
+	[Key.verifyLockedCountdown]: "請 {seconds} 秒後重試",
 	[Key.verifyAvatarAlt]: "管理員頭像",
 	[Key.verifyRememberMe]: "記住我",
 	[Key.verifyPasswordShow]: "顯示密碼",
