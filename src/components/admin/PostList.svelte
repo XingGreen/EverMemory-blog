@@ -335,7 +335,41 @@ function actionLabel(action: string, title: string): string {
 </script>
 
 <div class="md3-list-container card-base">
-	<!-- 工具栏 -->
+	<!-- 状态筛选（第一行，对齐参考项目 post-list-tabs） -->
+	<div class="filter-chips" role="group" aria-label={i18n(I18nKey.postStatusFilterGroup)}>
+		<button
+			class="chip"
+			class:selected={statusFilter === "all"}
+			aria-pressed={statusFilter === "all"}
+			onclick={() => (statusFilter = "all")}
+		>
+			<Icon icon="material-symbols:check" class="chip-check" />
+			<span class="chip-label">{i18n(I18nKey.postAll)}</span>
+			<span class="chip-count">{posts.length}</span>
+		</button>
+		<button
+			class="chip"
+			class:selected={statusFilter === "published"}
+			aria-pressed={statusFilter === "published"}
+			onclick={() => (statusFilter = "published")}
+		>
+			<Icon icon="material-symbols:check" class="chip-check" />
+			<span class="chip-label">{i18n(I18nKey.postPublished)}</span>
+			<span class="chip-count">{posts.filter((p) => !p.draft).length}</span>
+		</button>
+		<button
+			class="chip"
+			class:selected={statusFilter === "draft"}
+			aria-pressed={statusFilter === "draft"}
+			onclick={() => (statusFilter = "draft")}
+		>
+			<Icon icon="material-symbols:check" class="chip-check" />
+			<span class="chip-label">{i18n(I18nKey.postDraft)}</span>
+			<span class="chip-count">{posts.filter((p) => p.draft).length}</span>
+		</button>
+	</div>
+
+	<!-- 工具栏（第二行） -->
 	<div class="toolbar">
 		<div class="search-bar">
 			<Icon icon="material-symbols:search" class="leading-icon" />
@@ -383,15 +417,6 @@ function actionLabel(action: string, title: string): string {
 				onTagChange={(value) => (tagFilter = value)}
 			/>
 
-			<button class="icon-text-btn" onclick={onRefresh} disabled={isLoading || isSyncing}>
-				{#if isLoading}
-					<span class="spinner" aria-hidden="true"></span>
-				{:else}
-					<Icon icon="material-symbols:update-rounded" />
-				{/if}
-				{i18n(I18nKey.postRefresh)}
-			</button>
-
 			{#if onSync}
 				<button class="icon-text-btn sync-btn" onclick={onSync} disabled={isLoading || isSyncing}>
 					{#if isSyncing}
@@ -403,40 +428,6 @@ function actionLabel(action: string, title: string): string {
 				</button>
 			{/if}
 		</div>
-	</div>
-
-	<!-- 状态筛选（第二行） -->
-	<div class="filter-chips" role="group" aria-label={i18n(I18nKey.postStatusFilterGroup)}>
-		<button
-			class="chip"
-			class:selected={statusFilter === "all"}
-			aria-pressed={statusFilter === "all"}
-			onclick={() => (statusFilter = "all")}
-		>
-			<Icon icon="material-symbols:check" class="chip-check" />
-			<span class="chip-label">{i18n(I18nKey.postAll)}</span>
-			<span class="chip-count">{posts.length}</span>
-		</button>
-		<button
-			class="chip"
-			class:selected={statusFilter === "published"}
-			aria-pressed={statusFilter === "published"}
-			onclick={() => (statusFilter = "published")}
-		>
-			<Icon icon="material-symbols:check" class="chip-check" />
-			<span class="chip-label">{i18n(I18nKey.postPublished)}</span>
-			<span class="chip-count">{posts.filter((p) => !p.draft).length}</span>
-		</button>
-		<button
-			class="chip"
-			class:selected={statusFilter === "draft"}
-			aria-pressed={statusFilter === "draft"}
-			onclick={() => (statusFilter = "draft")}
-		>
-			<Icon icon="material-symbols:check" class="chip-check" />
-			<span class="chip-label">{i18n(I18nKey.postDraft)}</span>
-			<span class="chip-count">{posts.filter((p) => p.draft).length}</span>
-		</button>
 	</div>
 
 	<!-- 分类栏（表头） -->

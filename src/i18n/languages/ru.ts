@@ -508,7 +508,6 @@ export const ru: Translation = {
 	[Key.postAll]: "Все",
 	[Key.postPublished]: "Опубликовано",
 	[Key.postDraft]: "Черновик",
-	[Key.postRefresh]: "Обновить",
 	[Key.postSync]: "Синхронизировать",
 	[Key.postLoading]: "Загрузка...",
 	[Key.postRetry]: "Повторить",
@@ -537,7 +536,6 @@ export const ru: Translation = {
 	[Key.postSearchLabel]:
 		"Поиск статей по заголовку, автору, категории или тегу",
 	[Key.postStatusFilterGroup]: "Фильтр по статусу публикации",
-	[Key.postFilterGroup]: "Фильтр по категории и тегу, сортировка",
 	[Key.postTableLabel]: "Список статей",
 	[Key.postActionLabel]: "{action}: {title}",
 	[Key.postMoreTags]: "ещё {count} тегов",
