@@ -75,6 +75,7 @@ let route = $state<Route>({ page: "login" });
 let editingPost = $state<Post | null>(null);
 let showDeleteModal = $state(false);
 let deletingPost = $state<Post | null>(null);
+let deleteTrigger: HTMLElement | null = null;
 let toast = $state<{ message: string; type: "success" | "error" } | null>(null);
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 let tourOpen = $state(false);
@@ -822,12 +823,32 @@ function handleCancelEdit() {
 
 function handleDeleteClick(post: Post) {
 	deletingPost = post;
+	/* 点击事件里 activeElement 就是那一行的删除按钮，此刻列表尚未变动。
+	   记下它，关闭对话框后焦点才有地方可回。 */
+	deleteTrigger =
+		typeof document !== "undefined" &&
+		document.activeElement instanceof HTMLElement
+			? document.activeElement
+			: null;
 	showDeleteModal = true;
+}
+
+/* 删除成功后触发它的按钮随行一起消失，直接归还会让焦点落回 body，
+   键盘用户被丢到页面开头。此时改落到搜索框——它不在 {#each} 里，列表重载期间始终在。 */
+function restoreDeleteFocus(useTrigger: boolean) {
+	const target =
+		useTrigger && deleteTrigger?.isConnected
+			? deleteTrigger
+			: document.querySelector<HTMLElement>("[data-post-list-search]");
+	target?.focus();
+	deleteTrigger = null;
 }
 
 async function handleConfirmDelete() {
 	if (!deletingPost) return;
 
+	/* 只有删除成功才会让触发行消失，其余路径触发元素仍在，原路归还即可 */
+	let rowSurvives = true;
 	try {
 		const response = await fetch("/api/admin/delete/", {
 			method: "POST",
@@ -840,6 +861,7 @@ async function handleConfirmDelete() {
 		const data = await response.json();
 		if (data.success) {
 			showToast("删除成功", "success");
+			rowSurvives = false;
 			loadPosts();
 		} else {
 			console.error("[Admin] 删除失败:", data.message);
@@ -853,6 +875,8 @@ async function handleConfirmDelete() {
 			10000,
 		);
 	} finally {
+		/* 归还焦点必须先于卸载：对话框销毁会清掉它内部输入框占着的焦点 */
+		restoreDeleteFocus(rowSurvives);
 		showDeleteModal = false;
 		deletingPost = null;
 	}
@@ -1681,6 +1705,7 @@ function formatDate(dateStr: string | null): string {
 			title={deletingPost.title}
 			onConfirm={handleConfirmDelete}
 			onCancel={() => {
+				restoreDeleteFocus(true);
 				showDeleteModal = false;
 				deletingPost = null;
 			}}
