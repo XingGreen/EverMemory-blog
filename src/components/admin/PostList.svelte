@@ -177,6 +177,55 @@ function restoreFilters(): SavedFilters | null {
 	}
 }
 
+const SCROLL_STORAGE_KEY = "admin_posts_scroll";
+
+/* 后台 html/body 的 overflow 被锁死，真正滚动的是右侧内容区
+   （见 AdminLayout.astro 对 .admin-content 的说明） */
+function scrollContainer(): HTMLElement | null {
+	return document.querySelector<HTMLElement>(".admin-content");
+}
+
+function saveScroll() {
+	const el = scrollContainer();
+	if (!el) return;
+	try {
+		sessionStorage.setItem(
+			SCROLL_STORAGE_KEY,
+			String(Math.round(el.scrollTop)),
+		);
+	} catch {
+		// 写入失败不影响功能
+	}
+}
+
+let scrollSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+/* 滚动时节流落盘：等卸载再存会踩上 .admin-content 的 class 切换
+   （列表 → 编辑会加 content-wide 改宽度），那时 scrollTop 可能已被回流改动 */
+function handleContentScroll() {
+	if (scrollSaveTimer) return;
+	scrollSaveTimer = setTimeout(() => {
+		scrollSaveTimer = null;
+		saveScroll();
+	}, 200);
+}
+
+/* 一次性的滚动归位：列表真正渲染出来后才定位。加载态渲染的是骨架，
+   行高与真实列表不同，提前定位会被 clamp 到错误位置 */
+let scrollRestored = false;
+
+$effect(() => {
+	if (scrollRestored || isLoading || posts.length === 0) return;
+	scrollRestored = true;
+	try {
+		const saved = Number(sessionStorage.getItem(SCROLL_STORAGE_KEY) || 0);
+		const el = scrollContainer();
+		if (saved > 0 && el) el.scrollTop = saved;
+	} catch {
+		// 读不到就停在顶部
+	}
+});
+
 onMount(() => {
 	const saved = restoreFilters();
 	if (saved) {
@@ -187,6 +236,20 @@ onMount(() => {
 		sortKey = saved.sort;
 	}
 	filtersReady = true;
+
+	const el = scrollContainer();
+	el?.addEventListener("scroll", handleContentScroll, { passive: true });
+	/* 关闭标签页或刷新不走组件卸载，得单独兜住 */
+	window.addEventListener("pagehide", saveScroll);
+	return () => {
+		el?.removeEventListener("scroll", handleContentScroll);
+		window.removeEventListener("pagehide", saveScroll);
+		if (scrollSaveTimer) {
+			clearTimeout(scrollSaveTimer);
+			scrollSaveTimer = null;
+		}
+		saveScroll();
+	};
 });
 
 /* 筛选一变就同时落两处：URL 用 replaceState（不产生历史记录，后退键不会
