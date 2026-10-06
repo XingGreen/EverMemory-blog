@@ -19,6 +19,21 @@ import { registerSession } from "@/utils/session-store";
 
 export const prerender = false;
 
+/** 标准 Retry-After（秒）。客户端可据此禁用按钮并倒计时，无需解析中文文案 */
+function retryAfterHeader(base: Headers, seconds: number): Headers {
+	const value = Math.max(1, Math.ceil(seconds));
+	base.set("Retry-After", String(value));
+	return base;
+}
+
+/** 锁定态响应的完整头集合 */
+function lockedHeaders(seconds: number): Headers {
+	return retryAfterHeader(
+		new Headers({ "Content-Type": "application/json" }),
+		seconds,
+	);
+}
+
 export async function POST({ request }) {
 	try {
 		const text = await request.text();
@@ -56,22 +71,16 @@ export async function POST({ request }) {
 					success: false,
 					message: `尝试过于频繁，请 ${retryAfterSeconds} 秒后重试`,
 				}),
-				{ status: 429, headers: { "Content-Type": "application/json" } },
+				{ status: 429, headers: lockedHeaders(retryAfterSeconds) },
 			);
 		}
 
-		console.log(
-			`[Admin Verify] Username: ${username}, password length: ${password.length}`,
-		);
-
 		// 双重验证：用户名 + 密码，全部通过才签发会话
 		// 私钥由服务端环境变量持有，用于 GitHub API 操作，前端不传输
+		// 两个校验都无条件执行（不短路）：否则用户名错误时会跳过耗时的
+		// scrypt，成为可测量的时序侧信道来枚举有效用户名
 		const usernameOk = verifyAdminUsername(username);
 		const passwordOk = verifyAdminPassword(password);
-
-		console.log(
-			`[Admin Verify] Results: username=${usernameOk}, password=${passwordOk}`,
-		);
 
 		if (usernameOk && passwordOk) {
 			await clearFailures(clientKey);
@@ -116,6 +125,21 @@ export async function POST({ request }) {
 		});
 		const failHeaders = new Headers({ "Content-Type": "application/json" });
 		clearAuthCookie(failHeaders);
+
+		// 本次失败恰好跨过阈值：按 429 返回而非 401。若沿用 401，客户端无法
+		// 得知已被锁定，会把「需要等待」误当成「凭据错误」继续重试。
+		if (lockInfo.locked) {
+			return new Response(
+				JSON.stringify({
+					success: false,
+					message: `尝试过于频繁，请 ${lockInfo.retryAfterSeconds} 秒后重试`,
+				}),
+				{
+					status: 429,
+					headers: retryAfterHeader(failHeaders, lockInfo.retryAfterSeconds),
+				},
+			);
+		}
 
 		return new Response(
 			JSON.stringify({ success: false, message: "用户名或密码错误" }),
