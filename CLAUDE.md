@@ -125,6 +125,31 @@ Icons/LQIP data are generated into `src/constants/` and committed. Regenerate wi
 ## Deployment
 
 - **Vercel** (default, `vercel.json`)
-- **Cloudflare Workers** (`wrangler.jsonc`, set `CF_WORKERS` env var)
+- **Node standalone** (`astro.config.mjs` default branch) for self-hosting
 - Static output to `dist/`
+
+### Cloudflare Workers is wired up but NOT viable — do not "just try" it
+
+`astro.config.mjs` still selects `@astrojs/cloudflare` when `CF_WORKERS` is set, and `wrangler.jsonc` exists. Treat that as legacy, not as a working target. Three independent hard blockers, all measured/verified rather than assumed:
+
+**1. Password hashing exceeds the isolate memory limit.** `src/utils/secret-io.ts` uses `SCRYPT_N = 131072` (2^17), i.e. 128 MiB of scrypt working memory. Cloudflare caps memory at **128 MB per isolate on both Free and Paid — there is no knob to raise it.**
+
+Measured peak process RSS (verified by differencing `maxRSS` across two N values, since `process.resourceUsage().maxRSS` is reported in KB):
+
+| N | scrypt working set | peak RSS |
+|---|---|---|
+| 2^16 | 64 MiB | 124.9 MiB (131 MB) — still over |
+| **2^17 (current)** | 128 MiB | **189.0 MiB (198.6 MB)** — 55% over |
+
+Peak RSS fits roughly `61 MiB + 128 MiB × (N / 2^17)`, which puts the ceiling at N ≈ 2^15.8. Staying under the limit would mean dropping to N = 2^15 — **1/16 the OWASP-recommended cost factor**. Weakening password storage to fit a runtime is backwards; the login path is the last place to trade security for platform fit.
+
+**2. CPU budget.** A single scrypt call measures ~484 ms. Workers Free allows **10 ms** of CPU per request (48x over). Only the Paid plan's 30 s default survives, so Free is out even for static assets.
+
+**3. Storage has no Cloudflare adapter.** `src/utils/persist-store.ts` selects its KV backend solely from `KV_REST_API_URL` + `KV_REST_API_TOKEN` (Upstash/Vercel KV REST protocol). Cloudflare's own KV is a different API (`env.BINDING.get/put`) with no binding in `wrangler.jsonc`. Supporting it means writing a third backend plus tests, and the admin session table and `login-guard` lockout state both depend on this layer.
+
+Note that this is not "Workers can't host an Astro blog." The reference project `E:\flare-stack-blog` does run there because it uses better-auth, whose hashing parameters are the library's own and whose request path is built on Cloudflare primitives (Durable Objects rate limiting, `c.env` for data). Our auth path deliberately uses Node-native capabilities — `node:crypto` scrypt, large memory, `node:fs` — so moving hosts means redesigning that path, not changing config.
+
+**If you only want edge delivery**, put static assets (images, Pagefind index) on Cloudflare Pages/R2 and leave the SSR/admin backend where it is. That touches no authentication code.
+
+Revisit only if there is concrete pressure (Vercel pricing, regional latency, reachability) — and re-measure before assuming a fix landed.
 
