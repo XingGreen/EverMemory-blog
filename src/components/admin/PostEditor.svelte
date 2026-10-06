@@ -931,7 +931,7 @@ $effect(() => {
 	.btn-save {
 		background: var(--primary);
 		color: var(--primary-foreground);
-		border-radius: var(--radius-large);
+		border-radius: 0.625rem;
 		box-shadow: var(--shadow-button);
 	}
 
