@@ -6,8 +6,10 @@
  *   - 本文件只用两者同名共享的变量,同一 class 在前后台渲染出同一形状
  * 约定:新增基础控件先查这里,有则复用,没有就补在这里 ——
  *       不允许在组件里另起炉灶再写一套搜索框/输入框/下拉。
- * 规格(与参考项目 flare-stack-blog 对齐):控件高 44px、圆角 10px、
- * 边框 1px line-divider、底 --btn-regular-bg、聚焦主色边框 + 3px 主色 ring。
+ * 规格(与参考项目 flare-stack-blog 对齐):控件高 44px、圆角 10px、边框 1px
+ * --input-border;背景分两类 —— 搜索栏为 page-bg 25% + card-bg 混合
+ * (参考 post-list-search 的内嵌观感),输入框/下拉为 --input-bg;
+ * 聚焦换主色边框,搜索栏再叠 2px --btn-regular-bg 外圈(参考项目 focus-within)。
  */
 
 /* ── 搜索栏(容器) ── */
@@ -17,7 +19,9 @@
 	gap: 0.5rem;
 	height: 44px;
 	padding: 0 0.625rem 0 0.875rem;
-	background: var(--btn-regular-bg);
+	/* 搜索栏底 = 页面底 25% + 卡片底 75%(参考 flare post-list-search):
+	   比卡片略沉、比按钮柔和,呈「内嵌搜索槽」而非按钮观感 */
+	background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
 	border: 1px solid var(--line-divider);
 	border-radius: 10px;
 	transition:
@@ -26,18 +30,10 @@
 		background-color 0.15s;
 }
 
-.ui-search:hover {
-	border-color: var(--line-color);
-	background: var(--btn-regular-bg-hover);
-}
-
 .ui-search:focus-within {
 	border-color: var(--primary);
-	box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 12%, transparent);
-}
-
-.ui-search:focus-within .ui-search-icon {
-	color: var(--primary);
+	/* 参考 flare:外圈用按钮底色而非主色透明 ring,聚焦反馈柔和不抢戏 */
+	box-shadow: 0 0 0 2px var(--btn-regular-bg);
 }
 
 .ui-search-icon {
@@ -98,13 +94,15 @@
 	outline-offset: 1px;
 }
 
-/* ── 文本输入框 ── */
+/* ── 文本输入框 ──
+   底/边框用专用输入 token(--input-bg / --input-border,与 flare --fuwari-input-* 同值:
+   亮色黑 7%/10%、暗色白 5%/10% 的透明叠加),与按钮底区分 */
 .ui-input {
 	width: 100%;
 	height: 44px;
 	padding: 0 0.75rem;
-	background: var(--btn-regular-bg);
-	border: 1px solid var(--line-divider);
+	background: var(--input-bg);
+	border: 1px solid var(--input-border);
 	border-radius: 10px;
 	font-family: inherit;
 	font-size: 0.9375rem;
@@ -123,15 +121,9 @@ textarea.ui-input {
 	line-height: 1.5;
 }
 
-.ui-input:hover {
-	border-color: var(--line-color);
-	background: var(--btn-regular-bg-hover);
-}
-
 .ui-input:focus {
 	outline: none;
 	border-color: var(--primary);
-	box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 12%, transparent);
 }
 
 .ui-input::placeholder {
@@ -156,8 +148,8 @@ textarea.ui-input {
 	height: 44px;
 	min-width: 130px;
 	padding: 0 2rem 0 0.875rem;
-	background-color: var(--btn-regular-bg);
-	border: 1px solid var(--line-divider);
+	background-color: var(--input-bg);
+	border: 1px solid var(--input-border);
 	border-radius: 10px;
 	font-family: inherit;
 	font-size: 0.875rem;
@@ -176,15 +168,9 @@ textarea.ui-input {
 		background-color 0.15s;
 }
 
-.ui-select:hover:not(:disabled) {
-	border-color: var(--line-color);
-	background: var(--btn-regular-bg-hover);
-}
-
 .ui-select:focus {
 	outline: none;
 	border-color: var(--primary);
-	box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 12%, transparent);
 }
 
 .ui-select:disabled {

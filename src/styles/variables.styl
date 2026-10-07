@@ -32,6 +32,11 @@
   --line-color: rgba(0, 0, 0, 0.1)
   --meta-divider: rgba(0, 0, 0, 0.2)
   --content-meta: rgba(0, 0, 0, 0.7)
+
+  /* 输入控件专用底/边框(与 flare --fuwari-input-bg / --fuwari-input-border 同值):
+     透明叠加而非实色,随所在表面自然取色;与按钮底(--btn-regular-bg)区分 */
+  --input-bg: rgba(0, 0, 0, 0.07)
+  --input-border: rgba(0, 0, 0, 0.1)
   
   --inline-code-bg: var(--btn-regular-bg)
   --inline-code-color: var(--btn-content)
@@ -110,6 +115,10 @@
   --line-color: rgba(255, 255, 255, 0.1)
   --meta-divider: rgba(255, 255, 255, 0.2)
   --content-meta: rgba(255, 255, 255, 0.6)
+
+  /* 输入控件专用底/边框:暗色下白 5%/10% 透明叠加(同 flare) */
+  --input-bg: rgba(255, 255, 255, 0.05)
+  --input-border: rgba(255, 255, 255, 0.1)
 
   /* 暗色下黑色投影落在深底上几乎不可见,整体加深以保证层级感;
      sm/md 同时是后台 --shadow-card / --shadow-card-hover 的取值来源,

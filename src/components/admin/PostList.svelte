@@ -550,7 +550,7 @@ function actionLabel(action: string, title: string): string {
 								<div class="title-row">
 									<span class="pin-wrap" aria-hidden={!post.pinned}>
 										{#if post.pinned}
-											<Icon icon="material-symbols:vertical-align-top" class="pin-icon" />
+											<Icon icon="material-symbols:push-pin" class="pin-icon" />
 											<span class="sr-only">{i18n(I18nKey.postPinned)}</span>
 										{/if}
 									</span>
@@ -713,15 +713,11 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.search-bar {
-		/* ui-base 提供 .ui-search 基础形状（44px / 10px / --btn-regular-bg / focus ring），
-		   这里只保留后台特有的宽度展开动画：失焦窄、聚焦/输入时放宽 flex-basis */
-		flex: 0 1 200px;
-		min-width: 140px;
-		transition: flex-basis 0.2s;
-	}
-
-	.search-bar:focus-within {
-		flex-basis: 280px;
+		/* 放弃失焦/聚焦的宽度伸缩,改为固定宽度:
+		   对齐参考项目 post-list-search 的默认宽度
+		   (390 × admin-unit,即约 27.3vw、上限 585px) */
+		flex: 0 1 auto;
+		width: min(calc(390 * clamp(1px, 0.07vw, 1.5px)), 100%);
 	}
 
 	/* 页头：标题 + 副标题 + 主操作（对齐参考项目 .post-list-heading）
@@ -863,7 +859,10 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.select-wrap .ui-select {
-		/* 形状由 ui-base 的 .ui-select 提供,这里只保留后台的宽度约束 */
+		/* 形状由 ui-base 的 .ui-select 提供,这里只保留后台的宽度约束;
+		   底色换卡片底 —— 筛选项是「浮在卡片上」的触发器,
+		   对齐参考项目 post-list-sort-trigger 的 --fuwari-card-bg */
+		background-color: var(--card-bg);
 		min-width: 130px;
 		max-width: 220px;
 	}
@@ -994,6 +993,13 @@ function actionLabel(action: string, title: string): string {
 		gap: 0.25rem;
 	}
 
+	/* 表头「标题」右移 2rem：与行内标题竖线对齐
+	   （置顶图标槽 1.25rem + title-row gap 0.75rem），
+	   参考项目 title-link 与表头同起点 */
+	.header-row .col-title {
+		padding-left: 2rem;
+	}
+
 	/* 当前排序列给出方向箭头，aria-sort 之外的视觉冗余，
 	   避免「只靠颜色/语义」传达排序状态 */
 	.header-row [aria-sort="ascending"]::after {
@@ -1067,20 +1073,25 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	/* 置顶图标固定 20px 槽位，无置顶的行也占位：行标题起点一致，
-	   同时把标题向右让开，表头「标题」保持最左，两层自然错开。 */
+	   同时把标题向右让开，表头「标题」保持最左，两层自然错开。
+	   高度取首行标题行高（1.0625rem × line-height 1.5），图标在框内
+	   垂直居中 —— 与旁边标题文字同轴，而不是压在行顶。 */
 	.pin-wrap {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		width: 20px;
+		height: calc(1.0625rem * 1.5);
 		flex-shrink: 0;
-		padding-top: 2px;
 	}
 
+	/* 置顶图标：实心大头针（对齐参考项目 lucide Pin），
+	   颜色沿用莫奈色板天空蓝（压深保证非文本对比 ≥3:1） */
 	:global(.pin-icon) {
-		font-size: 1rem;
+		font-size: 1.125rem;
 		color: var(--monet-sky);
 		flex-shrink: 0;
+		line-height: 1;
 	}
 
 	/* 标题是列表的视觉锚点：加大加粗，并用 on-surface（暗色下接近纯白），
@@ -1290,6 +1301,11 @@ function actionLabel(action: string, title: string): string {
 	@media (max-width: 860px) {
 		.toolbar {
 			flex-wrap: wrap;
+		}
+
+		/* 窄屏下搜索栏占满整行（参考项目 620px 断点的 width:100%） */
+		.search-bar {
+			width: 100%;
 		}
 
 		/* 窄屏下 tab 不被压扁，超出部分横向滚动 */
