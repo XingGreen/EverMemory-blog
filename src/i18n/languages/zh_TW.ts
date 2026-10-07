@@ -519,7 +519,6 @@ export const zh_TW: Translation = {
 	[Key.postStatusFilterGroup]: "依發布狀態篩選",
 	[Key.postTableLabel]: "文章列表",
 	[Key.postActionLabel]: "{action}：{title}",
-	[Key.postMoreTags]: "另有 {count} 個標籤",
 	[Key.postResultCount]: "篩選後共 {count} 篇文章",
 	[Key.postSortAsc]: "升序排列",
 	[Key.postSortDesc]: "降序排列",

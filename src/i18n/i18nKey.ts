@@ -517,7 +517,6 @@ enum I18nKey {
 	postStatusFilterGroup = "postStatusFilterGroup",
 	postTableLabel = "postTableLabel",
 	postActionLabel = "postActionLabel",
-	postMoreTags = "postMoreTags",
 	postResultCount = "postResultCount",
 	postSortAsc = "postSortAsc",
 	postSortDesc = "postSortDesc",

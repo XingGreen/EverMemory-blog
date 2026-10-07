@@ -532,7 +532,6 @@ export const en: Translation = {
 	[Key.postStatusFilterGroup]: "Filter by publishing status",
 	[Key.postTableLabel]: "Post list",
 	[Key.postActionLabel]: "{action}: {title}",
-	[Key.postMoreTags]: "{count} more tags",
 	[Key.postResultCount]: "{count} posts after filtering",
 	[Key.postSortAsc]: "sorted ascending",
 	[Key.postSortDesc]: "sorted descending",

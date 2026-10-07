@@ -66,12 +66,12 @@ let filtersReady = $state(false);
 
 /** 骨架行：列结构与真实行一致，只占位、不填充，加载完成后行高不变 */
 const SKELETON_ROWS = [
-	{ titleWidth: "78%", tags: true },
-	{ titleWidth: "52%", tags: false },
-	{ titleWidth: "66%", tags: true },
-	{ titleWidth: "84%", tags: false },
-	{ titleWidth: "44%", tags: true },
-	{ titleWidth: "70%", tags: false },
+	{ titleWidth: "78%", intro: true },
+	{ titleWidth: "52%", intro: false },
+	{ titleWidth: "66%", intro: true },
+	{ titleWidth: "84%", intro: false },
+	{ titleWidth: "44%", intro: true },
+	{ titleWidth: "70%", intro: false },
 ];
 
 const categories = $derived.by(() =>
@@ -520,14 +520,14 @@ function actionLabel(action: string, title: string): string {
 							<div class="col col-title" role="cell">
 								<div class="title-cell">
 									<div class="title-row">
-										<span class="sk sk-title" style:width={row.titleWidth}></span>
-									</div>
-									{#if row.tags}
-										<div class="tags">
-											<span class="sk sk-tag"></span>
-											<span class="sk sk-tag short"></span>
+										<span class="pin-wrap" aria-hidden="true"></span>
+										<div class="title-main">
+											<span class="sk sk-title" style:width={row.titleWidth}></span>
+											{#if row.intro}
+												<span class="sk sk-intro"></span>
+											{/if}
 										</div>
-									{/if}
+									</div>
 								</div>
 							</div>
 							<div class="col col-author" role="cell"><span class="sk sk-line"></span></div>
@@ -559,23 +559,13 @@ function actionLabel(action: string, title: string): string {
 											<span class="sr-only">{i18n(I18nKey.postPinned)}</span>
 										{/if}
 									</span>
-									<span class="title" title={post.title}>{post.title}</span>
-								</div>
-								{#if post.tags && post.tags.length > 0}
-									<div class="tags">
-										{#each post.tags.slice(0, 3) as tag}
-											<span class="tag">#{tag}</span>
-										{/each}
-										{#if post.tags.length > 3}
-											<span
-												class="tag-more"
-												aria-label={i18n(I18nKey.postMoreTags).replace("{count}", String(post.tags.length - 3))}
-											>
-												+{post.tags.length - 3}
-											</span>
+									<div class="title-main">
+										<span class="title" title={post.title}>{post.title}</span>
+										{#if post.description}
+											<span class="intro" title={post.description}>{post.description}</span>
 										{/if}
 									</div>
-								{/if}
+								</div>
 							</div>
 						</div>
 
@@ -715,7 +705,8 @@ function actionLabel(action: string, title: string): string {
 		align-items: center;
 		gap: var(--md-control-gap);
 		flex-wrap: wrap;
-		margin-bottom: 0.75rem;
+		/* 表头上方留白对齐参考项目 controls 底部 23px（flare post-manager） */
+		margin-bottom: 1.4375rem;
 	}
 
 	.toolbar-fields {
@@ -928,7 +919,8 @@ function actionLabel(action: string, title: string): string {
 		align-items: center;
 		gap: 2rem;
 		border-bottom: 1px solid var(--md-outline);
-		margin-bottom: 0.75rem;
+		/* 与工具栏间距对齐参考项目 controls 顶部 26px（flare post-manager） */
+		margin-bottom: 1.625rem;
 	}
 
 	.chip {
@@ -1073,14 +1065,10 @@ function actionLabel(action: string, title: string): string {
 		height: 20px;
 	}
 
-	.sk-tag {
-		width: 48px;
-		height: 14px;
+	.sk-intro {
+		width: 55%;
+		height: 12px;
 		border-radius: 4px;
-	}
-
-	.sk-tag.short {
-		width: 32px;
 	}
 
 	.sk-line {
@@ -1207,7 +1195,8 @@ function actionLabel(action: string, title: string): string {
 		grid-template-columns: 2.9fr 0.9fr 0.9fr 1.1fr 0.9fr 1.2fr;
 		align-items: center;
 		height: 44px;
-		padding: 0 1rem;
+		/* 左缘对齐容器内容起点（= 搜索栏左部）：表头「标题」贴齐搜索栏 */
+		padding: 0 1rem 0 0;
 		position: sticky;
 		top: 0;
 		z-index: 2;
@@ -1219,7 +1208,7 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.header-row .col {
-		padding: 0 0.25rem;
+		padding: 0;
 		display: flex;
 		align-items: center;
 		gap: 0.25rem;
@@ -1326,31 +1315,22 @@ function actionLabel(action: string, title: string): string {
 		white-space: nowrap;
 	}
 
-	.tags {
+	/* 标题主区：标题 + 简介同一左缘（都从置顶图标槽之后开始），
+	   简介 12px 灰字、单行省略，对齐参考项目 title-link 的第二行。 */
+	.title-main {
 		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-		align-items: baseline;
+		flex-direction: column;
+		gap: 0.25rem;
+		min-width: 0;
 	}
 
-	/* 标签退为灰色纯文本（#tag），去掉背景色块、圆角与内边距：
-	   多色方块在一屏内互相竞争注意力，弱化后标题层级才立得住。
-	   颜色沿用 on-surface-variant（不再额外压暗）——标签已是 12px 小字，
-	   继续压到 4.5:1 以下会牺牲可读性，弱化交给「去色块 + 缩小」即可。 */
-	.tag {
+	.intro {
 		font-size: 0.75rem;
 		font-weight: 400;
 		color: var(--md-on-surface-variant);
-		letter-spacing: 0.01em;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-	}
-
-	.tag-more {
-		font-size: 0.75rem;
-		color: var(--md-on-surface-variant);
-		align-self: center;
 	}
 
 	/* 元信息文本（作者/分类/日期）

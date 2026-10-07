@@ -533,7 +533,6 @@ export const ru: Translation = {
 	[Key.postStatusFilterGroup]: "Фильтр по статусу публикации",
 	[Key.postTableLabel]: "Список статей",
 	[Key.postActionLabel]: "{action}: {title}",
-	[Key.postMoreTags]: "ещё {count} тегов",
 	[Key.postResultCount]: "после фильтра {count} статей",
 	[Key.postSortAsc]: "сортировка по возрастанию",
 	[Key.postSortDesc]: "сортировка по убыванию",

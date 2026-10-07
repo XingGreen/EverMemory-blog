@@ -514,7 +514,6 @@ export const zaku: Translation = {
 	[Key.postStatusFilterGroup]: "按发布状态筛选",
 	[Key.postTableLabel]: "文章列表",
 	[Key.postActionLabel]: "{action}：{title}",
-	[Key.postMoreTags]: "另有 {count} 个标签",
 	[Key.postResultCount]: "筛选后共 {count} 篇文章",
 	[Key.postSortAsc]: "升序排列",
 	[Key.postSortDesc]: "降序排列",

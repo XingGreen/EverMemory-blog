@@ -529,7 +529,6 @@ export const ja: Translation = {
 	[Key.postStatusFilterGroup]: "公開状態で絞り込み",
 	[Key.postTableLabel]: "記事一覧",
 	[Key.postActionLabel]: "{action}：{title}",
-	[Key.postMoreTags]: "ほか {count} 個のタグ",
 	[Key.postResultCount]: "絞り込み後 {count} 件の記事",
 	[Key.postSortAsc]: "昇順で並べ替え",
 	[Key.postSortDesc]: "降順で並べ替え",
