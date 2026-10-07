@@ -483,8 +483,6 @@ enum I18nKey {
 
 	// 控制面板
 	dashboardWelcome = "dashboardWelcome",
-	dashboardHomeDesc = "dashboardHomeDesc",
-	postsManageDesc = "postsManageDesc",
 
 	// 文章列表
 	postSearchPlaceholder = "postSearchPlaceholder",
@@ -594,7 +592,6 @@ enum I18nKey {
 
 	// 网站配置
 	settingsOverviewDesc = "settingsOverviewDesc",
-	settingsSelectHint = "settingsSelectHint",
 	configReload = "configReload",
 	configSave = "configSave",
 	configSaving = "configSaving",
@@ -668,7 +665,6 @@ enum I18nKey {
 
 	// 密钥配置
 	adminSecrets = "adminSecrets",
-	adminSecretsDesc = "adminSecretsDesc",
 
 	// 会话管理
 	adminSessions = "adminSessions",

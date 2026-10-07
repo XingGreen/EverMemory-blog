@@ -484,9 +484,6 @@ export const zh_CN: Translation = {
 	[Key.errorFillRequired]: "请填写: {fields}",
 
 	[Key.dashboardWelcome]: "博客数据概览",
-	[Key.dashboardHomeDesc]:
-		"欢迎回来，这里是博客控制面板。功能建设中，敬请期待。",
-	[Key.postsManageDesc]: "管理你的博客文章",
 
 	[Key.postSearchPlaceholder]: "搜索文章...",
 	[Key.postSearchClear]: "清除",
@@ -594,7 +591,6 @@ export const zh_CN: Translation = {
 
 	[Key.settingsOverviewDesc]:
 		"选择下方配置项进行在线编辑，保存后写入对应配置文件并自动同步到 GitHub。",
-	[Key.settingsSelectHint]: "选择配置项进行在线编辑",
 	[Key.configReload]: "重新加载",
 	[Key.configSave]: "保存配置",
 	[Key.configSaving]: "保存中…",
@@ -693,7 +689,6 @@ export const zh_CN: Translation = {
 	[Key.cloudDraftSyncing]: "正在同步…",
 	[Key.cloudDraftFailed]: "云端同步失败",
 	[Key.cloudDraftRetry]: "重试",
-	[Key.adminSecretsDesc]: "管理 GitHub App 凭据与管理员认证密钥等环境变量",
 	[Key.secretsGroupGithub]: "GitHub App 凭据",
 	[Key.secretsGroupAuth]: "管理员认证",
 	[Key.secretsConfigured]: "已配置",

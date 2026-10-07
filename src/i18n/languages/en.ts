@@ -499,9 +499,6 @@ export const en: Translation = {
 	[Key.errorFillRequired]: "Please fill in: {fields}",
 
 	[Key.dashboardWelcome]: "Blog Statistics Overview",
-	[Key.dashboardHomeDesc]:
-		"Welcome back! This is the blog dashboard. Features are under construction, stay tuned.",
-	[Key.postsManageDesc]: "Manage your blog posts",
 
 	[Key.postSearchPlaceholder]: "Search posts...",
 	[Key.postSearchClear]: "Clear",
@@ -615,7 +612,6 @@ export const en: Translation = {
 
 	[Key.settingsOverviewDesc]:
 		"Select a configuration item below to edit online. Once saved, it will be written to the corresponding config file and automatically synced to GitHub.",
-	[Key.settingsSelectHint]: "Select a configuration item to edit online",
 	[Key.configReload]: "Reload",
 	[Key.configSave]: "Save Configuration",
 	[Key.configSaving]: "Saving...",
@@ -721,8 +717,6 @@ export const en: Translation = {
 	[Key.cloudDraftSyncing]: "Syncing...",
 	[Key.cloudDraftFailed]: "Cloud sync failed",
 	[Key.cloudDraftRetry]: "Retry",
-	[Key.adminSecretsDesc]:
-		"Manage environment secrets: GitHub App credentials and admin auth keys",
 	[Key.secretsGroupGithub]: "GitHub App Credentials",
 	[Key.secretsGroupAuth]: "Admin Authentication",
 	[Key.secretsConfigured]: "Configured",

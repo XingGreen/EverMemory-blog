@@ -12,6 +12,9 @@ let {
 	onEdit,
 	onDelete,
 	onRefresh,
+	onCreate,
+	onSync,
+	isSyncing = false,
 }: {
 	posts: any[];
 	isLoading: boolean;
@@ -19,6 +22,9 @@ let {
 	onEdit: (post: any) => void;
 	onDelete: (post: any, trigger?: HTMLElement | null) => void;
 	onRefresh: () => void;
+	onCreate: () => void;
+	onSync?: () => void;
+	isSyncing?: boolean;
 } = $props();
 
 type SortKey = "updated" | "newest" | "oldest" | "titleAsc" | "titleDesc";
@@ -330,6 +336,28 @@ function actionLabel(action: string, title: string): string {
 </script>
 
 <div class="md3-list-container card-base">
+	<!-- 页头：标题 + 主操作（对齐参考项目 post-list-heading，桌面端不再有全局 header） -->
+	<div class="post-list-heading">
+		<h2 class="heading-title">{i18n(I18nKey.adminPosts)}</h2>
+		<div class="heading-actions">
+			{#if onSync}
+				<button
+					class="icon-text-btn"
+					onclick={onSync}
+					disabled={isLoading || isSyncing}
+					aria-label={i18n(I18nKey.postSyncNow)}
+				>
+					<Icon icon="material-symbols:cloud" />
+					{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}
+				</button>
+			{/if}
+			<button class="filled-btn" onclick={onCreate}>
+				<Icon icon="material-symbols:edit-calendar-outline-rounded" />
+				{i18n(I18nKey.adminNewPost)}
+			</button>
+		</div>
+	</div>
+
 	<!-- 状态筛选（第一行，对齐参考项目 post-list-tabs） -->
 	<div class="filter-chips" role="group" aria-label={i18n(I18nKey.postStatusFilterGroup)}>
 		<button
@@ -787,6 +815,62 @@ function actionLabel(action: string, title: string): string {
 	.trailing-icon-btn:focus-visible {
 		outline: 2px solid var(--md-primary-text);
 		outline-offset: -2px;
+	}
+
+	/* 页头：标题 + 主操作（对齐参考项目 .post-list-heading，替代全局 header） */
+	.post-list-heading {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.heading-title {
+		margin: 0;
+		font-size: 1.125rem;
+		font-weight: 600;
+		color: var(--md-on-surface);
+	}
+
+	.heading-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-shrink: 0;
+	}
+
+	.icon-text-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.375rem;
+		height: var(--md-control-h);
+		padding: 0 1rem;
+		border: none;
+		border-radius: var(--md-control-r);
+		background: transparent;
+		color: var(--md-primary-text);
+		font-size: 0.875rem;
+		font-weight: 500;
+		font-family: inherit;
+		cursor: pointer;
+		white-space: nowrap;
+		transition: background 0.15s;
+	}
+
+	.icon-text-btn:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--primary) 8%, transparent);
+	}
+
+	.icon-text-btn:focus-visible {
+		outline: 2px solid var(--md-primary-text);
+		outline-offset: -2px;
+	}
+
+	.icon-text-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	/* 状态筛选（第一行）：文字下划线 tab，对齐参考项目 post-list-tabs。

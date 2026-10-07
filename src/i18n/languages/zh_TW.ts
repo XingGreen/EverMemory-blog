@@ -486,9 +486,6 @@ export const zh_TW: Translation = {
 	[Key.errorFillRequired]: "請填寫: {fields}",
 
 	[Key.dashboardWelcome]: "部落格數據總覽",
-	[Key.dashboardHomeDesc]:
-		"歡迎回來，這裡是部落格控制面板。功能開發中，敬請期待。",
-	[Key.postsManageDesc]: "管理你的部落格文章",
 
 	[Key.postSearchPlaceholder]: "搜尋文章...",
 	[Key.postSearchClear]: "清除",
@@ -596,7 +593,6 @@ export const zh_TW: Translation = {
 
 	[Key.settingsOverviewDesc]:
 		"選擇下方設定項進行線上編輯，儲存後寫入對應設定檔並自動同步到 GitHub。",
-	[Key.settingsSelectHint]: "選擇設定項進行線上編輯",
 	[Key.configReload]: "重新載入",
 	[Key.configSave]: "儲存設定",
 	[Key.configSaving]: "儲存中…",
@@ -695,7 +691,6 @@ export const zh_TW: Translation = {
 	[Key.cloudDraftSyncing]: "正在同步…",
 	[Key.cloudDraftFailed]: "雲端同步失敗",
 	[Key.cloudDraftRetry]: "重試",
-	[Key.adminSecretsDesc]: "管理 GitHub App 憑證與管理員認證密鑰等環境變數",
 	[Key.secretsGroupGithub]: "GitHub App 憑證",
 	[Key.secretsGroupAuth]: "管理員認證",
 	[Key.secretsConfigured]: "已設定",

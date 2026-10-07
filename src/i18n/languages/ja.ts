@@ -496,9 +496,6 @@ export const ja: Translation = {
 	[Key.errorFillRequired]: "入力してください: {fields}",
 
 	[Key.dashboardWelcome]: "ブログデータ概要",
-	[Key.dashboardHomeDesc]:
-		"おかえりなさい。こちらはブログのコントロールパネルです。機能は現在構築中です。お楽しみに。",
-	[Key.postsManageDesc]: "ブログの記事を管理します",
 
 	[Key.postSearchPlaceholder]: "記事を検索...",
 	[Key.postSearchClear]: "クリア",
@@ -609,7 +606,6 @@ export const ja: Translation = {
 
 	[Key.settingsOverviewDesc]:
 		"下の設定項目を選択してオンライン編集し、保存すると対応する設定ファイルへ書き込まれ、GitHub に自動同期されます。",
-	[Key.settingsSelectHint]: "設定項目を選択してオンライン編集",
 	[Key.configReload]: "再読み込み",
 	[Key.configSave]: "設定を保存",
 	[Key.configSaving]: "保存中…",
@@ -715,8 +711,6 @@ export const ja: Translation = {
 	[Key.cloudDraftSyncing]: "同期中…",
 	[Key.cloudDraftFailed]: "クラウド同期に失敗",
 	[Key.cloudDraftRetry]: "再試行",
-	[Key.adminSecretsDesc]:
-		"GitHub App 認証情報と管理者認証キーなどの環境変数を管理",
 	[Key.secretsGroupGithub]: "GitHub App 認証情報",
 	[Key.secretsGroupAuth]: "管理者認証",
 	[Key.secretsConfigured]: "設定済み",
