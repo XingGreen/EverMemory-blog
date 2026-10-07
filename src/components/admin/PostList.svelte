@@ -475,7 +475,6 @@ function actionLabel(action: string, title: string): string {
 			<div class="col col-title" role="columnheader" aria-sort={ariaSortFor("title")}>
 				{i18n(I18nKey.postColTitle)}
 			</div>
-			<div class="col col-author" role="columnheader">{i18n(I18nKey.postColAuthor)}</div>
 			<div class="col col-category" role="columnheader">{i18n(I18nKey.postColCategory)}</div>
 			<div class="col col-date" role="columnheader" aria-sort={ariaSortFor("date")}>
 				{dateColLabel}
@@ -530,7 +529,6 @@ function actionLabel(action: string, title: string): string {
 									</div>
 								</div>
 							</div>
-							<div class="col col-author" role="cell"><span class="sk sk-line"></span></div>
 							<div class="col col-category" role="cell"><span class="sk sk-line short"></span></div>
 							<div class="col col-date" role="cell"><span class="sk sk-line"></span></div>
 							<div class="col col-status" role="cell"><span class="sk sk-chip"></span></div>
@@ -555,23 +553,23 @@ function actionLabel(action: string, title: string): string {
 								<div class="title-row">
 									<span class="pin-wrap" aria-hidden={!post.pinned}>
 										{#if post.pinned}
-											<Icon icon="material-symbols:push-pin" class="pin-icon" />
+											<Icon icon="material-symbols:push-pin-outline" class="pin-icon" />
 											<span class="sr-only">{i18n(I18nKey.postPinned)}</span>
 										{/if}
 									</span>
 									<div class="title-main">
-										<span class="title" title={post.title}>{post.title}</span>
-										{#if post.description}
-											<span class="intro" title={post.description}>{post.description}</span>
-										{/if}
+										<span class="title-line">
+											<span class="title" title={post.title}>{post.title}</span>
+											{#if post.password}
+												<Icon icon="material-symbols:lock-outline" class="lock-icon" />
+											{/if}
+										</span>
+										<span class="intro" title={post.description || post.slug}>
+											{post.description || post.slug}
+										</span>
 									</div>
 								</div>
 							</div>
-						</div>
-
-						<!-- 作者 -->
-						<div class="col col-author" role="cell" data-label={i18n(I18nKey.postColAuthor)}>
-							<span class="text-meta" title={post.author || ""}>{post.author || "—"}</span>
 						</div>
 
 						<!-- 分类 -->
@@ -1192,7 +1190,7 @@ function actionLabel(action: string, title: string): string {
 	   背景用 --card-bg 实底，吸顶时遮住下方滚动内容。 */
 	.header-row {
 		display: grid;
-		grid-template-columns: 2.9fr 0.9fr 0.9fr 1.1fr 0.9fr 1.2fr;
+		grid-template-columns: 2.9fr 0.9fr 1.1fr 0.9fr 1.2fr;
 		align-items: center;
 		height: 44px;
 		/* 左缘对齐容器内容起点（= 搜索栏左部）：表头「标题」贴齐搜索栏 */
@@ -1236,7 +1234,7 @@ function actionLabel(action: string, title: string): string {
 	   悬停高亮保留，分隔线不随行变色是正常现象（参考项目同样如此）。 */
 	.list-item {
 		display: grid;
-		grid-template-columns: 2.9fr 0.9fr 0.9fr 1.1fr 0.9fr 1.2fr;
+		grid-template-columns: 2.9fr 0.9fr 1.1fr 0.9fr 1.2fr;
 		align-items: center;
 		padding: 0.8125rem 1rem;
 		min-height: 76px;
@@ -1313,6 +1311,7 @@ function actionLabel(action: string, title: string): string {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		min-width: 0;
 	}
 
 	/* 标题主区：标题 + 简介同一左缘（都从置顶图标槽之后开始），
@@ -1322,6 +1321,20 @@ function actionLabel(action: string, title: string): string {
 		flex-direction: column;
 		gap: 0.25rem;
 		min-width: 0;
+	}
+
+	/* 标题行：标题 + 锁图标同排，锁图标紧随文字（空心、蓝色，与置顶一致） */
+	.title-line {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		min-width: 0;
+	}
+
+	:global(.lock-icon) {
+		font-size: 1rem;
+		color: var(--monet-sky);
+		flex-shrink: 0;
 	}
 
 	.intro {

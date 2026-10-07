@@ -501,7 +501,6 @@ export const zaku: Translation = {
 	[Key.postSortTitleAsc]: "标题 A→Z",
 	[Key.postSortTitleDesc]: "标题 Z→A",
 	[Key.postColTitle]: "标题",
-	[Key.postColAuthor]: "作者",
 	[Key.postColCategory]: "分类",
 	[Key.postColDate]: "发布日期",
 	[Key.postColStatus]: "状态",

@@ -519,7 +519,6 @@ export const en: Translation = {
 	[Key.postSortTitleAsc]: "Title A→Z",
 	[Key.postSortTitleDesc]: "Title Z→A",
 	[Key.postColTitle]: "Title",
-	[Key.postColAuthor]: "Author",
 	[Key.postColCategory]: "Category",
 	[Key.postColDate]: "Publish Date",
 	[Key.postColStatus]: "Status",
