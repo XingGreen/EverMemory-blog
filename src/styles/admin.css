@@ -125,6 +125,7 @@
   --meta-divider: rgba(255, 255, 255, 0.2);
   --muted: oklch(0.25 0.015 275);
   --selection-bg: oklch(0.40 0.08 275);
+  /* 与前台暗色 --float-panel-bg(oklch(0.25 0.015))同值,浮层高于卡片一档 */
   --float-panel-bg: oklch(0.25 0.015 275);
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
