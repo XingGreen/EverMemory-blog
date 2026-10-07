@@ -336,23 +336,36 @@ function actionLabel(action: string, title: string): string {
 </script>
 
 <div class="md3-list-container card-base">
-	<!-- 页头：标题 + 主操作（对齐参考项目 post-list-heading，桌面端不再有全局 header） -->
+	<!-- 页头：标题(28px/700) + 副标题(总数) + 主操作（对齐参考项目 post-list-heading，
+	      桌面端不再有全局 header；按钮规格取自 flare fuwari-btn-primary/regular） -->
 	<div class="post-list-heading">
-		<h2 class="heading-title">{i18n(I18nKey.adminPosts)}</h2>
+		<div class="heading-text">
+			<h1 class="heading-title">{i18n(I18nKey.adminPosts)}</h1>
+			<p class="heading-subtitle">
+				{i18n(I18nKey.postListCount).replace("{count}", String(posts.length))}
+				{#if isLoading}
+					<Icon
+						icon="material-symbols:progress-activity"
+						class="heading-spinner"
+						aria-hidden="true"
+					/>
+				{/if}
+			</p>
+		</div>
 		<div class="heading-actions">
 			{#if onSync}
 				<button
-					class="icon-text-btn"
+					class="regular-btn"
 					onclick={onSync}
 					disabled={isLoading || isSyncing}
 					aria-label={i18n(I18nKey.postSyncNow)}
 				>
-					<Icon icon="material-symbols:cloud" />
+					<Icon icon="material-symbols:cloud" class="btn-icon" />
 					{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}
 				</button>
 			{/if}
 			<button class="filled-btn" onclick={onCreate}>
-				<Icon icon="material-symbols:edit-calendar-outline-rounded" />
+				<Icon icon="material-symbols:add" class="btn-icon" />
 				{i18n(I18nKey.adminNewPost)}
 			</button>
 		</div>
@@ -649,21 +662,10 @@ function actionLabel(action: string, title: string): string {
 		--md-on-surface: var(--deep-text);
 		--md-on-surface-variant: var(--content-meta);
 		--md-outline: var(--line-divider);
-		--md-primary: var(--primary);
-		--md-primary-container: color-mix(in srgb, var(--primary) 14%, var(--card-bg));
-
-		/* 表头、选中态 chip 的文字底色是 primary-container（浅紫）而非白底，
-		   --primary 压到该底只有 2.7:1，朝 deep-text 混一档才够 4.5:1。
-		   deep-text 在亮色近黑、暗色近白，同一条式子两端同时修正。 */
-		--md-on-primary-container: color-mix(in srgb, var(--on-primary-container) 85%, var(--deep-text));
 
 		/* primary 直接当文字色只有 2.7:1（暗色 7.4:1 尚可，亮色不达标），
 		   朝 deep-text 混 42% 后亮色 7.4:1、暗色 11.1:1，两端都稳过 AA。 */
 		--md-primary-text: color-mix(in srgb, var(--primary) 42%, var(--deep-text));
-
-		/* filled button 是「primary 底 + on-primary 字」，而本项目 primary 是浅紫，
-		   白字只有 1.6:1，on-primary 必须取深色（亮色 7.2:1、暗色 8.5:1）。 */
-		--md-on-primary: oklch(0.16 0.08 275);
 
 		--md-surface-container-high: color-mix(in srgb, var(--primary) 6%, var(--card-bg));
 		--md-state-layer-hover: color-mix(in srgb, var(--deep-text) 5%, transparent);
@@ -817,20 +819,49 @@ function actionLabel(action: string, title: string): string {
 		outline-offset: -2px;
 	}
 
-	/* 页头：标题 + 主操作（对齐参考项目 .post-list-heading，替代全局 header） */
+	/* 页头：标题 + 副标题 + 主操作（对齐参考项目 .post-list-heading）
+	   标题 28px/700 加大加粗（flare h1 规格），下方 14px 灰字承接总数、加载转圈；
+	   按钮组 align-items:flex-start 与标题首行对齐。 */
 	.post-list-heading {
 		display: flex;
-		align-items: center;
 		justify-content: space-between;
+		align-items: flex-start;
 		gap: 1rem;
-		margin-bottom: 0.75rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.heading-text {
+		min-width: 0;
 	}
 
 	.heading-title {
 		margin: 0;
-		font-size: 1.125rem;
-		font-weight: 600;
-		color: var(--md-on-surface);
+		font-size: 1.75rem;
+		font-weight: 700;
+		line-height: 1.4;
+		letter-spacing: -0.02em;
+		color: var(--deep-text);
+	}
+
+	.heading-subtitle {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0.5rem 0 0;
+		font-size: 0.875rem;
+		color: var(--content-meta);
+	}
+
+	:global(.heading-spinner) {
+		font-size: 1rem;
+		color: inherit;
+		animation: headingSpin 0.9s linear infinite;
+	}
+
+	@keyframes headingSpin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.heading-actions {
@@ -840,35 +871,50 @@ function actionLabel(action: string, title: string): string {
 		flex-shrink: 0;
 	}
 
-	.icon-text-btn {
+	/* 按钮内图标统一 19px、文字左侧（图标先于文字，gap 8px） */
+	:global(.btn-icon) {
+		font-size: 1.1875rem;
+		flex-shrink: 0;
+	}
+
+	/* 同步 = regular 次级按钮：浅紫底 + 紫字，token 与 flare fuwari-btn-regular 同源
+	   （--btn-regular-bg / --btn-content） */
+	.regular-btn {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		gap: 0.375rem;
-		height: var(--md-control-h);
-		padding: 0 1rem;
+		gap: 0.5rem;
+		min-height: 44px;
+		padding: 0 1.25rem;
 		border: none;
-		border-radius: var(--md-control-r);
-		background: transparent;
-		color: var(--md-primary-text);
+		border-radius: 9px;
+		background: var(--btn-regular-bg);
+		color: var(--btn-content);
 		font-size: 0.875rem;
 		font-weight: 500;
 		font-family: inherit;
 		cursor: pointer;
 		white-space: nowrap;
-		transition: background 0.15s;
+		transition:
+			background-color 0.2s,
+			color 0.2s,
+			opacity 0.2s;
 	}
 
-	.icon-text-btn:hover:not(:disabled) {
-		background: color-mix(in srgb, var(--primary) 8%, transparent);
+	.regular-btn:hover:not(:disabled) {
+		background: var(--btn-regular-bg-hover);
 	}
 
-	.icon-text-btn:focus-visible {
-		outline: 2px solid var(--md-primary-text);
-		outline-offset: -2px;
+	.regular-btn:active:not(:disabled) {
+		background: var(--btn-regular-bg-active);
 	}
 
-	.icon-text-btn:disabled {
+	.regular-btn:focus-visible {
+		outline: 2px solid var(--title-active);
+		outline-offset: 2px;
+	}
+
+	.regular-btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
@@ -1077,27 +1123,46 @@ function actionLabel(action: string, title: string): string {
 		}
 	}
 
+	/* 新建 = primary 填充按钮：44px/9px 圆角，亮色白字 / 暗色近黑字，
+	   完全对齐 flare fuwari-btn-primary（dark 下 primary 提亮故文字下沉） */
 	.filled-btn {
-		height: var(--md-control-h);
-		padding: 0 1.5rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		min-height: 44px;
+		padding: 0 1.25rem;
 		border: none;
-		border-radius: var(--md-control-r);
-		background: var(--md-primary);
-		color: var(--md-on-primary);
+		border-radius: 9px;
+		background: var(--primary);
+		color: #fff;
 		font-size: 0.875rem;
 		font-weight: 500;
 		font-family: inherit;
 		cursor: pointer;
-		transition: filter 0.15s;
+		white-space: nowrap;
+		transition:
+			background-color 0.2s,
+			color 0.2s,
+			opacity 0.2s;
 	}
 
-	.filled-btn:hover {
-		filter: brightness(1.08);
+	.filled-btn:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--primary) 88%, #000);
 	}
 
 	.filled-btn:focus-visible {
-		outline: 2px solid var(--md-primary-text);
+		outline: 2px solid var(--title-active);
 		outline-offset: 2px;
+	}
+
+	.filled-btn:disabled {
+		opacity: 0.5;
+		pointer-events: none;
+	}
+
+	:global(.dark) .filled-btn {
+		color: rgb(0 0 0 / 0.75);
 	}
 
 	.text-btn {
