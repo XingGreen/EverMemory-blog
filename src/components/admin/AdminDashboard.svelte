@@ -329,65 +329,21 @@ onMount(async () => {
 	startAdmin();
 });
 
-// 顶部标题随页面联动
-const headerInfo = $derived.by(() => {
-	if (activePage === "dashboard") {
-		return {
-			title: i18n(I18nKey.adminDashboard),
-			subtitle: i18n(I18nKey.dashboardHomeDesc),
-		};
-	}
+// 移动端 TopBar 标题随页面联动（桌面端已无全局 header）
+const headerTitle = $derived.by(() => {
+	if (activePage === "dashboard") return i18n(I18nKey.adminDashboard);
 	if (activePage === "settings") {
 		const item = settingsSection ? getConfigItem(settingsSection) : undefined;
 		return item
-			? {
-					title: i18n(getConfigLabelKey(item.key)),
-					subtitle: i18n(getConfigDescKey(item.key)),
-				}
-			: {
-					title: i18n(I18nKey.adminSettings),
-					subtitle: i18n(I18nKey.settingsSelectHint),
-				};
+			? i18n(getConfigLabelKey(item.key))
+			: i18n(I18nKey.adminSettings);
 	}
-	if (activePage === "secrets") {
-		return {
-			title: i18n(I18nKey.adminSecrets),
-			subtitle: i18n(I18nKey.adminSecretsDesc),
-		};
-	}
-	if (activePage === "sessions") {
-		return {
-			title: i18n(I18nKey.adminSessions),
-			subtitle: i18n(I18nKey.adminSessionsDesc),
-		};
-	}
-	if (viewMode === "edit" && editingPost) {
-		return { title: i18n(I18nKey.adminEditPost), subtitle: editingPost.title };
-	}
-	if (viewMode === "create") {
-		return {
-			title: i18n(I18nKey.adminNewPost),
-			subtitle: i18n(I18nKey.postsManageDesc),
-		};
-	}
-	return {
-		title: i18n(I18nKey.adminPosts),
-		subtitle: i18n(I18nKey.postsManageDesc),
-	};
+	if (activePage === "secrets") return i18n(I18nKey.adminSecrets);
+	if (activePage === "sessions") return i18n(I18nKey.adminSessions);
+	if (viewMode === "edit" && editingPost) return i18n(I18nKey.adminEditPost);
+	if (viewMode === "create") return i18n(I18nKey.adminNewPost);
+	return i18n(I18nKey.adminPosts);
 });
-
-const headerIcon = $derived(
-	activePage === "dashboard"
-		? "material-symbols:home-outline-rounded"
-		: activePage === "settings"
-			? (settingsSection && getConfigItem(settingsSection)?.icon) ||
-				"material-symbols:settings"
-			: activePage === "secrets"
-				? "material-symbols:shield-lock"
-				: activePage === "sessions"
-					? "material-symbols:devices"
-					: "material-symbols:article-outline",
-);
 
 async function loadPosts() {
 	isLoading = true;
@@ -1538,60 +1494,11 @@ function formatDate(dateStr: string | null): string {
 
 		<!-- 主内容区 -->
 		<div class="admin-main">
-			<div class="card-base admin-header">
-				<div class="header-content">
-					<button class="menu-toggle" onclick={() => (isSidebarOpen = true)} aria-label="打开菜单">
-						<Icon icon="material-symbols:menu-rounded" />
-					</button>
-					<div class="header-title">
-						<div class="title-icon">
-							<Icon icon={headerIcon} class="text-xl" />
-						</div>
-						<div class="title-text">
-							<h1>{headerInfo.title}</h1>
-							<span class="subtitle">{headerInfo.subtitle}</span>
-						</div>
-					</div>
-				</div>
-				<div class="header-actions">
-				{#if activePage === "settings" && !settingsSection}
-						<div class="search-box" class:focused={settingsSearchTerm.length > 0}>
-							<Icon icon="material-symbols:search" class="search-icon" size="lg" />
-							<input
-								type="text"
-								bind:value={settingsSearchTerm}
-								placeholder="{i18n(I18nKey.search)}..."
-								class="search-input"
-								aria-label={i18n(I18nKey.search)}
-							/>
-							{#if settingsSearchTerm}
-								<button class="search-clear" onclick={() => (settingsSearchTerm = "")} aria-label="清除">
-									<Icon icon="material-symbols:close" size="sm" />
-								</button>
-							{/if}
-						</div>
-					{/if}
-					{#if activePage === "posts" && viewMode === "list"}
-						<button class="action-btn primary" onclick={goCreatePost}>
-							<Icon icon="material-symbols:edit-calendar-outline-rounded" class="text-sm" />
-							<span>{i18n(I18nKey.adminNewPost)}</span>
-						</button>
-						<button class="action-btn" onclick={handleSync} disabled={isSyncing}>
-							<Icon icon="material-symbols:cloud" class="text-sm" />
-							<span>{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}</span>
-						</button>
-					{/if}
-					{#if activePage === "settings" && settingsSection && getConfigItem(settingsSection)}
-						<button class="action-btn" onclick={() => loadSettings(settingsSection)} disabled={settingsLoading}>
-							<Icon icon="material-symbols:refresh" class="text-sm" />
-							<span>{i18n(I18nKey.configReload)}</span>
-						</button>
-						<button class="action-btn primary" onclick={saveSettings} disabled={settingsSaving || settingsLoading}>
-							<Icon icon="material-symbols:save-outline" class="text-sm" />
-							<span>{settingsSaving ? i18n(I18nKey.configSaving) : i18n(I18nKey.configSave)}</span>
-						</button>
-					{/if}
-				</div>
+			<div class="card-base mobile-topbar">
+				<button class="menu-toggle" onclick={() => (isSidebarOpen = true)} aria-label="打开菜单">
+					<Icon icon="material-symbols:menu-rounded" />
+				</button>
+				<h1 class="topbar-title">{headerTitle}</h1>
 			</div>
 
 			<div
@@ -1610,6 +1517,9 @@ function formatDate(dateStr: string | null): string {
 							onEdit={handleEditPost}
 							onDelete={handleDeleteClick}
 							onRefresh={loadPosts}
+							onCreate={goCreatePost}
+							onSync={handleSync}
+							{isSyncing}
 						/>
 					{:else if viewMode === "edit" && editingPost}
 						<PostEditor
@@ -1637,6 +1547,27 @@ function formatDate(dateStr: string | null): string {
 									<span>线上环境：表单基于最近一次构建的配置快照，保存将提交 GitHub 并触发自动重建</span>
 								</div>
 							{/if}
+							<div class="card-base settings-page-head">
+								<h2 class="page-head-title">{i18n(getConfigLabelKey(settingsSection))}</h2>
+								<div class="page-head-actions">
+									<button
+										class="page-head-btn"
+										onclick={() => loadSettings(settingsSection)}
+										disabled={settingsLoading}
+									>
+										<Icon icon="material-symbols:refresh" class="text-sm" />
+										<span>{i18n(I18nKey.configReload)}</span>
+									</button>
+									<button
+										class="page-head-btn primary"
+										onclick={saveSettings}
+										disabled={settingsSaving || settingsLoading}
+									>
+										<Icon icon="material-symbols:save-outline" class="text-sm" />
+										<span>{settingsSaving ? i18n(I18nKey.configSaving) : i18n(I18nKey.configSave)}</span>
+									</button>
+								</div>
+							</div>
 							<SettingsEditor
 								item={getConfigItem(settingsSection)!}
 								data={settingsData}
@@ -1652,6 +1583,24 @@ function formatDate(dateStr: string | null): string {
 							{@render placeholder(i18n(I18nKey.adminSettings), i18n(I18nKey.configSectionUnknown), "material-symbols:settings")}
 						{/if}
 					{:else}
+						<div class="card-base settings-overview-head">
+							<h2 class="overview-title">{i18n(I18nKey.adminSettings)}</h2>
+							<div class="search-box" class:focused={settingsSearchTerm.length > 0}>
+								<Icon icon="material-symbols:search" class="search-icon" size="lg" />
+								<input
+									type="text"
+									bind:value={settingsSearchTerm}
+									placeholder="{i18n(I18nKey.search)}..."
+									class="search-input"
+									aria-label={i18n(I18nKey.search)}
+								/>
+								{#if settingsSearchTerm}
+									<button class="search-clear" onclick={() => (settingsSearchTerm = "")} aria-label="清除">
+										<Icon icon="material-symbols:close" size="sm" />
+									</button>
+								{/if}
+							</div>
+						</div>
 						<SettingsOverview
 							onNavigate={(key) => goSettings(key)}
 							searchTerm={settingsSearchTerm}
@@ -2160,33 +2109,27 @@ function formatDate(dateStr: string | null): string {
 		gap: 1rem;
 	}
 
-	.admin-header {
-		padding: 1.25rem 1.5rem;
-		display: flex;
-		justify-content: space-between;
+	/* 移动端 TopBar（对齐参考项目 MobileTopBar：lg:hidden，仅窄屏显示） */
+	.mobile-topbar {
+		display: none;
 		align-items: center;
-		gap: 1rem;
-		box-shadow: var(--shadow-card);
+		gap: 0.75rem;
+		padding: 0.75rem 1rem;
+		flex-shrink: 0;
 		border: none;
-		/* 页头同样限制最大宽度并居中，避免大屏下横向拉得过长 */
-		width: 100%;
-		max-width: 76rem;
-		margin-inline: auto;
+		box-shadow: var(--shadow-card);
 	}
 
-	.header-content {
+	.topbar-title {
 		flex: 1;
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
 		min-width: 0;
-	}
-
-	.header-title {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		min-width: 0;
+		margin: 0;
+		font-size: 1.0625rem;
+		font-weight: 600;
+		color: var(--deep-text);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.menu-toggle {
@@ -2208,47 +2151,83 @@ function formatDate(dateStr: string | null): string {
 		background: var(--btn-regular-bg-hover);
 	}
 
-	.title-icon {
-		width: 2.75rem;
-		height: 2.75rem;
-		flex-shrink: 0;
+	/* 设置索引页头：标题 + 搜索框（原全局 header 的功能键下沉到页内） */
+	.settings-overview-head {
 		display: flex;
 		align-items: center;
-		justify-content: center;
+		justify-content: space-between;
+		gap: 1rem;
+		flex-wrap: wrap;
+		padding: 1rem 1.25rem;
+		border: none;
+		box-shadow: var(--shadow-card);
+	}
+
+	.overview-title {
+		margin: 0;
+		font-size: 1.125rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	/* 设置详情页头：标题 + 重新加载/保存 */
+	.settings-page-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		flex-wrap: wrap;
+		padding: 1rem 1.25rem;
+		border: none;
+		box-shadow: var(--shadow-card);
+	}
+
+	.page-head-title {
+		margin: 0;
+		font-size: 1.125rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.page-head-actions {
+		display: flex;
+		gap: 0.5rem;
+		flex-shrink: 0;
+	}
+
+	.page-head-btn {
+		padding: 0.5rem 1rem;
+		border: none;
+		border-radius: var(--radius-md);
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		font-family: inherit;
+		background: var(--btn-regular-bg);
+		color: var(--deep-text);
+		transition: background 0.15s, color 0.15s;
+	}
+
+	.page-head-btn:hover:not(:disabled) {
+		background: var(--btn-regular-bg-hover);
+	}
+
+	.page-head-btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.page-head-btn.primary {
 		background: var(--primary);
 		color: var(--primary-foreground);
 		border-radius: var(--radius-large);
 	}
 
-	.title-text {
-		min-width: 0;
-	}
-
-	.title-text h1 {
-		font-size: 1.25rem;
-		font-weight: 600;
-		color: var(--deep-text);
-		line-height: 1.2;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.subtitle {
-		font-size: 0.875rem;
-		color: var(--content-meta);
-		margin-top: 0.25rem;
-		display: block;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.header-actions {
-		display: flex;
-		gap: 0.5rem;
-		flex-shrink: 0;
-		align-items: center;
+	.page-head-btn.primary:hover:not(:disabled) {
+		background: color-mix(in oklch, var(--primary) 88%, black);
 	}
 
 	.search-box {
@@ -2322,30 +2301,6 @@ function formatDate(dateStr: string | null): string {
 	.search-clear:hover {
 		background: var(--btn-regular-bg-hover);
 		color: var(--deep-text);
-	}
-
-	.action-btn {
-		padding: 0.5rem 1rem;
-		border: none;
-		border-radius: var(--radius-md);
-		font-size: 0.875rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: background 0.15s, color 0.15s;
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-		font-family: inherit;
-	}
-
-	.action-btn.primary {
-		background: var(--primary);
-		color: var(--primary-foreground);
-		border-radius: var(--radius-large);
-	}
-
-	.action-btn.primary:hover:not(:disabled) {
-		background: color-mix(in oklch, var(--primary) 88%, black);
 	}
 
 	.admin-content {
@@ -3213,6 +3168,10 @@ function formatDate(dateStr: string | null): string {
 
 	/* ── 响应式 ── */
 	@media (max-width: 1023px) {
+		.mobile-topbar {
+			display: flex;
+		}
+
 		.admin-sidebar {
 			position: fixed;
 			top: 0;
@@ -3268,16 +3227,7 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	@media (max-width: 768px) {
-		.admin-header {
-			padding: 1rem 1.25rem;
-			flex-wrap: wrap;
-		}
-
-		.header-actions {
-			width: 100%;
-			justify-content: flex-end;
-		}
-
+		/* 搜索框窄屏全宽（设置索引页头内自动换行） */
 		.search-box {
 			max-width: none;
 			width: 100%;
@@ -3285,14 +3235,6 @@ function formatDate(dateStr: string | null): string {
 
 		.search-box:focus-within {
 			max-width: none;
-		}
-
-		.title-text h1 {
-			font-size: 1.0625rem;
-		}
-
-		.subtitle {
-			font-size: 0.75rem;
 		}
 
 		.toast {

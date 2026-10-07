@@ -499,9 +499,6 @@ export const ru: Translation = {
 	[Key.errorFillRequired]: "Заполните: {fields}",
 
 	[Key.dashboardWelcome]: "Обзор данных блога",
-	[Key.dashboardHomeDesc]:
-		"С возвращением! Это панель управления блогом. Функции находятся в разработке, следите за обновлениями.",
-	[Key.postsManageDesc]: "Управляйте статьями вашего блога",
 
 	[Key.postSearchPlaceholder]: "Поиск статей...",
 	[Key.postSearchClear]: "Очистить",
@@ -617,8 +614,6 @@ export const ru: Translation = {
 
 	[Key.settingsOverviewDesc]:
 		"Выберите пункт конфигурации ниже для онлайн-редактирования. После сохранения данные записываются в соответствующий файл конфигурации и автоматически синхронизируются с GitHub.",
-	[Key.settingsSelectHint]:
-		"Выберите пункт конфигурации для онлайн-редактирования",
 	[Key.configReload]: "Перезагрузить",
 	[Key.configSave]: "Сохранить конфигурацию",
 	[Key.configSaving]: "Сохранение...",
@@ -728,8 +723,6 @@ export const ru: Translation = {
 	[Key.cloudDraftSyncing]: "Синхронизация…",
 	[Key.cloudDraftFailed]: "Сбой синхронизации",
 	[Key.cloudDraftRetry]: "Повторить",
-	[Key.adminSecretsDesc]:
-		"Управление секретами окружения: учётные данные GitHub App и ключи аутентификации",
 	[Key.secretsGroupGithub]: "Учётные данные GitHub App",
 	[Key.secretsGroupAuth]: "Аутентификация администратора",
 	[Key.secretsConfigured]: "Настроено",
