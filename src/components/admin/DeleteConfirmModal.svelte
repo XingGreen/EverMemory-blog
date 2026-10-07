@@ -85,7 +85,7 @@ function handleKeydown(e: KeyboardEvent) {
 				bind:this={inputEl}
 				bind:value={confirmText}
 				placeholder={i18n(I18nKey.deletePlaceholder)}
-				class={`confirm-input ${shakeError ? "shake" : ""} ${confirmText === title ? "matched" : ""}`}
+				class={`ui-input confirm-input ${shakeError ? "shake" : ""} ${confirmText === title ? "matched" : ""}`}
 			/>
 
 			{#if confirmText && confirmText !== title}
@@ -99,11 +99,11 @@ function handleKeydown(e: KeyboardEvent) {
 		</div>
 
 		<div class="modal-footer">
-			<button class="btn btn-cancel" onclick={onCancel} disabled={isSubmitting}>
+			<button class="ui-btn ui-btn-soft" onclick={onCancel} disabled={isSubmitting}>
 				{i18n(I18nKey.deleteCancel)}
 			</button>
 			<button
-				class={`btn btn-delete ${confirmText === title ? "enabled" : ""}`}
+				class={`ui-btn btn-delete ${confirmText === title ? "enabled" : ""}`}
 				onclick={handleConfirm}
 				disabled={isSubmitting || confirmText !== title}
 			>
@@ -226,21 +226,6 @@ function handleKeydown(e: KeyboardEvent) {
 		word-break: break-all;
 	}
 
-	.confirm-input {
-		padding: 0.625rem 0.875rem;
-		border: 1px solid var(--input-border);
-		border-radius: var(--radius-md);
-		font-size: 0.875rem;
-		transition: all 0.15s;
-		background: var(--card-bg);
-		color: var(--deep-text);
-	}
-
-	.confirm-input:focus {
-		outline: none;
-		border-color: var(--primary);
-	}
-
 	.confirm-input.matched {
 		border-color: #22c55e;
 		background: color-mix(in srgb, #22c55e 10%, transparent);
@@ -291,29 +276,6 @@ function handleKeydown(e: KeyboardEvent) {
 		gap: 0.75rem;
 		padding: 1rem 1.5rem;
 		border-top: 1px solid var(--line-divider);
-		background: var(--btn-plain-bg-hover);
-	}
-
-	.btn {
-		padding: 0.625rem 1.25rem;
-		border: none;
-		border-radius: var(--radius-md);
-		font-size: 0.875rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.15s;
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-	}
-
-	.btn-cancel {
-		background: var(--card-bg);
-		color: var(--deep-text);
-		border: 1px solid var(--line-divider);
-	}
-
-	.btn-cancel:hover:not(:disabled) {
 		background: var(--btn-plain-bg-hover);
 	}
 
