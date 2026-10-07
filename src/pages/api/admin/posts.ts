@@ -24,6 +24,7 @@ export async function GET({ request }) {
 				updated: post.data.updated?.toISOString() || null,
 				draft: post.data.draft || false,
 				description: post.data.description || "",
+				password: post.data.password || "",
 				image: post.data.image || "",
 				pinned: post.data.pinned || false,
 				filePath: `src/content/posts/${post.id}.md`,

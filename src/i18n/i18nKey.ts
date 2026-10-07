@@ -504,7 +504,6 @@ enum I18nKey {
 	postSortTitleAsc = "postSortTitleAsc",
 	postSortTitleDesc = "postSortTitleDesc",
 	postColTitle = "postColTitle",
-	postColAuthor = "postColAuthor",
 	postColCategory = "postColCategory",
 	postColDate = "postColDate",
 	postColStatus = "postColStatus",

@@ -519,7 +519,6 @@ export const ru: Translation = {
 	[Key.postSortTitleAsc]: "Заголовок А→Я",
 	[Key.postSortTitleDesc]: "Заголовок Я→А",
 	[Key.postColTitle]: "Заголовок",
-	[Key.postColAuthor]: "Автор",
 	[Key.postColCategory]: "Категория",
 	[Key.postColDate]: "Дата публикации",
 	[Key.postColStatus]: "Статус",

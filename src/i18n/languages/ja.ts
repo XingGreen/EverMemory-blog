@@ -516,7 +516,6 @@ export const ja: Translation = {
 	[Key.postSortTitleAsc]: "タイトル A→Z",
 	[Key.postSortTitleDesc]: "タイトル Z→A",
 	[Key.postColTitle]: "タイトル",
-	[Key.postColAuthor]: "著者",
 	[Key.postColCategory]: "カテゴリ",
 	[Key.postColDate]: "公開日",
 	[Key.postColStatus]: "ステータス",
