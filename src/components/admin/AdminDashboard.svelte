@@ -1585,17 +1585,17 @@ function formatDate(dateStr: string | null): string {
 					{:else}
 						<div class="card-base settings-overview-head">
 							<h2 class="overview-title">{i18n(I18nKey.adminSettings)}</h2>
-							<div class="search-box" class:focused={settingsSearchTerm.length > 0}>
-								<Icon icon="material-symbols:search" class="search-icon" size="lg" />
+							<div class="ui-search search-box" class:focused={settingsSearchTerm.length > 0}>
+								<Icon icon="material-symbols:search" class="ui-search-icon" size="lg" />
 								<input
 									type="text"
 									bind:value={settingsSearchTerm}
 									placeholder="{i18n(I18nKey.search)}..."
-									class="search-input"
+									class="ui-search-input"
 									aria-label={i18n(I18nKey.search)}
 								/>
 								{#if settingsSearchTerm}
-									<button class="search-clear" onclick={() => (settingsSearchTerm = "")} aria-label="清除">
+									<button class="ui-search-clear" onclick={() => (settingsSearchTerm = "")} aria-label="清除">
 										<Icon icon="material-symbols:close" size="sm" />
 									</button>
 								{/if}
@@ -2231,76 +2231,14 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.search-box {
-		position: relative;
-		display: flex;
-		align-items: center;
+		/* ui-base 提供 .ui-search 基础形状,这里只保留设置区特有的展开宽度 */
 		width: 100%;
 		max-width: 260px;
-		height: 40px;
-		padding: 0 0.625rem 0 0.875rem;
-		background: var(--page-bg);
-		border: 1px solid var(--line-divider);
-		border-radius: 10px;
-		transition: border-color 0.15s, box-shadow 0.15s, max-width 0.15s;
 	}
 
-	.search-box:focus-within,
-	.search-box.focused {
-		border-color: var(--primary);
-		box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 12%, transparent);
-	}
-
+	.search-box.focused,
 	.search-box:focus-within {
 		max-width: 300px;
-	}
-
-	:global(.search-icon) {
-		color: var(--content-meta);
-		flex-shrink: 0;
-		transition: color 0.15s;
-	}
-
-	.search-box:focus-within :global(.search-icon) {
-		color: var(--primary);
-	}
-
-	.search-input {
-		flex: 1;
-		border: none;
-		background: transparent;
-		font-size: 0.9375rem;
-		color: var(--deep-text);
-		padding: 0 0.5rem;
-		font-family: inherit;
-	}
-
-	.search-input:focus {
-		outline: none;
-	}
-
-	.search-input::placeholder {
-		color: var(--content-meta);
-		opacity: 0.8;
-	}
-
-	.search-clear {
-		width: 24px;
-		height: 24px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border: none;
-		border-radius: 50%;
-		background: var(--btn-regular-bg);
-		color: var(--content-meta);
-		cursor: pointer;
-		flex-shrink: 0;
-		transition: background 0.15s, color 0.15s;
-	}
-
-	.search-clear:hover {
-		background: var(--btn-regular-bg-hover);
-		color: var(--deep-text);
 	}
 
 	.admin-content {

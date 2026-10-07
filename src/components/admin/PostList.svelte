@@ -404,19 +404,19 @@ function actionLabel(action: string, title: string): string {
 
 	<!-- 工具栏（第二行）：搜索居左，分类/标签/排序整组居右 -->
 	<div class="toolbar">
-		<div class="search-bar">
-			<Icon icon="material-symbols:search" class="leading-icon" />
+		<div class="ui-search search-bar">
+			<Icon icon="material-symbols:search" class="ui-search-icon" />
 			<input
 				type="search"
 				bind:value={searchTerm}
 				placeholder={i18n(I18nKey.postSearchPlaceholder)}
 				aria-label={i18n(I18nKey.postSearchLabel)}
-				class="search-input"
+				class="ui-search-input"
 				data-post-list-search
 			/>
 			{#if searchTerm}
 				<button
-					class="trailing-icon-btn"
+					class="ui-search-clear"
 					onclick={() => (searchTerm = "")}
 					aria-label={i18n(I18nKey.postSearchClear)}
 				>
@@ -430,7 +430,7 @@ function actionLabel(action: string, title: string): string {
 			<label class="toolbar-field">
 				<span class="field-label">{i18n(I18nKey.postFilterCategory)}</span>
 				<div class="select-wrap">
-					<select bind:value={categoryFilter} disabled={categories.length === 0}>
+					<select class="ui-select" bind:value={categoryFilter} disabled={categories.length === 0}>
 						<option value="">{i18n(I18nKey.postAll)}</option>
 						{#each categories as category (category)}
 							<option value={category}>{category}</option>
@@ -443,7 +443,7 @@ function actionLabel(action: string, title: string): string {
 			<label class="toolbar-field">
 				<span class="field-label">{i18n(I18nKey.postFilterTag)}</span>
 				<div class="select-wrap">
-					<select bind:value={tagFilter} disabled={tags.length === 0}>
+					<select class="ui-select" bind:value={tagFilter} disabled={tags.length === 0}>
 						<option value="">{i18n(I18nKey.postAll)}</option>
 						{#each tags as tag (tag)}
 							<option value={tag}>{tag}</option>
@@ -456,7 +456,7 @@ function actionLabel(action: string, title: string): string {
 			<label class="toolbar-field">
 				<span class="field-label">{i18n(I18nKey.postSort)}</span>
 				<div class="select-wrap">
-					<select bind:value={sortKey} aria-label={i18n(I18nKey.postSort)}>
+					<select class="ui-select" bind:value={sortKey} aria-label={i18n(I18nKey.postSort)}>
 						<option value="updated">{i18n(I18nKey.postSortUpdated)}</option>
 						<option value="newest">{i18n(I18nKey.postSortNewest)}</option>
 						<option value="oldest">{i18n(I18nKey.postSortOldest)}</option>
@@ -679,7 +679,7 @@ function actionLabel(action: string, title: string): string {
 		   混排，视觉上参差不齐，这里收敛为一套 token。
 		   圆角取 10px 方角而非胶囊：与参考项目（flare-stack-blog）后台
 		   post-manager 的控件圆角一致，40px 高配 10px 圆角是方形按钮观感。 */
-		--md-control-h: 40px;
+		--md-control-h: 44px;
 		--md-control-r: 10px;
 		--md-control-gap: 0.5rem;
 	}
@@ -716,97 +716,15 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.search-bar {
-		/* 前台的宽度展开动画（Search.svelte：w-40 focus:w-60）：
-		   失焦窄、聚焦/输入时放宽 flex-basis，配合兄弟控件 shrink:0
-		   平滑让位；hover 背景微深同前台 hover:bg-black/6 */
+		/* ui-base 提供 .ui-search 基础形状（44px / 10px / --btn-regular-bg / focus ring），
+		   这里只保留后台特有的宽度展开动画：失焦窄、聚焦/输入时放宽 flex-basis */
 		flex: 0 1 200px;
 		min-width: 140px;
-		display: flex;
-		align-items: center;
-		height: var(--md-control-h);
-		padding: 0 0.25rem 0 0.875rem;
-		background: var(--md-surface-container-high);
-		border: 1px solid var(--md-outline);
-		border-radius: var(--md-control-r);
-		transition:
-			background 0.2s,
-			border-color 0.2s,
-			flex-basis 0.2s;
-	}
-
-	.search-bar:hover {
-		background: color-mix(in srgb, var(--md-on-surface) 4%, var(--md-surface-container-high));
-		border-color: color-mix(in srgb, var(--md-on-surface) 30%, var(--md-outline));
+		transition: flex-basis 0.2s;
 	}
 
 	.search-bar:focus-within {
 		flex-basis: 280px;
-		background: color-mix(in srgb, var(--primary) 12%, var(--card-bg));
-		border-color: var(--md-primary-text);
-		outline: 2px solid var(--md-primary-text);
-		outline-offset: -2px;
-	}
-
-	:global(.leading-icon) {
-		font-size: 1.25rem;
-		color: var(--md-on-surface-variant);
-		flex-shrink: 0;
-	}
-
-	.search-input {
-		flex: 1;
-		min-width: 0;
-		border: none;
-		background: transparent;
-		font-size: 0.9375rem;
-		color: var(--md-on-surface);
-		padding: 0 0.5rem;
-	}
-
-	.search-input:focus {
-		outline: none;
-	}
-
-	.search-input::placeholder {
-		color: var(--md-on-surface-variant);
-	}
-
-	.search-input::-webkit-search-cancel-button {
-		display: none;
-	}
-
-	/* 视觉 40px 与搜索框等高，命中区用伪元素外扩到 48dp，
-	   避免撑破搜索框又保住触控目标 */
-	.trailing-icon-btn {
-		position: relative;
-		width: var(--md-control-h);
-		height: var(--md-control-h);
-		border: none;
-		border-radius: 10px;
-		background: transparent;
-		color: var(--md-on-surface-variant);
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: background 0.15s;
-		flex-shrink: 0;
-	}
-
-	.trailing-icon-btn::after {
-		content: "";
-		position: absolute;
-		inset: -4px;
-		border-radius: 10px;
-	}
-
-	.trailing-icon-btn:hover {
-		background: var(--md-state-layer-hover);
-	}
-
-	.trailing-icon-btn:focus-visible {
-		outline: 2px solid var(--md-primary-text);
-		outline-offset: -2px;
 	}
 
 	/* 页头：标题 + 副标题 + 主操作（对齐参考项目 .post-list-heading）
@@ -989,28 +907,13 @@ function actionLabel(action: string, title: string): string {
 		align-items: center;
 	}
 
-	.select-wrap select {
-		appearance: none;
-		height: var(--md-control-h);
+	.select-wrap .ui-select {
+		/* 形状由 ui-base 的 .ui-select 提供,这里只保留后台的宽度约束 */
 		min-width: 130px;
 		max-width: 220px;
-		padding: 0 2rem 0 0.875rem;
-		border: 1px solid var(--md-outline);
-		border-radius: var(--md-control-r);
-		background: var(--md-surface-container-high);
-		color: var(--md-on-surface);
-		font-family: inherit;
-		font-size: 0.8125rem;
-		cursor: pointer;
-		text-overflow: ellipsis;
 	}
 
-	.select-wrap select:focus-visible {
-		outline: 2px solid var(--md-primary-text);
-		outline-offset: 1px;
-	}
-
-	.select-wrap select:disabled {
+	.select-wrap .ui-select:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
