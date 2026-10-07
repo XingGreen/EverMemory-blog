@@ -100,6 +100,7 @@
 
 /* ── 文本输入框 ── */
 .ui-input {
+	width: 100%;
 	height: 44px;
 	padding: 0 0.75rem;
 	background: var(--btn-regular-bg);
@@ -112,6 +113,14 @@
 		border-color 0.15s,
 		box-shadow 0.15s,
 		background-color 0.15s;
+}
+
+textarea.ui-input {
+	height: auto;
+	min-height: 44px;
+	padding-block: 0.625rem;
+	resize: vertical;
+	line-height: 1.5;
 }
 
 .ui-input:hover {
@@ -147,7 +156,7 @@
 	height: 44px;
 	min-width: 130px;
 	padding: 0 2rem 0 0.875rem;
-	background: var(--btn-regular-bg);
+	background-color: var(--btn-regular-bg);
 	border: 1px solid var(--line-divider);
 	border-radius: 10px;
 	font-family: inherit;
@@ -155,6 +164,12 @@
 	color: var(--deep-text);
 	cursor: pointer;
 	text-overflow: ellipsis;
+	/* 内置下拉箭头：appearance:none 后必须给出视觉提示 */
+	background-image: linear-gradient(45deg, transparent 50%, var(--content-meta) 50%),
+		linear-gradient(135deg, var(--content-meta) 50%, transparent 50%);
+	background-position: calc(100% - 0.9rem) 50%, calc(100% - 0.65rem) 50%;
+	background-repeat: no-repeat;
+	background-size: 0.25rem 0.25rem;
 	transition:
 		border-color 0.15s,
 		box-shadow 0.15s,
@@ -175,4 +190,79 @@
 .ui-select:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
+}
+
+/* ── 按钮 ──
+   基座 44px / 10px；变体覆盖底色与文字色，全部使用前后台同名共享 token：
+   primary=主色实心（对应 flare fuwari-btn-primary、前台 bg-(--primary) 白字钮），
+   soft=浅紫次级底（对应 --btn-regular-bg / --btn-content，PostList regular-btn、
+   PostEditor/DeleteConfirm btn-cancel 同源），ghost=透明主色文字钮（text-btn 同源）。 */
+.ui-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	height: 44px;
+	padding: 0 1.25rem;
+	border: none;
+	border-radius: 10px;
+	font-family: inherit;
+	font-size: 0.875rem;
+	font-weight: 500;
+	line-height: 1;
+	cursor: pointer;
+	white-space: nowrap;
+	transition:
+		background-color 0.15s,
+		color 0.15s,
+		filter 0.15s,
+		box-shadow 0.15s,
+		opacity 0.15s;
+}
+
+.ui-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.ui-btn:focus-visible {
+	outline: 2px solid var(--primary);
+	outline-offset: 2px;
+}
+
+.ui-btn-primary {
+	background: var(--primary);
+	color: #fff;
+	box-shadow: var(--shadow-button);
+}
+
+.ui-btn-primary:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--primary) 88%, #000);
+}
+
+/* 暗色下 primary 提亮，黑字反而更可读（前台 dark:text-black/70 同惯例） */
+.dark .ui-btn-primary {
+	color: rgb(0 0 0 / 0.75);
+}
+
+.ui-btn-soft {
+	background: var(--btn-regular-bg);
+	color: var(--btn-content);
+}
+
+.ui-btn-soft:hover:not(:disabled) {
+	background: var(--btn-regular-bg-hover);
+}
+
+.ui-btn-soft:active:not(:disabled) {
+	background: var(--btn-regular-bg-active);
+}
+
+.ui-btn-ghost {
+	background: transparent;
+	color: var(--primary);
+}
+
+.ui-btn-ghost:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--primary) 8%, transparent);
 }

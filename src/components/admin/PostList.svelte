@@ -355,7 +355,7 @@ function actionLabel(action: string, title: string): string {
 		<div class="heading-actions">
 			{#if onSync}
 				<button
-					class="regular-btn"
+					class="ui-btn ui-btn-soft"
 					onclick={onSync}
 					disabled={isLoading || isSyncing}
 					aria-label={i18n(I18nKey.postSyncNow)}
@@ -364,7 +364,7 @@ function actionLabel(action: string, title: string): string {
 					{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}
 				</button>
 			{/if}
-			<button class="filled-btn" onclick={onCreate}>
+			<button class="ui-btn ui-btn-primary" onclick={onCreate}>
 				<Icon icon="material-symbols:add" class="btn-icon" />
 				{i18n(I18nKey.adminNewPost)}
 			</button>
@@ -435,9 +435,8 @@ function actionLabel(action: string, title: string): string {
 						{#each categories as category (category)}
 							<option value={category}>{category}</option>
 						{/each}
-					</select>
-					<Icon icon="material-symbols:expand-more" class="select-caret" />
-				</div>
+</select>
+			</div>
 			</label>
 
 			<label class="toolbar-field">
@@ -448,9 +447,8 @@ function actionLabel(action: string, title: string): string {
 						{#each tags as tag (tag)}
 							<option value={tag}>{tag}</option>
 						{/each}
-					</select>
-					<Icon icon="material-symbols:expand-more" class="select-caret" />
-				</div>
+</select>
+			</div>
 			</label>
 
 			<label class="toolbar-field">
@@ -462,9 +460,8 @@ function actionLabel(action: string, title: string): string {
 						<option value="oldest">{i18n(I18nKey.postSortOldest)}</option>
 						<option value="titleAsc">{i18n(I18nKey.postSortTitleAsc)}</option>
 						<option value="titleDesc">{i18n(I18nKey.postSortTitleDesc)}</option>
-					</select>
-					<Icon icon="material-symbols:expand-more" class="select-caret" />
-				</div>
+</select>
+			</div>
 			</label>
 		</div>
 	</div>
@@ -785,48 +782,6 @@ function actionLabel(action: string, title: string): string {
 		flex-shrink: 0;
 	}
 
-	/* 同步 = regular 次级按钮：浅紫底 + 紫字，token 与 flare fuwari-btn-regular 同源
-	   （--btn-regular-bg / --btn-content） */
-	.regular-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		min-height: 44px;
-		padding: 0 1.25rem;
-		border: none;
-		border-radius: 9px;
-		background: var(--btn-regular-bg);
-		color: var(--btn-content);
-		font-size: 0.875rem;
-		font-weight: 500;
-		font-family: inherit;
-		cursor: pointer;
-		white-space: nowrap;
-		transition:
-			background-color 0.2s,
-			color 0.2s,
-			opacity 0.2s;
-	}
-
-	.regular-btn:hover:not(:disabled) {
-		background: var(--btn-regular-bg-hover);
-	}
-
-	.regular-btn:active:not(:disabled) {
-		background: var(--btn-regular-bg-active);
-	}
-
-	.regular-btn:focus-visible {
-		outline: 2px solid var(--title-active);
-		outline-offset: 2px;
-	}
-
-	.regular-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
 	/* 状态筛选（第一行）：文字下划线 tab，对齐参考项目 post-list-tabs。
    不做等宽——译文长短不齐时按内容自然宽度排，选中项靠 2px 主色
    底线指示，容器自带一条 1px 分隔线。 */
@@ -918,14 +873,6 @@ function actionLabel(action: string, title: string): string {
 		cursor: not-allowed;
 	}
 
-	:global(.select-caret) {
-		position: absolute;
-		right: 0.875rem;
-		font-size: 1.125rem;
-		color: var(--md-on-surface-variant);
-		pointer-events: none;
-	}
-
 	/* ── 状态容器 ── */
 	.state-container {
 		display: flex;
@@ -1011,74 +958,6 @@ function actionLabel(action: string, title: string): string {
 		.sk {
 			animation: none;
 		}
-	}
-
-	/* 新建 = primary 填充按钮：44px/9px 圆角，亮色白字 / 暗色近黑字，
-	   完全对齐 flare fuwari-btn-primary（dark 下 primary 提亮故文字下沉） */
-	.filled-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		min-height: 44px;
-		padding: 0 1.25rem;
-		border: none;
-		border-radius: 9px;
-		background: var(--primary);
-		color: #fff;
-		font-size: 0.875rem;
-		font-weight: 500;
-		font-family: inherit;
-		cursor: pointer;
-		white-space: nowrap;
-		transition:
-			background-color 0.2s,
-			color 0.2s,
-			opacity 0.2s;
-	}
-
-	.filled-btn:hover:not(:disabled) {
-		background: color-mix(in srgb, var(--primary) 88%, #000);
-	}
-
-	.filled-btn:focus-visible {
-		outline: 2px solid var(--title-active);
-		outline-offset: 2px;
-	}
-
-	.filled-btn:disabled {
-		opacity: 0.5;
-		pointer-events: none;
-	}
-
-	:global(.dark) .filled-btn {
-		color: rgb(0 0 0 / 0.75);
-	}
-
-	.text-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		height: var(--md-control-h);
-		padding: 0 1rem;
-		border: none;
-		background: transparent;
-		color: var(--md-primary-text);
-		font-size: 0.875rem;
-		font-weight: 500;
-		font-family: inherit;
-		cursor: pointer;
-		border-radius: var(--md-control-r);
-		transition: background 0.15s;
-	}
-
-	.text-btn:hover {
-		background: color-mix(in srgb, var(--primary) 8%, transparent);
-	}
-
-	.text-btn:focus-visible {
-		outline: 2px solid var(--md-primary-text);
-		outline-offset: -2px;
 	}
 
 	/* ── 数据表 ── */

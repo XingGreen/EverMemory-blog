@@ -62,7 +62,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									type="text"
 									bind:value={editorState.title}
 									placeholder={i18n(I18nKey.postTitlePlaceholder)}
-									class="form-input"
+									class="ui-input"
 								/>
 							</label>
 						</div>
@@ -75,7 +75,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									bind:value={editorState.slug}
 									oninput={actions.handleSlugInput}
 									placeholder={i18n(I18nKey.postSlugPlaceholder)}
-									class="form-input"
+									class="ui-input"
 								/>
 							</label>
 						</div>
@@ -87,7 +87,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									type="text"
 									bind:value={editorState.category}
 									placeholder={i18n(I18nKey.postCategoryPlaceholder)}
-									class="form-input"
+									class="ui-input"
 								/>
 							</label>
 						</div>
@@ -99,7 +99,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									type="text"
 									bind:value={editorState.author}
 									placeholder={i18n(I18nKey.postAuthorPlaceholder)}
-									class="form-input"
+									class="ui-input"
 								/>
 							</label>
 						</div>
@@ -110,7 +110,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 								<input
 									type="date"
 									bind:value={editorState.published}
-									class="form-input"
+									class="ui-input"
 								/>
 							</label>
 						</div>
@@ -121,7 +121,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 								<input
 									type="date"
 									bind:value={editorState.updated}
-									class="form-input"
+									class="ui-input"
 								/>
 							</label>
 						</div>
@@ -158,12 +158,12 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 						<div class="form-group full-width">
 							<label>
 								{i18n(I18nKey.postSummary)}
-								<textarea
-									bind:value={editorState.description}
-									placeholder={i18n(I18nKey.postSummaryPlaceholder)}
-									class="form-textarea"
-									rows={2}
-								></textarea>
+<textarea
+								bind:value={editorState.description}
+								placeholder={i18n(I18nKey.postSummaryPlaceholder)}
+								class="ui-input"
+								rows={2}
+							></textarea>
 							</label>
 						</div>
 
@@ -174,7 +174,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									type="text"
 									bind:value={editorState.image}
 									placeholder={i18n(I18nKey.postCoverPlaceholder)}
-									class="form-input"
+									class="ui-input"
 								/>
 							</label>
 						</div>
@@ -186,7 +186,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									type="text"
 									bind:value={editorState.lang}
 									placeholder={i18n(I18nKey.postLangPlaceholder)}
-									class="form-input"
+									class="ui-input"
 								/>
 							</label>
 						</div>
@@ -213,7 +213,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 										type="text"
 										bind:value={editorState.tagInput}
 										placeholder={i18n(I18nKey.postTagPlaceholder)}
-										class="form-input tag-input"
+										class="ui-input tag-input"
 										onkeydown={actions.handleTagKeydown}
 									/>
 								</div>
@@ -227,7 +227,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									type="text"
 									bind:value={editorState.password}
 									placeholder={i18n(I18nKey.postPasswordPlaceholder)}
-									class="form-input"
+									class="ui-input"
 								/>
 							</label>
 						</div>
@@ -239,7 +239,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									type="text"
 									bind:value={editorState.passwordHint}
 									placeholder={i18n(I18nKey.postPasswordHintPlaceholder)}
-									class="form-input"
+									class="ui-input"
 								/>
 							</label>
 						</div>
@@ -251,7 +251,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									type="text"
 									bind:value={editorState.licenseName}
 									placeholder={i18n(I18nKey.postLicenseNamePlaceholder)}
-									class="form-input"
+									class="ui-input"
 								/>
 							</label>
 						</div>
@@ -263,7 +263,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									type="text"
 									bind:value={editorState.licenseUrl}
 									placeholder={i18n(I18nKey.postLicenseUrlPlaceholder)}
-									class="form-input"
+									class="ui-input"
 								/>
 							</label>
 						</div>
@@ -275,7 +275,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									type="text"
 									bind:value={editorState.sourceLink}
 									placeholder={i18n(I18nKey.postSourceLinkPlaceholder)}
-									class="form-input"
+									class="ui-input"
 								/>
 							</label>
 						</div>
@@ -395,29 +395,6 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 
 	.full-width {
 		grid-column: 1 / -1;
-	}
-
-	.form-input,
-	.form-textarea {
-		padding: 0.625rem 0.875rem;
-		font-size: 0.8125rem;
-		background: var(--btn-regular-bg);
-		border: 1px solid var(--input-border);
-		border-radius: var(--radius-md);
-		font-family: inherit;
-		color: var(--deep-text);
-		transition: border-color 0.15s;
-	}
-
-	.form-input:focus,
-	.form-textarea:focus {
-		outline: none;
-		border-color: var(--primary);
-	}
-
-	.form-textarea {
-		resize: vertical;
-		min-height: 80px;
 	}
 
 	/* ── MD3 Switch 行 ── */

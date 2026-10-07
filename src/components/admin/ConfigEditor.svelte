@@ -102,7 +102,7 @@ function addItem(arr: JsonValue[]) {
 		</button>
 	{:else if typeof value === "number"}
 		<input
-			class="field-input"
+			class="ui-input"
 			type="number"
 			value={value}
 			oninput={(e) => {
@@ -112,7 +112,7 @@ function addItem(arr: JsonValue[]) {
 		/>
 	{:else if typeof value === "string" && options && options.length > 0}
 		<select
-			class="field-input field-select"
+			class="ui-select"
 			value={value}
 			onchange={(e) => onUpdate(e.currentTarget.value)}
 		>
@@ -126,14 +126,14 @@ function addItem(arr: JsonValue[]) {
 	{:else if typeof value === "string"}
 		{#if value.length > 60 || value.includes("\n")}
 			<textarea
-				class="field-input"
+				class="ui-input"
 				rows={Math.min(6, Math.max(2, Math.ceil(value.length / 60)))}
 				value={value}
 				oninput={(e) => onUpdate(e.currentTarget.value)}
 			></textarea>
 		{:else}
 			<input
-				class="field-input"
+				class="ui-input"
 				type="text"
 				value={value}
 				oninput={(e) => onUpdate(e.currentTarget.value)}
@@ -250,40 +250,6 @@ function addItem(arr: JsonValue[]) {
 		gap: 0.25rem;
 	}
 
-	.field-input {
-		width: 100%;
-		padding: 0.4375rem 0.625rem;
-		font-size: 0.8125rem;
-		font-family: inherit;
-		color: var(--deep-text);
-		background: var(--btn-regular-bg);
-		border: 1px solid var(--input-border);
-		border-radius: var(--radius-md);
-		appearance: none;
-		box-sizing: border-box;
-		transition: border-color 0.2s;
-	}
-
-	/* 下拉选择框：增加右侧下拉箭头，避免无样式 */
-	.field-select {
-		background-image: linear-gradient(45deg, transparent 50%, var(--content-meta) 50%),
-			linear-gradient(135deg, var(--content-meta) 50%, transparent 50%);
-		background-position: calc(100% - 0.9rem) 50%, calc(100% - 0.65rem) 50%;
-		background-repeat: no-repeat;
-		background-size: 0.25rem 0.25rem;
-		cursor: pointer;
-	}
-
-	.field-input:focus {
-		outline: none;
-		border-color: var(--primary);
-	}
-
-	textarea.field-input {
-		resize: vertical;
-		line-height: 1.5;
-	}
-
 	/* 布尔开关 */
 	.toggle {
 		display: inline-flex;
@@ -379,7 +345,7 @@ function addItem(arr: JsonValue[]) {
 		width: 100%;
 	}
 
-	.scalar-item .field-input {
+	.scalar-item .ui-input {
 		flex: 1;
 	}
 

@@ -779,11 +779,11 @@ $effect(() => {
 			{/if}
 		</div>
 		<div class="header-actions">
-			<button class="btn btn-cancel" onclick={onCancel}>
+			<button class="ui-btn ui-btn-soft" onclick={onCancel}>
 				<Icon icon="material-symbols:arrow-back" class="text-sm" />
 				{i18n(I18nKey.postCancel)}
 			</button>
-			<button class="btn btn-save" onclick={handleSave} disabled={isSaving}>
+			<button class="ui-btn ui-btn-primary" onclick={handleSave} disabled={isSaving}>
 				{#if isSaving}
 					<span class="spinner"></span>
 					{i18n(I18nKey.postSaving)}
@@ -904,45 +904,6 @@ $effect(() => {
 	.header-actions {
 		display: flex;
 		gap: 0.75rem;
-	}
-
-	.btn {
-		padding: 0.5rem 1rem;
-		border: none;
-		border-radius: var(--radius-md);
-		font-size: 0.875rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.15s;
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-	}
-
-	.btn-cancel {
-		background: var(--btn-regular-bg);
-		color: var(--deep-text);
-	}
-
-	.btn-cancel:hover {
-		background: var(--btn-regular-bg-hover);
-	}
-
-	.btn-save {
-		background: var(--primary);
-		color: var(--primary-foreground);
-		border-radius: 0.625rem;
-		box-shadow: var(--shadow-button);
-	}
-
-	.btn-save:hover:not(:disabled) {
-		filter: brightness(1.05);
-		transform: translateY(-1px);
-	}
-
-	.btn-save:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
 	}
 
 	.spinner {
