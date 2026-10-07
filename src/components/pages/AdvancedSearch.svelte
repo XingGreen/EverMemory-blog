@@ -130,19 +130,15 @@ const handleInput = () => {
     </div>
 
     <!-- Search Bar -->
-    <div class="relative flex">
-        <div class="relative flex-1">
-            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <Icon icon="material-symbols:search" class="text-2xl text-50" />
-            </div>
-            <input
-                type="text"
-                class="block w-full p-4 pl-10 text-sm bg-transparent border border-black/10 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-(--primary) focus:border-(--primary) hover:border-black/20 dark:hover:border-white/20 text-75 placeholder:opacity-50 transition-colors outline-hidden"
-                placeholder={i18n(I18nKey.search)}
-                bind:value={keyword}
-                on:input={handleInput}
-            >
-        </div>
+    <div class="ui-search w-full">
+        <Icon icon="material-symbols:search" class="ui-search-icon" />
+        <input
+            type="text"
+            placeholder={i18n(I18nKey.search)}
+            bind:value={keyword}
+            on:input={handleInput}
+            class="ui-search-input"
+        >
     </div>
 </div>
 

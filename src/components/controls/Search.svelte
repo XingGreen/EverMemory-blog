@@ -137,16 +137,11 @@ $: if (initialized && (keywordMobile || keywordMobile === "")) {
 </script>
 
 <!-- search bar for desktop view -->
-<div id="search-bar" class="hidden lg:flex transition-all items-center h-11 mr-2 rounded-lg
-      bg-black/4 hover:bg-black/6 focus-within:bg-black/6
-      dark:bg-white/5 dark:hover:bg-white/10 dark:focus-within:bg-white/10
-">
-    <Icon icon="material-symbols:search"
-          class="absolute text-[1.25rem] pointer-events-none ml-3 transition my-auto text-black/30 dark:text-white/30"></Icon>
+<div id="search-bar" class="ui-search mr-2">
+    <Icon icon="material-symbols:search" class="ui-search-icon"></Icon>
     <input placeholder="{i18n(I18nKey.search)}" bind:value={keywordDesktop}
            on:focus={() => search(keywordDesktop, true)}
-           class="transition-all pl-10 text-sm bg-transparent outline-0
-         h-full w-40 active:w-60 focus:w-60 text-black/50 dark:text-white/50"
+           class="ui-search-input"
     >
 </div>
 
@@ -161,15 +156,10 @@ $: if (initialized && (keywordMobile || keywordMobile === "")) {
 top-20 left-4 md:left-[unset] right-4 shadow-2xl rounded-2xl p-2">
 
     <!-- search bar inside panel for phone/tablet -->
-    <div id="search-bar-inside" class="flex relative lg:hidden transition-all items-center h-11 rounded-xl
-      bg-black/4 hover:bg-black/6 focus-within:bg-black/6
-      dark:bg-white/5 dark:hover:bg-white/10 dark:focus-within:bg-white/10
-  ">
-        <Icon icon="material-symbols:search"
-              class="absolute text-[1.25rem] pointer-events-none ml-3 transition my-auto text-black/30 dark:text-white/30"></Icon>
+    <div id="search-bar-inside" class="ui-search relative">
+        <Icon icon="material-symbols:search" class="ui-search-icon"></Icon>
         <input placeholder={i18n(I18nKey.search)} bind:value={keywordMobile}
-               class="pl-10 absolute inset-0 text-sm bg-transparent outline-0
-               focus:w-60 text-black/50 dark:text-white/50"
+               class="ui-search-input"
         >
     </div>
 
@@ -231,8 +221,32 @@ top-20 left-4 md:left-[unset] right-4 shadow-2xl rounded-2xl p-2">
 </div>
 
 <style>
-    input:focus {
-        outline: 0;
+    /* ui-base 提供 .ui-search 基础形状（44px / 10px / --btn-regular-bg / focus ring）。
+       这里只保留导航特有的宽度展开动画与响应式显隐：
+       - #search-bar：仅 lg+ 显示，宽度 w-40 → 聚焦 w-60（原 Tailwind 的 hidden lg:flex / w-40 focus:w-60）
+       - #search-bar-inside：仅非 lg 显示（ui-search 自带 display:flex 会顶掉 lg:hidden，需显式接管） */
+    #search-bar {
+        width: 10rem;
+        display: none;
+        transition:
+            width 0.2s,
+            border-color 0.15s,
+            box-shadow 0.15s,
+            background-color 0.15s;
+    }
+
+    #search-bar:focus-within {
+        width: 15rem;
+    }
+
+    @media (min-width: 1024px) {
+        #search-bar {
+            display: flex;
+        }
+
+        #search-bar-inside {
+            display: none;
+        }
     }
 
     .search-panel {
