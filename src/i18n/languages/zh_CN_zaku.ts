@@ -490,7 +490,6 @@ export const zaku: Translation = {
 	[Key.postAll]: "全部",
 	[Key.postPublished]: "已发布",
 	[Key.postDraft]: "草稿",
-	[Key.postSync]: "同步",
 	[Key.postLoading]: "加载中...",
 	[Key.postRetry]: "重试",
 	[Key.postNoMatch]: "无匹配文章",

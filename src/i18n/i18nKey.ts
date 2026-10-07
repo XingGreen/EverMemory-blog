@@ -492,7 +492,6 @@ enum I18nKey {
 	postAll = "postAll",
 	postPublished = "postPublished",
 	postDraft = "postDraft",
-	postSync = "postSync",
 	postLoading = "postLoading",
 	postRetry = "postRetry",
 	postNoMatch = "postNoMatch",

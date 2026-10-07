@@ -1576,6 +1576,10 @@ function formatDate(dateStr: string | null): string {
 							<Icon icon="material-symbols:edit-calendar-outline-rounded" class="text-sm" />
 							<span>{i18n(I18nKey.adminNewPost)}</span>
 						</button>
+						<button class="action-btn" onclick={handleSync} disabled={isSyncing}>
+							<Icon icon="material-symbols:cloud" class="text-sm" />
+							<span>{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}</span>
+						</button>
 					{/if}
 					{#if activePage === "settings" && settingsSection && getConfigItem(settingsSection)}
 						<button class="action-btn" onclick={() => loadSettings(settingsSection)} disabled={settingsLoading}>
@@ -1606,8 +1610,6 @@ function formatDate(dateStr: string | null): string {
 							onEdit={handleEditPost}
 							onDelete={handleDeleteClick}
 							onRefresh={loadPosts}
-							onSync={handleSync}
-							{isSyncing}
 						/>
 					{:else if viewMode === "edit" && editingPost}
 						<PostEditor

@@ -12,8 +12,6 @@ let {
 	onEdit,
 	onDelete,
 	onRefresh,
-	onSync,
-	isSyncing = false,
 }: {
 	posts: any[];
 	isLoading: boolean;
@@ -21,8 +19,6 @@ let {
 	onEdit: (post: any) => void;
 	onDelete: (post: any, trigger?: HTMLElement | null) => void;
 	onRefresh: () => void;
-	onSync?: () => void;
-	isSyncing?: boolean;
 } = $props();
 
 type SortKey = "updated" | "newest" | "oldest" | "titleAsc" | "titleDesc";
@@ -365,7 +361,7 @@ function actionLabel(action: string, title: string): string {
 		</button>
 	</div>
 
-	<!-- 工具栏（第二行） -->
+	<!-- 工具栏（第二行）：搜索居左，分类/标签/排序整组居右 -->
 	<div class="toolbar">
 		<div class="search-bar">
 			<Icon icon="material-symbols:search" class="leading-icon" />
@@ -388,59 +384,47 @@ function actionLabel(action: string, title: string): string {
 			{/if}
 		</div>
 
-		<!-- 分类、标签、排序：常驻一行直接可点，不做二次点击收折。
-		   搜索框缩短宽度给它们让位 -->
-		<label class="toolbar-field">
-			<span class="field-label">{i18n(I18nKey.postFilterCategory)}</span>
-			<div class="select-wrap">
-				<select bind:value={categoryFilter} disabled={categories.length === 0}>
-					<option value="">{i18n(I18nKey.postAll)}</option>
-					{#each categories as category (category)}
-						<option value={category}>{category}</option>
-					{/each}
-				</select>
-				<Icon icon="material-symbols:expand-more" class="select-caret" />
-			</div>
-		</label>
+		<div class="toolbar-fields">
+			<!-- 分类、标签、排序：常驻一行直接可点，不做二次点击收折 -->
+			<label class="toolbar-field">
+				<span class="field-label">{i18n(I18nKey.postFilterCategory)}</span>
+				<div class="select-wrap">
+					<select bind:value={categoryFilter} disabled={categories.length === 0}>
+						<option value="">{i18n(I18nKey.postAll)}</option>
+						{#each categories as category (category)}
+							<option value={category}>{category}</option>
+						{/each}
+					</select>
+					<Icon icon="material-symbols:expand-more" class="select-caret" />
+				</div>
+			</label>
 
-		<label class="toolbar-field">
-			<span class="field-label">{i18n(I18nKey.postFilterTag)}</span>
-			<div class="select-wrap">
-				<select bind:value={tagFilter} disabled={tags.length === 0}>
-					<option value="">{i18n(I18nKey.postAll)}</option>
-					{#each tags as tag (tag)}
-						<option value={tag}>{tag}</option>
-					{/each}
-				</select>
-				<Icon icon="material-symbols:expand-more" class="select-caret" />
-			</div>
-		</label>
+			<label class="toolbar-field">
+				<span class="field-label">{i18n(I18nKey.postFilterTag)}</span>
+				<div class="select-wrap">
+					<select bind:value={tagFilter} disabled={tags.length === 0}>
+						<option value="">{i18n(I18nKey.postAll)}</option>
+						{#each tags as tag (tag)}
+							<option value={tag}>{tag}</option>
+						{/each}
+					</select>
+					<Icon icon="material-symbols:expand-more" class="select-caret" />
+				</div>
+			</label>
 
-		<label class="toolbar-field">
-			<span class="field-label">{i18n(I18nKey.postSort)}</span>
-			<div class="select-wrap">
-				<select bind:value={sortKey} aria-label={i18n(I18nKey.postSort)}>
-					<option value="updated">{i18n(I18nKey.postSortUpdated)}</option>
-					<option value="newest">{i18n(I18nKey.postSortNewest)}</option>
-					<option value="oldest">{i18n(I18nKey.postSortOldest)}</option>
-					<option value="titleAsc">{i18n(I18nKey.postSortTitleAsc)}</option>
-					<option value="titleDesc">{i18n(I18nKey.postSortTitleDesc)}</option>
-				</select>
-				<Icon icon="material-symbols:expand-more" class="select-caret" />
-			</div>
-		</label>
-
-		<div class="toolbar-actions">
-			{#if onSync}
-				<button class="icon-text-btn sync-btn" onclick={onSync} disabled={isLoading || isSyncing}>
-					{#if isSyncing}
-						<span class="spinner" aria-hidden="true"></span>
-					{:else}
-						<Icon icon="material-symbols:cloud" />
-					{/if}
-					{i18n(I18nKey.postSync)}
-				</button>
-			{/if}
+			<label class="toolbar-field">
+				<span class="field-label">{i18n(I18nKey.postSort)}</span>
+				<div class="select-wrap">
+					<select bind:value={sortKey} aria-label={i18n(I18nKey.postSort)}>
+						<option value="updated">{i18n(I18nKey.postSortUpdated)}</option>
+						<option value="newest">{i18n(I18nKey.postSortNewest)}</option>
+						<option value="oldest">{i18n(I18nKey.postSortOldest)}</option>
+						<option value="titleAsc">{i18n(I18nKey.postSortTitleAsc)}</option>
+						<option value="titleDesc">{i18n(I18nKey.postSortTitleDesc)}</option>
+					</select>
+					<Icon icon="material-symbols:expand-more" class="select-caret" />
+				</div>
+			</label>
 		</div>
 	</div>
 
@@ -703,10 +687,11 @@ function actionLabel(action: string, title: string): string {
 		margin-bottom: 0.75rem;
 	}
 
-	.toolbar-actions {
+	.toolbar-fields {
 		display: flex;
 		align-items: center;
 		gap: var(--md-control-gap);
+		flex-wrap: wrap;
 		margin-left: auto;
 	}
 
@@ -861,48 +846,6 @@ function actionLabel(action: string, title: string): string {
 		font-size: 0.8125rem;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
-	}
-
-	:global(.icon-text-btn) {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.375rem;
-		height: var(--md-control-h);
-		padding: 0 1rem;
-		border: none;
-		border-radius: var(--md-control-r);
-		background: transparent;
-		color: var(--md-primary-text);
-		font-size: 0.875rem;
-		font-weight: 500;
-		font-family: inherit;
-		cursor: pointer;
-		white-space: nowrap;
-		transition: background 0.15s;
-	}
-
-	:global(.icon-text-btn):hover:not(:disabled) {
-		background: color-mix(in srgb, var(--primary) 8%, transparent);
-	}
-
-	:global(.icon-text-btn):focus-visible {
-		outline: 2px solid var(--md-primary-text);
-		outline-offset: -2px;
-	}
-
-	:global(.icon-text-btn):disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.spinner {
-		width: 16px;
-		height: 16px;
-		border: 2px solid color-mix(in srgb, var(--md-primary-text) 30%, transparent);
-		border-top-color: var(--md-primary-text);
-		border-radius: 50%;
-		animation: spin 0.8s linear infinite;
 	}
 
 	/* ── 分类/标签/排序：常驻工具栏，label + select 同高同轴 ── */
@@ -1412,12 +1355,6 @@ function actionLabel(action: string, title: string): string {
 		outline-offset: -2px;
 	}
 
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
 	/* ── 自适应：按可用宽度而非设备类别切换 ── */
 
 	/* 中等宽度：作者/分类列先让位给标题与操作 */
@@ -1445,16 +1382,6 @@ function actionLabel(action: string, title: string): string {
 			min-width: 0;
 			overflow-x: auto;
 			padding-bottom: 0.25rem;
-		}
-
-		.toolbar-actions {
-			margin-left: 0;
-			width: 100%;
-		}
-
-		:global(.icon-text-btn) {
-			flex: 1;
-			justify-content: center;
 		}
 
 		/* 分类/标签/排序整行占满，select 跟着拉宽 */

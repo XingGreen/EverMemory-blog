@@ -495,7 +495,6 @@ export const zh_TW: Translation = {
 	[Key.postAll]: "全部",
 	[Key.postPublished]: "已發布",
 	[Key.postDraft]: "草稿",
-	[Key.postSync]: "同步",
 	[Key.postLoading]: "載入中...",
 	[Key.postRetry]: "重試",
 	[Key.postNoMatch]: "無匹配文章",
