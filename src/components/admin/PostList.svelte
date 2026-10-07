@@ -553,12 +553,12 @@ function actionLabel(action: string, title: string): string {
 						<div class="col col-title" role="cell" data-label={i18n(I18nKey.postColTitle)}>
 							<div class="title-cell">
 								<div class="title-row">
-									{#if post.pinned}
-										<span class="pin-wrap">
-											<Icon icon="material-symbols:pinboard" class="pin-icon" />
+									<span class="pin-wrap" aria-hidden={!post.pinned}>
+										{#if post.pinned}
+											<Icon icon="material-symbols:push-pin" class="pin-icon" />
 											<span class="sr-only">{i18n(I18nKey.postPinned)}</span>
-										</span>
-									{/if}
+										{/if}
+									</span>
 									<span class="title" title={post.title}>{post.title}</span>
 								</div>
 								{#if post.tags && post.tags.length > 0}
@@ -681,7 +681,9 @@ function actionLabel(action: string, title: string): string {
 		--md-info-text: color-mix(in srgb, var(--info) 72%, var(--deep-text));
 		--md-destructive-text: color-mix(in srgb, var(--destructive) 88%, var(--deep-text));
 
-		padding: 1.25rem;
+		/* 容器内边距对齐参考项目（flare-stack-blog）post-manager 的
+		   30px 上下 / 34px 左右，比原先 1.25rem 更从容。 */
+		padding: 1.875rem 2.125rem;
 		border-radius: var(--radius-large);
 
 		/* 统一控件规格：工具栏内所有控件共用高度、圆角、间距。
@@ -1290,19 +1292,25 @@ function actionLabel(action: string, title: string): string {
 
 	.title-row {
 		display: flex;
-		align-items: baseline;
-		gap: 0.375rem;
+		align-items: flex-start;
+		gap: 0.75rem;
+		min-width: 0;
 	}
 
+	/* 置顶图标固定 20px 槽位，无置顶的行也占位：行标题起点一致，
+	   同时把标题向右让开，表头「标题」保持最左，两层自然错开。 */
 	.pin-wrap {
 		display: inline-flex;
 		align-items: center;
+		justify-content: center;
+		width: 20px;
 		flex-shrink: 0;
+		padding-top: 2px;
 	}
 
 	:global(.pin-icon) {
-		font-size: 0.875rem;
-		color: var(--md-primary-text);
+		font-size: 1rem;
+		color: var(--monet-sky);
 		flex-shrink: 0;
 	}
 
