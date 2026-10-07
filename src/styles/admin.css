@@ -40,9 +40,10 @@
      直接引用以跟随 hue 变化（不写死 275） */
   --on-primary-container: var(--btn-content);
 
-  /* 覆盖：前台 --title-active 是 0.6(亮色)，压后台侧边栏底只有 3.46:1，
-     压深到 0.52(4.87:1) 以达 AA */
-  --title-active: oklch(0.52 0.12 275);
+  /* 覆盖：前台 --title-active(0.6) 压后台侧边栏底只有 3.46:1，
+     用同 hue 的 primary 混合 deep-text 压深到 ≈0.53(L，≈4.87:1) 达 AA，
+     hue 跟随主题（var(--primary) 走 var(--hue)），不写死 275 */
+  --title-active: color-mix(in srgb, var(--primary) 62%, var(--deep-text));
 
   /* 覆盖：卡片阴影沿用前台 --shadow-sm / --shadow-md（暗色两者已在前台统一为
      0.4/0.5），保留别名避免改动 13 处组件引用 */
@@ -76,8 +77,8 @@
   --on-primary-container: var(--btn-content);
 
   /* 覆盖：前台只在 :root 定义 --title-active(0.6)，暗色下会继承这个偏深的
-     亮色版；后台用同色相更亮版本保证深底可读 */
-  --title-active: oklch(0.75 0.13 275);
+     亮色版；跟 primary 同 hue 混白色提亮，保证深底可读且跟随主题色相 */
+  --title-active: color-mix(in srgb, var(--primary) 88%, white);
 }
 
 @media (prefers-reduced-motion: reduce) {
