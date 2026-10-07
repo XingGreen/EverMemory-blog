@@ -550,7 +550,7 @@ function actionLabel(action: string, title: string): string {
 								<div class="title-row">
 									<span class="pin-wrap" aria-hidden={!post.pinned}>
 										{#if post.pinned}
-											<Icon icon="material-symbols:push-pin-outline" class="pin-icon" />
+											<Icon icon="material-symbols:vertical-align-top" class="pin-icon" />
 											<span class="sr-only">{i18n(I18nKey.postPinned)}</span>
 										{/if}
 									</span>
