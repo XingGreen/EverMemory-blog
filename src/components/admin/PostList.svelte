@@ -597,7 +597,6 @@ function actionLabel(action: string, title: string): string {
 						<!-- 状态 -->
 						<div class="col col-status" role="cell" data-label={i18n(I18nKey.postColStatus)}>
 							<span class="status-chip" data-draft={post.draft}>
-								<span class="status-dot" aria-hidden="true"></span>
 								{post.draft ? i18n(I18nKey.postDraft) : i18n(I18nKey.postPublished)}
 							</span>
 						</div>
@@ -1192,34 +1191,29 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	/* ── 数据表 ── */
-	/* 外层 .card-base 已提供容器语义，内层不再叠第二层描边圆角，
-	   否则就是「卡片里再套卡片」——分隔交给行间 divider。 */
-	/* 表格容器
-	   圆角从 radius-md(6px) 提到 radius-large(16px)：6px 在 70px 行高下显得生硬，
-	   16px 贴近 MD3 卡片圆角，和外层容器内边距（1.25rem）不冲突。 */
+	/* 列表形态（对齐参考项目 post-list-table）：不叠表格边框/圆角，
+	   行间分隔线承担划分；表头轻量左对齐（13px/500 灰字），随滚动吸顶。 */
 	.md3-table {
-		border-radius: var(--radius-large);
-		overflow: hidden;
-		border: 1px solid var(--md-outline);
+		/* 表头 sticky 依赖滚动容器，这里不能有 overflow:hidden 的祖先裁剪 */
 	}
 
 	/* 表头行
-	   底色用 on-surface 混入 card-bg：方向随主题自动正确 —— 亮色下 on-surface 是
-	   深色，表头因此比正文行更深；暗色下是近白，表头凸起更亮，两个主题都能与正文
-	   明确分层。不用「叠黑」是因为暗色下叠黑会让表头底趋近纯黑、反而更贴近卡片底。
-	   再叠一条下边框，字号/字重/字距/大写同时收敛，分层不只依赖底色。 */
+	   参考项目 th：44px 高、13px/500、灰色，仅靠一条下边框分层；
+	   背景用 --card-bg 实底，吸顶时遮住下方滚动内容。 */
 	.header-row {
 		display: grid;
 		grid-template-columns: 2.9fr 0.9fr 0.9fr 1.1fr 0.9fr 1.2fr;
 		align-items: center;
-		padding: 0.875rem 1rem;
-		background: color-mix(in srgb, var(--md-on-surface) 10%, var(--card-bg));
+		height: 44px;
+		padding: 0 1rem;
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		background: var(--card-bg);
 		border-bottom: 1px solid var(--md-outline);
 		color: var(--md-on-surface-variant);
-		font-size: 0.75rem;
-		font-weight: 600;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
+		font-size: 0.8125rem;
+		font-weight: 500;
 	}
 
 	.header-row .col {
@@ -1247,23 +1241,24 @@ function actionLabel(action: string, title: string): string {
 		flex-direction: column;
 	}
 
-	/* 列表项
-	   行高约 63px → 70px：标题 + 标签两行内容原本挤在 12px 上下内边距里，
-	   上下留白不足让相邻行视觉粘连。padding 取 1rem 而非 1.125rem，
-	   使「有标签」与「无标签」两种行高都落在 70~71px，整列不被个别行撑歪。 */
+	/* 列表项：76px 行高，行间 1px 分隔线（对齐参考项目 td 行高 + border-bottom）。
+	   悬停高亮保留，分隔线不随行变色是正常现象（参考项目同样如此）。 */
 	.list-item {
 		display: grid;
 		grid-template-columns: 2.9fr 0.9fr 0.9fr 1.1fr 0.9fr 1.2fr;
 		align-items: center;
-		padding: 1rem;
-		min-height: 70px;
+		padding: 0.8125rem 1rem;
+		min-height: 76px;
+		border-bottom: 1px solid var(--md-outline);
 		transition: background 0.15s;
 		cursor: default;
 	}
 
-	/* 行间分割线已移除，改为纯靠 70px 行高 + 悬停高亮分隔。
-   除了视觉更透气，保留分割线还有个实际问题：它不会跟随悬停变色，
-   鼠标扫过一行时横线仍是原色，把高亮区切成两段，悬停反馈显得破碎。 */
+	/* 末行去掉分隔线，避免容器底边出现收尾的双线 */
+	.list-item:last-child {
+		border-bottom: none;
+	}
+
 	.list-item:hover {
 		background: var(--md-row-hover);
 	}
@@ -1364,28 +1359,17 @@ function actionLabel(action: string, title: string): string {
 		white-space: nowrap;
 	}
 
-	/* 状态徽章：圆点 + 文字
-	   原先「勾/编辑笔记」图标把状态列撑到约 83px，收窄为 6px 圆点后降到约 70px。
-   圆角取 6px（radius-md）而非 999px 胶囊：徽章高度仅 20px，胶囊过于圆润，
-   6px 与表格容器 16px 的圆角语言更协调，也避免一排胶囊抢走标题的注意力。
-   语义仍由文字承载（圆点是纯装饰），未退化为「只靠颜色表意」。 */
+	/* 状态徽章：纯文字胶囊（对齐参考项目 post-list-status，无圆点装饰），
+	   语义由文字承载，颜色仅作辅助分层。 */
 	.status-chip {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.375rem;
-		padding: 0.1875rem 0.5rem;
-		border-radius: var(--radius-md);
+		min-height: 24px;
+		padding: 1px 0.625rem;
+		border-radius: 999px;
 		font-size: 0.75rem;
 		font-weight: 500;
 		white-space: nowrap;
-	}
-
-	.status-dot {
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		flex-shrink: 0;
-		background: currentcolor;
 	}
 
 	.status-chip[data-draft="false"] {
@@ -1542,12 +1526,6 @@ function actionLabel(action: string, title: string): string {
 		.toolbar-field .select-wrap select {
 			flex: 1;
 			max-width: none;
-		}
-
-		.md3-table {
-			border: none;
-			border-radius: 0;
-			overflow: visible;
 		}
 
 		.header-row {

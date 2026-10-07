@@ -14,8 +14,9 @@ let {
 let open = $state(false);
 let triggerEl = $state<HTMLButtonElement | null>(null);
 let menuEl = $state<HTMLElement | null>(null);
-/* 菜单用 fixed 定位（.md3-table 是 overflow:hidden，absolute 会被裁掉）。
-   坐标在打开瞬间按触发器算好，之后滚动/改尺寸一律直接关闭而不是重算：
+/* 菜单用 fixed 定位（列表容器曾有过 overflow:hidden，absolute 会被裁掉；现为
+   列表形态后依旧用 fixed 保持稳定）。坐标在打开瞬间按触发器算好，之后滚动/
+   改尺寸一律直接关闭而不是重算：
    列表在 .admin-content 里内部滚动，fixed 元素不会跟着走。 */
 let pos = $state<{
 	right: number;
