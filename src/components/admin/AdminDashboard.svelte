@@ -161,7 +161,6 @@ function toggleTheme() {
 	isDark = next === "dark";
 }
 // 侧边栏状态
-let postsSubOpen = $state(true); // 文章管理子菜单是否展开
 let settingsSubOpen = $state(true); // 网站配置子菜单是否展开
 let isSidebarOpen = $state(false); // 移动端侧边栏抽屉是否打开
 let sidebarCollapsed = $state(false); // 桌面端侧边栏是否折叠（仅图标模式）
@@ -175,7 +174,6 @@ if (typeof window !== "undefined") {
 function toggleCollapseSidebar() {
 	sidebarCollapsed = !sidebarCollapsed;
 	if (sidebarCollapsed) {
-		postsSubOpen = false;
 		settingsSubOpen = false;
 	}
 	localStorage.setItem("admin-sidebar-collapsed", String(sidebarCollapsed));
@@ -743,24 +741,15 @@ function toggleSettingsSubmenu() {
 }
 
 function goPostList() {
-	postsSubOpen = true;
 	navigate(`${DASHBOARD_PATH}articles/`);
 }
 
 function goCreatePost() {
-	postsSubOpen = true;
 	navigate(`${DASHBOARD_PATH}articles/new/`);
 }
 
 function goEditPost(post: Post) {
-	postsSubOpen = true;
 	navigate(`${DASHBOARD_PATH}articles/edit/${post.slug}/`);
-}
-
-function togglePostsSubmenu() {
-	// 折叠态下组头仅作为 hover 滑出触发点，不允许内联展开
-	if (sidebarCollapsed) return;
-	postsSubOpen = !postsSubOpen;
 }
 
 function handleEditPost(post: Post) {
@@ -1262,83 +1251,19 @@ function formatDate(dateStr: string | null): string {
 					<span>{i18n(I18nKey.adminHome)}</span>
 				</button>
 
-				<!-- 文章管理（二级菜单） -->
-				<div class="nav-group">
-					<button
-						class="nav-item nav-group-head"
-						class:group-active={activePage === "posts"}
-						onclick={togglePostsSubmenu}
-						aria-expanded={postsSubOpen}
-					>
-{#if activePage === "posts"}
+				<!-- 文章管理（直接进列表页；新建入口在列表页头部按钮） -->
+				<button
+					class="nav-item"
+					class:active={activePage === "posts"}
+					onclick={goPostList}
+				>
+					{#if activePage === "posts"}
 						<Icon icon="material-symbols:article" />
 					{:else}
 						<Icon icon="material-symbols:article-outline" />
 					{/if}
 					<span>{i18n(I18nKey.adminPosts)}</span>
-						{#if !sidebarCollapsed}
-							<Icon
-								icon={postsSubOpen ? "material-symbols:keyboard-arrow-up-rounded" : "material-symbols:keyboard-arrow-down-rounded"}
-								class="nav-arrow"
-							/>
-						{/if}
-					</button>
-					<div class="nav-submenu-wrap" class:open={postsSubOpen}>
-						<div class="nav-submenu">
-							<button
-								class="nav-item sub"
-								class:active={activePage === "posts" && (viewMode === "list" || viewMode === "edit")}
-								onclick={goPostList}
-							>
-								{#if activePage === "posts" && (viewMode === "list" || viewMode === "edit")}
-									<Icon icon="material-symbols:list-alt-rounded" />
-								{:else}
-									<Icon icon="material-symbols:list-alt-outline" />
-								{/if}
-								<span>{i18n(I18nKey.adminPostList)}</span>
-							</button>
-							<button
-								class="nav-item sub"
-								class:active={activePage === "posts" && viewMode === "create"}
-								onclick={goCreatePost}
-							>
-								{#if activePage === "posts" && viewMode === "create"}
-									<Icon icon="material-symbols:edit-calendar-rounded" />
-								{:else}
-									<Icon icon="material-symbols:edit-calendar-outline-rounded" />
-								{/if}
-								<span>{i18n(I18nKey.adminNewPost)}</span>
-							</button>
-						</div>
-					</div>
-					<!-- 折叠态悬停弹出的文章子菜单 -->
-					<div class="flyout-panel" aria-hidden={!sidebarCollapsed}>
-						<button
-							class="nav-item sub"
-							class:active={activePage === "posts" && (viewMode === "list" || viewMode === "edit")}
-							onclick={goPostList}
-						>
-							{#if activePage === "posts" && (viewMode === "list" || viewMode === "edit")}
-								<Icon icon="material-symbols:list-alt-rounded" />
-							{:else}
-								<Icon icon="material-symbols:list-alt-outline" />
-							{/if}
-							<span>{i18n(I18nKey.adminPostList)}</span>
-						</button>
-						<button
-							class="nav-item sub"
-							class:active={activePage === "posts" && viewMode === "create"}
-							onclick={goCreatePost}
-						>
-							{#if activePage === "posts" && viewMode === "create"}
-								<Icon icon="material-symbols:edit-calendar-rounded" />
-							{:else}
-								<Icon icon="material-symbols:edit-calendar-outline-rounded" />
-							{/if}
-							<span>{i18n(I18nKey.adminNewPost)}</span>
-						</button>
-					</div>
-				</div>
+				</button>
 
 				<!-- 网站配置（二级菜单） -->
 				<div class="nav-group">
