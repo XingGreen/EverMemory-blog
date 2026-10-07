@@ -25,9 +25,6 @@
      凸起语义，且只需在各自模式下改 --card-bg 一处，不会再出现两模式不同步。 */
   --admin-sidebar-bg: var(--card-bg);
 
-  /* 输入/下拉边框：由 content-meta 与 line 混合，避免写死灰阶（前台无此 token） */
-  --input-border: color-mix(in srgb, var(--content-meta) 28%, var(--line-divider));
-
   /* 莫奈「睡莲池」色板（后台图标专用色，非文本，按 WCAG 1.4.11 需 ≥3:1）
      取自 Monet 柔彩 #F7CAC9/#92B6B0/#E8C547/#8ECAE6 的色相，
      原色 L 在 0.75~0.88，压到白底只有 1.3~1.9:1，图标会看不见，故按同色相压深。 */
@@ -65,8 +62,6 @@
   --success: #4ade80;
   --warning: #fbbf24;
   --info: oklch(0.73 0.12 245);
-
-  --input-border: color-mix(in srgb, var(--content-meta) 35%, var(--line-color));
 
   /* 暗色下用同色相的更亮版本 */
   --monet-sky: oklch(0.78 0.1 229);
