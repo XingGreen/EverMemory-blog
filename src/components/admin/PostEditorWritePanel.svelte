@@ -253,11 +253,12 @@ const TOOLS: {
 	}
 
 	/* 代码块排版：对齐前台 expressive-code（one-light / one-dark）观感，
-	   并阻断 markdown.css 的 .custom-md code 内联码背景渗入 pre code */
+	   并阻断 markdown.css 的 .custom-md code 内联码背景渗入 pre code；
+	   背景 hue 跟随主题（--hue），不写死品牌紫 */
 	:global(.content-preview pre) {
 		border-radius: var(--radius-md);
 		overflow-x: auto;
-		background: oklch(0.985 0.002 275);
+		background: oklch(0.985 0.002 var(--hue));
 		color: #383a42;
 	}
 
@@ -268,7 +269,7 @@ const TOOLS: {
 	}
 
 	:global(.dark .content-preview pre) {
-		background: oklch(0.205 0.015 275);
+		background: oklch(0.205 0.015 var(--hue));
 		color: #abb2bf;
 	}
 
