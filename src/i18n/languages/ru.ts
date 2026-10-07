@@ -508,7 +508,6 @@ export const ru: Translation = {
 	[Key.postAll]: "Все",
 	[Key.postPublished]: "Опубликовано",
 	[Key.postDraft]: "Черновик",
-	[Key.postSync]: "Синхронизировать",
 	[Key.postLoading]: "Загрузка...",
 	[Key.postRetry]: "Повторить",
 	[Key.postNoMatch]: "Соответствующих статей не найдено",

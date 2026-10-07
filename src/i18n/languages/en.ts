@@ -508,7 +508,6 @@ export const en: Translation = {
 	[Key.postAll]: "All",
 	[Key.postPublished]: "Published",
 	[Key.postDraft]: "Draft",
-	[Key.postSync]: "Sync",
 	[Key.postLoading]: "Loading...",
 	[Key.postRetry]: "Retry",
 	[Key.postNoMatch]: "No matching posts",

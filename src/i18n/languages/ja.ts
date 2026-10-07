@@ -505,7 +505,6 @@ export const ja: Translation = {
 	[Key.postAll]: "すべて",
 	[Key.postPublished]: "公開済み",
 	[Key.postDraft]: "下書き",
-	[Key.postSync]: "同期",
 	[Key.postLoading]: "読み込み中...",
 	[Key.postRetry]: "再試行",
 	[Key.postNoMatch]: "一致する記事がありません",
