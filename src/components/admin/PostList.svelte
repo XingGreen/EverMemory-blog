@@ -974,8 +974,9 @@ function actionLabel(action: string, title: string): string {
 		grid-template-columns: 2.9fr 0.9fr 1.1fr 0.9fr 1.2fr;
 		align-items: center;
 		height: 44px;
-		/* 左缘对齐容器内容起点（= 搜索栏左部）：表头「标题」贴齐搜索栏 */
-		padding: 0 1rem 0 0;
+		/* 左缘与列表行内容同轴（list-item 左右 1rem），
+		   表头「标题」与大头针列起点对齐 */
+		padding: 0 1rem;
 		position: sticky;
 		top: 0;
 		z-index: 2;
@@ -987,17 +988,12 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.header-row .col {
-		padding: 0;
+		/* 与列表内容列同轴：padding 对齐 .list-item .col (0 0.25rem)，
+		   表头文本与下方内容左缘完全一致 */
+		padding: 0 0.25rem;
 		display: flex;
 		align-items: center;
 		gap: 0.25rem;
-	}
-
-	/* 表头「标题」右移 2rem：与行内标题竖线对齐
-	   （置顶图标槽 1.25rem + title-row gap 0.75rem），
-	   参考项目 title-link 与表头同起点 */
-	.header-row .col-title {
-		padding-left: 2rem;
 	}
 
 	/* 当前排序列给出方向箭头，aria-sort 之外的视觉冗余，
