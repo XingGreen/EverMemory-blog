@@ -1629,11 +1629,11 @@ function formatDate(dateStr: string | null): string {
 		display: flex;
 		align-items: center;
 		gap: 0;
-		padding: 0.25rem 0 1rem;
+		/* 上下对称：28px logo（含 mb-1 为 32px margin-box）中心落在
+		   品牌盒与右上角折叠按钮（中心 30px）近似同轴，不再上浮 */
+		padding: 0.75rem 1.5rem 0.75rem 0;
 		border-bottom: 1px solid var(--line-divider);
 		margin-bottom: 0.75rem;
-		/* 给悬垂在右上角的折叠按钮让位 */
-		padding-right: 1.5rem;
 		border-radius: var(--radius-lg);
 		transition: background 0.15s;
 		color: var(--deep-text);
