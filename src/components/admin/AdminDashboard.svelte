@@ -60,7 +60,23 @@ type Route =
 	| { page: "secrets" }
 	| { page: "sessions" };
 
-let { avatarUrl = "" }: { avatarUrl?: string } = $props();
+let {
+	avatarUrl = "",
+	siteName = "",
+	logoType = "icon",
+	logoValue = "",
+	logoUrl = null,
+	logoAlt = "",
+	logoFollowTheme = false,
+}: {
+	avatarUrl?: string;
+	siteName?: string;
+	logoType?: "icon" | "image" | "url";
+	logoValue?: string;
+	logoUrl?: string | null;
+	logoAlt?: string;
+	logoFollowTheme?: boolean;
+} = $props();
 
 // 直接读取会话状态，避免后台页在未登录时先闪现登录表单
 let isVerified = $state(
@@ -1208,33 +1224,31 @@ function formatDate(dateStr: string | null): string {
 
 		<!-- 左侧导航栏 -->
 		<aside class="admin-sidebar" class:open={isSidebarOpen} class:collapsed={sidebarCollapsed}>
-			<div class="sidebar-brand">
-				<button
-					class="brand-toggle"
-					onclick={toggleCollapseSidebar}
-					aria-label={i18n(sidebarCollapsed ? I18nKey.adminExpandSidebar : I18nKey.adminCollapseSidebar)}
-					title={i18n(sidebarCollapsed ? I18nKey.adminExpandSidebar : I18nKey.adminCollapseSidebar)}
-				>
-					<span class="brand-avatar">
-						{#if avatarUrl}
-							<img src={avatarUrl} alt="" class="brand-avatar-img" />
-						{:else}
-							<Icon icon="material-symbols:person-rounded" class="text-2xl" />
-						{/if}
-						<span class="brand-toggle-overlay" aria-hidden="true">
-							{#if sidebarCollapsed}
-								<Icon icon="material-symbols:menu-rounded" />
-							{:else}
-								<Icon icon="material-symbols:menu-open-rounded" />
-							{/if}
-						</span>
-					</span>
-				</button>
-				<div class="brand-text">
-					<span class="brand-title">Good Day</span>
-					<span class="brand-subtitle">EverMemory</span>
+			<!-- 折叠/展开按钮：悬垂在侧边栏右上角外侧（参考 flare admin-sidebar-toggle） -->
+			<button
+				class="sidebar-collapse"
+				onclick={toggleCollapseSidebar}
+				aria-label={i18n(sidebarCollapsed ? I18nKey.adminExpandSidebar : I18nKey.adminCollapseSidebar)}
+				title={i18n(sidebarCollapsed ? I18nKey.adminExpandSidebar : I18nKey.adminCollapseSidebar)}
+			>
+				{#if sidebarCollapsed}
+					<Icon icon="material-symbols:menu-open-rounded" />
+				{:else}
+					<Icon icon="material-symbols:menu-rounded" />
+				{/if}
+			</button>
+			<!-- 品牌区：复用前台导航栏 Logo（siteConfig.navbar.logo），
+				   样式与前台一致——图片 28px、mb-1 mr-2、标题 text-md/bold/导航栏字体 -->
+				<div class="sidebar-brand" class:brand-follow-theme={logoFollowTheme}>
+					{#if logoType === "image"}
+						<img src={logoUrl ?? logoValue} alt={logoAlt} class="brand-logo" />
+					{:else if logoType === "icon"}
+						<Icon icon={logoValue} class="brand-home" />
+					{:else}
+						<img src={logoValue} alt={logoAlt} class="brand-logo" />
+					{/if}
+					<span class="brand-title">{siteName}</span>
 				</div>
-			</div>
 
 			<nav class="sidebar-nav">
 				<!-- 首页 -->
@@ -1270,7 +1284,7 @@ function formatDate(dateStr: string | null): string {
 					<button
 						class="nav-item nav-group-head"
 						class:group-active={activePage === "settings"}
-						onclick={toggleSettingsSubmenu}
+						onclick={() => (sidebarCollapsed ? goSettings() : toggleSettingsSubmenu())}
 						aria-expanded={settingsSubOpen}
 					>
 {#if activePage === "settings"}
@@ -1321,41 +1335,6 @@ function formatDate(dateStr: string | null): string {
 							{/if}
 						{/each}
 						</div>
-					</div>
-					<!-- 折叠态悬停弹出的网站配置子菜单 -->
-					<div class="flyout-panel flyout-settings" aria-hidden={!sidebarCollapsed}>
-						<button
-							class="nav-item sub"
-							class:active={activePage === "settings" && !settingsSection}
-							onclick={() => goSettings()}
-						>
-							{#if activePage === "settings" && !settingsSection}
-								<Icon icon="material-symbols:extension-rounded" />
-							{:else}
-								<Icon icon="material-symbols:extension-outline" />
-							{/if}
-							<span>{i18n(I18nKey.adminSettingsOverview)}</span>
-						</button>
-						{#each CONFIG_GROUPS as group}
-						{@const groupItems = CONFIG_ITEMS.filter(
-							(item) => getConfigGroup(item.key) === group.id,
-						)}
-						{#if groupItems.length > 0}
-							<div class="nav-group-label">{i18n(group.labelKey)}</div>
-							{#each groupItems as item (item.key)}
-								{@const itemActive =
-									activePage === "settings" && settingsSection === item.key}
-								<button
-									class="nav-item sub"
-									class:active={itemActive}
-									onclick={() => goSettings(item.key)}
-								>
-									<Icon icon={itemActive ? item.icon : item.iconOutline} />
-									<span>{i18n(getConfigLabelKey(item.key))}</span>
-								</button>
-							{/each}
-						{/if}
-					{/each}
 					</div>
 				</div>
 
@@ -1627,18 +1606,13 @@ function formatDate(dateStr: string | null): string {
 
 	/* ── 左侧导航栏 ── */
 	.admin-sidebar {
-		/* 240px：品牌区的折叠/展开入口复用头像本身（不再另设按钮），
-		   因此横向只需容纳 48px 头像 + 12px 间距 + 文字。
-		   实测最宽字体 system-ui 下 "EverMemory" @20px/600 约 128.7px，
-		   240px 可留 19px 余量，且已明显窄于此前的 280px */
+		/* position/overflow：折叠按钮悬垂在右上角外侧，滚动裁切必须放开，
+		   滚动需求交给内部 .sidebar-nav */
+		position: relative;
 		width: 240px;
 		flex-shrink: 0;
 		height: 100%;
-		overflow-y: auto;
-		/* 始终预留滚动条槽位：子菜单展开出现滚动条时内容不再向左偏移 */
-		scrollbar-gutter: stable;
-		scrollbar-width: thin;
-		scrollbar-color: color-mix(in oklab, var(--deep-text) 25%, transparent) transparent;
+		overflow: visible;
 		display: flex;
 		flex-direction: column;
 		background: var(--admin-sidebar-bg);
@@ -1649,82 +1623,96 @@ function formatDate(dateStr: string | null): string {
 		box-shadow: var(--shadow-card);
 	}
 
-	.admin-sidebar::-webkit-scrollbar {
-		width: 6px;
-	}
-
-	.admin-sidebar::-webkit-scrollbar-thumb {
-		background: color-mix(in oklab, var(--deep-text) 25%, transparent);
-		border-radius: 999px;
-	}
-
-	.admin-sidebar::-webkit-scrollbar-track {
-		background: transparent;
-	}
-
+	/* 品牌区：与前台导航栏 Logo 一致——无 flex gap（图片自带 mb-1 mr-2），
+		   悬停出现 btn-plain 背景，标题 text-md/bold/导航栏字体 */
 	.sidebar-brand {
 		display: flex;
 		align-items: center;
-		/* 水平内边距由 .admin-sidebar 提供，此处不重复，否则会挤占品牌名宽度 */
-		gap: 0.75rem;
-		padding: 0.5rem 0 1rem;
+		gap: 0;
+		padding: 0.25rem 0 1rem;
 		border-bottom: 1px solid var(--line-divider);
 		margin-bottom: 0.75rem;
+		/* 给悬垂在右上角的折叠按钮让位 */
+		padding-right: 1.5rem;
+		border-radius: var(--radius-lg);
+		transition: background 0.15s;
+		color: var(--deep-text);
 	}
 
-	.brand-avatar {
-		position: relative;
-		width: 3rem;
-		height: 3rem;
-		border-radius: 50%;
-		background: var(--primary);
-		color: var(--primary-foreground);
-		display: flex;
-		align-items: center;
-		justify-content: center;
+	.sidebar-brand:hover {
+		background: var(--btn-plain-bg-hover);
+	}
+
+	/* 前台 navbar 的 followTheme=true 时 Logo 与标题跟随主题色 */
+	.sidebar-brand.brand-follow-theme {
+		color: var(--primary);
+	}
+
+	/* 前台 Navbar <Picture>：h-7 w-7 mb-1 mr-2 object-contain */
+	.brand-logo {
+		width: 1.75rem;
+		height: 1.75rem;
+		margin-bottom: 0.25rem;
+		margin-right: 0.5rem;
+		object-fit: contain;
 		flex-shrink: 0;
-		overflow: hidden;
-		/* 浅色描边：用 box-shadow 而非 border，避免 2px 边框挤占头像尺寸 */
-		box-shadow: 0 0 0 2px var(--line-color);
 	}
 
-	.brand-avatar-img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-	}
-
-	.brand-text {
-		display: flex;
-		flex-direction: column;
-		flex: 1;
-		min-width: 0;
-	}
-
-	.brand-title,
-	.brand-subtitle {
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		line-height: 1.45;
+	/* 图标型 Logo：与前台 Icon text-[1.75rem] mb-1 mr-2 对齐 */
+	.brand-home {
+		font-size: 1.75rem;
+		flex-shrink: 0;
+		margin-bottom: 0.25rem;
+		margin-right: 0.5rem;
+		/* 颜色继承 brand（深色或主题色），不再是固定的主题色 */
 	}
 
 	.brand-title {
-		/* 问候语：Regular(400) + 次要色，辅助信息层级。
-		   实测系统仅 300 / 400-500 / 600-700 三档可用字重，
-		   用 400 而非 300 可避免与品牌名的字重落差过大 */
-		font-weight: 400;
-		color: var(--content-meta);
-		font-size: 14px;
+		min-width: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		/* 与前台导航栏标题一致：font-navbar-title 字体、text-md(1rem)、font-bold */
+		font-family: var(--font-navbar-title, inherit);
+		font-size: 1rem;
+		font-weight: 700;
+		color: inherit;
+		line-height: 1.45;
 	}
 
-	.brand-subtitle {
-		/* 品牌名：SemiBold(600) + 主色，主体信息层级。
-		   注意 600 与 700 在多数系统上渲染相同（无更细的中间档），
-		   品牌名的"重"主要由字号与主色承担 */
-		font-weight: 600;
+	/* 折叠/展开按钮：悬垂在侧边栏右上角外侧（参考 flare admin-sidebar-toggle） */
+	.sidebar-collapse {
+		position: absolute;
+		top: 1rem;
+		right: -0.875rem;
+		z-index: 5;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.75rem;
+		height: 1.75rem;
+		padding: 0;
+		border: 1px solid var(--line-divider);
+		border-radius: 50%;
+		background: var(--card-bg);
+		color: var(--content-meta);
+		box-shadow: var(--shadow-sm);
+		cursor: pointer;
+		transition: color 0.15s, background 0.15s;
+	}
+
+	.sidebar-collapse:hover {
+		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
 		color: var(--deep-text);
-		font-size: 20px;
+	}
+
+	.sidebar-collapse:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	.sidebar-collapse :global(.inline-icon) {
+		font-size: 1.125rem;
 	}
 
 	.sidebar-nav {
@@ -1732,6 +1720,24 @@ function formatDate(dateStr: string | null): string {
 		flex-direction: column;
 		gap: 0.375rem;
 		flex: 1;
+		min-height: 0;
+		/* 侧栏整体不再滚动（折叠按钮需悬垂出界），滚动需求下沉到导航区 */
+		overflow-y: auto;
+		scrollbar-width: thin;
+		scrollbar-color: color-mix(in oklab, var(--deep-text) 25%, transparent) transparent;
+	}
+
+	.sidebar-nav::-webkit-scrollbar {
+		width: 6px;
+	}
+
+	.sidebar-nav::-webkit-scrollbar-thumb {
+		background: color-mix(in oklab, var(--deep-text) 25%, transparent);
+		border-radius: 999px;
+	}
+
+	.sidebar-nav::-webkit-scrollbar-track {
+		background: transparent;
 	}
 
 	.nav-group {
@@ -1916,100 +1922,39 @@ function formatDate(dateStr: string | null): string {
 		pointer-events: none;
 	}
 
-	.brand-toggle:hover .brand-toggle-overlay,
-	.brand-toggle:focus-visible .brand-toggle-overlay {
-		opacity: 1;
-	}
-
-	/* 折叠态滑出的二级菜单面板（仅折叠时悬停一级图标显示） */
-	.flyout-panel {
-		display: none;
-		position: absolute;
-		top: 0;
-		/* 紧贴侧栏右侧，保证鼠标从图标移到面板时 hover 不断链 */
-		left: 100%;
-		z-index: 70;
-		min-width: 216px;
-		max-width: 272px;
-		max-height: min(70vh, 600px);
-		overflow-y: auto;
-		padding: 0.5rem;
-		background: var(--card-bg);
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-large);
-		box-shadow: var(--shadow-lg);
-	}
-
-	.flyout-panel .nav-item {
-		width: 100%;
-		justify-content: flex-start;
-		gap: 0.625rem;
-		padding: 0.625rem 0.875rem;
-		font-size: 0.8125rem;
-		border-radius: var(--radius-lg);
-	}
-
-	.flyout-panel .nav-group-label {
-		display: block;
-		text-transform: none;
-		letter-spacing: 0.05em;
-	}
-
-	/* 桌面端折叠模式：仅图标，悬停滑出二级菜单 */
+	/* 桌面端折叠模式：仅图标列 */
 	@media (min-width: 1024px) {
 		.admin-sidebar.collapsed {
-			/* 64px：需完整容纳 48px 头像 + 左右各 0.5rem 内边距，
-			   头像即折叠/展开入口，折叠后依然保留可见 */
+			/* 64px：容纳 28px 品牌 Logo + 左右各 0.5rem 内边距 */
 			width: 64px;
 			padding: 1rem 0.5rem;
-			/* flyout 面板超出侧栏右边界，必须关掉滚动裁切才能显示 */
+			/* 折叠按钮悬垂在右上角外侧，必须关掉滚动裁切才能显示 */
 			overflow: visible;
 		}
 
-		/* 折叠时隐藏文字与内联子菜单（flyout 面板内的文字不受影响） */
+		/* 折叠时隐藏所有文字与展开态的内联子菜单 */
 		.admin-sidebar.collapsed :not(.flyout-panel) > .nav-item > span,
-		.admin-sidebar.collapsed .brand-text,
+		.admin-sidebar.collapsed .brand-title,
 		.admin-sidebar.collapsed .nav-submenu-wrap {
 			display: none;
 		}
 
+		/* 折叠态品牌区：仅 Logo，水平居中，垂直中心与导航图标同轴 */
 		.admin-sidebar.collapsed .sidebar-brand {
 			justify-content: center;
-			padding: 0.5rem 0 1rem;
+			padding: 0.375rem 0 0.875rem;
+		}
+
+		/* 折叠态无标题，logo 的 mb-1 mr-2 只会制造偏移，归零保持居中 */
+		.admin-sidebar.collapsed .sidebar-brand .brand-logo,
+		.admin-sidebar.collapsed .sidebar-brand .brand-home {
+			margin-bottom: 0;
+			margin-right: 0;
 		}
 
 		.admin-sidebar.collapsed .nav-item {
 			justify-content: center;
 			padding: 0.5rem;
-		}
-
-		.admin-sidebar.collapsed .nav-group {
-			position: relative;
-		}
-
-		/* flyout 内按钮保持左对齐文字布局 */
-		.admin-sidebar.collapsed .flyout-panel .nav-item {
-			justify-content: flex-start;
-			padding: 0.625rem 0.875rem;
-		}
-
-		/* 悬停一级图标 => 右侧滑出二级菜单 */
-		.admin-sidebar.collapsed .nav-group:hover > .flyout-panel,
-		.admin-sidebar.collapsed .nav-group:focus-within > .flyout-panel {
-			display: block;
-			animation: sidebar-flyout-in 0.22s ease;
-		}
-	}
-
-	@keyframes sidebar-flyout-in {
-		from {
-			opacity: 0;
-			transform: translateX(-6px);
-		}
-
-		to {
-			opacity: 1;
-			transform: translateX(0);
 		}
 	}
 

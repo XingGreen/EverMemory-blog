@@ -1,18 +1,29 @@
 ---
 import AdminDashboard from "@/components/admin/AdminDashboard.svelte";
-import { profileConfig } from "@/config";
+import { profileConfig, siteConfig } from "@/config";
 import AdminLayout from "@/layouts/AdminLayout.astro";
+import { resolveAdminLogo } from "@/utils/admin-logo";
 import { resolveAvatarUrl } from "@/utils/avatar-url";
 
 const title = "控制面板";
 const description = `控制面板 - ${profileConfig.name}`;
 
 const avatarUrl = resolveAvatarUrl();
+const logo = await resolveAdminLogo();
 ---
 
 <AdminLayout title={title} description={description}>
 	<div class="admin-container">
-		<AdminDashboard client:load avatarUrl={avatarUrl} />
+		<AdminDashboard
+			client:load
+			avatarUrl={avatarUrl}
+			siteName={siteConfig.title}
+			logoType={logo.type}
+			logoValue={logo.value}
+			logoUrl={logo.src}
+			logoAlt={logo.alt}
+			logoFollowTheme={logo.followTheme}
+		/>
 	</div>
 </AdminLayout>
 
