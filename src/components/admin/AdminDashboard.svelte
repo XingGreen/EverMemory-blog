@@ -2091,6 +2091,14 @@ function formatDate(dateStr: string | null): string {
 			background: color-mix(in oklab, var(--deep-text) 8%, transparent);
 		}
 
+		/* 折叠态图标悬停反馈：灰底提示鼠标指向哪一项。
+		   展开态的基础条目不覆盖带 group-active 的设置头按钮
+		   （:not(.group-active) 排除了它），折叠态统一补上；
+		   钉住态按钮的 Flyout 底色不被 hover 覆盖，避免闪烁。 */
+		.admin-sidebar.collapsed .nav-item:hover:not(.flyout-pinned) {
+			background: color-mix(in oklab, var(--deep-text) 8%, transparent);
+		}
+
 		.admin-sidebar.collapsed .flyout-panel .nav-item {
 			width: 100%;
 			flex-shrink: 0;
