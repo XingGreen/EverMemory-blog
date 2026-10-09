@@ -2057,7 +2057,8 @@ function formatDate(dateStr: string | null): string {
 			gap: 0.375rem;
 			position: absolute;
 			top: 0;
-			left: 100%;
+			/* 与侧边栏右缘留 0.5rem 间隔，避免面板贴着栏身而难以分辨归属 */
+			left: calc(100% + 0.5rem);
 			width: 14rem;
 			max-height: calc(100vh - 8rem);
 			overflow-y: auto;
@@ -2069,15 +2070,16 @@ function formatDate(dateStr: string | null): string {
 			z-index: 40;
 		}
 
-		/* 图标与面板之间的悬停桥：面板贴边定位，空隙由 ::before 承担，
+		/* 图标与面板之间的悬停桥：间隙+按钮边缘都由 ::before 承担，
 		   鼠标从图标滑向面板的路径上悬停不中断，面板不会闪烁消失 */
 		.admin-sidebar.collapsed .flyout-panel::before {
 			content: "";
 			position: absolute;
 			top: 0;
 			bottom: 0;
-			left: -0.875rem;
-			width: 0.875rem;
+			/* 0.5rem 间隙 + 0.875rem 按钮边缘余量 */
+			left: -1.375rem;
+			width: 1.375rem;
 		}
 
 		.admin-sidebar.collapsed .settings-flyout-wrap:hover > .flyout-panel,
