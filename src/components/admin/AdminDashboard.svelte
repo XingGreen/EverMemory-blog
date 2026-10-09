@@ -1684,6 +1684,8 @@ function formatDate(dateStr: string | null): string {
 		padding: 1rem;
 		gap: 0.5rem;
 		box-shadow: var(--shadow-card);
+		/* 展开/收起过渡：宽度与内边距同步动画，避免侧栏瞬间伸缩造成生硬跳变 */
+		transition: width 0.25s ease, padding 0.25s ease;
 	}
 
 	/* 品牌区：与前台导航栏 Logo 一致——无 flex gap（图片自带 mb-1 mr-2），
@@ -1826,11 +1828,13 @@ function formatDate(dateStr: string | null): string {
 		border-radius: var(--radius-lg);
 		cursor: pointer;
 		transition: background 0.15s, color 0.15s;
-		font-family: inherit;
+font-family: inherit;
 		text-align: left;
 		line-height: 1.3;
 		/* 侧边栏内的链接项（返回首页）去除下划线 */
 		text-decoration: none;
+		/* 展开/收起过渡：padding 随侧栏宽度平滑变化，文字宽/透明度的过渡见下方 span 规则 */
+		transition: background 0.15s, color 0.15s, padding 0.25s ease;
 	}
 
 	/* 导航图标统一 24px（MD3 drawer leading icon 规范值）。
@@ -1839,6 +1843,8 @@ function formatDate(dateStr: string | null): string {
 	   --content-meta）与缩进承担，符合 MD3 同层级图标等宽的约定。 */
 	.nav-item :global(.inline-icon) {
 		font-size: 1.5rem;
+		/* 折叠态文字收起时图标不得被 flex 压缩（内容区可能小于 图标+gap） */
+		flex-shrink: 0;
 	}
 
 	/* 展开/收起箭头保持 16px：它是状态指示器而非导航图标，
@@ -1852,6 +1858,11 @@ function formatDate(dateStr: string | null): string {
 	   :not(.nav-arrow) 排除箭头——Icon 组件渲染的也是 span。 */
 	.nav-item > span:not(.nav-arrow) {
 		min-width: 0;
+		/* 折叠过渡：图标原位不动，文字向右拉出/收回。
+		   max-width 需有限值才可动画，240px 大于现有最长导航文案，展开态不截断 */
+		max-width: 240px;
+		overflow: hidden;
+		transition: max-width 0.25s ease, opacity 0.2s ease;
 	}
 
 	.nav-item:focus-visible {
@@ -2034,11 +2045,15 @@ function formatDate(dateStr: string | null): string {
 			overflow: visible;
 		}
 
-		/* 折叠时隐藏文字：导航项、品牌名、用户卡片文本。
-		   浮层内的配置项通过下方高特异性规则恢复显示——面板内还包着一层
-		   .nav-submenu，旧版 :not(.flyout-panel) > .nav-item 的直接子级
-		   判断会漏判子项，这里改为全量隐藏 + 面板内覆盖恢复。 */
-		.admin-sidebar.collapsed .nav-item > span,
+		/* 折叠时文字收起：导航项文字向右缩回（max-width/opacity 过渡，图标原位不动），
+		   品牌名、用户卡片文本直接隐藏。浮层内的配置项通过下方高特异性规则恢复
+		   显示——面板内还包着一层 .nav-submenu，旧版 :not(.flyout-panel) > .nav-item
+		   的直接子级判断会漏判子项，这里改为全量隐藏 + 面板内覆盖恢复。 */
+		.admin-sidebar.collapsed .nav-item > span {
+			max-width: 0;
+			opacity: 0;
+		}
+
 		.admin-sidebar.collapsed .brand-title,
 		.admin-sidebar.collapsed .user-meta {
 			display: none;
@@ -2047,6 +2062,9 @@ function formatDate(dateStr: string | null): string {
 		/* 浮层内的配置项必须保留文字（折叠态下承担预览职责） */
 		.admin-sidebar.collapsed .flyout-panel .nav-item > span {
 			display: block;
+			max-width: none;
+			opacity: 1;
+			overflow: visible;
 		}
 
 		/* 折叠态「网站配置」悬停浮层：右侧滑出配置列表，侧边栏保持折叠。
@@ -2158,17 +2176,10 @@ function formatDate(dateStr: string | null): string {
 			margin-right: 0;
 		}
 
-		/* 折叠态仅图标：主视图项与「网站配置」头按钮居中。
-		   居中只命中 nav/footer 的直接子级（> ），浮层面板在
-		   .settings-flyout-wrap 内且隔了一层 .nav-submenu，任意层级
-		   都不会被命中，子项保持基础左对齐。 */
-		.admin-sidebar.collapsed .sidebar-nav > .nav-item,
-		.admin-sidebar.collapsed .sidebar-footer > .nav-item,
-		.admin-sidebar.collapsed .settings-flyout-wrap > .nav-item {
-			justify-content: center;
-			padding: 0.5rem;
-		}
-
+		/* 折叠态仅图标：主视图项与「网站配置」头按钮不再另设居中/padding——
+		   沿用展开态的对齐，图标位置基本不动，收起时仅文字向右缩回。
+		   浮层面板在 .settings-flyout-wrap 内且隔了一层 .nav-submenu，
+		   任意层级都不会被主视图规则命中，子项保持基础左对齐。 */
 		.admin-sidebar.collapsed .nav-item :global(.nav-arrow) {
 			display: none;
 		}
