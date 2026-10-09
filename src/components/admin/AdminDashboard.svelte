@@ -2016,12 +2016,18 @@ function formatDate(dateStr: string | null): string {
 		}
 
 		/* 折叠时隐藏文字：导航项、品牌名、用户卡片文本。
-		   用 :not(.flyout-panel) 排除折叠态「网站配置」的悬停浮层——浮层内的
-		   配置项必须保留文字（它承担折叠态下的预览职责）。 */
-		.admin-sidebar.collapsed :not(.flyout-panel) > .nav-item > span,
+		   浮层内的配置项通过下方高特异性规则恢复显示——面板内还包着一层
+		   .nav-submenu，旧版 :not(.flyout-panel) > .nav-item 的直接子级
+		   判断会漏判子项，这里改为全量隐藏 + 面板内覆盖恢复。 */
+		.admin-sidebar.collapsed .nav-item > span,
 		.admin-sidebar.collapsed .brand-title,
 		.admin-sidebar.collapsed .user-meta {
 			display: none;
+		}
+
+		/* 浮层内的配置项必须保留文字（折叠态下承担预览职责） */
+		.admin-sidebar.collapsed .flyout-panel .nav-item > span {
+			display: block;
 		}
 
 		/* 折叠态「网站配置」悬停浮层：右侧滑出配置列表，侧边栏保持折叠。
@@ -2060,7 +2066,7 @@ function formatDate(dateStr: string | null): string {
 			display: flex;
 		}
 
-		.admin-sidebar.collapsed .flyout-panel .nav-item.sub {
+		.admin-sidebar.collapsed .flyout-panel .nav-item {
 			width: 100%;
 			flex-shrink: 0;
 			justify-content: flex-start;
@@ -2091,15 +2097,15 @@ function formatDate(dateStr: string | null): string {
 			margin-right: 0;
 		}
 
-		/* 折叠态仅图标：主视图项居中；浮层的配置项保持左对齐（:not 排除）。
-		   折叠态下主视图项无文字可占位，右侧箭头也随之隐藏。 */
-		.admin-sidebar.collapsed .sidebar-nav :not(.flyout-panel) > .nav-item,
-		.admin-sidebar.collapsed .sidebar-footer :not(.flyout-panel) > .nav-item {
+		/* 折叠态仅图标：主视图项居中；浮层的配置项保持左对齐
+		   （面板覆盖规则在后，特异性更高，后声明生效）。 */
+		.admin-sidebar.collapsed .sidebar-nav .nav-item,
+		.admin-sidebar.collapsed .sidebar-footer .nav-item {
 			justify-content: center;
 			padding: 0.5rem;
 		}
 
-		.admin-sidebar.collapsed :not(.flyout-panel) > .nav-item :global(.nav-arrow) {
+		.admin-sidebar.collapsed .nav-item :global(.nav-arrow) {
 			display: none;
 		}
 
