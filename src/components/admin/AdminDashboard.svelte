@@ -85,6 +85,79 @@ let isVerified = $state(
 		: false,
 );
 let adminUsername = $state("");
+// 折叠态悬浮菜单：fixed 视口坐标，绕开 .sidebar-nav 滚动容器的裁切；
+// 面板在 body 层渲染，不占 flex 流，hover 图标列绝不会错位
+type FlyoutRow = {
+	label: string;
+	icon?: string;
+	iconHtml?: string;
+	action?: () => void;
+	header?: boolean;
+};
+let collapsedFlyout = $state<{
+	x: number;
+	y: number;
+	rows: FlyoutRow[];
+} | null>(null);
+let flyoutCloseTimer: ReturnType<typeof setTimeout> | undefined;
+
+function showCollapsedFlyout(target: EventTarget | null) {
+	if (!sidebarCollapsed) return;
+	const item = (target as Element | null)?.closest?.(".nav-item");
+	if (!item?.isConnected) return;
+	const rect = item.getBoundingClientRect();
+	const rows: FlyoutRow[] = [];
+	if (item.classList.contains("nav-group-head")) {
+		// 「网站配置」：完整子菜单面板（总览 + 各分组项）
+		rows.push({
+			label: i18n(I18nKey.adminSettingsOverview),
+			icon: "material-symbols:extension-outline",
+			action: () => goSettings(),
+		});
+		for (const group of CONFIG_GROUPS) {
+			const groupItems = CONFIG_ITEMS.filter(
+				(c) => getConfigGroup(c.key) === group.id,
+			);
+			if (groupItems.length === 0) continue;
+			rows.push({ label: i18n(group.labelKey), header: true });
+			for (const c of groupItems) {
+				rows.push({
+					label: i18n(getConfigLabelKey(c.key)),
+					icon: c.iconOutline,
+					action: () => goSettings(c.key),
+				});
+			}
+		}
+	} else {
+		// 普通项：克隆侧栏已渲染的图标 + 文字，点击复用原按钮逻辑
+		const icon = item
+			.querySelector("svg")
+			?.cloneNode(true) as SVGSVGElement | null;
+		const label =
+			item.querySelector(":scope > span")?.textContent?.trim() ?? "";
+		rows.push({
+			label,
+			iconHtml: icon?.outerHTML,
+			action: () => (item as HTMLElement).click(),
+		});
+	}
+	collapsedFlyout = { x: rect.right + 8, y: rect.top - 4, rows };
+}
+
+function hideCollapsedFlyoutSoon() {
+	clearTimeout(flyoutCloseTimer);
+	// 留出从图标移动到面板的时间窗口
+	flyoutCloseTimer = setTimeout(() => (collapsedFlyout = null), 150);
+}
+
+function keepCollapsedFlyout() {
+	clearTimeout(flyoutCloseTimer);
+}
+
+function hideCollapsedFlyout() {
+	clearTimeout(flyoutCloseTimer);
+	collapsedFlyout = null;
+}
 let posts = $state<Post[]>([]);
 let isLoading = $state(true);
 let error = $state("");
@@ -1245,7 +1318,15 @@ function formatDate(dateStr: string | null): string {
 		{/if}
 
 		<!-- 左侧导航栏 -->
-		<aside class="admin-sidebar" class:open={isSidebarOpen} class:collapsed={sidebarCollapsed}>
+		<aside
+				class="admin-sidebar"
+				class:open={isSidebarOpen}
+				class:collapsed={sidebarCollapsed}
+				onmouseover={(e) => showCollapsedFlyout(e.target)}
+				onmouseleave={hideCollapsedFlyoutSoon}
+				onfocusin={(e) => showCollapsedFlyout(e.target)}
+				onfocusout={hideCollapsedFlyoutSoon}
+			>
 			<!-- 折叠/展开按钮：悬垂在侧边栏右上角外侧（参考 flare admin-sidebar-toggle） -->
 			<button
 				class="sidebar-collapse"
@@ -1431,6 +1512,35 @@ function formatDate(dateStr: string | null): string {
 				</button>
 			</div>
 		</aside>
+
+		{#if collapsedFlyout}
+			<div
+				class="collapsed-flyout"
+				role="menu"
+				style:left="{collapsedFlyout.x}px"
+				style:top="{collapsedFlyout.y}px"
+				onmouseenter={keepCollapsedFlyout}
+				onmouseleave={hideCollapsedFlyout}
+				onfocusin={keepCollapsedFlyout}
+				onfocusout={hideCollapsedFlyoutSoon}
+			>
+				{#each collapsedFlyout.rows as row (row.label)}
+					{#if row.header}
+						<div class="flyout-group-label">{row.label}</div>
+					{:else}
+						<button class="flyout-row" role="menuitem" onclick={row.action}>
+							{#if row.iconHtml}
+								<!-- 克隆自侧栏已渲染的 Icon，无用户可控内容 -->
+								{@html row.iconHtml}
+							{:else}
+								<Icon icon={row.icon ?? "material-symbols:arrow-forward-rounded"} />
+							{/if}
+							<span>{row.label}</span>
+						</button>
+					{/if}
+				{/each}
+			</div>
+		{/if}
 
 		<!-- 主内容区 -->
 		<div class="admin-main">
@@ -2020,29 +2130,6 @@ function formatDate(dateStr: string | null): string {
 		.admin-sidebar.collapsed .nav-item {
 			justify-content: center;
 			padding: 0.5rem;
-			/* 悬浮菜单定位参照 */
-			position: relative;
-		}
-
-		/* 折叠态悬浮菜单：hover/键盘聚焦图标时，右侧弹出文字标签。
-		   文字 span 转 absolute 后脱离 flex 流，图标保持居中不动 */
-		.admin-sidebar.collapsed .nav-item:hover > span,
-		.admin-sidebar.collapsed .nav-item:focus-visible > span {
-			display: block;
-			position: absolute;
-			left: calc(100% + 0.75rem);
-			top: 50%;
-			transform: translateY(-50%);
-			z-index: 60;
-			padding: 0.45rem 0.75rem;
-			border-radius: var(--radius-lg);
-			border: 1px solid var(--line-divider);
-			background: var(--panel-bg);
-			box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.18);
-			color: var(--deep-text);
-			font-size: 0.875rem;
-			font-weight: 500;
-			white-space: nowrap;
 		}
 
 		/* 折叠态管理员卡片：仅头像居中（40px 中心对齐 20px 导航图标中心），隐藏文字 */
@@ -2053,6 +2140,70 @@ function formatDate(dateStr: string | null): string {
 
 		.admin-sidebar.collapsed .sidebar-user .user-meta {
 			display: none;
+		}
+	}
+
+	/* 折叠态悬浮菜单面板：fixed 视口定位，不受滚动容器裁切，不占 flex 流 */
+	.collapsed-flyout {
+		position: fixed;
+		z-index: 200;
+		min-width: 12.5rem;
+		max-width: 17rem;
+		padding: 0.375rem;
+		border-radius: var(--radius-lg);
+		border: 1px solid var(--line-divider);
+		background: var(--panel-bg);
+		box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.2);
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		animation: collapsed-flyout-in 0.12s ease-out;
+	}
+
+	.flyout-row {
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		padding: 0.5rem 0.625rem;
+		border: none;
+		border-radius: var(--radius-md);
+		background: transparent;
+		color: var(--deep-text);
+		font-size: 0.875rem;
+		text-align: left;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.flyout-row:hover,
+	.flyout-row:focus-visible {
+		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
+		outline: none;
+	}
+
+	.flyout-row :global(svg) {
+		width: 1.25rem;
+		height: 1.25rem;
+		flex-shrink: 0;
+	}
+
+	.flyout-group-label {
+		padding: 0.375rem 0.625rem 0.125rem;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		color: var(--content-meta);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	@keyframes collapsed-flyout-in {
+		from {
+			opacity: 0;
+			transform: translateX(-4px);
+		}
+		to {
+			opacity: 1;
+			transform: translateX(0);
 		}
 	}
 
