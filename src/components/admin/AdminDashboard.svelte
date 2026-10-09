@@ -2050,9 +2050,9 @@ function formatDate(dateStr: string | null): string {
 		}
 
 		/* 折叠态「网站配置」悬停浮层：右侧滑出配置列表，侧边栏保持折叠。
-		   显示由 :hover/:focus-within/:flyout-pinned 驱动；关闭带 0.6s 延迟
-		   与 0.15s 淡出（visibility 延迟切换、opacity 过渡），给用户滑过
-		   16px 间隙充裕的时间窗口，纯 CSS 实现，无 JS。 */
+		   显示由 :hover/:focus-within/:flyout-pinned 驱动；关闭带 0.25s 延迟
+		   与 0.15s 淡出（visibility 延迟切换、opacity 过渡）。滑过 16px 间隙
+		   主要靠下方的安全三角桥兜底，延迟只是二道保险，纯 CSS 实现，无 JS。 */
 		.admin-sidebar.collapsed .flyout-panel {
 			display: flex;
 			flex-direction: column;
@@ -2075,19 +2075,23 @@ function formatDate(dateStr: string | null): string {
 			pointer-events: none;
 			transition:
 				opacity 0.15s ease,
-				visibility 0s linear 0.6s;
+				visibility 0s linear 0.25s;
 		}
 
-		/* 图标与面板之间的悬停桥：间隙+按钮边缘都由 ::before 承担，
-		   鼠标从图标滑向面板的路径上悬停不中断，面板不会闪烁消失 */
+		/* 图标与面板之间的「安全三角」悬停桥：间隙+按钮边缘都由 ::before 承担。
+		   桥在上下两端各延伸 0.875rem，并用 clip-path 切成「按钮端窄、面板端宽」
+		   的梯形——鼠标从图标任意高度斜向滑向面板都落在桥内，悬停不中断，
+		   面板不会闪烁消失 */
 		.admin-sidebar.collapsed .flyout-panel::before {
 			content: "";
 			position: absolute;
-			top: 0;
-			bottom: 0;
+			top: -0.875rem;
+			bottom: -0.875rem;
 			/* 1rem 间隙 + 0.875rem 按钮边缘余量 */
 			left: -1.875rem;
 			width: 1.875rem;
+			/* 左端（按钮侧）保留中部 30%-70% 开口，向右张开到全高（面板侧） */
+			clip-path: polygon(0 30%, 0 70%, 100% 0, 100% 100%);
 		}
 
 		.admin-sidebar.collapsed .settings-flyout-wrap:hover > .flyout-panel,
