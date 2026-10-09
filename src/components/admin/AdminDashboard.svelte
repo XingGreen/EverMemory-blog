@@ -1998,7 +1998,7 @@ function formatDate(dateStr: string | null): string {
 		}
 
 		/* 折叠时隐藏所有文字与展开态的内联子菜单 */
-		.admin-sidebar.collapsed :not(.flyout-panel) > .nav-item > span,
+		.admin-sidebar.collapsed .nav-item > span,
 		.admin-sidebar.collapsed .brand-title,
 		.admin-sidebar.collapsed .nav-submenu-wrap {
 			display: none;
@@ -2020,6 +2020,29 @@ function formatDate(dateStr: string | null): string {
 		.admin-sidebar.collapsed .nav-item {
 			justify-content: center;
 			padding: 0.5rem;
+			/* 悬浮菜单定位参照 */
+			position: relative;
+		}
+
+		/* 折叠态悬浮菜单：hover/键盘聚焦图标时，右侧弹出文字标签。
+		   文字 span 转 absolute 后脱离 flex 流，图标保持居中不动 */
+		.admin-sidebar.collapsed .nav-item:hover > span,
+		.admin-sidebar.collapsed .nav-item:focus-visible > span {
+			display: block;
+			position: absolute;
+			left: calc(100% + 0.75rem);
+			top: 50%;
+			transform: translateY(-50%);
+			z-index: 60;
+			padding: 0.45rem 0.75rem;
+			border-radius: var(--radius-lg);
+			border: 1px solid var(--line-divider);
+			background: var(--panel-bg);
+			box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.18);
+			color: var(--deep-text);
+			font-size: 0.875rem;
+			font-weight: 500;
+			white-space: nowrap;
 		}
 
 		/* 折叠态管理员卡片：仅头像居中（40px 中心对齐 20px 导航图标中心），隐藏文字 */
