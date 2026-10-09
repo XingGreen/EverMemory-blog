@@ -464,6 +464,7 @@ export const ja: Translation = {
 	[Key.adminToggleTheme]: "テーマ切り替え",
 	[Key.adminCollapseSidebar]: "サイドバーを折りたたむ",
 	[Key.adminExpandSidebar]: "サイドバーを展開",
+	[Key.adminSidebarRole]: "管理者",
 	[Key.adminLogout]: "ログアウト",
 
 	[Key.verifyTitle]: "管理者ログイン",

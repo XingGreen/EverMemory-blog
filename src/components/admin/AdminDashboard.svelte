@@ -84,6 +84,7 @@ let isVerified = $state(
 		? sessionStorage.getItem("admin_verified") === "true"
 		: false,
 );
+let adminUsername = $state("");
 let posts = $state<Post[]>([]);
 let isLoading = $state(true);
 let error = $state("");
@@ -321,6 +322,16 @@ function startAdmin() {
 onMount(async () => {
 	// 同步当前主题状态（深浅切换按钮图标）
 	isDark = document.documentElement.classList.contains("dark");
+	// 侧边栏底部用户卡片展示的管理员用户名（与会话接口同一来源）
+	try {
+		const res = await fetch("/api/admin/session/");
+		const data = await res.json();
+		if (typeof data.username === "string" && data.username) {
+			adminUsername = data.username;
+		}
+	} catch {
+		// 网络异常时保留空值，登录后再补
+	}
 	if (!isVerified) {
 		// 未登录访问后台页：先尝试"记住我"Cookie，有效则免登录进入
 		try {
@@ -698,6 +709,17 @@ function handleVerify(success: boolean) {
 		loadPosts();
 		showToast("验证成功", "success");
 		goDashboard();
+		// 登录成功后补齐侧边栏用户卡片的管理员用户名
+		fetch("/api/admin/session/")
+			.then((res) => res.json())
+			.then((data) => {
+				if (typeof data.username === "string" && data.username) {
+					adminUsername = data.username;
+				}
+			})
+			.catch(() => {
+				// 忽略
+			});
 	} else {
 		showToast("密码验证失败", "error");
 	}
@@ -1368,6 +1390,20 @@ function formatDate(dateStr: string | null): string {
 			</nav>
 
 			<div class="sidebar-footer">
+				<!-- 当前管理员：左侧头像 + 用户名（登录/记住我 Cookie 回填）+ 角色 -->
+				<div class="sidebar-user">
+					<span class="user-avatar">
+						{#if avatarUrl}
+							<img src={avatarUrl} alt="" class="user-avatar-img" />
+						{:else}
+							<Icon icon="material-symbols:person-rounded" class="user-avatar-fallback" />
+						{/if}
+					</span>
+					<div class="user-meta">
+						<span class="user-name">{adminUsername || "admin"}</span>
+						<span class="user-role">{i18n(I18nKey.adminSidebarRole)}</span>
+					</div>
+				</div>
 				<!-- 返回前台首页 -->
 				<a class="nav-item" href="/">
 					<Icon icon="material-symbols:home-outline-rounded" />
@@ -1885,41 +1921,70 @@ function formatDate(dateStr: string | null): string {
 		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
 	}
 
+	/* 底部管理员卡片：左头像（直接展示、无边框/描边/背景圈）+ 右用户名（env）/ 角色 */
+	.sidebar-user {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.625rem 0.5rem;
+		border-radius: var(--radius-lg);
+		margin-bottom: 0.25rem;
+		transition: background 0.15s, color 0.15s;
+	}
+
+	.sidebar-user:hover {
+		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
+	}
+
+	.user-avatar {
+		width: 2.5rem;
+		height: 2.5rem;
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		overflow: hidden;
+		/* 圆形裁切但无描边：直接展示头像图片 */
+		border-radius: 50%;
+	}
+
+	.user-avatar-img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.user-avatar-fallback {
+		font-size: 1.375rem;
+		color: var(--content-meta);
+	}
+
+	.user-meta {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+
+	.user-name {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--deep-text);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		line-height: 1.4;
+	}
+
+	.user-role {
+		font-size: 0.75rem;
+		color: var(--content-meta);
+		line-height: 1.4;
+	}
+
 	.sidebar-footer {
 		border-top: 1px solid var(--line-divider);
 		padding-top: 0.5rem;
 		margin-top: 0.5rem;
-	}
-
-	/* 折叠/展开入口：复用头像本身，不额外占横向空间 */
-	.brand-toggle {
-		display: inline-flex;
-		padding: 0;
-		border: none;
-		background: transparent;
-		cursor: pointer;
-		border-radius: 50%;
-		flex-shrink: 0;
-	}
-
-	.brand-toggle:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 2px;
-	}
-
-	/* 悬停/聚焦时用遮罩 + 图标提示当前点击将折叠或展开侧边栏 */
-	.brand-toggle-overlay {
-		position: absolute;
-		inset: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border-radius: 50%;
-		background: rgba(0, 0, 0, 0.55);
-		color: #fff;
-		opacity: 0;
-		transition: opacity 0.2s ease;
-		pointer-events: none;
 	}
 
 	/* 桌面端折叠模式：仅图标列 */
@@ -1955,6 +2020,16 @@ function formatDate(dateStr: string | null): string {
 		.admin-sidebar.collapsed .nav-item {
 			justify-content: center;
 			padding: 0.5rem;
+		}
+
+		/* 折叠态管理员卡片：仅头像居中（40px 中心对齐 20px 导航图标中心），隐藏文字 */
+		.admin-sidebar.collapsed .sidebar-user {
+			justify-content: center;
+			padding: 0.25rem 0 1rem;
+		}
+
+		.admin-sidebar.collapsed .sidebar-user .user-meta {
+			display: none;
 		}
 	}
 
@@ -3010,17 +3085,6 @@ function formatDate(dateStr: string | null): string {
 
 		.menu-toggle {
 			display: inline-flex;
-		}
-
-		/* 移动端抽屉没有折叠态概念（由遮罩与 X 按钮关闭），
-		   禁用头像上的 hover 覆盖层，避免误触发桌面端折叠逻辑 */
-		.brand-toggle {
-			pointer-events: none;
-			cursor: default;
-		}
-
-		.brand-toggle-overlay {
-			display: none;
 		}
 	}
 

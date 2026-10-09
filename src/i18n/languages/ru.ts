@@ -467,6 +467,7 @@ export const ru: Translation = {
 	[Key.adminToggleTheme]: "Переключить тему",
 	[Key.adminCollapseSidebar]: "Свернуть боковую панель",
 	[Key.adminExpandSidebar]: "Развернуть боковую панель",
+	[Key.adminSidebarRole]: "Администратор",
 	[Key.adminLogout]: "Выйти",
 
 	[Key.verifyTitle]: "Вход для администратора",
