@@ -196,12 +196,26 @@ function toggleCollapseSidebar() {
 	localStorage.setItem("admin-sidebar-collapsed", String(sidebarCollapsed));
 }
 
-// 折叠态点击带二级菜单的项：展开侧边栏并展开该组子菜单，由用户选择子项，
-// 与展开态交互一致，不直接跳到配置概览
-function expandSidebarWithSubmenu() {
-	sidebarCollapsed = false;
-	settingsSubOpen = true;
-	localStorage.setItem("admin-sidebar-collapsed", "false");
+// 折叠态点击带二级菜单的项：钉住悬浮浮层（flyout-pinned）。
+// 钉住后浮层不再依赖 hover，鼠标移出也保持显示，直到用户点击页面
+// 空白处（onWindowClick）或从浮层内选择了配置项才解除。
+let flyoutPinned = $state(false);
+
+function handleSettingsHeadClick() {
+	if (sidebarCollapsed) {
+		flyoutPinned = !flyoutPinned;
+		return;
+	}
+	toggleSettingsSubmenu();
+}
+
+// 钉住状态下点击空白处解除：浮层内（按钮/面板）的点击不处理，
+// 避免选择路径上的点击误关闭面板
+function onWindowClick(e: MouseEvent) {
+	if (!flyoutPinned) return;
+	const target = e.target as Element | null;
+	if (target?.closest(".settings-flyout-wrap")) return;
+	flyoutPinned = false;
 }
 
 const activePage = $derived<Page>(
@@ -765,6 +779,8 @@ function goDashboard() {
 }
 
 function goSettings(section?: string) {
+	// 从折叠态浮层选择配置项后解除钉住
+	flyoutPinned = false;
 	navigate(
 		section
 			? `${DASHBOARD_PATH}settings/${section}/`
@@ -1237,6 +1253,8 @@ function formatDate(dateStr: string | null): string {
 	</div>
 {/snippet}
 
+<svelte:window onclick={onWindowClick} />
+
 {#if !isVerified}
 	<VerifyScreen onVerify={handleVerify} {avatarUrl} />
 {:else}
@@ -1310,11 +1328,12 @@ function formatDate(dateStr: string | null): string {
 				</button>
 
 				<!-- 网站配置：展开态点击切换子菜单；折叠态悬停图标 → 右侧浮层预览配置列表 -->
-				<div class="settings-flyout-wrap" class:open={settingsSubOpen}>
+				<div class="settings-flyout-wrap" class:open={settingsSubOpen} class:flyout-pinned={flyoutPinned}>
 					<button
 						class="nav-item nav-group-head"
 						class:group-active={activePage === "settings"}
-						onclick={() => (sidebarCollapsed ? expandSidebarWithSubmenu() : toggleSettingsSubmenu())}
+						class:flyout-pinned={flyoutPinned}
+						onclick={handleSettingsHeadClick}
 						aria-expanded={settingsSubOpen}
 					>
 {#if activePage === "settings"}
@@ -2062,8 +2081,14 @@ function formatDate(dateStr: string | null): string {
 		}
 
 		.admin-sidebar.collapsed .settings-flyout-wrap:hover > .flyout-panel,
-		.admin-sidebar.collapsed .settings-flyout-wrap:focus-within > .flyout-panel {
+		.admin-sidebar.collapsed .settings-flyout-wrap:focus-within > .flyout-panel,
+		.admin-sidebar.collapsed .settings-flyout-wrap.flyout-pinned > .flyout-panel {
 			display: flex;
+		}
+
+		/* 钉住状态的视觉反馈：头按钮底色与面板同理，提示当前已固定 */
+		.admin-sidebar.collapsed .nav-group-head.flyout-pinned {
+			background: color-mix(in oklab, var(--deep-text) 8%, transparent);
 		}
 
 		.admin-sidebar.collapsed .flyout-panel .nav-item {
