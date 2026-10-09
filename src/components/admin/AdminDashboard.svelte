@@ -2078,15 +2078,18 @@ function formatDate(dateStr: string | null): string {
 				visibility 0s linear 0.25s;
 		}
 
-		/* 图标与面板之间的判断区域缓冲带：由 ::before 承担。
-		   整条矩形通道覆盖 1rem 间隙 + 按钮侧/面板侧余量，上下各延伸 1rem，
-		   鼠标从图标任意高度直行或斜向滑向面板都落在带内，悬停不中断 */
-		.admin-sidebar.collapsed .flyout-panel::before {
+		/* 图标与面板之间的判断区域缓冲带：挂在 wrap 的 ::after 上。
+		   不能挂面板 ::before——面板自身 overflow-y:auto 会把位于边界
+		   外的伪元素（即整个间隙）裁掉，间隙从未真正可命中。
+		   wrap 无溢出裁剪：矩形通道从按钮右缘（left:100%）向右延伸
+		   2rem，覆盖 1rem 间隙并深入面板左缘，鼠标沿任意高度移向
+		   面板都落在带内，悬停不中断 */
+		.admin-sidebar.collapsed .settings-flyout-wrap::after {
 			content: "";
 			position: absolute;
 			top: -1rem;
 			bottom: -1rem;
-			left: -2rem;
+			left: 100%;
 			width: 2rem;
 		}
 
