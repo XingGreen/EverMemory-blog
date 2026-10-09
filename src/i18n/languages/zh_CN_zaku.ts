@@ -449,6 +449,7 @@ export const zaku: Translation = {
 	[Key.adminToggleTheme]: "切换深浅模式",
 	[Key.adminCollapseSidebar]: "收起侧边栏",
 	[Key.adminExpandSidebar]: "展开侧边栏",
+	[Key.adminSidebarRole]: "管理员",
 	[Key.adminLogout]: "退出登录",
 
 	[Key.verifyTitle]: "管理员登录",

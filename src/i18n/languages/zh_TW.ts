@@ -454,6 +454,7 @@ export const zh_TW: Translation = {
 	[Key.adminToggleTheme]: "切換深淺模式",
 	[Key.adminCollapseSidebar]: "收起側邊欄",
 	[Key.adminExpandSidebar]: "展開側邊欄",
+	[Key.adminSidebarRole]: "管理員",
 	[Key.adminLogout]: "登出",
 
 	[Key.verifyTitle]: "管理員登入",

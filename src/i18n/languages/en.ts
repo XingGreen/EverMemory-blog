@@ -467,6 +467,7 @@ export const en: Translation = {
 	[Key.adminToggleTheme]: "Toggle theme",
 	[Key.adminCollapseSidebar]: "Collapse sidebar",
 	[Key.adminExpandSidebar]: "Expand sidebar",
+	[Key.adminSidebarRole]: "Administrator",
 	[Key.adminLogout]: "Log Out",
 
 	[Key.verifyTitle]: "Admin Login",

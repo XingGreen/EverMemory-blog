@@ -450,6 +450,7 @@ enum I18nKey {
 	adminToggleTheme = "adminToggleTheme",
 	adminCollapseSidebar = "adminCollapseSidebar",
 	adminExpandSidebar = "adminExpandSidebar",
+	adminSidebarRole = "adminSidebarRole",
 
 	// 登录验证
 	verifyTitle = "verifyTitle",
