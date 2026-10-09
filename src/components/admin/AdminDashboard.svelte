@@ -1309,8 +1309,8 @@ function formatDate(dateStr: string | null): string {
 					<span>{i18n(I18nKey.adminPosts)}</span>
 				</button>
 
-				<!-- 网站配置（二级菜单） -->
-				<div class="nav-group">
+				<!-- 网站配置：展开态点击切换子菜单；折叠态悬停图标 → 右侧浮层预览配置列表 -->
+				<div class="settings-flyout-wrap" class:open={settingsSubOpen}>
 					<button
 						class="nav-item nav-group-head"
 						class:group-active={activePage === "settings"}
@@ -1330,7 +1330,7 @@ function formatDate(dateStr: string | null): string {
 							/>
 						{/if}
 					</button>
-					<div class="nav-submenu-wrap" class:open={settingsSubOpen}>
+					<div class="flyout-panel" aria-hidden={!sidebarCollapsed}>
 						<div class="nav-submenu">
 							<button
 								class="nav-item sub"
@@ -1862,18 +1862,28 @@ function formatDate(dateStr: string | null): string {
 		flex-shrink: 0;
 	}
 
-	/* 折叠子菜单动画容器（grid 行高过渡） */
-	.nav-submenu-wrap {
+	/* ── 网站配置：展开态内联二级菜单；折叠态右侧悬浮浮层（旧版 flyout 写法）── */
+	.settings-flyout-wrap {
+		position: relative;
+	}
+
+	/* 浮层面板默认隐藏，仅折叠态由 :hover/:focus-within 触发显示 */
+	.flyout-panel {
+		display: none;
+	}
+
+	/* 展开态：子菜单用 grid 行高动画展开收起 */
+	.settings-flyout-wrap > .flyout-panel {
 		display: grid;
 		grid-template-rows: 0fr;
 		transition: grid-template-rows 0.32s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
-	.nav-submenu-wrap.open {
+	.settings-flyout-wrap.open > .flyout-panel {
 		grid-template-rows: 1fr;
 	}
 
-	.nav-submenu-wrap > .nav-submenu {
+	.settings-flyout-wrap > .flyout-panel .nav-submenu {
 		overflow: hidden;
 		min-height: 0;
 	}
@@ -2005,16 +2015,18 @@ function formatDate(dateStr: string | null): string {
 			overflow: visible;
 		}
 
-		/* 折叠时隐藏所有文字（浮层内的子项文字单独恢复显示） */
-		.admin-sidebar.collapsed .nav-item > span,
-		.admin-sidebar.collapsed .brand-title {
+		/* 折叠时隐藏文字：导航项、品牌名、用户卡片文本。
+		   用 :not(.flyout-panel) 排除折叠态「网站配置」的悬停浮层——浮层内的
+		   配置项必须保留文字（它承担折叠态下的预览职责）。 */
+		.admin-sidebar.collapsed :not(.flyout-panel) > .nav-item > span,
+		.admin-sidebar.collapsed .brand-title,
+		.admin-sidebar.collapsed .user-meta {
 			display: none;
 		}
 
-		/* 折叠态「网站配置」的二级导航变为右侧悬浮面板（旧版 flyout 写法）：
-		   .nav-group:hover/focus-within 显示；absolute 定位脱离 flex 流，
-		   图标列保持居中不动 */
-		.admin-sidebar.collapsed .nav-submenu-wrap {
+		/* 折叠态「网站配置」悬停浮层：右侧滑出配置列表，侧边栏保持折叠。
+		   悬停/焦点移出 wrap 即随 :hover 状态消失，显示逻辑全在 CSS，无 JS。 */
+		.admin-sidebar.collapsed .flyout-panel {
 			display: none;
 			flex-direction: column;
 			gap: 0.375rem;
@@ -2032,14 +2044,9 @@ function formatDate(dateStr: string | null): string {
 			z-index: 40;
 		}
 
-		.admin-sidebar.collapsed .nav-group:hover > .nav-submenu-wrap,
-		.admin-sidebar.collapsed .nav-group:focus-within > .nav-submenu-wrap {
-			display: flex;
-		}
-
 		/* 图标与面板之间的悬停桥：面板贴边定位，空隙由 ::before 承担，
-		   鼠标从图标滑向面板时悬停不中断、面板不闪烁 */
-		.admin-sidebar.collapsed .nav-submenu-wrap::before {
+		   鼠标从图标滑向面板的路径上悬停不中断，面板不会闪烁消失 */
+		.admin-sidebar.collapsed .flyout-panel::before {
 			content: "";
 			position: absolute;
 			top: 0;
@@ -2048,38 +2055,27 @@ function formatDate(dateStr: string | null): string {
 			width: 0.875rem;
 		}
 
-		/* 浮层内还原子项排版：去掉展开态的缩进/左线，子项左对齐占满 */
-		.admin-sidebar.collapsed .nav-submenu-wrap .nav-submenu {
+		.admin-sidebar.collapsed .settings-flyout-wrap:hover > .flyout-panel,
+		.admin-sidebar.collapsed .settings-flyout-wrap:focus-within > .flyout-panel {
+			display: flex;
+		}
+
+		.admin-sidebar.collapsed .flyout-panel .nav-item.sub {
+			width: 100%;
+			flex-shrink: 0;
+			justify-content: flex-start;
+		}
+
+		/* 浮层内的展开态缩进/左线只属于内联形态，折叠浮层中还原顶格 */
+		.admin-sidebar.collapsed .flyout-panel .nav-submenu {
 			margin-left: 0;
 			padding-left: 0;
 			border-left: none;
 			overflow: visible;
 		}
 
-		.admin-sidebar.collapsed .nav-submenu-wrap .nav-item > span {
-			display: block;
-		}
-
-		.admin-sidebar.collapsed .nav-submenu-wrap .nav-item.sub {
-			width: 100%;
-			flex-shrink: 0;
-			justify-content: flex-start;
-		}
-
-		.admin-sidebar.collapsed .nav-submenu-wrap .nav-group-label {
+		.admin-sidebar.collapsed .flyout-panel .nav-group-label {
 			padding-left: 0.875rem;
-		}
-
-		/* 深色模式提亮：--card-bg 近纯黑时混入文字色，保证面板与背景可分辨 */
-		:global(.dark) .admin-sidebar.collapsed .nav-submenu-wrap {
-			background: color-mix(in oklab, var(--card-bg) 70%, var(--deep-text));
-			border-color: color-mix(in oklab, var(--deep-text) 28%, transparent);
-		}
-
-		/* 折叠态导航区释放滚动裁剪：absolute 浮层 left:100% 才能溢出显示
-		   （折叠态仅几个图标项，无需滚动） */
-		.admin-sidebar.collapsed .sidebar-nav {
-			overflow: visible;
 		}
 
 		/* 折叠态品牌区：仅 Logo，水平居中，垂直中心与导航图标同轴 */
@@ -2095,12 +2091,33 @@ function formatDate(dateStr: string | null): string {
 			margin-right: 0;
 		}
 
-		.admin-sidebar.collapsed .nav-item:not(.sub) {
+		/* 折叠态仅图标：主视图项居中；浮层的配置项保持左对齐（:not 排除）。
+		   折叠态下主视图项无文字可占位，右侧箭头也随之隐藏。 */
+		.admin-sidebar.collapsed .sidebar-nav :not(.flyout-panel) > .nav-item,
+		.admin-sidebar.collapsed .sidebar-footer :not(.flyout-panel) > .nav-item {
 			justify-content: center;
 			padding: 0.5rem;
 		}
 
-		/* 折叠态管理员卡片：仅头像居中（40px 中心对齐 20px 导航图标中心），隐藏文字 */
+		.admin-sidebar.collapsed :not(.flyout-panel) > .nav-item :global(.nav-arrow) {
+			display: none;
+		}
+
+		/* 释放溢出裁剪：sidebar-nav 默认 overflow-y:auto 会把 overflow-x 强制成 auto，
+		   折叠态悬停浮层（absolute 定位于 wrap 右侧）会被滚动容器裁掉。
+		   折叠态仅 5 个图标项，高度远小于视口，滚动需求为零，恢复 visible 让浮层可溢出 */
+		.admin-sidebar.collapsed .sidebar-nav {
+			overflow: visible;
+		}
+
+		/* 「网站配置」的浮层 wrap 在折叠态是普通 flex 子项，按钮按内容宽度左对齐，
+		   会把图标顶到整条左缘之外——这里把 wrap 自身居中，图标中心与其它项一致 */
+		.admin-sidebar.collapsed .settings-flyout-wrap {
+			display: flex;
+			justify-content: center;
+		}
+
+		/* 折叠态管理员卡片：仅头像居中（40px 中心对齐 20px 导航图标中心） */
 		.admin-sidebar.collapsed .sidebar-user {
 			justify-content: center;
 			padding: 0.25rem 0 1rem;
