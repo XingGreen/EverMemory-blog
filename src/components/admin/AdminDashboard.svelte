@@ -85,79 +85,6 @@ let isVerified = $state(
 		: false,
 );
 let adminUsername = $state("");
-// 折叠态悬浮菜单：fixed 视口坐标，绕开 .sidebar-nav 滚动容器的裁切；
-// 面板在 body 层渲染，不占 flex 流，hover 图标列绝不会错位
-type FlyoutRow = {
-	label: string;
-	icon?: string;
-	iconHtml?: string;
-	action?: () => void;
-	header?: boolean;
-};
-let collapsedFlyout = $state<{
-	x: number;
-	y: number;
-	rows: FlyoutRow[];
-} | null>(null);
-let flyoutCloseTimer: ReturnType<typeof setTimeout> | undefined;
-// 当前悬停的分组头：避免同按钮内 span/svg 移动反复重建面板
-let flyoutTarget: Element | null = null;
-
-function showCollapsedFlyout(target: EventTarget | null) {
-	if (!sidebarCollapsed) return;
-	const item = (target as Element | null)?.closest?.(".nav-item");
-	if (!item?.isConnected) return;
-	// 2 级导航判定：nav-item 后紧跟子菜单容器。无二级菜单的项不弹悬浮面板
-	const submenuWrap = item.nextElementSibling as HTMLElement | null;
-	if (!submenuWrap?.classList.contains("nav-submenu-wrap")) {
-		hideCollapsedFlyout();
-		return;
-	}
-	if (item === flyoutTarget) {
-		keepCollapsedFlyout();
-		return;
-	}
-	flyoutTarget = item;
-	const rect = item.getBoundingClientRect();
-	const rows: FlyoutRow[] = [];
-	// 面板内容直接来自该组的子菜单 DOM：分组头 + 各子项（图标/文字/点击逻辑）
-	const submenu = submenuWrap.querySelector(".nav-submenu");
-	for (const child of submenu?.children ?? []) {
-		const el = child as HTMLElement;
-		if (el.classList.contains("nav-group-label")) {
-			if (el.textContent) rows.push({ label: el.textContent, header: true });
-		} else if (el.classList.contains("nav-item")) {
-			const label =
-				el.querySelector(":scope > span")?.textContent?.trim() ?? "";
-			const icon = el
-				.querySelector("svg")
-				?.cloneNode(true) as SVGSVGElement | null;
-			rows.push({
-				label,
-				iconHtml: icon?.outerHTML,
-				action: () => (el as HTMLElement).click(),
-			});
-		}
-	}
-	if (rows.length === 0) return;
-	collapsedFlyout = { x: rect.right + 8, y: rect.top - 4, rows };
-}
-
-function hideCollapsedFlyoutSoon() {
-	clearTimeout(flyoutCloseTimer);
-	// 留出从图标移动到面板的时间窗口
-	flyoutCloseTimer = setTimeout(() => (collapsedFlyout = null), 150);
-}
-
-function keepCollapsedFlyout() {
-	clearTimeout(flyoutCloseTimer);
-}
-
-function hideCollapsedFlyout() {
-	clearTimeout(flyoutCloseTimer);
-	collapsedFlyout = null;
-	flyoutTarget = null;
-}
 let posts = $state<Post[]>([]);
 let isLoading = $state(true);
 let error = $state("");
@@ -267,6 +194,14 @@ function toggleCollapseSidebar() {
 		settingsSubOpen = false;
 	}
 	localStorage.setItem("admin-sidebar-collapsed", String(sidebarCollapsed));
+}
+
+// 折叠态点击带二级菜单的项：展开侧边栏并展开该组子菜单，由用户选择子项，
+// 与展开态交互一致，不直接跳到配置概览
+function expandSidebarWithSubmenu() {
+	sidebarCollapsed = false;
+	settingsSubOpen = true;
+	localStorage.setItem("admin-sidebar-collapsed", "false");
 }
 
 const activePage = $derived<Page>(
@@ -1318,15 +1253,7 @@ function formatDate(dateStr: string | null): string {
 		{/if}
 
 		<!-- 左侧导航栏 -->
-		<aside
-				class="admin-sidebar"
-				class:open={isSidebarOpen}
-				class:collapsed={sidebarCollapsed}
-				onmouseover={(e) => showCollapsedFlyout(e.target)}
-				onmouseleave={hideCollapsedFlyoutSoon}
-				onfocusin={(e) => showCollapsedFlyout(e.target)}
-				onfocusout={hideCollapsedFlyoutSoon}
-			>
+		<aside class="admin-sidebar" class:open={isSidebarOpen} class:collapsed={sidebarCollapsed}>
 			<!-- 折叠/展开按钮：悬垂在侧边栏右上角外侧（参考 flare admin-sidebar-toggle） -->
 			<button
 				class="sidebar-collapse"
@@ -1387,7 +1314,7 @@ function formatDate(dateStr: string | null): string {
 					<button
 						class="nav-item nav-group-head"
 						class:group-active={activePage === "settings"}
-						onclick={() => (sidebarCollapsed ? goSettings() : toggleSettingsSubmenu())}
+						onclick={() => (sidebarCollapsed ? expandSidebarWithSubmenu() : toggleSettingsSubmenu())}
 						aria-expanded={settingsSubOpen}
 					>
 {#if activePage === "settings"}
@@ -1512,35 +1439,6 @@ function formatDate(dateStr: string | null): string {
 				</button>
 			</div>
 		</aside>
-
-		{#if collapsedFlyout}
-			<div
-				class="collapsed-flyout"
-				role="menu"
-				style:left="{collapsedFlyout.x}px"
-				style:top="{collapsedFlyout.y}px"
-				onmouseenter={keepCollapsedFlyout}
-				onmouseleave={hideCollapsedFlyout}
-				onfocusin={keepCollapsedFlyout}
-				onfocusout={hideCollapsedFlyoutSoon}
-			>
-				{#each collapsedFlyout.rows as row (row.label)}
-					{#if row.header}
-						<div class="flyout-group-label">{row.label}</div>
-					{:else}
-						<button class="flyout-row" role="menuitem" onclick={row.action}>
-							{#if row.iconHtml}
-								<!-- 克隆自侧栏已渲染的 Icon，无用户可控内容 -->
-								{@html row.iconHtml}
-							{:else}
-								<Icon icon={row.icon ?? "material-symbols:arrow-forward-rounded"} />
-							{/if}
-							<span>{row.label}</span>
-						</button>
-					{/if}
-				{/each}
-			</div>
-		{/if}
 
 		<!-- 主内容区 -->
 		<div class="admin-main">
@@ -2107,11 +2005,81 @@ function formatDate(dateStr: string | null): string {
 			overflow: visible;
 		}
 
-		/* 折叠时隐藏所有文字与展开态的内联子菜单 */
+		/* 折叠时隐藏所有文字（浮层内的子项文字单独恢复显示） */
 		.admin-sidebar.collapsed .nav-item > span,
-		.admin-sidebar.collapsed .brand-title,
+		.admin-sidebar.collapsed .brand-title {
+			display: none;
+		}
+
+		/* 折叠态「网站配置」的二级导航变为右侧悬浮面板（旧版 flyout 写法）：
+		   .nav-group:hover/focus-within 显示；absolute 定位脱离 flex 流，
+		   图标列保持居中不动 */
 		.admin-sidebar.collapsed .nav-submenu-wrap {
 			display: none;
+			flex-direction: column;
+			gap: 0.375rem;
+			position: absolute;
+			top: 0;
+			left: 100%;
+			width: 14rem;
+			max-height: calc(100vh - 8rem);
+			overflow-y: auto;
+			padding: 0.375rem;
+			background: var(--card-bg);
+			border: 1px solid var(--line-divider);
+			border-radius: var(--radius-lg);
+			box-shadow: var(--shadow-card-hover);
+			z-index: 40;
+		}
+
+		.admin-sidebar.collapsed .nav-group:hover > .nav-submenu-wrap,
+		.admin-sidebar.collapsed .nav-group:focus-within > .nav-submenu-wrap {
+			display: flex;
+		}
+
+		/* 图标与面板之间的悬停桥：面板贴边定位，空隙由 ::before 承担，
+		   鼠标从图标滑向面板时悬停不中断、面板不闪烁 */
+		.admin-sidebar.collapsed .nav-submenu-wrap::before {
+			content: "";
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			left: -0.875rem;
+			width: 0.875rem;
+		}
+
+		/* 浮层内还原子项排版：去掉展开态的缩进/左线，子项左对齐占满 */
+		.admin-sidebar.collapsed .nav-submenu-wrap .nav-submenu {
+			margin-left: 0;
+			padding-left: 0;
+			border-left: none;
+			overflow: visible;
+		}
+
+		.admin-sidebar.collapsed .nav-submenu-wrap .nav-item > span {
+			display: block;
+		}
+
+		.admin-sidebar.collapsed .nav-submenu-wrap .nav-item.sub {
+			width: 100%;
+			flex-shrink: 0;
+			justify-content: flex-start;
+		}
+
+		.admin-sidebar.collapsed .nav-submenu-wrap .nav-group-label {
+			padding-left: 0.875rem;
+		}
+
+		/* 深色模式提亮：--card-bg 近纯黑时混入文字色，保证面板与背景可分辨 */
+		:global(.dark) .admin-sidebar.collapsed .nav-submenu-wrap {
+			background: color-mix(in oklab, var(--card-bg) 70%, var(--deep-text));
+			border-color: color-mix(in oklab, var(--deep-text) 28%, transparent);
+		}
+
+		/* 折叠态导航区释放滚动裁剪：absolute 浮层 left:100% 才能溢出显示
+		   （折叠态仅几个图标项，无需滚动） */
+		.admin-sidebar.collapsed .sidebar-nav {
+			overflow: visible;
 		}
 
 		/* 折叠态品牌区：仅 Logo，水平居中，垂直中心与导航图标同轴 */
@@ -2127,7 +2095,7 @@ function formatDate(dateStr: string | null): string {
 			margin-right: 0;
 		}
 
-		.admin-sidebar.collapsed .nav-item {
+		.admin-sidebar.collapsed .nav-item:not(.sub) {
 			justify-content: center;
 			padding: 0.5rem;
 		}
@@ -2140,77 +2108,6 @@ function formatDate(dateStr: string | null): string {
 
 		.admin-sidebar.collapsed .sidebar-user .user-meta {
 			display: none;
-		}
-	}
-
-	/* 折叠态悬浮菜单面板：fixed 视口定位，不受滚动容器裁切，不占 flex 流 */
-	.collapsed-flyout {
-		position: fixed;
-		z-index: 200;
-		min-width: 12.5rem;
-		max-width: 17rem;
-		padding: 0.375rem;
-		border-radius: var(--radius-lg);
-		border: 1px solid var(--line-divider);
-		background: var(--panel-bg);
-		box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.2);
-		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
-		animation: collapsed-flyout-in 0.12s ease-out;
-	}
-
-	.flyout-row {
-		display: flex;
-		align-items: center;
-		gap: 0.625rem;
-		padding: 0.5rem 0.625rem;
-		border: none;
-		border-radius: var(--radius-md);
-		background: transparent;
-		color: var(--deep-text);
-		font-size: 0.875rem;
-		text-align: left;
-		cursor: pointer;
-		white-space: nowrap;
-	}
-
-	.flyout-row:hover,
-	.flyout-row:focus-visible {
-		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
-		outline: none;
-	}
-
-	.flyout-row :global(svg) {
-		width: 1.25rem;
-		height: 1.25rem;
-		flex-shrink: 0;
-	}
-
-	.flyout-group-label {
-		padding: 0.375rem 0.625rem 0.125rem;
-		font-size: 0.6875rem;
-		font-weight: 600;
-		color: var(--content-meta);
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
-
-	/* 悬浮菜单面板：深色模式下 --panel-bg 近纯黑，混入深色文字色提亮，
-	   并用文字色描边保证面板与背景可分辨 */
-	:global(.dark) .collapsed-flyout {
-		background: color-mix(in oklab, var(--panel-bg) 70%, var(--deep-text));
-		border-color: color-mix(in oklab, var(--deep-text) 28%, transparent);
-	}
-
-	@keyframes collapsed-flyout-in {
-		from {
-			opacity: 0;
-			transform: translateX(-4px);
-		}
-		to {
-			opacity: 1;
-			transform: translateX(0);
 		}
 	}
 
