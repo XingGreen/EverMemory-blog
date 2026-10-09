@@ -2057,8 +2057,8 @@ function formatDate(dateStr: string | null): string {
 			gap: 0.375rem;
 			position: absolute;
 			top: 0;
-			/* 与侧边栏右缘留 0.5rem 间隔，避免面板贴着栏身而难以分辨归属 */
-			left: calc(100% + 0.5rem);
+			/* 与侧边栏右缘留 1rem 间隔（0.5rem + 追加 0.5rem），避免面板贴着栏身而难以分辨归属 */
+			left: calc(100% + 1rem);
 			width: 14rem;
 			max-height: calc(100vh - 8rem);
 			overflow-y: auto;
@@ -2077,9 +2077,9 @@ function formatDate(dateStr: string | null): string {
 			position: absolute;
 			top: 0;
 			bottom: 0;
-			/* 0.5rem 间隙 + 0.875rem 按钮边缘余量 */
-			left: -1.375rem;
-			width: 1.375rem;
+			/* 1rem 间隙 + 0.875rem 按钮边缘余量 */
+			left: -1.875rem;
+			width: 1.875rem;
 		}
 
 		.admin-sidebar.collapsed .settings-flyout-wrap:hover > .flyout-panel,
