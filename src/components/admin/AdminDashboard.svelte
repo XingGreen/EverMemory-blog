@@ -2086,16 +2086,25 @@ function formatDate(dateStr: string | null): string {
 			display: flex;
 		}
 
-		/* 钉住状态的视觉反馈：头按钮底色与面板同理，提示当前已固定 */
-		.admin-sidebar.collapsed .nav-group-head.flyout-pinned {
+		/* 折叠态图标悬停反馈：灰底提示鼠标指向哪一项。
+		   展开态的基础条目不覆盖带 group-active 的设置头按钮
+		   （:not(.group-active) 排除了它），折叠态统一补上。 */
+		.admin-sidebar.collapsed .sidebar-nav > .nav-item:hover,
+		.admin-sidebar.collapsed .sidebar-footer > .nav-item:hover {
 			background: color-mix(in oklab, var(--deep-text) 8%, transparent);
 		}
 
-		/* 折叠态图标悬停反馈：灰底提示鼠标指向哪一项。
-		   展开态的基础条目不覆盖带 group-active 的设置头按钮
-		   （:not(.group-active) 排除了它），折叠态统一补上；
-		   钉住态按钮的 Flyout 底色不被 hover 覆盖，避免闪烁。 */
-		.admin-sidebar.collapsed .nav-item:hover:not(.flyout-pinned) {
+		/* 「网站配置」头按钮的常驻反馈：鼠标进入 wrap（按钮本身、
+		   悬浮面板驻留）或钉住状态时保持灰底。面板是 wrap 的直接子级，
+		   指针移到面板上时 wrap 仍处于 :hover，按钮底色不中断，
+		   用户可沿面板反查当前选中的子项属于哪个图标。 */
+		.admin-sidebar.collapsed .settings-flyout-wrap:hover > .nav-item,
+		.admin-sidebar.collapsed .settings-flyout-wrap:focus-within > .nav-item {
+			background: color-mix(in oklab, var(--deep-text) 8%, transparent);
+		}
+
+		/* 钉住状态：头按钮保持灰底，提示当前已固定 */
+		.admin-sidebar.collapsed .settings-flyout-wrap.flyout-pinned > .nav-item {
 			background: color-mix(in oklab, var(--deep-text) 8%, transparent);
 		}
 
