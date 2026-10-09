@@ -2050,9 +2050,11 @@ function formatDate(dateStr: string | null): string {
 		}
 
 		/* 折叠态「网站配置」悬停浮层：右侧滑出配置列表，侧边栏保持折叠。
-		   悬停/焦点移出 wrap 即随 :hover 状态消失，显示逻辑全在 CSS，无 JS。 */
+		   显示由 :hover/:focus-within/:flyout-pinned 驱动；关闭带 0.25s 延迟
+		   与 0.15s 淡出（visibility 延迟切换、opacity 过渡），给用户滑过
+		   16px 间隙的时间窗口，纯 CSS 实现，无 JS。 */
 		.admin-sidebar.collapsed .flyout-panel {
-			display: none;
+			display: flex;
 			flex-direction: column;
 			gap: 0.375rem;
 			position: absolute;
@@ -2068,6 +2070,12 @@ function formatDate(dateStr: string | null): string {
 			border-radius: var(--radius-lg);
 			box-shadow: var(--shadow-card-hover);
 			z-index: 40;
+			opacity: 0;
+			visibility: hidden;
+			pointer-events: none;
+			transition:
+				opacity 0.15s ease,
+				visibility 0s linear 0.25s;
 		}
 
 		/* 图标与面板之间的悬停桥：间隙+按钮边缘都由 ::before 承担，
@@ -2085,7 +2093,13 @@ function formatDate(dateStr: string | null): string {
 		.admin-sidebar.collapsed .settings-flyout-wrap:hover > .flyout-panel,
 		.admin-sidebar.collapsed .settings-flyout-wrap:focus-within > .flyout-panel,
 		.admin-sidebar.collapsed .settings-flyout-wrap.flyout-pinned > .flyout-panel {
-			display: flex;
+			visibility: visible;
+			opacity: 1;
+			pointer-events: auto;
+			/* 显示即时（跳过隐藏态的 visibility 延迟），opacity 过渡不变 */
+			transition:
+				opacity 0.15s ease,
+				visibility 0s;
 		}
 
 		/* 折叠态图标悬停反馈：灰底提示鼠标指向哪一项。
