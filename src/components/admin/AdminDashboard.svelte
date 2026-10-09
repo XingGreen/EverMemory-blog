@@ -2050,9 +2050,9 @@ function formatDate(dateStr: string | null): string {
 		}
 
 		/* 折叠态「网站配置」悬停浮层：右侧滑出配置列表，侧边栏保持折叠。
-		   显示由 :hover/:focus-within/:flyout-pinned 驱动；关闭带 0.25s 延迟
+		   显示由 :hover/:focus-within/:flyout-pinned 驱动；关闭带 0.6s 延迟
 		   与 0.15s 淡出（visibility 延迟切换、opacity 过渡），给用户滑过
-		   16px 间隙的时间窗口，纯 CSS 实现，无 JS。 */
+		   16px 间隙充裕的时间窗口，纯 CSS 实现，无 JS。 */
 		.admin-sidebar.collapsed .flyout-panel {
 			display: flex;
 			flex-direction: column;
@@ -2075,7 +2075,7 @@ function formatDate(dateStr: string | null): string {
 			pointer-events: none;
 			transition:
 				opacity 0.15s ease,
-				visibility 0s linear 0.25s;
+				visibility 0s linear 0.6s;
 		}
 
 		/* 图标与面板之间的悬停桥：间隙+按钮边缘都由 ::before 承担，
