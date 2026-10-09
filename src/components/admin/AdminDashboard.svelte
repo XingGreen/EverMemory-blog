@@ -100,47 +100,46 @@ let collapsedFlyout = $state<{
 	rows: FlyoutRow[];
 } | null>(null);
 let flyoutCloseTimer: ReturnType<typeof setTimeout> | undefined;
+// 当前悬停的分组头：避免同按钮内 span/svg 移动反复重建面板
+let flyoutTarget: Element | null = null;
 
 function showCollapsedFlyout(target: EventTarget | null) {
 	if (!sidebarCollapsed) return;
 	const item = (target as Element | null)?.closest?.(".nav-item");
 	if (!item?.isConnected) return;
+	// 2 级导航判定：nav-item 后紧跟子菜单容器。无二级菜单的项不弹悬浮面板
+	const submenuWrap = item.nextElementSibling as HTMLElement | null;
+	if (!submenuWrap?.classList.contains("nav-submenu-wrap")) {
+		hideCollapsedFlyout();
+		return;
+	}
+	if (item === flyoutTarget) {
+		keepCollapsedFlyout();
+		return;
+	}
+	flyoutTarget = item;
 	const rect = item.getBoundingClientRect();
 	const rows: FlyoutRow[] = [];
-	if (item.classList.contains("nav-group-head")) {
-		// 「网站配置」：完整子菜单面板（总览 + 各分组项）
-		rows.push({
-			label: i18n(I18nKey.adminSettingsOverview),
-			icon: "material-symbols:extension-outline",
-			action: () => goSettings(),
-		});
-		for (const group of CONFIG_GROUPS) {
-			const groupItems = CONFIG_ITEMS.filter(
-				(c) => getConfigGroup(c.key) === group.id,
-			);
-			if (groupItems.length === 0) continue;
-			rows.push({ label: i18n(group.labelKey), header: true });
-			for (const c of groupItems) {
-				rows.push({
-					label: i18n(getConfigLabelKey(c.key)),
-					icon: c.iconOutline,
-					action: () => goSettings(c.key),
-				});
-			}
+	// 面板内容直接来自该组的子菜单 DOM：分组头 + 各子项（图标/文字/点击逻辑）
+	const submenu = submenuWrap.querySelector(".nav-submenu");
+	for (const child of submenu?.children ?? []) {
+		const el = child as HTMLElement;
+		if (el.classList.contains("nav-group-label")) {
+			if (el.textContent) rows.push({ label: el.textContent, header: true });
+		} else if (el.classList.contains("nav-item")) {
+			const label =
+				el.querySelector(":scope > span")?.textContent?.trim() ?? "";
+			const icon = el
+				.querySelector("svg")
+				?.cloneNode(true) as SVGSVGElement | null;
+			rows.push({
+				label,
+				iconHtml: icon?.outerHTML,
+				action: () => (el as HTMLElement).click(),
+			});
 		}
-	} else {
-		// 普通项：克隆侧栏已渲染的图标 + 文字，点击复用原按钮逻辑
-		const icon = item
-			.querySelector("svg")
-			?.cloneNode(true) as SVGSVGElement | null;
-		const label =
-			item.querySelector(":scope > span")?.textContent?.trim() ?? "";
-		rows.push({
-			label,
-			iconHtml: icon?.outerHTML,
-			action: () => (item as HTMLElement).click(),
-		});
 	}
+	if (rows.length === 0) return;
 	collapsedFlyout = { x: rect.right + 8, y: rect.top - 4, rows };
 }
 
@@ -157,6 +156,7 @@ function keepCollapsedFlyout() {
 function hideCollapsedFlyout() {
 	clearTimeout(flyoutCloseTimer);
 	collapsedFlyout = null;
+	flyoutTarget = null;
 }
 let posts = $state<Post[]>([]);
 let isLoading = $state(true);
@@ -2194,6 +2194,13 @@ function formatDate(dateStr: string | null): string {
 		color: var(--content-meta);
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
+	}
+
+	/* 悬浮菜单面板：深色模式下 --panel-bg 近纯黑，混入深色文字色提亮，
+	   并用文字色描边保证面板与背景可分辨 */
+	:global(.dark) .collapsed-flyout {
+		background: color-mix(in oklab, var(--panel-bg) 70%, var(--deep-text));
+		border-color: color-mix(in oklab, var(--deep-text) 28%, transparent);
 	}
 
 	@keyframes collapsed-flyout-in {
