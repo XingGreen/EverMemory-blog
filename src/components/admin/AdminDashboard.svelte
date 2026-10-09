@@ -2097,10 +2097,13 @@ function formatDate(dateStr: string | null): string {
 			margin-right: 0;
 		}
 
-		/* 折叠态仅图标：主视图项居中；浮层的配置项保持左对齐
-		   （面板覆盖规则在后，特异性更高，后声明生效）。 */
-		.admin-sidebar.collapsed .sidebar-nav .nav-item,
-		.admin-sidebar.collapsed .sidebar-footer .nav-item {
+		/* 折叠态仅图标：主视图项与「网站配置」头按钮居中。
+		   居中只命中 nav/footer 的直接子级（> ），浮层面板在
+		   .settings-flyout-wrap 内且隔了一层 .nav-submenu，任意层级
+		   都不会被命中，子项保持基础左对齐。 */
+		.admin-sidebar.collapsed .sidebar-nav > .nav-item,
+		.admin-sidebar.collapsed .sidebar-footer > .nav-item,
+		.admin-sidebar.collapsed .settings-flyout-wrap > .nav-item {
 			justify-content: center;
 			padding: 0.5rem;
 		}
