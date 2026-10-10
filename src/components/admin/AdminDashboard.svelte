@@ -2355,14 +2355,27 @@ font-family: inherit;
 	}
 
 	.search-box {
-		/* ui-base 提供 .ui-search 基础形状,这里只保留设置区特有的展开宽度 */
+		/* ui-base 提供 .ui-search 基础形状,这里只保留设置区特有的展开宽度;
+		   底色覆盖为 flare 的「内嵌搜索槽」,与前台导航搜索栏区分 */
+		background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
 		width: 100%;
 		max-width: 260px;
 	}
 
+	.search-box:hover {
+		background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
+		border-color: var(--line-color);
+	}
+
 	.search-box.focused,
 	.search-box:focus-within {
+		background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
+		box-shadow: 0 0 0 2px var(--btn-regular-bg);
 		max-width: 300px;
+	}
+
+	.search-box:focus-within :global(.ui-search-icon) {
+		color: var(--content-meta);
 	}
 
 	.admin-content {
