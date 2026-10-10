@@ -182,7 +182,7 @@ function goAction(action: TourAction) {
 		gap: 0.375rem;
 		font-size: 0.75rem;
 		font-weight: 600;
-		color: var(--primary);
+		color: var(--btn-content);
 	}
 
 	.tour-close {

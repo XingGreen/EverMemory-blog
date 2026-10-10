@@ -145,7 +145,7 @@ function handleKeydown(event: KeyboardEvent, key: string) {
 	.empty-reset {
 		font-size: 0.875rem;
 		font-weight: 500;
-		color: var(--primary);
+		color: var(--btn-content);
 		background: transparent;
 		border: none;
 		cursor: pointer;

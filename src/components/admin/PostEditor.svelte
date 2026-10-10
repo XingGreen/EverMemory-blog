@@ -4,15 +4,15 @@ import Icon from "@/components/common/Icon.svelte";
 import { editorConfig } from "@/config/editorConfig";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import PostEditorFmPanel from "./PostEditorFmPanel.svelte";
+import PostEditorTocPanel from "./PostEditorTocPanel.svelte";
+import PostEditorWritePanel from "./PostEditorWritePanel.svelte";
 import {
 	extractTocItems,
 	POST_EDITOR_CONTEXT,
 	type PostEditorFields,
 	type PostEditorUiState,
 } from "./postEditorContext";
-import PostEditorFmPanel from "./PostEditorFmPanel.svelte";
-import PostEditorWritePanel from "./PostEditorWritePanel.svelte";
-import PostEditorTocPanel from "./PostEditorTocPanel.svelte";
 
 let {
 	post,
@@ -857,28 +857,28 @@ $effect(() => {
 		border-radius: 999px;
 		font-size: 0.75rem;
 		font-weight: 500;
-		color: hsl(130 45% 30%);
-		background: hsl(120 45% 92%);
-		border: 1px solid hsl(120 40% 78%);
+		color: var(--success);
+		background: color-mix(in srgb, var(--success) 12%, transparent);
+		border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
 	}
 
 	.cloud-badge.syncing {
-		color: hsl(220 30% 40%);
-		background: hsl(220 40% 94%);
-		border-color: hsl(220 30% 80%);
+		color: var(--info);
+		background: color-mix(in srgb, var(--info) 12%, transparent);
+		border-color: color-mix(in srgb, var(--info) 30%, transparent);
 	}
 
 	.cloud-badge.error {
-		color: hsl(0 65% 45%);
-		background: hsl(0 60% 95%);
-		border-color: hsl(0 55% 82%);
+		color: var(--destructive);
+		background: color-mix(in srgb, var(--destructive) 12%, transparent);
+		border-color: color-mix(in srgb, var(--destructive) 30%, transparent);
 	}
 
 	.cloud-spinner {
 		width: 0.75rem;
 		height: 0.75rem;
-		border: 2px solid hsl(220 30% 75%);
-		border-top-color: hsl(220 30% 40%);
+		border: 2px solid color-mix(in srgb, var(--info) 25%, transparent);
+		border-top-color: var(--info);
 		border-radius: 50%;
 		animation: cloud-spin 0.8s linear infinite;
 	}

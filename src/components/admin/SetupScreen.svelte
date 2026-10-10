@@ -585,8 +585,8 @@ function handleTokenKeyDown(e: KeyboardEvent) {
 		justify-content: space-between;
 		gap: 0.5rem;
 		padding: 0.625rem 0.875rem;
-		background: rgba(34, 197, 94, 0.1);
-		border: 1px solid rgba(34, 197, 94, 0.3);
+		background: color-mix(in srgb, var(--success) 10%, transparent);
+		border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
 		border-radius: var(--radius-sm);
 		font-size: 0.8125rem;
 	}
@@ -595,7 +595,7 @@ function handleTokenKeyDown(e: KeyboardEvent) {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.375rem;
-		color: #22c55e;
+		color: var(--success);
 	}
 
 	.token-back {
@@ -618,8 +618,8 @@ function handleTokenKeyDown(e: KeyboardEvent) {
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.625rem 0.875rem;
-		background: rgba(239, 68, 68, 0.1);
-		border: 1px solid rgba(239, 68, 68, 0.3);
+		background: color-mix(in srgb, var(--destructive) 10%, transparent);
+		border: 1px solid color-mix(in srgb, var(--destructive) 30%, transparent);
 		border-radius: var(--radius-sm);
 		color: var(--destructive);
 		font-size: 0.8125rem;
@@ -630,10 +630,10 @@ function handleTokenKeyDown(e: KeyboardEvent) {
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.625rem 0.875rem;
-		background: rgba(34, 197, 94, 0.1);
-		border: 1px solid rgba(34, 197, 94, 0.3);
+		background: color-mix(in srgb, var(--success) 10%, transparent);
+		border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
 		border-radius: var(--radius-sm);
-		color: #22c55e;
+		color: var(--success);
 		font-size: 0.8125rem;
 	}
 
@@ -643,10 +643,10 @@ function handleTokenKeyDown(e: KeyboardEvent) {
 		align-items: flex-start;
 		gap: 0.625rem;
 		padding: 1rem 1.125rem;
-		background: rgba(249, 115, 22, 0.1);
-		border: 1px solid rgba(249, 115, 22, 0.3);
+		background: color-mix(in srgb, var(--warning) 10%, transparent);
+		border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
 		border-radius: var(--radius-md);
-		color: #f97316;
+		color: var(--warning);
 		font-size: 0.875rem;
 		line-height: 1.6;
 	}
