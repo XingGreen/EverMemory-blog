@@ -145,7 +145,7 @@ function handleKeydown(e: KeyboardEvent) {
 	}
 
 	.modal-content {
-		background: var(--card-bg);
+		background: var(--float-panel-bg);
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-large);
 		width: 90%;
@@ -227,8 +227,8 @@ function handleKeydown(e: KeyboardEvent) {
 	}
 
 	.confirm-input.matched {
-		border-color: #22c55e;
-		background: color-mix(in srgb, #22c55e 10%, transparent);
+		border-color: var(--success);
+		background: color-mix(in srgb, var(--success) 10%, transparent);
 	}
 
 	.confirm-input.shake {
@@ -257,12 +257,12 @@ function handleKeydown(e: KeyboardEvent) {
 	}
 
 	.hint-text {
-		color: #f59e0b;
+		color: var(--warning);
 		font-size: 0.8rem;
 	}
 
 	.success-text {
-		color: #22c55e;
+		color: var(--success);
 		font-size: 0.8rem;
 		font-weight: 500;
 		display: flex;
