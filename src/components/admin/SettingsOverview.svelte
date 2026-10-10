@@ -333,7 +333,7 @@ function handleKeydown(event: KeyboardEvent, key: string) {
 		gap: 0.375rem;
 		padding: 0.625rem 1.25rem;
 		background: var(--btn-regular-bg);
-		border-top: 1px solid var(--line-divider);
+		border-top: 1px solid var(--line-color);
 		color: var(--content-meta);
 	}
 

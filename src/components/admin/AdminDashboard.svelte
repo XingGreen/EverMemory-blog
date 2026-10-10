@@ -1697,7 +1697,8 @@ function formatDate(dateStr: string | null): string {
 		/* 上下对称：28px logo（含 mb-1 为 32px margin-box）中心落在
 		   品牌盒与右上角折叠按钮（中心 30px）近似同轴，不再上浮 */
 		padding: 0.75rem 1.5rem 0.75rem 0;
-		border-bottom: 1px solid var(--line-divider);
+		/* 品牌区底部分隔：内容分隔线用 --line-color，与容器轮廓（--line-divider）区分 */
+		border-bottom: 1px solid var(--line-color);
 		margin-bottom: 0.75rem;
 		border-radius: var(--radius-lg);
 		transition: background 0.15s;
@@ -1917,7 +1918,8 @@ font-family: inherit;
 		gap: 0.375rem;
 		margin-left: 1.25rem;
 		padding-left: 0.875rem;
-		border-left: 2px solid var(--line-divider);
+		/* 缩进结构线（内容分隔），非容器轮廓 */
+		border-left: 2px solid var(--line-color);
 	}
 
 	/* 配置分组小标题（侧边栏"网站配置"二级菜单） */
@@ -1945,16 +1947,21 @@ font-family: inherit;
 	}
 
 	.nav-item.sub.active {
-		/* 二级菜单高亮：半透明主题色 */
-		background: color-mix(in oklab, var(--primary) 16%, transparent);
+		/* 二级菜单高亮：底色比一级浅一半（一级 16%），并加 2px 主色左条，
+		   让「内层选中」与「一级选中」在层级上可区分，而非同一档色 */
+		background: color-mix(in oklab, var(--primary) 8%, transparent);
+		box-shadow: inset 2px 0 0 var(--primary);
 		color: var(--title-active);
 	}
 
 	/* 悬停：已选中项加深主题色背景（保持选中标识不被灰色冲掉），
-	   未选中项用中性灰，避免与选中态混淆。 */
-	.nav-item.active:hover,
-	.nav-item.sub.active:hover {
+	   未选中项用中性灰，避免与选中态混淆。二级选中 hover 仍低于一级选中静态值。 */
+	.nav-item.active:hover {
 		background: color-mix(in oklab, var(--primary) 26%, transparent);
+	}
+
+	.nav-item.sub.active:hover {
+		background: color-mix(in oklab, var(--primary) 16%, transparent);
 	}
 
 	.nav-item:hover:not(.active),
@@ -2023,7 +2030,7 @@ font-family: inherit;
 	}
 
 	.sidebar-footer {
-		border-top: 1px solid var(--line-divider);
+		border-top: 1px solid var(--line-color);
 		padding-top: 0.5rem;
 		margin-top: 0.5rem;
 	}
@@ -2950,7 +2957,8 @@ font-family: inherit;
 		flex: 1;
 		min-width: 0;
 		border-radius: 9999px;
-		background: var(--line-divider);
+		/* 进度条轨道：装饰/占位，用 --muted */
+		background: var(--muted);
 		transition: background-color 0.2s ease;
 	}
 

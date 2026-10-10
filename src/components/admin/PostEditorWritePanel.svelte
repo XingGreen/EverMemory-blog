@@ -154,7 +154,7 @@ const TOOLS: {
 	.tabs {
 		display: flex;
 		gap: 0.25rem;
-		border-bottom: 1px solid var(--line-divider);
+		border-bottom: 1px solid var(--line-color);
 	}
 
 	.tabs button {
@@ -219,7 +219,7 @@ const TOOLS: {
 	.toolbar-sep {
 		width: 1px;
 		height: 1.25rem;
-		background: var(--line-divider);
+		background: var(--line-color);
 		margin: 0 0.375rem;
 	}
 

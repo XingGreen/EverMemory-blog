@@ -534,7 +534,7 @@ function handleKeyDown(e: KeyboardEvent) {
 	}
 
 	.submit-btn.loading {
-		background: var(--line-divider);
+		background: var(--muted);
 		color: var(--content-meta);
 	}
 
