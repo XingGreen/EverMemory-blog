@@ -173,7 +173,7 @@ function handleKeydown(e: KeyboardEvent) {
 		align-items: center;
 		gap: 0.75rem;
 		padding: 1.5rem;
-		border-bottom: 1px solid var(--line-divider);
+		border-bottom: 1px solid var(--line-color);
 		background: color-mix(in srgb, var(--destructive) 10%, transparent);
 	}
 
@@ -275,7 +275,7 @@ function handleKeydown(e: KeyboardEvent) {
 		justify-content: flex-end;
 		gap: 0.75rem;
 		padding: 1rem 1.5rem;
-		border-top: 1px solid var(--line-divider);
+		border-top: 1px solid var(--line-color);
 		background: var(--btn-plain-bg-hover);
 	}
 

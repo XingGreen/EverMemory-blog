@@ -257,7 +257,7 @@ function goAction(action: TourAction) {
 		width: 0.5rem;
 		height: 0.5rem;
 		border-radius: 50%;
-		background: var(--line-divider);
+		background: var(--muted);
 		transition: all 0.2s;
 	}
 

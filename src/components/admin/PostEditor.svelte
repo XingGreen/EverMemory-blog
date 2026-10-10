@@ -929,7 +929,7 @@ $effect(() => {
 	.loader {
 		width: 40px;
 		height: 40px;
-		border: 3px solid var(--line-divider);
+		border: 3px solid var(--muted);
 		border-top-color: var(--primary);
 		border-radius: 50%;
 		margin: 0 auto 1rem;

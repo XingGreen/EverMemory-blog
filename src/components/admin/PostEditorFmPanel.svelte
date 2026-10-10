@@ -3,7 +3,7 @@ import { getContext } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
-import { POST_EDITOR_CONTEXT, type FormGroup } from "./postEditorContext";
+import { type FormGroup, POST_EDITOR_CONTEXT } from "./postEditorContext";
 
 const { state: editorState, actions } = getContext<{
 	state: import("./postEditorContext").PostEditorContextValue["state"];
@@ -314,7 +314,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 
 	.form-section + .form-section {
 		padding-top: 1rem;
-		border-top: 1px solid var(--line-divider);
+		border-top: 1px solid var(--line-color);
 	}
 
 	/* 分组折叠头：整行可点，收起时显示字段摘要提示 */

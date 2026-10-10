@@ -241,7 +241,7 @@ $effect(() => {
 	.editor-file {
 		margin-top: 1rem;
 		padding-top: 0.75rem;
-		border-top: 1px dashed var(--line-divider);
+		border-top: 1px dashed var(--line-color);
 		font-size: 0.75rem;
 		color: var(--content-meta);
 		font-family: var(--font-mono, monospace);

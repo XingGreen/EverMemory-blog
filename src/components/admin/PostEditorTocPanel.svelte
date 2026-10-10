@@ -121,7 +121,7 @@ $effect(() => {
 		color: var(--deep-text);
 		padding-bottom: 0.5rem;
 		margin-bottom: 0.75rem;
-		border-bottom: 1px solid var(--line-divider);
+		border-bottom: 1px solid var(--line-color);
 	}
 
 	.toc-list {
