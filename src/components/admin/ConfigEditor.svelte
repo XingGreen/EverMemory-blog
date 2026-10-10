@@ -308,7 +308,7 @@ function addItem(arr: JsonValue[]) {
 		gap: 0.375rem;
 		font-size: 0.8rem;
 		font-weight: 600;
-		color: var(--primary);
+		color: var(--btn-content);
 		margin-bottom: 0.5rem;
 		letter-spacing: 0.02em;
 	}

@@ -1,7 +1,7 @@
 <script lang="ts">
-import { onMount, onDestroy } from "svelte";
-import Icon from "@/components/common/Icon.svelte";
+import { onDestroy, onMount } from "svelte";
 import TurnstileWidget from "@/components/admin/TurnstileWidget.svelte";
+import Icon from "@/components/common/Icon.svelte";
 import { DARK_MODE, LIGHT_MODE } from "@/constants/constants";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -496,8 +496,8 @@ function handleKeyDown(e: KeyboardEvent) {
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.625rem 0.875rem;
-		background: rgba(239, 68, 68, 0.1);
-		border: 1px solid rgba(239, 68, 68, 0.3);
+		background: color-mix(in srgb, var(--destructive) 10%, transparent);
+		border: 1px solid color-mix(in srgb, var(--destructive) 30%, transparent);
 		border-radius: var(--radius-sm);
 		color: var(--destructive);
 		font-size: 0.8125rem;
