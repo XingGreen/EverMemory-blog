@@ -1187,6 +1187,8 @@ onMount(load);
 		width: 100%;
 		max-width: 440px;
 		padding: 1.5rem;
+		/* 浮动模态用前台 --float-panel-bg，与下拉/悬浮面板同档，暗色比承载卡片高一级 */
+		background: var(--float-panel-bg);
 		box-shadow: var(--shadow-card);
 		border-radius: var(--radius-large);
 	}
@@ -1242,10 +1244,10 @@ onMount(load);
 		align-items: flex-start;
 		gap: 0.5rem;
 		padding: 0.625rem 0.875rem;
-		background: rgba(249, 115, 22, 0.1);
-		border: 1px solid rgba(249, 115, 22, 0.3);
+		background: color-mix(in srgb, var(--warning) 10%, transparent);
+		border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
 		border-radius: var(--radius-sm);
-		color: #f97316;
+		color: var(--warning);
 		font-size: 0.8125rem;
 		line-height: 1.6;
 		margin-bottom: 1.25rem;

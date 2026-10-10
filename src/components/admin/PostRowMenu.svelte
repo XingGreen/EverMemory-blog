@@ -154,11 +154,13 @@ $effect(() => {
 		align-items: center;
 	}
 
-	/* .card-base 只给到背景色与大圆角，浮层该有的紧凑圆角和投影自己补 */
+	/* .card-base 只给到背景色与大圆角，浮层该有的紧凑圆角和投影自己补。
+	   浮层底色改用前台 --float-panel-bg：与下拉/模态同档，暗色下比承载卡片高一级 */
 	.row-menu {
 		z-index: 90;
 		min-width: 8.5rem;
 		padding: 0.25rem;
+		background: var(--float-panel-bg);
 		border-radius: var(--radius-md, 0.75rem);
 		box-shadow: var(--shadow-lg);
 		display: flex;

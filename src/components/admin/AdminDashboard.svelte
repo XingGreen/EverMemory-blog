@@ -1759,7 +1759,7 @@ function formatDate(dateStr: string | null): string {
 		padding: 0;
 		border: 1px solid var(--line-divider);
 		border-radius: 50%;
-		background: var(--card-bg);
+		background: var(--float-panel-bg);
 		color: var(--content-meta);
 		box-shadow: var(--shadow-sm);
 		cursor: pointer;
@@ -1843,8 +1843,6 @@ font-family: inherit;
 	   --content-meta）与缩进承担，符合 MD3 同层级图标等宽的约定。 */
 	.nav-item :global(.inline-icon) {
 		font-size: 1.5rem;
-		/* 折叠态文字收起时图标不得被 flex 压缩（内容区可能小于 图标+gap） */
-		flex-shrink: 0;
 	}
 
 	/* 展开/收起箭头保持 16px：它是状态指示器而非导航图标，
@@ -1858,11 +1856,6 @@ font-family: inherit;
 	   :not(.nav-arrow) 排除箭头——Icon 组件渲染的也是 span。 */
 	.nav-item > span:not(.nav-arrow) {
 		min-width: 0;
-		/* 折叠过渡：图标原位不动，文字向右拉出/收回。
-		   max-width 需有限值才可动画，240px 大于现有最长导航文案，展开态不截断 */
-		max-width: 240px;
-		overflow: hidden;
-		transition: max-width 0.25s ease, opacity 0.2s ease;
 	}
 
 	.nav-item:focus-visible {
@@ -2045,15 +2038,14 @@ font-family: inherit;
 			overflow: visible;
 		}
 
-		/* 折叠时文字收起：导航项文字向右缩回（max-width/opacity 过渡，图标原位不动），
-		   品牌名、用户卡片文本直接隐藏。浮层内的配置项通过下方高特异性规则恢复
-		   显示——面板内还包着一层 .nav-submenu，旧版 :not(.flyout-panel) > .nav-item
-		   的直接子级判断会漏判子项，这里改为全量隐藏 + 面板内覆盖恢复。 */
-		.admin-sidebar.collapsed .nav-item > span {
-			max-width: 0;
-			opacity: 0;
-		}
-
+		/* 折叠时隐藏文字：导航项、品牌名、用户卡片文本直接 display:none
+		   （脱离布局，图标独占按钮，避免 span 残留占位/挤压）。
+		   宽度/内边距的平滑过渡由 .admin-sidebar 与 .nav-item 的
+		   transition 承担，文字瞬时切换的突兀感被容器动画掩盖。
+		   浮层内的配置项通过下方高特异性规则恢复显示——面板内还包着一层
+		   .nav-submenu，旧版 :not(.flyout-panel) > .nav-item 的直接子级
+		   判断会漏判子项，这里改为全量隐藏 + 面板内覆盖恢复。 */
+		.admin-sidebar.collapsed .nav-item > span,
 		.admin-sidebar.collapsed .brand-title,
 		.admin-sidebar.collapsed .user-meta {
 			display: none;
@@ -2062,9 +2054,6 @@ font-family: inherit;
 		/* 浮层内的配置项必须保留文字（折叠态下承担预览职责） */
 		.admin-sidebar.collapsed .flyout-panel .nav-item > span {
 			display: block;
-			max-width: none;
-			opacity: 1;
-			overflow: visible;
 		}
 
 		/* 折叠态「网站配置」悬停浮层：右侧滑出配置列表，侧边栏保持折叠。
@@ -2083,7 +2072,7 @@ font-family: inherit;
 			max-height: calc(100vh - 8rem);
 			overflow-y: auto;
 			padding: 0.375rem;
-			background: var(--card-bg);
+			background: var(--float-panel-bg);
 			border: 1px solid var(--line-divider);
 			border-radius: var(--radius-lg);
 			box-shadow: var(--shadow-card-hover);
@@ -2176,10 +2165,17 @@ font-family: inherit;
 			margin-right: 0;
 		}
 
-		/* 折叠态仅图标：主视图项与「网站配置」头按钮不再另设居中/padding——
-		   沿用展开态的对齐，图标位置基本不动，收起时仅文字向右缩回。
-		   浮层面板在 .settings-flyout-wrap 内且隔了一层 .nav-submenu，
-		   任意层级都不会被主视图规则命中，子项保持基础左对齐。 */
+		/* 折叠态仅图标：主视图项与「网站配置」头按钮居中。
+		   居中只命中 nav/footer 的直接子级（> ），浮层面板在
+		   .settings-flyout-wrap 内且隔了一层 .nav-submenu，任意层级
+		   都不会被命中，子项保持基础左对齐。 */
+		.admin-sidebar.collapsed .sidebar-nav > .nav-item,
+		.admin-sidebar.collapsed .sidebar-footer > .nav-item,
+		.admin-sidebar.collapsed .settings-flyout-wrap > .nav-item {
+			justify-content: center;
+			padding: 0.5rem;
+		}
+
 		.admin-sidebar.collapsed .nav-item :global(.nav-arrow) {
 			display: none;
 		}
@@ -3427,8 +3423,8 @@ font-family: inherit;
 		font-size: 0.8125rem;
 		color: var(--content-meta);
 		line-height: 1.6;
-		background: rgba(59, 130, 246, 0.08);
-		border: 1px solid rgba(59, 130, 246, 0.25);
+		background: color-mix(in srgb, var(--info) 8%, transparent);
+		border: 1px solid color-mix(in srgb, var(--info) 25%, transparent);
 		border-radius: var(--radius-sm);
 		padding: 0.625rem 0.875rem;
 	}
@@ -3436,6 +3432,6 @@ font-family: inherit;
 	.guide-tip :global(svg) {
 		flex-shrink: 0;
 		margin-top: 0.125rem;
-		color: #3b82f6;
+		color: var(--info);
 	}
 </style>
