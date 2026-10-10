@@ -9,8 +9,9 @@
  * 规格(与参考项目 flare-stack-blog 对齐):控件高 44px、圆角 10px、
  * 边框 1px line-divider、底 --btn-regular-bg、聚焦主色边框 + 3px 主色 ring。
  * 注:仅后台(PostList / 设置页)的搜索栏另用 flare 的「内嵌搜索槽」外观
- * (page-bg 25% + card-bg),在各自组件里以 scoped 覆盖实现,不动本基类 ——
- * 本类被前台导航搜索栏共用,不能为后台单方需求改基类。
+ * (page-bg 25% + card-bg),在各自组件里以 scoped 覆盖实现,不动本基类;
+ * 前台 AdvancedSearch 页面仍复用本类。导航搜索栏不在此列 —— 它需要贴合
+ * 半透明/透明导航栏,故保留自身的半透明样式(见 Search.svelte)。
  */
 
 /* ── 搜索栏(容器) ── */
