@@ -713,11 +713,29 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.search-bar {
+		/* 后台搜索栏对照 flare post-list-search 的「内嵌搜索槽」外观:
+		   底色 page-bg 25% + card-bg。基类 .ui-search 被前台导航搜索栏共用,
+		   故后台外观只在此 scoped 覆盖,不污染基类。 */
+		background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
 		/* 放弃失焦/聚焦的宽度伸缩,改为固定宽度:
 		   对齐参考项目 post-list-search 的默认宽度
 		   (390 × admin-unit,即约 27.3vw、上限 585px) */
 		flex: 0 1 auto;
 		width: min(calc(390 * clamp(1px, 0.07vw, 1.5px)), 100%);
+	}
+
+	.search-bar:hover {
+		background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
+		border-color: var(--line-color);
+	}
+
+	.search-bar:focus-within {
+		background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
+		box-shadow: 0 0 0 2px var(--btn-regular-bg);
+	}
+
+	.search-bar:focus-within :global(.ui-search-icon) {
+		color: var(--content-meta);
 	}
 
 	/* 页头：标题 + 副标题 + 主操作（对齐参考项目 .post-list-heading）
