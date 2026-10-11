@@ -498,6 +498,7 @@ export const en: Translation = {
 	[Key.postMdUndo]: "Undo",
 	[Key.postMdRedo]: "Redo",
 	[Key.postSlugGenerate]: "Auto-generate from title",
+	[Key.postSlugRomanize]: "Romanize",
 	[Key.postInfoDone]: "Done",
 	[Key.postCoverEmpty]: "No cover image",
 	[Key.postCoverClear]: "Clear",

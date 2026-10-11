@@ -483,6 +483,7 @@ export const zh_CN: Translation = {
 	[Key.postMdUndo]: "撤销",
 	[Key.postMdRedo]: "重做",
 	[Key.postSlugGenerate]: "根据标题自动生成",
+	[Key.postSlugRomanize]: "转拼音",
 	[Key.postInfoDone]: "完成",
 	[Key.postCoverEmpty]: "未设置封面",
 	[Key.postCoverClear]: "清除",

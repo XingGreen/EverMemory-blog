@@ -297,6 +297,9 @@ export default defineConfig({
 	},
 	vite: {
 		plugins: [tailwindcss()],
+		optimizeDeps: {
+			include: ["pinyin-pro"],
+		},
 		server: {
 			watch: {
 				ignored: ["**/package/**", "**/Firefly-docs/**"],
