@@ -47,9 +47,10 @@
   --shadow-card: var(--shadow-sm);
   --shadow-card-hover: var(--shadow-md);
 
-  /* 后台界面使用系统默认字体（不用展示字体），代码块保留等宽字体 */
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
-    "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  /* 后台界面与前台统一使用 Maple Mono NF CN（全局 @font-face 见 main.css），
+     代码块保留等宽字体 */
+  --font-sans: "Maple Mono NF CN", "PingFang SC", "Microsoft YaHei",
+    "Noto Sans SC", sans-serif;
   --font-serif: "Georgia", serif;
   --font-mono: "JetBrains Mono", "Monaco", "Consolas", monospace;
 

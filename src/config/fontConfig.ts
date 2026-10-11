@@ -81,6 +81,22 @@ export const fontsList: FontDefinition[] = [
 		},
 		fallbacks: ["sans-serif"],
 	},
+	// 前后台界面全局字体：由 main.css 手写 @font-face 引入，
+	// 并交由 scripts/subset-fonts.ts 在构建时子集化（见下方 subsetFonts）。
+	// 原始字体 19.6MB，子集化后约 0.5MB。
+	{
+		name: "Maple Mono NF CN",
+		cssVariable: "--font-maple-mono",
+		provider: "local",
+		options: {
+			variants: [
+				{
+					src: ["./public/assets/fonts/MapleMono-NF-CN-Regular.ttf"],
+				},
+			],
+		},
+		fallbacks: ["sans-serif"],
+	},
 ];
 
 // ─── 字体选择与区域覆盖 ─────────────────────────────────────
@@ -104,8 +120,9 @@ export const fontConfig: FontSelectionConfig = {
 
 	// 本地字体子集化配置（构建时由 scripts/subset-fonts.ts 处理）
 	// key 为 fonts 数组中对应的 cssVariable，value 为子集化选项
+	// 子集会永续替换 main.css 中该字体的 @font-face 引用，并删除原始字体文件
 	subsetFonts: {
-		"--font-greatvibes": {
+		"--font-maple-mono": {
 			// 额外包含的字符
 			extraChars: "",
 		},
