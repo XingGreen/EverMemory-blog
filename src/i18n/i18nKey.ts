@@ -481,6 +481,7 @@ enum I18nKey {
 	postMdUndo = "postMdUndo",
 	postMdRedo = "postMdRedo",
 	postSlugGenerate = "postSlugGenerate",
+	postSlugRomanize = "postSlugRomanize",
 	postInfoDone = "postInfoDone",
 	postCoverEmpty = "postCoverEmpty",
 	postCoverClear = "postCoverClear",

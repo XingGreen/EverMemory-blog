@@ -495,6 +495,7 @@ export const ja: Translation = {
 	[Key.postMdUndo]: "元に戻す",
 	[Key.postMdRedo]: "やり直す",
 	[Key.postSlugGenerate]: "タイトルから自動生成",
+	[Key.postSlugRomanize]: "ピンインに変換",
 	[Key.postInfoDone]: "完了",
 	[Key.postCoverEmpty]: "カバー未設定",
 	[Key.postCoverClear]: "クリア",

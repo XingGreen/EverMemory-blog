@@ -498,6 +498,7 @@ export const ru: Translation = {
 	[Key.postMdUndo]: "Отменить",
 	[Key.postMdRedo]: "Повторить",
 	[Key.postSlugGenerate]: "Автогенерация из заголовка",
+	[Key.postSlugRomanize]: "Романизировать",
 	[Key.postInfoDone]: "Готово",
 	[Key.postCoverEmpty]: "Обложка не задана",
 	[Key.postCoverClear]: "Очистить",

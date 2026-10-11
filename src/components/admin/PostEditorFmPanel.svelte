@@ -96,6 +96,16 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 								>
 									<Icon icon="material-symbols:refresh" />
 								</button>
+								<button
+									type="button"
+									class="slug-generate"
+									onclick={actions.normalizeSlug}
+									disabled={!editorState.slug}
+									title={i18n(I18nKey.postSlugRomanize)}
+									aria-label={i18n(I18nKey.postSlugRomanize)}
+								>
+									<Icon icon="material-symbols:sync" />
+								</button>
 							</div>
 						</label>
 					</div>

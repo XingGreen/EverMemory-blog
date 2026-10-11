@@ -485,6 +485,7 @@ export const zh_TW: Translation = {
 	[Key.postMdUndo]: "復原",
 	[Key.postMdRedo]: "重做",
 	[Key.postSlugGenerate]: "根據標題自動生成",
+	[Key.postSlugRomanize]: "轉拼音",
 	[Key.postInfoDone]: "完成",
 	[Key.postCoverEmpty]: "未設定封面",
 	[Key.postCoverClear]: "清除",
