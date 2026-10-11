@@ -1,5 +1,7 @@
 <script lang="ts">
 import { onDestroy, onMount, setContext } from "svelte";
+import { prefersReducedMotion } from "svelte/motion";
+import { fade, fly } from "svelte/transition";
 import Icon from "@/components/common/Icon.svelte";
 import { editorConfig } from "@/config/editorConfig";
 import I18nKey from "@/i18n/i18nKey";
@@ -66,6 +68,14 @@ const editorState = $state({
 	editorEl: undefined as HTMLTextAreaElement | undefined,
 	previewEl: undefined as HTMLElement | undefined,
 } satisfies PostEditorFields & PostEditorUiState);
+
+// 右侧抽屉：基本信息（元数据）与目录共用；单栏写作不再常驻左右两栏
+type Drawer = "none" | "info" | "toc";
+let drawer = $state<Drawer>("none");
+
+function toggleDrawer(panel: Exclude<Drawer, "none">) {
+	drawer = drawer === panel ? "none" : panel;
+}
 
 let isSaving = $state(false);
 let isLoadingContent = $state(false);
@@ -779,6 +789,24 @@ $effect(() => {
 			{/if}
 		</div>
 		<div class="header-actions">
+			<button
+				class="ui-btn ui-btn-soft"
+				class:is-active={drawer === "info"}
+				aria-expanded={drawer === "info"}
+				onclick={() => toggleDrawer("info")}
+			>
+				<Icon icon="material-symbols:info-outline" class="text-sm" />
+				{i18n(I18nKey.postBasicInfo)}
+			</button>
+			<button
+				class="ui-btn ui-btn-soft"
+				class:is-active={drawer === "toc"}
+				aria-expanded={drawer === "toc"}
+				onclick={() => toggleDrawer("toc")}
+			>
+				<Icon icon="material-symbols:toc" class="text-sm" />
+				{i18n(I18nKey.postToc)}
+			</button>
 			<button class="ui-btn ui-btn-soft" onclick={onCancel}>
 				<Icon icon="material-symbols:arrow-back" class="text-sm" />
 				{i18n(I18nKey.postCancel)}
@@ -802,12 +830,48 @@ $effect(() => {
 		</div>
 	{:else}
 		<div
-			class="editor-layout"
+			class="editor-body"
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}; --editor-min-content-height: ${editorConfig.minContentHeight}; --editor-default-content-height: ${editorConfig.defaultContentHeight}; --editor-max-content-height: ${editorConfig.maxContentHeight}`}
 		>
-			<PostEditorFmPanel />
-			<PostEditorWritePanel />
-			<PostEditorTocPanel />
+			<div class="editor-layout">
+				<PostEditorWritePanel />
+			</div>
+
+			{#if drawer !== "none"}
+				<button
+					class="editor-backdrop"
+					aria-label={i18n(I18nKey.postCancel)}
+					onclick={() => (drawer = "none")}
+					transition:fade={{ duration: prefersReducedMotion.current ? 0 : 150 }}
+				></button>
+				<aside
+					class="editor-drawer"
+					transition:fly={{
+						x: prefersReducedMotion.current ? 0 : 24,
+						duration: prefersReducedMotion.current ? 0 : 180,
+					}}
+				>
+					<header class="drawer-head">
+						<h3>
+							{drawer === "info" ? i18n(I18nKey.postBasicInfo) : i18n(I18nKey.postToc)}
+						</h3>
+						<button
+							class="drawer-close"
+							aria-label={i18n(I18nKey.postCancel)}
+							onclick={() => (drawer = "none")}
+						>
+							<Icon icon="material-symbols:close" />
+						</button>
+					</header>
+					<div class="drawer-body">
+						{#if drawer === "info"}
+							<PostEditorFmPanel />
+						{:else}
+							<PostEditorTocPanel />
+						{/if}
+					</div>
+				</aside>
+			{/if}
 		</div>
 	{/if}
 </div>
@@ -815,6 +879,7 @@ $effect(() => {
 <style>
 	/* 外壳仅承担布局，不提供任何卡片外观：三栏各自是独立卡片 */
 	.editor-shell {
+		position: relative;
 		display: grid;
 		grid-template-areas:
 			"header"
@@ -903,7 +968,8 @@ $effect(() => {
 
 	.header-actions {
 		display: flex;
-		gap: 0.75rem;
+		flex-wrap: wrap;
+		gap: 0.5rem;
 	}
 
 	.spinner {
@@ -940,28 +1006,92 @@ $effect(() => {
 		color: var(--content-meta);
 	}
 
-	/* 仅负责三栏排布：无背景、无边框、无阴影，栏间透出页面底色 */
-	.editor-layout {
+	/* 单栏工作区：元数据与目录收进右侧抽屉（原三栏改为写作区独占） */
+	.editor-body {
 		grid-area: layout;
+		position: relative;
+		min-width: 0;
+	}
+
+	.editor-layout {
 		display: grid;
-		grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) 240px;
-		gap: 1.5rem;
-		align-items: start;
+		grid-template-columns: minmax(0, 1fr);
 		max-width: var(--editor-max-page-width, 96rem);
 		margin-inline: auto;
 		width: 100%;
 	}
 
-	@media (max-width: 1400px) {
-		.editor-layout {
-			grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
-		}
+	/* ── 右侧抽屉：基本信息 / 目录 共用外壳，内容按 drawer 切换 ── */
+	.editor-backdrop {
+		position: absolute;
+		inset: 0;
+		z-index: 20;
+		padding: 0;
+		border: none;
+		background: rgb(20 35 50 / 0.12);
+		cursor: default;
 	}
 
-	@media (max-width: 900px) {
-		.editor-layout {
-			grid-template-columns: 1fr;
-		}
+	.editor-drawer {
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 30;
+		display: flex;
+		flex-direction: column;
+		width: min(100%, 22rem);
+		background: var(--card-bg);
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-large);
+		box-shadow: var(--shadow-card);
+	}
+
+	.drawer-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		flex-shrink: 0;
+		padding: 1rem 1.25rem;
+		border-bottom: 1px solid var(--line-color);
+	}
+
+	.drawer-head h3 {
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.drawer-close {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		border: none;
+		border-radius: var(--radius-sm);
+		background: none;
+		color: var(--content-meta);
+		cursor: pointer;
+	}
+
+	.drawer-close:hover {
+		background: var(--btn-regular-bg);
+		color: var(--deep-text);
+	}
+
+	.drawer-body {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		padding: 1.25rem;
+	}
+
+	/* header 上「基本信息 / 目录」按钮的展开态 */
+	.ui-btn.is-active {
+		background: color-mix(in srgb, var(--primary) 14%, transparent);
+		color: var(--primary);
 	}
 
 	@media (max-width: 768px) {

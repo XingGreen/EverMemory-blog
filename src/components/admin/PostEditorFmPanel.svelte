@@ -287,19 +287,8 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 </aside>
 
 <style>
-	/* ── 左侧 Front Matter 栏：独立卡片 ── */
+	/* 作为抽屉内容渲染：外壳（卡片/滚动）由抽屉提供，此处只负责分组排布 */
 	.fm-panel {
-		position: sticky;
-		top: 1rem;
-		max-height: calc(100vh - 7.5rem);
-		overflow-y: auto;
-		padding: 1.25rem;
-		background: var(--card-bg);
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-large);
-		box-shadow: var(--shadow-card);
-		align-self: start;
-		isolation: isolate;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
@@ -510,12 +499,5 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 
 	.tag-input {
 		flex: 1;
-	}
-
-	@media (max-width: 900px) {
-		.fm-panel {
-			position: static;
-			max-height: none;
-		}
 	}
 </style>
