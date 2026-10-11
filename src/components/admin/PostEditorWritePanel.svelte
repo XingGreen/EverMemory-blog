@@ -10,6 +10,22 @@ const { state: editorState, actions } = getContext<{
 	actions: import("./postEditorContext").PostEditorContextValue["actions"];
 }>(POST_EDITOR_CONTEXT);
 
+/**
+ * 把 Ctrl/Cmd+Z 接到编辑器自己的历史栈（原生 textarea 撤销与快照栈相互独立，
+ * 不拦截会导致两种「撤销」交替、行为割裂）。Ctrl+Y 与 Ctrl+Shift+Z 作重做。
+ */
+function handleEditorKeydown(e: KeyboardEvent) {
+	if (e.isComposing || (!e.ctrlKey && !e.metaKey)) return;
+	const key = e.key.toLowerCase();
+	if (key === "z" && !e.shiftKey) {
+		e.preventDefault();
+		actions.undo();
+	} else if ((key === "z" && e.shiftKey) || key === "y") {
+		e.preventDefault();
+		actions.redo();
+	}
+}
+
 /** 工具栏按钮定义：图标或字形 + 动作，集中渲染避免模板冗长 */
 const TOOLS: {
 	icon?: string;
@@ -140,6 +156,7 @@ const TOOLS: {
 			bind:this={editorState.editorEl}
 			bind:value={editorState.content}
 			onscroll={actions.handleEditorScroll}
+			onkeydown={handleEditorKeydown}
 			placeholder={i18n(I18nKey.postContentPlaceholder)}
 			class="content-editor"
 		></textarea>
