@@ -114,6 +114,7 @@ function undoEditor() {
 	historyApplying = true;
 	historyIndex -= 1;
 	editorState.content = history[historyIndex];
+	placeCaretAtEnd();
 }
 
 function redoEditor() {
@@ -121,6 +122,18 @@ function redoEditor() {
 	historyApplying = true;
 	historyIndex += 1;
 	editorState.content = history[historyIndex];
+	placeCaretAtEnd();
+}
+
+/** 历史回退后把光标放到末尾：原生撤销会还原光标，快照方案无法映射，退而求其次 */
+function placeCaretAtEnd() {
+	const el = editorState.editorEl;
+	if (!el) return;
+	requestAnimationFrame(() => {
+		el.focus();
+		const end = el.value.length;
+		el.setSelectionRange(end, end);
+	});
 }
 
 // content 变化即安排记录点；撤销/重做自身引起的变化不再记录
