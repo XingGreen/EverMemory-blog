@@ -477,6 +477,8 @@ export const zaku: Translation = {
 	[Key.postMdUl]: "无序列表",
 	[Key.postMdOl]: "有序列表",
 	[Key.postMdDivider]: "分割线",
+	[Key.postMdUndo]: "撤销",
+	[Key.postMdRedo]: "重做",
 	[Key.postToc]: "目录",
 	[Key.postTocEmpty]: "暂无标题，写正文试试",
 	[Key.errorFillRequired]: "请填写: {fields}",

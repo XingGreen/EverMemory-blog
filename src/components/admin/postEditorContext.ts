@@ -42,6 +42,9 @@ export interface PostEditorUiState {
 	visibleTocLines: number[];
 	editorEl: HTMLTextAreaElement | undefined;
 	previewEl: HTMLElement | undefined;
+	/** 书写区撤销/重做是否可用（由历史栈指针派生） */
+	canUndo: boolean;
+	canRedo: boolean;
 }
 
 /** 容器提供、供三栏调用的动作 */
@@ -68,6 +71,8 @@ export interface PostEditorActions {
 	handleEditorScroll: () => void;
 	handlePreviewScroll: () => void;
 	jumpToToc: (item: TocItem) => void;
+	undo: () => void;
+	redo: () => void;
 }
 
 export interface PostEditorContextValue {

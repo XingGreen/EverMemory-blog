@@ -492,6 +492,8 @@ export const ja: Translation = {
 	[Key.postMdUl]: "箇条書きリスト",
 	[Key.postMdOl]: "番号付きリスト",
 	[Key.postMdDivider]: "区切り線",
+	[Key.postMdUndo]: "元に戻す",
+	[Key.postMdRedo]: "やり直す",
 	[Key.postToc]: "目次",
 	[Key.postTocEmpty]: "見出しがまだありません、## を書いてみて",
 	[Key.errorFillRequired]: "入力してください: {fields}",

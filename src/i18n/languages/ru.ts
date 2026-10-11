@@ -495,6 +495,8 @@ export const ru: Translation = {
 	[Key.postMdUl]: "Маркированный список",
 	[Key.postMdOl]: "Нумерованный список",
 	[Key.postMdDivider]: "Разделитель",
+	[Key.postMdUndo]: "Отменить",
+	[Key.postMdRedo]: "Повторить",
 	[Key.postToc]: "Оглавление",
 	[Key.postTocEmpty]: "Заголовков пока нет, напишите несколько ##",
 	[Key.errorFillRequired]: "Заполните: {fields}",
