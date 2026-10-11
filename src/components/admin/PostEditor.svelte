@@ -201,9 +201,14 @@ function formatDate(dateStr: string): string {
 }
 
 function generateSlug(title: string): string {
+	// 与参考 slugify(features/posts/utils/content.ts) 对齐:
+	// 空格/下划线 -> "-",剔除其余非允许字符,连续 "-" 合并,去首尾;仅保留截断
 	return title
 		.toLowerCase()
-		.replace(/[^\w\u4e00-\u9fa5]+/g, "-")
+		.trim()
+		.replace(/[\s_]+/g, "-")
+		.replace(/[^a-z0-9\u4e00-\u9fa5-]+/g, "")
+		.replace(/-{2,}/g, "-")
 		.replace(/^-+|-+$/g, "")
 		.substring(0, 100);
 }
