@@ -79,6 +79,26 @@ function toggleDrawer(panel: Exclude<Drawer, "none">) {
 	drawer = drawer === panel ? "none" : panel;
 }
 
+/** 抽屉焦点管理（参考 post-editor-info-panel）：打开时聚焦关闭钮，关闭时还原到触发元素 */
+let drawerCloseEl: HTMLButtonElement | undefined = $state();
+let drawerOpener: HTMLElement | null = null;
+
+function handleDrawerKeydown(e: KeyboardEvent) {
+	if (e.key !== "Escape") return;
+	e.stopPropagation();
+	drawer = "none";
+}
+
+$effect(() => {
+	if (drawer === "none") {
+		drawerOpener?.focus();
+		drawerOpener = null;
+		return;
+	}
+	drawerOpener = document.activeElement as HTMLElement | null;
+	requestAnimationFrame(() => drawerCloseEl?.focus());
+});
+
 let isSaving = $state(false);
 
 /**
@@ -197,6 +217,14 @@ function toggleGroup(group: keyof typeof editorState.openGroups) {
 }
 
 function handleSlugInput() {
+	slugTouched = true;
+}
+
+/** 手动触发：按当前标题重新生成 slug（与瞄准目标的自动生成同源），之后固定不再被覆盖 */
+function generateSlugFromTitle() {
+	const value = generateSlug(editorState.title);
+	if (!value) return;
+	editorState.slug = value;
 	slugTouched = true;
 }
 
@@ -410,6 +438,7 @@ setContext(POST_EDITOR_CONTEXT, {
 	actions: {
 		toggleGroup,
 		handleSlugInput,
+		generateSlugFromTitle,
 		addTag,
 		removeTag,
 		handleTagKeydown,
@@ -930,6 +959,9 @@ $effect(() => {
 				></button>
 				<aside
 					class="editor-drawer"
+					role="dialog"
+					aria-modal="false"
+					onkeydown={handleDrawerKeydown}
 					transition:fly={{
 						x: prefersReducedMotion.current ? 0 : 24,
 						duration: prefersReducedMotion.current ? 0 : 180,
@@ -940,6 +972,7 @@ $effect(() => {
 							{drawer === "info" ? i18n(I18nKey.postBasicInfo) : i18n(I18nKey.postToc)}
 						</h3>
 						<button
+							bind:this={drawerCloseEl}
 							class="drawer-close"
 							aria-label={i18n(I18nKey.postCancel)}
 							onclick={() => (drawer = "none")}
@@ -954,6 +987,15 @@ $effect(() => {
 							<PostEditorTocPanel />
 						{/if}
 					</div>
+					<footer class="drawer-foot">
+						<button
+							type="button"
+							class="ui-btn ui-btn-soft"
+							onclick={() => (drawer = "none")}
+						>
+							{i18n(I18nKey.postInfoDone)}
+						</button>
+					</footer>
 				</aside>
 			{/if}
 		</div>
@@ -1198,6 +1240,21 @@ $effect(() => {
 		min-height: 0;
 		overflow-y: auto;
 		padding: 1.25rem;
+	}
+
+	.drawer-foot {
+		flex-shrink: 0;
+		display: flex;
+		justify-content: flex-end;
+		padding: 0.875rem 1.25rem;
+		border-top: 1px solid var(--line-color);
+	}
+
+	/* footer 按钮对齐参考（fuwari-btn-regular h-9 rounded-lg px-4 text-sm） */
+	.drawer-foot .ui-btn {
+		height: 2.25rem;
+		padding: 0 1rem;
+		font-size: 0.875rem;
 	}
 
 	@media (max-width: 768px) {
