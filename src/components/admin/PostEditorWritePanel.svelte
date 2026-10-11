@@ -173,15 +173,17 @@ const TOOLS: {
 		border-bottom-color: var(--primary);
 	}
 
+	/* 工具栏：对齐参考实现——不用灰底圆角块，仅以底部细线收束，按钮本身保持轻量 */
 	.md-toolbar {
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
 		gap: 0.25rem;
-		padding: 0.5rem;
-		background: var(--btn-regular-bg);
+		padding: 0.5rem 0;
+		background: none;
 		border: none;
-		border-radius: var(--radius-md);
+		border-bottom: 1px solid var(--line-color);
+		border-radius: 0;
 	}
 
 	.md-toolbar button {
@@ -213,9 +215,9 @@ const TOOLS: {
 
 	.toolbar-sep {
 		width: 1px;
-		height: 1.25rem;
+		height: 1rem;
 		background: var(--line-color);
-		margin: 0 0.375rem;
+		margin: 0 0.5rem;
 	}
 
 	.content-editor {
