@@ -55,7 +55,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 				{#if !editorState.openGroups[group.key]}
 					<span class="fm-section-hint">{i18n(group.hint)}</span>
 				{/if}
-				<Icon icon="material-symbols:expand_more" class="fm-section-caret" />
+				<Icon icon="material-symbols:expand-more" class="fm-section-caret" />
 			</button>
 
 			{#if editorState.openGroups[group.key]}
@@ -63,7 +63,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 					{#if group.key === "essential"}
 						<div class="form-group">
 							<label>
-								{i18n(I18nKey.postTitle)} *
+								{i18n(I18nKey.postTitle)}
 								<input
 									type="text"
 									bind:value={editorState.title}
@@ -75,7 +75,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 
 <div class="form-group">
 						<label>
-							{i18n(I18nKey.postSlug)} *
+							{i18n(I18nKey.postSlug)}
 							<div class="slug-field">
 								<span class="slug-prefix">/posts/</span>
 								<input
