@@ -82,6 +82,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									type="text"
 									bind:value={editorState.slug}
 									oninput={actions.handleSlugInput}
+									onblur={actions.normalizeSlug}
 									placeholder={i18n(I18nKey.postSlugPlaceholder)}
 									class="ui-input"
 								/>

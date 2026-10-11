@@ -243,6 +243,14 @@ function generateSlugFromTitle() {
 	});
 }
 
+/** slug 输入框失焦：含非 ASCII 字符（如中文）时就地转拼音规范化，避免后端 400 */
+function normalizeSlug() {
+	if (!editorState.slug || /^[A-Za-z0-9_-]+$/.test(editorState.slug)) return;
+	void generateSlug(editorState.slug).then((value) => {
+		editorState.slug = value;
+	});
+}
+
 function addTag() {
 	const tag = editorState.tagInput.trim();
 	if (tag && !editorState.tags.includes(tag)) {
@@ -454,6 +462,7 @@ setContext(POST_EDITOR_CONTEXT, {
 		toggleGroup,
 		handleSlugInput,
 		generateSlugFromTitle,
+		normalizeSlug,
 		addTag,
 		removeTag,
 		handleTagKeydown,
