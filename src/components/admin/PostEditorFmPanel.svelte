@@ -89,12 +89,12 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 								<button
 									type="button"
 									class="slug-generate"
-									onclick={actions.normalizeSlug}
-									disabled={!editorState.slug}
-									title={i18n(I18nKey.postSlugRomanize)}
-									aria-label={i18n(I18nKey.postSlugRomanize)}
+									onclick={actions.generateSlugFromTitle}
+									disabled={!editorState.title}
+									title={i18n(I18nKey.postSlugGenerate)}
+									aria-label={i18n(I18nKey.postSlugGenerate)}
 								>
-									<Icon icon="material-symbols:sync" />
+									<Icon icon="material-symbols:refresh" />
 								</button>
 							</div>
 						</label>

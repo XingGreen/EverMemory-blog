@@ -235,6 +235,14 @@ function handleSlugInput() {
 	slugTouched = true;
 }
 
+/** 手动触发：按当前标题重新生成 slug（与自动生成同源），之后固定不再被覆盖 */
+function generateSlugFromTitle() {
+	void generateSlug(editorState.title).then((value) => {
+		editorState.slug = value;
+		slugTouched = true;
+	});
+}
+
 /** slug 输入框失焦：含非 ASCII 字符（如中文）时就地转拼音规范化，避免后端 400 */
 function normalizeSlug() {
 	if (!editorState.slug || /^[A-Za-z0-9_-]+$/.test(editorState.slug)) return;
@@ -453,6 +461,7 @@ setContext(POST_EDITOR_CONTEXT, {
 	actions: {
 		toggleGroup,
 		handleSlugInput,
+		generateSlugFromTitle,
 		normalizeSlug,
 		addTag,
 		removeTag,
