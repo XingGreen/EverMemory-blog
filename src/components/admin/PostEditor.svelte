@@ -874,29 +874,28 @@ $effect(() => {
 </div>
 
 <style>
-	/* 外壳仅承担布局，不提供任何卡片外观：三栏各自是独立卡片 */
+	/* 工作区：单张卡片，header 与书写区同处其内，用一条分隔线区分 */
 	.editor-shell {
 		position: relative;
-		display: grid;
-		grid-template-areas:
-			"header"
-			"layout";
-		grid-template-rows: auto 1fr;
-		gap: 1.5rem;
-	}
-
-	.editor-header {
-		grid-area: header;
-		position: relative;
 		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 1rem;
-		padding: 1rem 1.5rem;
+		flex-direction: column;
+		min-height: 0;
 		background: var(--card-bg);
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-large);
 		box-shadow: var(--shadow-card);
+		overflow: hidden;
+	}
+
+	.editor-header {
+		position: relative;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		flex-shrink: 0;
+		gap: 1rem;
+		padding: 1rem 1.5rem;
+		border-bottom: 1px solid var(--line-divider);
 	}
 
 	/* 左侧返回 + 右侧文字按钮：共用无底色样式，hover 才浮现浅底（对齐参考 header 的层级） */
@@ -1034,9 +1033,10 @@ $effect(() => {
 
 	/* 单栏工作区：元数据与目录收进右侧抽屉（原三栏改为写作区独占） */
 	.editor-body {
-		grid-area: layout;
 		position: relative;
+		flex: 1;
 		min-width: 0;
+		min-height: 0;
 	}
 
 	.editor-layout {
@@ -1068,9 +1068,8 @@ $effect(() => {
 		flex-direction: column;
 		width: min(100%, 22rem);
 		background: var(--card-bg);
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-large);
-		box-shadow: var(--shadow-card);
+		border-left: 1px solid var(--line-divider);
+		box-shadow: -12px 0 24px rgb(0 0 0 / 0.06);
 	}
 
 	.drawer-head {
