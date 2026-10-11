@@ -736,8 +736,11 @@ $effect(() => {
 
 <div class="editor-shell">
 	<header class="editor-header">
-		<div class="editor-heading">
-			<h2>{mode === "edit" ? i18n(I18nKey.adminEditPost) : i18n(I18nKey.adminNewPost)}</h2>
+		<button class="editor-back" onclick={onCancel}>
+			<Icon icon="material-symbols:arrow-back" class="text-sm" />
+			{i18n(I18nKey.postCancel)}
+		</button>
+		<div class="header-actions">
 			{#if mode === "create" && cloudSync !== "idle"}
 				<span
 					class="cloud-badge"
@@ -787,10 +790,8 @@ $effect(() => {
 					{/if}
 				</span>
 			{/if}
-		</div>
-		<div class="header-actions">
 			<button
-				class="ui-btn ui-btn-soft"
+				class="editor-text-btn"
 				class:is-active={drawer === "info"}
 				aria-expanded={drawer === "info"}
 				onclick={() => toggleDrawer("info")}
@@ -799,17 +800,13 @@ $effect(() => {
 				{i18n(I18nKey.postBasicInfo)}
 			</button>
 			<button
-				class="ui-btn ui-btn-soft"
+				class="editor-text-btn"
 				class:is-active={drawer === "toc"}
 				aria-expanded={drawer === "toc"}
 				onclick={() => toggleDrawer("toc")}
 			>
 				<Icon icon="material-symbols:toc" class="text-sm" />
 				{i18n(I18nKey.postToc)}
-			</button>
-			<button class="ui-btn ui-btn-soft" onclick={onCancel}>
-				<Icon icon="material-symbols:arrow-back" class="text-sm" />
-				{i18n(I18nKey.postCancel)}
 			</button>
 			<button class="ui-btn ui-btn-primary" onclick={handleSave} disabled={isSaving}>
 				{#if isSaving}
@@ -894,30 +891,51 @@ $effect(() => {
 		justify-content: space-between;
 		align-items: center;
 		gap: 1rem;
-		padding: 1.25rem 1.5rem;
+		padding: 1rem 1.5rem;
 		background: var(--card-bg);
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-large);
 		box-shadow: var(--shadow-card);
 	}
 
-	.editor-heading {
-		display: flex;
+	/* 左侧返回 + 右侧文字按钮：共用无底色样式，hover 才浮现浅底（对齐参考 header 的层级） */
+	.editor-back,
+	.editor-text-btn {
+		display: inline-flex;
 		align-items: center;
-		flex-wrap: wrap;
+		gap: 0.5rem;
+		height: 2.75rem;
+		padding: 0 0.875rem;
+		border: none;
+		border-radius: 10px;
+		background: transparent;
+		color: var(--content-meta);
+		font-family: inherit;
+		font-size: 0.875rem;
+		font-weight: 500;
+		line-height: 1;
+		white-space: nowrap;
+		cursor: pointer;
+		transition:
+			background-color 0.15s,
+			color 0.15s;
 	}
 
-	.editor-header h2 {
-		font-size: 1.25rem;
-		font-weight: 600;
-		color: var(--deep-text);
+	.editor-back:hover,
+	.editor-text-btn:hover {
+		background: var(--btn-regular-bg);
+		color: var(--btn-content);
+	}
+
+	.editor-text-btn.is-active {
+		background: color-mix(in srgb, var(--primary) 14%, transparent);
+		color: var(--primary);
 	}
 
 	.cloud-badge {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
-		margin-left: 0.75rem;
 		padding: 0.2rem 0.6rem;
 		border-radius: 999px;
 		font-size: 0.75rem;
@@ -969,7 +987,9 @@ $effect(() => {
 	.header-actions {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.5rem;
+		align-items: center;
+		gap: 0.375rem;
+		margin-left: auto;
 	}
 
 	.spinner {
@@ -1088,16 +1108,14 @@ $effect(() => {
 		padding: 1.25rem;
 	}
 
-	/* header 上「基本信息 / 目录」按钮的展开态 */
-	.ui-btn.is-active {
-		background: color-mix(in srgb, var(--primary) 14%, transparent);
-		color: var(--primary);
-	}
-
 	@media (max-width: 768px) {
 		.editor-header {
 			flex-direction: column;
 			align-items: stretch;
+		}
+
+		.editor-back {
+			align-self: flex-start;
 		}
 
 		.header-actions {
