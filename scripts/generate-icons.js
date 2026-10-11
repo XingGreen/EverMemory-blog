@@ -5,10 +5,10 @@
  * 使用方法：node scripts/generate-icons.js
  */
 
-import { readFileSync, writeFileSync, readdirSync, statSync } from "fs";
-import { join, dirname } from "path";
+import { getIconData, iconToHTML, iconToSVG, replaceIDs } from "@iconify/utils";
+import { readdirSync, readFileSync, statSync, writeFileSync } from "fs";
+import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { getIconData, iconToSVG, iconToHTML, replaceIDs } from "@iconify/utils";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, "..");
@@ -64,30 +64,31 @@ function extractIconNames(content) {
 	const icons = new Set();
 
 	// 剔除 <meta> 标签：其 name/property 属性（如 twitter:card）与图标格式冲突，会被误判为图标调用
-	content = content.replace(/<meta\b[^>]*>/gi, "");
+	const cleaned = content.replace(/<meta\b[^>]*>/gi, "");
 
 	// 匹配各种图标使用模式
 	const patterns = [
 		// icon="xxx:yyy" 或 icon='xxx:yyy'
-		/icon=["']([a-z0-9-]+:[a-z0-9-]+)["']/gi,
+		/icon=["']([a-z0-9_-]+:[a-z0-9_-]+)["']/gi,
 		// icon: "xxx:yyy" 或 icon: 'xxx:yyy' (TS/JS 配置对象)
 		// 同时覆盖 iconOutline / iconFilled 等以 icon 开头的成对状态字段，
 		// 使空心/实心两态都能被离线预生成（值必须是 "图标集:图标名" 才会命中，
 		// 因此 iconSize: "24" 之类不会误匹配）
-		/\bicon\w*\s*:\s*["']([a-z0-9-]+:[a-z0-9-]+)["']/gi,
+		/\bicon\w*\s*:\s*["']([a-z0-9_-]+:[a-z0-9_-]+)["']/gi,
 		// icon={`xxx:yyy`}
-		/icon=\{[`"']([a-z0-9-]+:[a-z0-9-]+)[`"']\}/gi,
+		/icon=\{[`"']([a-z0-9_-]+:[a-z0-9_-]+)[`"']\}/gi,
 		// name="xxx:yyy" (Astro 组件)
-		/name=["']([a-z0-9-]+:[a-z0-9-]+)["']/gi,
+		/name=["']([a-z0-9_-]+:[a-z0-9_-]+)["']/gi,
 		// getIconSvg("xxx:yyy") 或 getIconSvg('xxx:yyy')
-		/getIconSvg\(["']([a-z0-9-]+:[a-z0-9-]+)["']\)/gi,
+		/getIconSvg\(["']([a-z0-9_-]+:[a-z0-9_-]+)["']\)/gi,
 		// hasIcon("xxx:yyy")
-		/hasIcon\(["']([a-z0-9-]+:[a-z0-9-]+)["']\)/gi,
+		/hasIcon\(["']([a-z0-9_-]+:[a-z0-9_-]+)["']\)/gi,
 	];
 
 	for (const pattern of patterns) {
-		let match;
-		while ((match = pattern.exec(content)) !== null) {
+		// 等价于 while ((m = pattern.exec(...)) !== null) 的惯用循环；
+		// matchAll 需要 /g 标志，上面所有 pattern 均带
+		for (const match of cleaned.matchAll(pattern)) {
 			icons.add(match[1]);
 		}
 	}
@@ -111,7 +112,12 @@ async function loadIconSet(prefix) {
 
 	try {
 		// 动态导入图标集 JSON
-		const iconSetPath = join(ROOT_DIR, "node_modules", packageName, "icons.json");
+		const iconSetPath = join(
+			ROOT_DIR,
+			"node_modules",
+			packageName,
+			"icons.json",
+		);
 		const data = JSON.parse(readFileSync(iconSetPath, "utf-8"));
 		iconSetCache.set(prefix, data);
 		return data;
@@ -273,7 +279,9 @@ async function main() {
 	writeFileSync(OUTPUT_FILE, output, "utf-8");
 
 	console.log(`\n📝 已生成: ${OUTPUT_FILE}`);
-	console.log(`📦 文件大小: ${(Buffer.byteLength(output, "utf-8") / 1024).toFixed(2)} KB\n`);
+	console.log(
+		`📦 文件大小: ${(Buffer.byteLength(output, "utf-8") / 1024).toFixed(2)} KB\n`,
+	);
 }
 
 main().catch(console.error);
