@@ -10,6 +10,12 @@ const { state: editorState, actions } = getContext<{
 	actions: import("./postEditorContext").PostEditorContextValue["actions"];
 }>(POST_EDITOR_CONTEXT);
 
+/** 参考 DatePicker 的 maxDate=serverToday 语义：发布日期/更新日期不允许选未来 */
+function localDateStr(d: Date): string {
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+const todayStr = localDateStr(new Date());
+
 /** 分组元数据：key / 标题 / 收起时的字段摘要 */
 const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 	{
@@ -67,9 +73,11 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 							</label>
 						</div>
 
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postSlug)} *
+<div class="form-group">
+						<label>
+							{i18n(I18nKey.postSlug)} *
+							<div class="slug-field">
+								<span class="slug-prefix">/posts/</span>
 								<input
 									type="text"
 									bind:value={editorState.slug}
@@ -77,8 +85,19 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									placeholder={i18n(I18nKey.postSlugPlaceholder)}
 									class="ui-input"
 								/>
-							</label>
-						</div>
+								<button
+									type="button"
+									class="slug-generate"
+									onclick={actions.generateSlugFromTitle}
+									disabled={!editorState.title}
+									title={i18n(I18nKey.postSlugGenerate)}
+									aria-label={i18n(I18nKey.postSlugGenerate)}
+								>
+									<Icon icon="material-symbols:refresh" />
+								</button>
+							</div>
+						</label>
+					</div>
 
 						<div class="form-group">
 							<label>
@@ -91,69 +110,70 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 								/>
 							</label>
 						</div>
-					{:else if group.key === "publish"}
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postAuthor)}
-								<input
-									type="text"
-									bind:value={editorState.author}
-									placeholder={i18n(I18nKey.postAuthorPlaceholder)}
-									class="ui-input"
-								/>
-							</label>
-						</div>
+{:else if group.key === "publish"}
+					<div class="form-group">
+						<label>
+							{i18n(I18nKey.postAuthor)}
+							<input
+								type="text"
+								bind:value={editorState.author}
+								placeholder={i18n(I18nKey.postAuthorPlaceholder)}
+								class="ui-input"
+							/>
+						</label>
+					</div>
 
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postPubDate)}
-								<input
-									type="date"
-									bind:value={editorState.published}
-									class="ui-input"
-								/>
-							</label>
-						</div>
+					<div class="form-group full-width date-pin-row">
+						<label class="date-field">
+							{i18n(I18nKey.postPubDate)}
+							<input
+								type="date"
+								bind:value={editorState.published}
+								max={todayStr}
+								class="ui-input"
+							/>
+						</label>
+						<label class="md3-switch pin-switch">
+							<input type="checkbox" bind:checked={editorState.isPinned} />
+							<span class="switch-track">
+								<span class="switch-thumb"></span>
+							</span>
+							<span class="switch-label">{i18n(I18nKey.postPinned)}</span>
+						</label>
+					</div>
 
-						<div class="form-group">
-							<label>
-								{i18n(I18nKey.postUpdateDate)}
-								<input
-									type="date"
-									bind:value={editorState.updated}
-									class="ui-input"
-								/>
-							</label>
-						</div>
+					<div class="form-group">
+						<label>
+							{i18n(I18nKey.postUpdateDate)}
+							<input
+								type="date"
+								bind:value={editorState.updated}
+								max={todayStr}
+								class="ui-input"
+							/>
+						</label>
+					</div>
 
-						<div class="form-group full-width switch-row">
-							<label class="md3-switch">
-								<input type="checkbox" bind:checked={editorState.isDraft} />
-								<span class="switch-track">
-									<span class="switch-thumb"></span>
-								</span>
-								<span class="switch-label">{i18n(I18nKey.postDraft)}</span>
-							</label>
+					<div class="form-group full-width switch-row">
+						<label class="md3-switch">
+							<input type="checkbox" bind:checked={editorState.isDraft} />
+							<span class="switch-track">
+								<span class="switch-thumb"></span>
+							</span>
+							<span class="switch-label">{i18n(I18nKey.postDraft)}</span>
+						</label>
 
-							<label class="md3-switch">
-								<input type="checkbox" bind:checked={editorState.isPinned} />
-								<span class="switch-track">
-									<span class="switch-thumb"></span>
-								</span>
-								<span class="switch-label">{i18n(I18nKey.postPinned)}</span>
-							</label>
-
-							<label class="md3-switch">
-								<input
-									type="checkbox"
-									bind:checked={editorState.enableComment}
-								/>
-								<span class="switch-track">
-									<span class="switch-thumb"></span>
-								</span>
-								<span class="switch-label">{i18n(I18nKey.postComments)}</span>
-							</label>
-						</div>
+						<label class="md3-switch">
+							<input
+								type="checkbox"
+								bind:checked={editorState.enableComment}
+							/>
+							<span class="switch-track">
+								<span class="switch-thumb"></span>
+							</span>
+							<span class="switch-label">{i18n(I18nKey.postComments)}</span>
+						</label>
+					</div>
 					{:else if group.key === "seo"}
 						<div class="form-group full-width">
 							<label>
@@ -167,17 +187,40 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 							</label>
 						</div>
 
-						<div class="form-group full-width">
-							<label>
-								{i18n(I18nKey.postCover)}
+<div class="form-group full-width">
+						<label>
+							{i18n(I18nKey.postCover)}
+							<div class="cover-block">
+								{#if editorState.image}
+									<div class="cover-preview">
+										<img
+											src={editorState.image}
+											alt={i18n(I18nKey.postCover)}
+										/>
+										<button
+											type="button"
+											class="cover-clear"
+											onclick={() => (editorState.image = "")}
+											aria-label={i18n(I18nKey.postCoverClear)}
+										>
+											<Icon icon="material-symbols:close" />
+										</button>
+									</div>
+								{:else}
+									<p class="cover-empty">
+										<Icon icon="material-symbols:image-outline" />
+										{i18n(I18nKey.postCoverEmpty)}
+									</p>
+								{/if}
 								<input
 									type="text"
 									bind:value={editorState.image}
 									placeholder={i18n(I18nKey.postCoverPlaceholder)}
 									class="ui-input"
 								/>
-							</label>
-						</div>
+							</div>
+						</label>
+					</div>
 
 						<div class="form-group">
 							<label>
@@ -373,10 +416,11 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 		gap: 0.5rem;
 	}
 
-	.form-group > label {
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--deep-text);
+	/* 参考 metadata 的 label:text-xs fuwari-text-50(小号灰字);开关识别不到该规则 */
+	.form-group > label:not(.md3-switch) {
+		font-size: 0.75rem;
+		font-weight: 400;
+		color: var(--content-meta);
 		display: flex;
 		flex-direction: column;
 		gap: 0.375rem;
@@ -384,6 +428,153 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 
 	.full-width {
 		grid-column: 1 / -1;
+	}
+
+	/* ── 字段外观对齐参考 EDITOR_FIELD_CLASS ──
+	   h-10 rounded-xl bg-(--fuwari-btn-regular-bg) text-sm,无边框淡底;
+	   只覆盖本面板,不动 ui-base 的全局 .ui-input */
+	.fm-panel .ui-input {
+		height: 2.5rem;
+		padding: 0 0.75rem;
+		background: var(--btn-regular-bg);
+		border: none;
+		border-radius: 0.75rem;
+		font-size: 0.875rem;
+	}
+
+	.fm-panel textarea.ui-input {
+		height: auto;
+		min-height: 2.5rem;
+		padding-block: 0.625rem;
+		resize: none;
+		line-height: 1.6;
+	}
+
+	.fm-panel .ui-input:hover {
+		background: var(--btn-regular-bg-hover);
+	}
+
+	/* 无边框后失去聚焦提示,补一处主色 ring(与 ui-base 的 focus-within ring 同手法) */
+	.fm-panel .ui-input:focus {
+		outline: none;
+		border: none;
+		box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 15%, transparent);
+	}
+
+	/* ── slug:前缀 + 生成按钮,参考 /post/ + RefreshCw ── */
+	.slug-field {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	.slug-field .ui-input {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.slug-prefix {
+		flex-shrink: 0;
+		font-size: 0.875rem;
+		color: var(--content-meta);
+	}
+
+	.slug-generate {
+		flex-shrink: 0;
+		display: grid;
+		place-items: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		border: none;
+		border-radius: 0.75rem;
+		background: var(--btn-regular-bg);
+		color: var(--content-meta);
+		cursor: pointer;
+		transition:
+			background-color 0.15s,
+			color 0.15s,
+			opacity 0.15s;
+	}
+
+	.slug-generate:hover:not(:disabled) {
+		background: var(--btn-regular-bg-hover);
+		color: var(--primary);
+	}
+
+	.slug-generate:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	/* ── 日期 + 置顶同行(参考 items-end 对齐) ── */
+	.date-pin-row {
+		flex-direction: row;
+		align-items: flex-end;
+		gap: 0.75rem;
+	}
+
+	.date-pin-row .date-field {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.pin-switch {
+		flex-shrink: 0;
+	}
+
+	/* ── 封面:有图预览 / 无图提示,下方始终保留 URL 输入(媒体库就绪前用文本) ── */
+	.cover-block {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.cover-preview {
+		position: relative;
+		aspect-ratio: 16 / 9;
+		border-radius: 0.75rem;
+		overflow: hidden;
+		background: var(--btn-regular-bg);
+	}
+
+	.cover-preview img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.cover-clear {
+		position: absolute;
+		right: 0.5rem;
+		bottom: 0.5rem;
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		border: none;
+		border-radius: 0.5rem;
+		background: rgb(0 0 0 / 0.45);
+		color: #fff;
+		cursor: pointer;
+		backdrop-filter: blur(4px);
+		transition: background-color 0.15s;
+	}
+
+	.cover-clear:hover {
+		background: rgb(0 0 0 / 0.55);
+	}
+
+	.cover-empty {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-height: 2.5rem;
+		padding: 0 0.75rem;
+		border-radius: 0.75rem;
+		background: var(--btn-regular-bg);
+		font-size: 0.875rem;
+		color: var(--content-meta);
 	}
 
 	/* ── MD3 Switch 行 ── */

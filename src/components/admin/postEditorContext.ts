@@ -51,6 +51,7 @@ export interface PostEditorUiState {
 export interface PostEditorActions {
 	toggleGroup: (group: FormGroup) => void;
 	handleSlugInput: () => void;
+	generateSlugFromTitle: () => void;
 	addTag: () => void;
 	removeTag: (index: number) => void;
 	handleTagKeydown: (e: KeyboardEvent) => void;
