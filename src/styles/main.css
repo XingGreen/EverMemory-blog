@@ -14,20 +14,21 @@
 /* 暗色模式选择器配置 */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* 全局字体：人间失格奶酪体（后台控制面板与前台统一使用） */
+/* 全局字体：Maple Mono NF CN（前台与后台控制面板统一使用）。
+   原始文件 19.6MB，构建时由 scripts/subset-fonts.ts 子集化并替换此引用；
+   代码块 / 横幅标题等特殊位置在各自字体配置中单独指定，不受影响。 */
 @font-face {
-  font-family: 'Renjian SSCN';
-  src: url('/assets/fonts/人间失格奶酪体字体 _爱给网_aigei_com.ttf')
-    format('truetype');
+  font-family: 'Maple Mono NF CN';
+  src: url('/assets/fonts/MapleMono-NF-CN-Regular.ttf') format('truetype');
   font-display: swap;
-  font-weight: 400 900;
+  font-weight: 400;
   font-style: normal;
 }
 
 /* Tailwind v4 配置 - 从 tailwind.config.cjs 迁移 */
 @theme {
   --font-sans:
-    'Renjian SSCN', 'Roboto', 'sans-serif', ui-sans-serif, system-ui, sans-serif,
+    'Maple Mono NF CN', 'Roboto', ui-sans-serif, system-ui, sans-serif,
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 

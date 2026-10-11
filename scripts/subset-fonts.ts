@@ -1,6 +1,12 @@
 // 字体子集化构建后脚本
 // 在 astro build 之后运行，扫描 dist/ 中所有 HTML 页面，收集实际使用的字符，
-// 为标记了 subset: true 的本地字体生成轻量 woff2 子集文件。
+// 为 fontConfig.subsetFonts 中列出的本地字体生成轻量 woff2 子集文件。
+//
+// 工作方式：本地字体通常以手写 @font-face（src 指向 /assets/fonts/xxx）引入，
+// astro build 会把这些 public 静态文件原样拷贝进产物目录。本脚本在产物中：
+//   1. 生成 woff2 子集到 <client>/_astro/fonts/；
+//   2. 把 CSS 中指向原始字体文件的 url(...) format(...) 替换为子集引用；
+//   3. 删除产物的原始字体文件，避免整份大字体随站点上线。
 
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
@@ -8,12 +14,23 @@ import path from "node:path";
 import { glob } from "glob";
 import subsetFont from "subset-font";
 import { fontConfig, fontsList } from "../src/config";
-import { collectUsedFontCssVars, toPublicPath } from "../src/utils/fontHelper";
+import { toPublicPath } from "../src/utils/fontHelper";
 
 // ─── 配置 ───────────────────────────────────────────────
 
-const DIST_DIR = "dist";
-const OUTPUT_DIR = "dist/_astro/fonts";
+// astro 产物根目录：node adapter 输出 dist/client，vercel adapter 输出
+// .vercel/output/static，无 adapter 时为 dist。取第一个包含 _astro 的目录。
+async function resolveClientDir(): Promise<string> {
+	for (const dir of ["dist/client", ".vercel/output/static", "dist"]) {
+		try {
+			const stat = await fs.stat(path.join(dir, "_astro"));
+			if (stat.isDirectory()) return dir;
+		} catch {
+			// 继续尝试下一个候选目录
+		}
+	}
+	return "dist";
+}
 
 // ─── 字体配置解析 ────────────────────────────────────────
 
@@ -29,8 +46,9 @@ type LocalSubsetFont = {
 
 /**
  * 从 fontConfig.subsetFonts 获取需要子集化的本地字体，
- * 交叉引用 fonts 数组获取字体文件路径。
- * 仅处理实际被使用的字体（在 selected、bannerTitleFont 等区域字段中引用的）。
+ * 交叉引用 fontsList 获取字体文件路径。
+ * subsetFonts 是显式白名单：只要列出了且能找到本地 src，就进行子集化，
+ * 不要求该字体出现在 selected / 区域字段中（本地字体多为手写 @font-face 引入）。
  */
 function getLocalSubsetFonts(): LocalSubsetFont[] {
 	if (!fontConfig.enable || !fontConfig.subsetFonts) return [];
@@ -38,25 +56,21 @@ function getLocalSubsetFonts(): LocalSubsetFont[] {
 	const subsetEntries = Object.entries(fontConfig.subsetFonts);
 	if (subsetEntries.length === 0) return [];
 
-	// 构建实际使用的字体 CSS 变量集合（与 astro.config.mjs 共享同一逻辑）
-	const used = collectUsedFontCssVars(fontConfig);
-
 	// 建立 cssVariable → fontsList 条目的映射
-	const fontByCssVar = new Map<string, typeof fontsList[number]>();
+	const fontByCssVar = new Map<string, (typeof fontsList)[number]>();
 	for (const f of fontsList) {
 		if (f.cssVariable) fontByCssVar.set(f.cssVariable, f);
 	}
 
 	const result: LocalSubsetFont[] = [];
 	for (const [cssVar, opts] of subsetEntries) {
-		// 跳过未被使用的字体，避免生成无用的子集文件
-		if (!used.has(cssVar)) {
-			console.log(`   ⏭ Skipping '${cssVar}' — not referenced in selected or any font region.`);
+		const f = fontByCssVar.get(cssVar);
+		if (!f?.options?.variants) {
+			console.log(
+				`   ⏭ Skipping '${cssVar}' — no local font definition found.`,
+			);
 			continue;
 		}
-
-		const f = fontByCssVar.get(cssVar);
-		if (!f?.options?.variants) continue;
 
 		for (const v of f.options.variants) {
 			if (!v.src?.length) continue;
@@ -66,12 +80,14 @@ function getLocalSubsetFonts(): LocalSubsetFont[] {
 			if (publicPath === null) {
 				console.warn(
 					`   ⚠ Skipping variant with unexpected src path: "${rawSrc}".\n` +
-					`     Expected a path under public/ (e.g. "./public/assets/fonts/MyFont.woff2") or an absolute path (e.g. "/assets/fonts/MyFont.woff2").`
+						`     Expected a path under public/ (e.g. "./public/assets/fonts/MyFont.woff2") or an absolute path (e.g. "/assets/fonts/MyFont.woff2").`,
 				);
 				continue;
 			}
 			result.push({
-				id: `${f.name}-${v.weight || "default"}`.toLowerCase().replace(/\s+/g, "-"),
+				id: `${f.name}-${v.weight || "default"}`
+					.toLowerCase()
+					.replace(/\s+/g, "-"),
 				family: f.name,
 				src: publicPath,
 				weight: v.weight,
@@ -102,7 +118,9 @@ function extractTextFromHtml(html: string): string {
 		.replace(/&#39;/g, "'")
 		.replace(/&nbsp;/g, " ");
 	// 提取 alt、title、aria-label、placeholder 属性值
-	const attrMatches = html.matchAll(/(?:alt|title|aria-label|placeholder)=["']([^"']+)["']/gi);
+	const attrMatches = html.matchAll(
+		/(?:alt|title|aria-label|placeholder)=["']([^"']+)["']/gi,
+	);
 	for (const match of attrMatches) {
 		text += match[1];
 	}
@@ -110,10 +128,10 @@ function extractTextFromHtml(html: string): string {
 }
 
 /**
- * 扫描 dist/ 中所有 HTML 文件，提取页面中实际使用的所有字符
+ * 扫描产物目录中所有 HTML 文件，提取页面中实际使用的所有字符
  */
-async function collectChars(): Promise<string> {
-	const htmlFiles = await glob(`${DIST_DIR}/**/*.html`);
+async function collectChars(clientDir: string): Promise<string> {
+	const htmlFiles = await glob(`${clientDir}/**/*.html`);
 	const charSet = new Set<string>();
 
 	for (const file of htmlFiles) {
@@ -128,11 +146,7 @@ async function collectChars(): Promise<string> {
 // ─── 子集生成 ────────────────────────────────────────────
 
 function contentHash(buffer: Buffer): string {
-	return crypto
-		.createHash("sha256")
-		.update(buffer)
-		.digest("hex")
-		.slice(0, 16);
+	return crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 16);
 }
 
 /**
@@ -163,6 +177,10 @@ function detectFontFormat(
 	}
 }
 
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // ─── 主流程 ──────────────────────────────────────────────
 
 interface SubsetResult {
@@ -179,11 +197,14 @@ interface SubsetResult {
 async function main() {
 	console.log("🔤 Font subsetting started...");
 
+	const clientDir = await resolveClientDir();
+	const outputDir = path.join(clientDir, "_astro", "fonts");
+
 	// 1. 从配置中获取需要子集化的本地字体
 	const localSubsetFonts = getLocalSubsetFonts();
 
 	if (localSubsetFonts.length === 0) {
-		console.log("   No local fonts with subset: true found. Skipping.");
+		console.log("   No local fonts configured in subsetFonts. Skipping.");
 		return;
 	}
 
@@ -192,17 +213,19 @@ async function main() {
 	);
 
 	// 2. 收集页面字符
-	console.log("🔍 Collecting characters from dist/...");
-	const pageChars = await collectChars();
+	console.log(`🔍 Collecting characters from ${clientDir}/...`);
+	const pageChars = await collectChars(clientDir);
 	console.log(`   Collected ${pageChars.length} unique characters.`);
 
 	if (pageChars.length === 0) {
-		console.warn("⚠ No characters found in dist/. Skipping subsetting.");
+		console.warn(
+			`⚠ No characters found in ${clientDir}/. Skipping subsetting.`,
+		);
 		return;
 	}
 
 	// 3. 确保输出目录存在
-	await fs.mkdir(OUTPUT_DIR, { recursive: true });
+	await fs.mkdir(outputDir, { recursive: true });
 
 	// 4. 为每个字体生成子集
 	const results: SubsetResult[] = [];
@@ -214,9 +237,7 @@ async function main() {
 		try {
 			await fs.access(fontPath);
 		} catch {
-			console.error(
-				`❌ Font file not found: ${fontPath} (src: ${font.src})`,
-			);
+			console.error(`❌ Font file not found: ${fontPath} (src: ${font.src})`);
 			continue;
 		}
 
@@ -230,9 +251,7 @@ async function main() {
 			chars = [...extraSet].join("");
 		}
 
-		console.log(
-			`⏳ Generating subset for '${font.id}' (${font.family})...`,
-		);
+		console.log(`⏳ Generating subset for '${font.id}' (${font.family})...`);
 
 		const fontBuffer = await fs.readFile(fontPath);
 		const originalFormat = detectFontFormat(fontPath);
@@ -244,7 +263,7 @@ async function main() {
 			});
 
 			const hash = contentHash(subsetBuffer);
-			const outFile = path.join(OUTPUT_DIR, `${hash}.woff2`);
+			const outFile = path.join(outputDir, `${hash}.woff2`);
 			await fs.writeFile(outFile, subsetBuffer);
 
 			const sizeKB = (subsetBuffer.length / 1024).toFixed(1);
@@ -278,35 +297,37 @@ async function main() {
 		return;
 	}
 
-	// 5. 替换 dist/ 中 CSS 和 HTML 的字体引用
-	//    @font-face 可能在独立 CSS 文件中，也可能在 HTML 内联 <style> 中
-	console.log("🔄 Replacing font URLs in dist/ CSS and HTML files...");
-	const filesToReplace = await glob(`${DIST_DIR}/**/*.{css,html}`);
+	// 5. 替换产物中 CSS 和 HTML 的字体引用
+	//    把 @font-face 里指向原始字体文件的 url(...) format(...) 换成子集引用
+	console.log("🔄 Replacing font URLs in dist CSS and HTML files...");
+	const filesToReplace = await glob(`${clientDir}/**/*.{css,html}`);
 
 	for (const file of filesToReplace) {
 		let content = await fs.readFile(file, "utf-8");
-		let replaced = false;
+		const before = content;
 
 		for (const result of results) {
-			const placeholder = `__SUBSET_FONT_${result.id}__`;
-			if (content.includes(placeholder)) {
-				const subsetUrl = `/_astro/fonts/${result.hash}.woff2`;
-				content = content.replaceAll(placeholder, subsetUrl);
-				replaced = true;
-			}
+			const subsetUrl = `/_astro/fonts/${result.hash}.woff2`;
+			// 匹配 url(/assets/fonts/xxx.ttf) format("truetype") 形式
+			// （可选引号 / 空白），整体替换为 woff2 引用
+			const re = new RegExp(
+				`url\\(\\s*["']?${escapeRegExp(result.originalSrc)}["']?\\s*\\)\\s*format\\(\\s*["']?[\\w-]+["']?\\s*\\)`,
+				"g",
+			);
+			content = content.replace(re, `url(${subsetUrl}) format("woff2")`);
 		}
 
-		if (replaced) {
+		if (content !== before) {
 			await fs.writeFile(file, content);
 			console.log(`   ✔ Updated: ${file}`);
 		}
 	}
 
-	// 6. 清理 dist/ 中的原始字体文件
+	// 6. 清理产物中拷贝过来的原始字体文件
 	console.log("🗑 Cleaning up original font files from dist/...");
 	for (const result of results) {
 		const originalInDist = path.join(
-			DIST_DIR,
+			clientDir,
 			result.originalSrc.startsWith("/")
 				? result.originalSrc.slice(1)
 				: result.originalSrc,
