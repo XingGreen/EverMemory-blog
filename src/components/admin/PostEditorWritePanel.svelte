@@ -136,18 +136,13 @@ const TOOLS: {
 </section>
 
 <style>
-	/* ── 中间书写区：独立卡片，tabs / 工具栏 / 编辑框内嵌 ── */
+	/* ── 中间书写区：工作区卡片的内容，本身不再有卡片外观 ── */
 	.write-panel {
 		display: flex;
 		flex-direction: column;
 		gap: 0.875rem;
 		min-width: 0;
-		padding: 1.25rem;
-		background: var(--card-bg);
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-large);
-		box-shadow: var(--shadow-card);
-		align-self: start;
+		padding: 1.25rem 1.5rem;
 		isolation: isolate;
 	}
 
