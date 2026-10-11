@@ -113,6 +113,26 @@ const TOOLS: {
 				{/if}
 			</button>
 		{/each}
+		<div class="toolbar-end">
+			<button
+				type="button"
+				title={i18n(I18nKey.postMdUndo)}
+				aria-label={i18n(I18nKey.postMdUndo)}
+				disabled={!editorState.canUndo}
+				onclick={() => actions.undo()}
+			>
+				<Icon icon="material-symbols:undo" class="text-sm" />
+			</button>
+			<button
+				type="button"
+				title={i18n(I18nKey.postMdRedo)}
+				aria-label={i18n(I18nKey.postMdRedo)}
+				disabled={!editorState.canRedo}
+				onclick={() => actions.redo()}
+			>
+				<Icon icon="material-symbols:redo" class="text-sm" />
+			</button>
+		</div>
 	</div>
 
 	{#if editorState.activeTab === "editor"}
@@ -149,6 +169,8 @@ const TOOLS: {
 	.tabs {
 		display: flex;
 		gap: 0.25rem;
+		margin-inline: -1.5rem;
+		padding-inline: 1.5rem;
 		border-bottom: 1px solid var(--line-color);
 	}
 
@@ -173,14 +195,15 @@ const TOOLS: {
 		border-bottom-color: var(--primary);
 	}
 
-	/* 工具栏：对齐参考实现——不用灰底圆角块，仅以底部细线收束，按钮本身保持轻量 */
+	/* 工具栏：对齐参考实现——淡色横条 + 底部细线，不用灰底圆角块，按钮保持轻量 */
 	.md-toolbar {
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
 		gap: 0.25rem;
-		padding: 0.5rem 0;
-		background: none;
+		margin-inline: -1.5rem;
+		padding: 0.5rem 1.5rem;
+		background: color-mix(in srgb, var(--btn-regular-bg) 35%, var(--card-bg));
 		border: none;
 		border-bottom: 1px solid var(--line-color);
 		border-radius: 0;
@@ -218,6 +241,22 @@ const TOOLS: {
 		height: 1rem;
 		background: var(--line-color);
 		margin: 0 0.5rem;
+	}
+
+	.toolbar-end {
+		display: flex;
+		gap: 0.25rem;
+		margin-left: auto;
+	}
+
+	.md-toolbar button:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
+
+	.md-toolbar button:disabled:hover {
+		background: none;
+		color: var(--content-meta);
 	}
 
 	.content-editor {

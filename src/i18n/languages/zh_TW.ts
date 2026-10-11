@@ -482,6 +482,8 @@ export const zh_TW: Translation = {
 	[Key.postMdUl]: "無序清單",
 	[Key.postMdOl]: "有序清單",
 	[Key.postMdDivider]: "分隔線",
+	[Key.postMdUndo]: "復原",
+	[Key.postMdRedo]: "重做",
 	[Key.postToc]: "目錄",
 	[Key.postTocEmpty]: "暫無標題，寫些 ## 試試",
 	[Key.errorFillRequired]: "請填寫: {fields}",

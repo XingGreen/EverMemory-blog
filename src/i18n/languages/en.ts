@@ -495,6 +495,8 @@ export const en: Translation = {
 	[Key.postMdUl]: "Unordered list",
 	[Key.postMdOl]: "Ordered list",
 	[Key.postMdDivider]: "Divider",
+	[Key.postMdUndo]: "Undo",
+	[Key.postMdRedo]: "Redo",
 	[Key.postToc]: "Table of contents",
 	[Key.postTocEmpty]: "No headings yet, try writing some ##",
 	[Key.errorFillRequired]: "Please fill in: {fields}",

@@ -67,6 +67,8 @@ const editorState = $state({
 	visibleTocLines: [] as number[],
 	editorEl: undefined as HTMLTextAreaElement | undefined,
 	previewEl: undefined as HTMLElement | undefined,
+	canUndo: false,
+	canRedo: false,
 } satisfies PostEditorFields & PostEditorUiState);
 
 // 右侧抽屉：基本信息（元数据）与目录共用；单栏写作不再常驻左右两栏
@@ -78,6 +80,73 @@ function toggleDrawer(panel: Exclude<Drawer, "none">) {
 }
 
 let isSaving = $state(false);
+
+/**
+ * 书写区撤销/重做：维护 content 的全文快照栈。
+ * 输入停止 400ms 后落一个记录点（合并连续击键）；文章加载 / 草稿恢复 / 工具插入
+ * 各自形成独立记录点。上限 200 步，超出丢弃最旧的记录。
+ */
+const HISTORY_LIMIT = 200;
+let history = $state<string[]>([]);
+let historyIndex = $state(-1);
+let historyTimer: ReturnType<typeof setTimeout> | undefined;
+let historyApplying = false;
+let historyInitialized = false;
+
+function recordHistoryPoint() {
+	const value = editorState.content;
+	if (history[historyIndex] === value) return;
+	history = [...history.slice(0, historyIndex + 1), value];
+	if (history.length > HISTORY_LIMIT) {
+		history = history.slice(history.length - HISTORY_LIMIT);
+	}
+	historyIndex = history.length - 1;
+}
+
+/** 以当前内容重置历史（文章 / 草稿载入后调用），使撤销不会越过载入点 */
+function resetHistory() {
+	history = [editorState.content];
+	historyIndex = 0;
+}
+
+function undoEditor() {
+	if (historyIndex <= 0) return;
+	historyApplying = true;
+	historyIndex -= 1;
+	editorState.content = history[historyIndex];
+}
+
+function redoEditor() {
+	if (historyIndex >= history.length - 1) return;
+	historyApplying = true;
+	historyIndex += 1;
+	editorState.content = history[historyIndex];
+}
+
+// content 变化即安排记录点；撤销/重做自身引起的变化不再记录
+$effect(() => {
+	const value = editorState.content;
+	if (historyApplying) {
+		historyApplying = false;
+		return;
+	}
+	if (!historyInitialized) {
+		historyInitialized = true;
+		recordHistoryPoint();
+		return;
+	}
+	if (historyTimer) clearTimeout(historyTimer);
+	historyTimer = setTimeout(recordHistoryPoint, 400);
+	return () => {
+		if (historyTimer) clearTimeout(historyTimer);
+	};
+});
+
+// 历史指针 / 栈变化 → 同步按钮可用态
+$effect(() => {
+	editorState.canUndo = historyIndex > 0;
+	editorState.canRedo = historyIndex < history.length - 1;
+});
 let isLoadingContent = $state(false);
 // 标记用户是否手动编辑过 slug，防止自动生成覆盖用户输入
 let slugTouched = $state(false);
@@ -348,6 +417,8 @@ setContext(POST_EDITOR_CONTEXT, {
 		handleEditorScroll,
 		handlePreviewScroll,
 		jumpToToc,
+		undo: undoEditor,
+		redo: redoEditor,
 	},
 });
 
@@ -549,6 +620,7 @@ async function restoreCreateDraft() {
 	const source = localTs >= cloudTs ? local : cloud;
 	if (!source || (!source.title && !source.content)) return;
 	applyDraft(source);
+	resetHistory();
 	cloudSavedAt = cloudTs || null;
 	if (cloudTs) cloudSync = "saved";
 }
@@ -581,6 +653,7 @@ async function loadContent() {
 			editorState.content = "";
 		} finally {
 			isLoadingContent = false;
+			resetHistory();
 		}
 	}
 }
@@ -594,6 +667,7 @@ onMount(() => {
 onDestroy(() => {
 	if (draftTimer) clearTimeout(draftTimer);
 	if (cloudTimer) clearTimeout(cloudTimer);
+	if (historyTimer) clearTimeout(historyTimer);
 	if (beforeUnloadHandler) {
 		window.removeEventListener("beforeunload", beforeUnloadHandler);
 	}

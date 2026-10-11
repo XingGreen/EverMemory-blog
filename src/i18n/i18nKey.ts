@@ -478,6 +478,8 @@ enum I18nKey {
 	postMdUl = "postMdUl",
 	postMdOl = "postMdOl",
 	postMdDivider = "postMdDivider",
+	postMdUndo = "postMdUndo",
+	postMdRedo = "postMdRedo",
 	postToc = "postToc",
 	postTocEmpty = "postTocEmpty",
 	errorFillRequired = "errorFillRequired",
