@@ -1947,10 +1947,8 @@ font-family: inherit;
 	}
 
 	.nav-item.sub.active {
-		/* 二级菜单高亮：底色比一级浅一半（一级 16%），并加 2px 主色左条，
-		   让「内层选中」与「一级选中」在层级上可区分，而非同一档色 */
+		/* 二级菜单高亮：底色比一级浅一半（一级 16%），以此区分内层选中 */
 		background: color-mix(in oklab, var(--primary) 8%, transparent);
-		box-shadow: inset 2px 0 0 var(--primary);
 		color: var(--title-active);
 	}
 
