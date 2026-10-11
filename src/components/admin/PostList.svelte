@@ -679,6 +679,21 @@ function actionLabel(action: string, title: string): string {
 		--md-control-h: 44px;
 		--md-control-r: 10px;
 		--md-control-gap: 0.5rem;
+
+		/* 固定高度 flex 容器（对齐参考项目 post-manager）：
+		   页头/筛选/工具栏与页脚固定，仅列表区（.md3-table）独立滚动，
+		   条数固定在卡片左下角。 */
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		overflow: hidden;
+	}
+
+	/* 固定区：不随列表滚动 */
+	.post-list-heading,
+	.filter-chips,
+	.toolbar {
+		flex-shrink: 0;
 	}
 
 	/* 视觉隐藏但保留给屏幕阅读器（置顶说明、标签溢出数、筛选结果播报） */
@@ -899,6 +914,8 @@ function actionLabel(action: string, title: string): string {
 		gap: 0.75rem;
 		padding: 3rem 1rem;
 		text-align: center;
+		/* 空态/错误态在固定高容器内占满剩余空间并居中 */
+		flex: 1;
 	}
 
 	:global(.state-icon) {
@@ -981,7 +998,13 @@ function actionLabel(action: string, title: string): string {
 	/* 列表形态（对齐参考项目 post-list-table）：不叠表格边框/圆角，
 	   行间分隔线承担划分；表头轻量左对齐（13px/500 灰字），随滚动吸顶。 */
 	.md3-table {
-		/* 表头 sticky 依赖滚动容器，这里不能有 overflow:hidden 的祖先裁剪 */
+		/* 列表独立滚动区：表头 sticky 相对此容器吸顶，
+		   页头/筛选/工具栏与页脚保持固定不随列表滚动。 */
+		flex: 1;
+		min-height: 0;
+		overflow: auto;
+		overscroll-behavior: contain;
+		scrollbar-gutter: stable;
 	}
 
 	/* 表头行
@@ -1260,13 +1283,16 @@ function actionLabel(action: string, title: string): string {
 		color: var(--md-primary-text);
 	}
 
-	/* Footer */
+	/* Footer：固定在卡片左下角（不随列表滚动），
+	   与列表之间用一条细分隔线分层（对齐参考项目 post-list-footer）。 */
 	.list-footer {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 1rem;
+		flex-shrink: 0;
 		padding: 0.75rem 1rem 0;
+		border-top: 1px solid var(--md-outline);
 		color: var(--md-on-surface-variant);
 		font-size: 0.75rem;
 	}
