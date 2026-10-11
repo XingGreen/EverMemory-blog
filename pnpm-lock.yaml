@@ -128,6 +128,9 @@ importers:
       pako:
         specifier: ^2.1.0
         version: 2.1.0
+      pinyin-pro:
+        specifier: ^3.29.5
+        version: 3.29.5
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -5020,6 +5023,9 @@ packages:
   pify@5.0.0:
     resolution: {integrity: sha512-eW/gHNMlxdSP6dmG6uJip6FXN0EQBwm2clYYd8Wul42Cwu/DK8HEftzsapcNdYe2MfLiIwZqsDk2RDEsTE79hA==}
     engines: {node: '>=10'}
+
+  pinyin-pro@3.29.5:
+    resolution: {integrity: sha512-Fk5YoRmtdHqJWqAuzYVG/NzvzeCbaG+ZEwbY6Nbps3QAIrvQQEtcm49frcyCM8i2b5najnzPDtYqrHRYTTiuwQ==}
 
   pkg-dir@4.2.0:
     resolution: {integrity: sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==}
@@ -12229,6 +12235,8 @@ snapshots:
   pify@2.3.0: {}
 
   pify@5.0.0: {}
+
+  pinyin-pro@3.29.5: {}
 
   pkg-dir@4.2.0:
     dependencies:

@@ -200,17 +200,27 @@ function formatDate(dateStr: string): string {
 	return new Date(dateStr).toISOString().split("T")[0];
 }
 
-function generateSlug(title: string): string {
-	// 与参考 slugify(features/posts/utils/content.ts) 对齐:
-	// 空格/下划线 -> "-",剔除其余非允许字符,连续 "-" 合并,去首尾;仅保留截断
-	return title
+/**
+ * 由标题生成 URL 标识：先中文转拼音，再走 slugify。
+ * 后端 isValidPostSlug 只接受 ASCII，故不保留汉字。
+ * pinyin-pro 体积较大，动态 import 只在需要时加载。
+ */
+async function generateSlug(title: string): Promise<string> {
+	const { pinyin } = await import("pinyin-pro");
+	const romanized = pinyin(title, {
+		toneType: "none",
+		nonZh: "consecutive",
+	});
+	const cleaned = romanized
 		.toLowerCase()
-		.trim()
+		// 拼音的 ü 归一为 v，避免后续被剔除（如「绿色」→ lü → lv）
+		.replace(/ü/g, "v")
 		.replace(/[\s_]+/g, "-")
-		.replace(/[^a-z0-9\u4e00-\u9fa5-]+/g, "")
+		.replace(/[^a-z0-9-]+/g, "")
 		.replace(/-{2,}/g, "-")
 		.replace(/^-+|-+$/g, "")
 		.substring(0, 100);
+	return cleaned || "untitled-post";
 }
 
 // ── 目录（容器内派生，供滚动与跳转动作使用） ──
@@ -225,12 +235,12 @@ function handleSlugInput() {
 	slugTouched = true;
 }
 
-/** 手动触发：按当前标题重新生成 slug（与瞄准目标的自动生成同源），之后固定不再被覆盖 */
+/** 手动触发：按当前标题重新生成 slug（与自动生成同源），之后固定不再被覆盖 */
 function generateSlugFromTitle() {
-	const value = generateSlug(editorState.title);
-	if (!value) return;
-	editorState.slug = value;
-	slugTouched = true;
+	void generateSlug(editorState.title).then((value) => {
+		editorState.slug = value;
+		slugTouched = true;
+	});
 }
 
 function addTag() {
@@ -501,7 +511,11 @@ $effect(() => {
 		!editorState.slug &&
 		editorState.title
 	) {
-		editorState.slug = generateSlug(editorState.title);
+		void generateSlug(editorState.title).then((value) => {
+			// 异步返回后再次确认，避免覆盖用户手动输入
+			if (slugTouched || editorState.slug) return;
+			editorState.slug = value;
+		});
 	}
 });
 
