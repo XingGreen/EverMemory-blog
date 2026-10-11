@@ -887,6 +887,7 @@ $effect(() => {
 
 	.editor-header {
 		grid-area: header;
+		position: relative;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -933,6 +934,11 @@ $effect(() => {
 	}
 
 	.cloud-badge {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 1;
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
@@ -1116,6 +1122,12 @@ $effect(() => {
 
 		.editor-back {
 			align-self: flex-start;
+		}
+
+		.cloud-badge {
+			position: static;
+			transform: none;
+			align-self: center;
 		}
 
 		.header-actions {
