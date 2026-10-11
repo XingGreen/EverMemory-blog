@@ -100,21 +100,7 @@ $effect(() => {
 </aside>
 
 <style>
-	/* ── 右侧目录栏：独立卡片 ── */
-	.toc-panel {
-		position: sticky;
-		top: 1rem;
-		max-height: calc(100vh - 7.5rem);
-		overflow-y: auto;
-		padding: 1.5rem 1.25rem;
-		background: var(--card-bg);
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-large);
-		box-shadow: var(--shadow-card);
-		align-self: start;
-		isolation: isolate;
-	}
-
+	/* 作为抽屉内容渲染：外壳（卡片/滚动）由抽屉提供 */
 	.toc-panel h3 {
 		font-size: 0.9375rem;
 		font-weight: 600;
@@ -151,19 +137,5 @@ $effect(() => {
 		font-size: 0.8125rem;
 		line-height: 1.6;
 		color: var(--content-meta);
-	}
-
-	@media (max-width: 1400px) {
-		.toc-panel {
-			display: none;
-		}
-	}
-
-	@media (max-width: 900px) {
-		.toc-panel {
-			display: block;
-			position: static;
-			max-height: none;
-		}
 	}
 </style>
