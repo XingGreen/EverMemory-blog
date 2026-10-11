@@ -63,3 +63,4 @@ src/constants/admin-config-snapshot.ts
 
 # 测试覆盖率报告
 coverage/
+screenshots/
