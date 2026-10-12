@@ -64,3 +64,12 @@ src/constants/admin-config-snapshot.ts
 # 测试覆盖率报告
 coverage/
 screenshots/
+
+# dev server 日志
+dev-server.log
+dev-server.err.log
+
+# 自动生成的站点流程文档（flow discovery 产物）
+docs/flows/
+docs/metadata/
+docs/index.md
