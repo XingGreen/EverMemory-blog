@@ -153,21 +153,21 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 						</label>
 					</div>
 
-					<div class="form-group full-width switch-row">
+					<div class="form-group full-width switch-list">
 						<label class="md3-switch">
-							<input type="checkbox" bind:checked={editorState.isPinned} />
+							<input type="checkbox" bind:checked={editorState.isDraft} />
+							<span class="switch-label">{i18n(I18nKey.postDraft)}</span>
 							<span class="switch-track">
 								<span class="switch-thumb"></span>
 							</span>
-							<span class="switch-label">{i18n(I18nKey.postPinned)}</span>
 						</label>
 
 						<label class="md3-switch">
-							<input type="checkbox" bind:checked={editorState.isDraft} />
+							<input type="checkbox" bind:checked={editorState.isPinned} />
+							<span class="switch-label">{i18n(I18nKey.postPinned)}</span>
 							<span class="switch-track">
 								<span class="switch-thumb"></span>
 							</span>
-							<span class="switch-label">{i18n(I18nKey.postDraft)}</span>
 						</label>
 
 						<label class="md3-switch">
@@ -175,10 +175,10 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 								type="checkbox"
 								bind:checked={editorState.enableComment}
 							/>
+							<span class="switch-label">{i18n(I18nKey.postComments)}</span>
 							<span class="switch-track">
 								<span class="switch-thumb"></span>
 							</span>
-							<span class="switch-label">{i18n(I18nKey.postComments)}</span>
 						</label>
 					</div>
 					{:else if group.key === "seo"}
@@ -574,19 +574,17 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 		color: var(--content-meta);
 	}
 
-	/* ── MD3 Switch 行 ── */
-	.switch-row {
-		flex-direction: row;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.5rem 1.25rem;
+	/* ── MD3 Switch 设置列表:三行竖排,文字在左、开关在右 ── */
+	.switch-list {
 		padding: 0;
 	}
 
 	.md3-switch {
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
 		gap: 0.5rem;
+		width: 100%;
 		min-height: 2.5rem;
 		cursor: pointer;
 		font-size: 0.8125rem;
