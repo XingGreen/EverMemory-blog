@@ -45,6 +45,8 @@ export interface PostEditorUiState {
 	/** 书写区撤销/重做是否可用（由历史栈指针派生） */
 	canUndo: boolean;
 	canRedo: boolean;
+	/** slug 生成后经标题复核通过的一次性成功反馈（约 1.5s 后自动复位） */
+	slugVerified: boolean;
 }
 
 /** 容器提供、供三栏调用的动作 */

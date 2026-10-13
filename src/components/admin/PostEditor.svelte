@@ -69,6 +69,7 @@ const editorState = $state({
 	previewEl: undefined as HTMLElement | undefined,
 	canUndo: false,
 	canRedo: false,
+	slugVerified: false,
 } satisfies PostEditorFields & PostEditorUiState);
 
 // 右侧抽屉：基本信息（元数据）与目录共用；单栏写作不再常驻左右两栏
@@ -235,13 +236,37 @@ function handleSlugInput() {
 	slugTouched = true;
 }
 
+/** 刷新按钮的一次性成功反馈时长 */
+const SLUG_VERIFIED_MS = 1500;
+let slugVerifiedTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * slug 生成后再对照标题复核一次：由当前标题重新推导一次，
+ * 与已写入的 slug 一致（且非空）才算生成成功，给按钮一次 √ 反馈。
+ * 复核期间标题被改动会推导出不同结果，此时不显示成功。
+ */
+async function verifySlugAgainstTitle(): Promise<void> {
+	const check = await generateSlug(editorState.title);
+	if (check === "" || check !== editorState.slug) return;
+	editorState.slugVerified = true;
+	if (slugVerifiedTimer) clearTimeout(slugVerifiedTimer);
+	slugVerifiedTimer = setTimeout(() => {
+		editorState.slugVerified = false;
+	}, SLUG_VERIFIED_MS);
+}
+
 /** 手动触发：按当前标题重新生成 slug（与自动生成同源），之后固定不再被覆盖 */
 function generateSlugFromTitle() {
 	void generateSlug(editorState.title).then((value) => {
 		editorState.slug = value;
 		slugTouched = true;
+		void verifySlugAgainstTitle();
 	});
 }
+
+$effect(() => () => {
+	if (slugVerifiedTimer) clearTimeout(slugVerifiedTimer);
+});
 
 /** slug 输入框失焦：含非 ASCII 字符（如中文）时就地转拼音规范化，避免后端 400 */
 function normalizeSlug() {
@@ -524,6 +549,8 @@ $effect(() => {
 			// 异步返回后再次确认，避免覆盖用户手动输入
 			if (slugTouched || editorState.slug) return;
 			editorState.slug = value;
+			// 生成后再对照标题复核一次，通过则给刷新按钮一次成功反馈
+			void verifySlugAgainstTitle();
 		});
 	}
 });
