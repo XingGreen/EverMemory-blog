@@ -124,8 +124,8 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 						</label>
 					</div>
 
-					<div class="form-group full-width date-pin-row">
-						<label class="date-field">
+					<div class="form-group">
+						<label>
 							{i18n(I18nKey.postPubDate)}
 							<input
 								type="date"
@@ -133,13 +133,6 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 								max={todayStr}
 								class="ui-input"
 							/>
-						</label>
-						<label class="md3-switch pin-switch">
-							<input type="checkbox" bind:checked={editorState.isPinned} />
-							<span class="switch-track">
-								<span class="switch-thumb"></span>
-							</span>
-							<span class="switch-label">{i18n(I18nKey.postPinned)}</span>
 						</label>
 					</div>
 
@@ -156,6 +149,14 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 					</div>
 
 					<div class="form-group full-width switch-row">
+						<label class="md3-switch">
+							<input type="checkbox" bind:checked={editorState.isPinned} />
+							<span class="switch-track">
+								<span class="switch-thumb"></span>
+							</span>
+							<span class="switch-label">{i18n(I18nKey.postPinned)}</span>
+						</label>
+
 						<label class="md3-switch">
 							<input type="checkbox" bind:checked={editorState.isDraft} />
 							<span class="switch-track">
@@ -507,22 +508,6 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 		cursor: not-allowed;
 	}
 
-	/* ── 日期 + 置顶同行(参考 items-end 对齐) ── */
-	.date-pin-row {
-		flex-direction: row;
-		align-items: flex-end;
-		gap: 0.75rem;
-	}
-
-	.date-pin-row .date-field {
-		flex: 1;
-		min-width: 0;
-	}
-
-	.pin-switch {
-		flex-shrink: 0;
-	}
-
 	/* ── 封面:有图预览 / 无图提示,下方始终保留 URL 输入(媒体库就绪前用文本) ── */
 	.cover-block {
 		display: flex;
@@ -581,8 +566,9 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 	/* ── MD3 Switch 行 ── */
 	.switch-row {
 		flex-direction: row;
+		flex-wrap: wrap;
 		align-items: center;
-		gap: 1rem;
+		gap: 0.5rem 1.25rem;
 		padding: 0;
 	}
 
@@ -590,6 +576,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+		min-height: 2.5rem;
 		cursor: pointer;
 		font-size: 0.8125rem;
 		color: var(--deep-text);
@@ -599,10 +586,11 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 
 	.md3-switch input {
 		position: absolute;
-		opacity: 0;
-		width: 48px;
-		height: 48px;
+		inset: 0;
+		width: 100%;
+		height: 100%;
 		margin: 0;
+		opacity: 0;
 		cursor: pointer;
 		z-index: 2;
 	}
