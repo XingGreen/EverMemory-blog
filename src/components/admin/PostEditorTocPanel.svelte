@@ -51,7 +51,6 @@ $effect(() => {
 </script>
 
 <aside class="toc-panel">
-	<h3>{i18n(I18nKey.postToc)}</h3>
 	{#if tocItems.length > 0}
 		<nav class="toc-list" bind:this={tocListEl}>
 			{#each tocItems as item, idx (item.lineIndex)}
@@ -101,15 +100,6 @@ $effect(() => {
 
 <style>
 	/* 作为抽屉内容渲染：外壳（卡片/滚动）由抽屉提供 */
-	.toc-panel h3 {
-		font-size: 0.9375rem;
-		font-weight: 600;
-		color: var(--deep-text);
-		padding-bottom: 0.5rem;
-		margin-bottom: 0.75rem;
-		border-bottom: 1px solid var(--line-color);
-	}
-
 	.toc-list {
 		position: relative;
 		display: flex;
