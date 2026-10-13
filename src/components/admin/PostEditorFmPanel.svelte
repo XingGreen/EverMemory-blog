@@ -89,12 +89,17 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 								<button
 									type="button"
 									class="slug-generate"
+									class:is-verified={editorState.slugVerified}
 									onclick={actions.generateSlugFromTitle}
 									disabled={!editorState.title}
 									title={i18n(I18nKey.postSlugGenerate)}
 									aria-label={i18n(I18nKey.postSlugGenerate)}
 								>
-									<Icon icon="material-symbols:refresh" />
+									<Icon
+										icon={editorState.slugVerified
+											? "material-symbols:check"
+											: "material-symbols:refresh"}
+									/>
 								</button>
 							</div>
 						</label>
@@ -499,6 +504,12 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 	}
 
 	.slug-generate:hover:not(:disabled) {
+		background: var(--btn-regular-bg-hover);
+		color: var(--primary);
+	}
+
+	.slug-generate.is-verified,
+	.slug-generate.is-verified:hover:not(:disabled) {
 		background: var(--btn-regular-bg-hover);
 		color: var(--primary);
 	}
