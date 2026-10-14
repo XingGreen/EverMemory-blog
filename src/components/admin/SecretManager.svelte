@@ -5,7 +5,7 @@ import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import {
 	type AdminSecretItem,
-	getSecretItem,
+	requiresPasswordToSave,
 	SECRET_GROUPS,
 } from "@/utils/admin-secrets";
 
@@ -123,9 +123,9 @@ async function save() {
 		onNotify("没有需要保存的修改", "error", 5000);
 		return;
 	}
-	// 涉及管理员认证（用户名 / 密码 / JWT）：先验证当前登录密码
-	const touchesAuth = entries.some(
-		(entry) => getSecretItem(entry.key)?.group === "auth",
+	// 涉及管理员认证（用户名/密码/JWT）或破坏性密钥（GitHub 私钥）：先验证当前登录密码
+	const touchesAuth = entries.some((entry) =>
+		requiresPasswordToSave(entry.key),
 	);
 	if (touchesAuth) {
 		pendingEntries = entries;
