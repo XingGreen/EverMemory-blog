@@ -188,13 +188,31 @@ export function getClientIp(request: Request): string {
 	return "unknown";
 }
 
+/**
+ * 第二空间（应急控制台）的失败计数命名空间。
+ * 主空间用空 scope（与历史数据兼容），第二密码用 "super" 独立计数。
+ */
+export const SUPER_SCOPE = "super";
+
+/**
+ * 失败计数/锁定按「空间」隔离：scope 为空即主空间。
+ * 之所以必须隔离，是因为登录成功后只应清零「本空间」的计数——否则攻击者
+ * 用一次正确主密码登录即可清掉猜第二密码的失败计数，从而无限探测它。
+ */
+function scopedKey(clientKey: string, scope?: string): string {
+	return scope ? `${clientKey}:${scope}` : clientKey;
+}
+
 /** 当前是否处于锁定：返回剩余秒数（0 表示未锁定）；只读，不触发写入 */
-export async function checkLockout(clientKey: string): Promise<{
+export async function checkLockout(
+	clientKey: string,
+	scope?: string,
+): Promise<{
 	locked: boolean;
 	retryAfterSeconds: number;
 }> {
 	const state = await loadState();
-	const record = state.get(clientKey);
+	const record = state.get(scopedKey(clientKey, scope));
 	if (!record) return { locked: false, retryAfterSeconds: 0 };
 	const remaining = Math.ceil((record.lockedUntil - Date.now()) / 1000);
 	if (remaining > 0) return { locked: true, retryAfterSeconds: remaining };
@@ -202,19 +220,23 @@ export async function checkLockout(clientKey: string): Promise<{
 }
 
 /** 记录一次登录失败；达到阈值后按指数退避延长锁定，返回当前剩余秒数 */
-export async function registerFailure(clientKey: string): Promise<{
+export async function registerFailure(
+	clientKey: string,
+	scope?: string,
+): Promise<{
 	retryAfterSeconds: number;
 	locked: boolean;
 	failures: number;
 }> {
+	const key = scopedKey(clientKey, scope);
 	const state = swept(await loadState());
-	const prev = state.get(clientKey);
+	const prev = state.get(key);
 	const failures = (prev?.failures ?? 0) + 1;
 	const lockedUntil =
 		failures >= FAIL_THRESHOLD
 			? Date.now() + lockSecondsFor(failures) * 1000
 			: (prev?.lockedUntil ?? 0);
-	state.set(clientKey, { failures, lockedUntil });
+	state.set(key, { failures, lockedUntil });
 	await saveState(state);
 	if (lockedUntil > Date.now()) {
 		return {
@@ -226,17 +248,23 @@ export async function registerFailure(clientKey: string): Promise<{
 	return { locked: false, retryAfterSeconds: 0, failures };
 }
 
-/** 登录成功：清空失败计数 */
-export async function clearFailures(clientKey: string): Promise<void> {
+/** 登录成功：清空该客户端「本空间」的失败计数 */
+export async function clearFailures(
+	clientKey: string,
+	scope?: string,
+): Promise<void> {
 	const state = swept(await loadState());
-	state.delete(clientKey);
+	state.delete(scopedKey(clientKey, scope));
 	await saveState(state);
 }
 
 /** 查询当前失败计数（诊断/审计用） */
-export async function failureCount(clientKey: string): Promise<number> {
+export async function failureCount(
+	clientKey: string,
+	scope?: string,
+): Promise<number> {
 	const state = await loadState();
-	return state.get(clientKey)?.failures ?? 0;
+	return state.get(scopedKey(clientKey, scope))?.failures ?? 0;
 }
 
 /**

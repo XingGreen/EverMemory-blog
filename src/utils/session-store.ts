@@ -1,3 +1,4 @@
+import type { AdminRole } from "./auth";
 import type { KVStore } from "./persist-store";
 import { getStore } from "./persist-store";
 
@@ -35,6 +36,8 @@ export interface AdminSession {
 	exp: number;
 	/** 是否勾选「记住我」（7 天 / 1 小时） */
 	remember: boolean;
+	/** 会话空间：admin（主空间）| super（应急控制台） */
+	role: AdminRole;
 }
 
 async function readAll(): Promise<Record<string, AdminSession>> {
@@ -88,6 +91,7 @@ export async function registerSession(opts: {
 	ip: string;
 	maxAgeSeconds: number;
 	remember: boolean;
+	role?: AdminRole;
 }): Promise<string> {
 	const sid = crypto.randomUUID();
 	const now = Date.now();
@@ -101,6 +105,7 @@ export async function registerSession(opts: {
 		lastSeenAt: now,
 		exp: now + opts.maxAgeSeconds * 1000,
 		remember: opts.remember,
+		role: opts.role ?? "admin",
 	};
 
 	const sessions = await readAll();

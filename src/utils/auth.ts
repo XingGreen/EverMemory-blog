@@ -356,6 +356,28 @@ export function verifySuperPassword(password: string): boolean {
 }
 
 /**
+ * 登录成功后应进入的空间（设计决策见计划 §P0）。
+ *
+ * 规则是「主密码优先」：主密码通过即进主空间，且完全不参考第二密码结果。
+ * 这样「正确主密码 + 猜测第二密码」的请求永远返回主空间——攻击者即使拿到
+ * 主密码，也无法借响应逐次试探第二密码是否正确。只有在主密码未通过时，
+ * 才由第二密码决定是否进入 super 空间。用户名不通过时一律 null。
+ *
+ * 抽成纯函数是为了让这条安全判定可被单测直接覆盖（路由本身不测）。
+ */
+export function resolveLoginSpace(params: {
+	usernameOk: boolean;
+	passwordOk: boolean;
+	superConfigured: boolean;
+	superOk: boolean;
+}): AdminRole | null {
+	if (!params.usernameOk) return null;
+	if (params.passwordOk) return "admin";
+	if (params.superConfigured && params.superOk) return "super";
+	return null;
+}
+
+/**
  * 验证管理员用户名
  * 环境变量 ADMIN_USERNAME 默认为 "admin"
  * 使用 timingSafeEqual 防止时序攻击
