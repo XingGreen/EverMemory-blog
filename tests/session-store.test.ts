@@ -121,6 +121,18 @@ describe("registerSession", () => {
 		expect(remaining).toContain(keep);
 		expect(remaining).not.toContain(stale);
 	});
+
+	it("默认会话空间为 admin", async () => {
+		const sid = await registerSession(baseOpts);
+
+		expect((await getSession(sid))?.role).toBe("admin");
+	});
+
+	it("可注册 super 空间会话", async () => {
+		const sid = await registerSession({ ...baseOpts, role: "super" });
+
+		expect((await getSession(sid))?.role).toBe("super");
+	});
 });
 
 describe("getSession", () => {

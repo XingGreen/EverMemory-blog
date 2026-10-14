@@ -834,3 +834,67 @@ describe("requireSuperAuth", () => {
 		expect(result.payload?.role).toBe("super");
 	});
 });
+
+describe("resolveLoginSpace 分空间判定（主密码优先）", () => {
+	const base = {
+		usernameOk: true,
+		passwordOk: false,
+		superConfigured: true,
+		superOk: false,
+	};
+
+	it("主密码通过即进主空间", async () => {
+		const { resolveLoginSpace } = await loadAuth();
+
+		expect(resolveLoginSpace({ ...base, passwordOk: true })).toBe("admin");
+	});
+
+	it("主密码通过时即使第二密码也对仍进主空间（不泄露第二密码是否猜中）", async () => {
+		const { resolveLoginSpace } = await loadAuth();
+
+		expect(
+			resolveLoginSpace({
+				...base,
+				passwordOk: true,
+				superOk: true,
+			}),
+		).toBe("admin");
+	});
+
+	it("主密码错、第二密码对且已配置 → super 空间", async () => {
+		const { resolveLoginSpace } = await loadAuth();
+
+		expect(resolveLoginSpace({ ...base, superOk: true })).toBe("super");
+	});
+
+	it("第二密码未配置时即使校验通过也不进 super", async () => {
+		const { resolveLoginSpace } = await loadAuth();
+
+		expect(
+			resolveLoginSpace({
+				...base,
+				superConfigured: false,
+				superOk: true,
+			}),
+		).toBeNull();
+	});
+
+	it("第二密码被锁（superOk=false）时降级为失败", async () => {
+		const { resolveLoginSpace } = await loadAuth();
+
+		expect(resolveLoginSpace({ ...base, superOk: false })).toBeNull();
+	});
+
+	it("用户名不通过时一律 null，即便密码正确", async () => {
+		const { resolveLoginSpace } = await loadAuth();
+
+		expect(
+			resolveLoginSpace({
+				...base,
+				usernameOk: false,
+				passwordOk: true,
+				superOk: true,
+			}),
+		).toBeNull();
+	});
+});

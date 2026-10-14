@@ -417,3 +417,48 @@ describe("IP 黑名单", () => {
 		);
 	});
 });
+
+describe("双空间失败计数隔离（scope）", () => {
+	it("主空间与 super 空间各自独立计数", async () => {
+		const guard = await loadGuard();
+		await guard.registerFailure("1.1.1.1");
+		await guard.registerFailure("1.1.1.1", guard.SUPER_SCOPE);
+
+		// 直接断言存储里的键，避免用被测函数自证
+		expect(rawLock()["1.1.1.1"].failures).toBe(1);
+		expect(rawLock()["1.1.1.1:super"].failures).toBe(1);
+		expect(await guard.failureCount("1.1.1.1")).toBe(1);
+		expect(await guard.failureCount("1.1.1.1", guard.SUPER_SCOPE)).toBe(1);
+	});
+
+	it("清空主空间计数不影响 super 空间（防借主密码重置探测额度）", async () => {
+		const guard = await loadGuard();
+		await guard.registerFailure("1.1.1.1", guard.SUPER_SCOPE);
+		await guard.registerFailure("1.1.1.1", guard.SUPER_SCOPE);
+		await guard.registerFailure("1.1.1.1");
+
+		await guard.clearFailures("1.1.1.1");
+
+		expect(await guard.failureCount("1.1.1.1")).toBe(0);
+		expect(await guard.failureCount("1.1.1.1", guard.SUPER_SCOPE)).toBe(2);
+	});
+
+	it("锁定状态按 scope 独立：super 锁定不牵连主空间", async () => {
+		const guard = await loadGuard();
+		for (let i = 0; i < 5; i++) {
+			await guard.registerFailure("1.1.1.1", guard.SUPER_SCOPE);
+		}
+
+		expect((await guard.checkLockout("1.1.1.1")).locked).toBe(false);
+		expect(
+			(await guard.checkLockout("1.1.1.1", guard.SUPER_SCOPE)).locked,
+		).toBe(true);
+	});
+
+	it("默认 scope 仍使用裸 clientKey 作为存储键（与历史数据兼容）", async () => {
+		const guard = await loadGuard();
+		await guard.registerFailure("9.9.9.9");
+
+		expect(Object.keys(rawLock())).toEqual(["9.9.9.9"]);
+	});
+});
