@@ -554,6 +554,11 @@ const hasMultipleImages =
             // 键盘控制
             document.addEventListener('keydown', function(e) {
                 if (!isBannerWallpaperMode() || !isCarouselEnabled()) return;
+                // 焦点在可编辑元素上时不劫持按键：否则在搜索框 / 评论框里
+                // 按空格会被 preventDefault（打不出空格），方向键也会被当成切换幻灯片
+                var t = e.target;
+                if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' ||
+                    t.tagName === 'SELECT' || t.isContentEditable)) return;
                 if (e.key === 'ArrowRight') {
                     var slides = getVisibleSlides();
                     changeToSlide(getCurrentIndex(slides) + 1);
