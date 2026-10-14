@@ -33,10 +33,11 @@ vi.mock("@utils/secret-io", async (importOriginal) => ({
 	},
 }));
 
-/** 会话表桩：verifySessionToken 只关心 sid 是否存在 */
+/** 会话表桩：verifySessionToken 只关心 sid 是否存在，并补全有效账户名 */
 const sessions = new Set<string>();
 vi.mock("@utils/session-store", () => ({
-	getSession: async (sid: string) => (sessions.has(sid) ? { sid } : null),
+	getSession: async (sid: string) =>
+		sessions.has(sid) ? { sid, username: "EverMemory" } : null,
 	touchSession: async () => {},
 }));
 
@@ -288,6 +289,16 @@ describe("verifySessionToken - 会话表检查", () => {
 		});
 
 		expect(await auth.verifySessionToken(token)).toBeNull();
+	});
+
+	it("验签后从会话表补全有效账户名（审计需要）", async () => {
+		const auth = await loadAuth();
+		const sid = crypto.randomUUID();
+		sessions.add(sid);
+		const token = auth.generateSessionToken(SESSION_MAX_AGE, sid, "super");
+
+		// 令牌本身不含 username，必须以服务端会话表为准
+		expect((await auth.verifySessionToken(token))?.username).toBe("EverMemory");
 	});
 
 	it("无 sid 时不得落到会话表查询（否则 sid 校验形同虚设）", async () => {

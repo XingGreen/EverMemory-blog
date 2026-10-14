@@ -1,11 +1,14 @@
 // 后台读写运行时配置覆盖层（需登录）。
 // PUT   保存覆盖值（即时生效，不触发重建）
 // DELETE 清除覆盖值（回落构建期源码默认值）
+//
+// 属控制面：仅第二空间（应急控制台）可改。运行时配置能即时改变站点行为，
+// 主空间会话一律 403。
 import type { APIRoute } from "astro";
 export const prerender = false;
 
 import { getConfigItem } from "@/utils/admin-settings";
-import { requireAuth } from "@/utils/auth";
+import { requireSuperAuth } from "@/utils/auth";
 import {
 	delRuntimeConfig,
 	isRuntimeConfigKey,
@@ -20,7 +23,7 @@ export const PUT: APIRoute = async ({ request, params }) => {
 			{ status: 400, headers: { "Content-Type": "application/json" } },
 		);
 	}
-	const auth = await requireAuth(request);
+	const auth = await requireSuperAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 
 	try {
@@ -52,7 +55,7 @@ export const DELETE: APIRoute = async ({ request, params }) => {
 	const key = params.key ?? "";
 	if (!isRuntimeConfigKey(key))
 		return new Response("Not Found", { status: 404 });
-	const auth = await requireAuth(request);
+	const auth = await requireSuperAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 	try {
 		await delRuntimeConfig(key);

@@ -105,7 +105,7 @@ export async function POST({
 		writeAuditLog({
 			event: "draft_saved",
 			client: getClientIp(request),
-			username: "admin",
+			username: auth.payload?.username || "admin",
 			detail: `云端草稿已保存（字符数 ${draft.content.length}）`,
 		});
 		return json({ success: true, savedAt: draft.savedAt });
