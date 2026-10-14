@@ -22,6 +22,7 @@ async function loadGuard() {
 
 const LOCK_KEY = "admin_login_lock";
 const ATTEMPT_KEY = "admin_login_attempts";
+const BAN_KEY = "admin_ip_ban";
 
 const T0 = Date.parse("2026-01-01T00:00:00.000Z");
 
@@ -306,5 +307,113 @@ describe("存储不可用时的降级", () => {
 	it("getClientIp 在降级路径上仍可工作", async () => {
 		const guard = await loadGuard();
 		expect(guard.getClientIp(new Request("https://x/"))).toBe("unknown");
+	});
+});
+
+describe("IP 黑名单", () => {
+	function rawBan(): Record<
+		string,
+		{ reason: string; by: string; bannedAt: number; until: number | null }
+	> {
+		return (store.dump()[BAN_KEY] ?? {}) as Record<
+			string,
+			{ reason: string; by: string; bannedAt: number; until: number | null }
+		>;
+	}
+
+	it("未封禁的 IP 视为通过", async () => {
+		const guard = await loadGuard();
+		expect(await guard.isIpBanned("1.1.1.1")).toEqual({
+			banned: false,
+			reason: "",
+			retryAfterSeconds: 0,
+		});
+	});
+
+	it("永久封禁后返回 banned 与原因，剩余秒数为 0（无自动解封）", async () => {
+		const guard = await loadGuard();
+		await guard.banIp("1.1.1.1", { reason: "暴力破解", by: "admin" });
+
+		const info = await guard.isIpBanned("1.1.1.1");
+		expect(info.banned).toBe(true);
+		expect(info.reason).toBe("暴力破解");
+		expect(info.retryAfterSeconds).toBe(0);
+	});
+
+	it("临时封禁在到期前给出剩余秒数，到期后自动失效", async () => {
+		const guard = await loadGuard();
+		await guard.banIp("1.1.1.1", { ttlSeconds: 300 });
+		expect((await guard.isIpBanned("1.1.1.1")).retryAfterSeconds).toBe(300);
+
+		vi.setSystemTime(T0 + 299_000);
+		const near = await guard.isIpBanned("1.1.1.1");
+		expect(near.banned).toBe(true);
+		expect(near.retryAfterSeconds).toBe(1);
+
+		vi.setSystemTime(T0 + 300_000);
+		expect(await guard.isIpBanned("1.1.1.1")).toEqual({
+			banned: false,
+			reason: "",
+			retryAfterSeconds: 0,
+		});
+	});
+
+	it("banIp 为 reason/by 提供默认值，永久封禁 until 为 null", async () => {
+		const guard = await loadGuard();
+		const rec = await guard.banIp("1.1.1.1");
+		expect(rec.reason).toBe("手动封禁");
+		expect(rec.by).toBe("admin");
+		expect(rec.until).toBeNull();
+		expect(rec.bannedAt).toBe(T0);
+	});
+
+	it("banIp 拒绝空 IP，不写入任何记录", async () => {
+		const guard = await loadGuard();
+		await expect(guard.banIp("")).rejects.toThrow();
+		expect(rawBan()).toEqual({});
+	});
+
+	it("unbanIp 解除封禁；对不存在项返回 false", async () => {
+		const guard = await loadGuard();
+		await guard.banIp("1.1.1.1");
+
+		expect(await guard.unbanIp("1.1.1.1")).toBe(true);
+		expect((await guard.isIpBanned("1.1.1.1")).banned).toBe(false);
+		expect(await guard.unbanIp("2.2.2.2")).toBe(false);
+	});
+
+	it("重复封禁同 IP 覆盖旧记录而非新增", async () => {
+		const guard = await loadGuard();
+		await guard.banIp("1.1.1.1", { reason: "第一次" });
+		await guard.banIp("1.1.1.1", { reason: "第二次", by: "super" });
+
+		expect(Object.keys(rawBan())).toEqual(["1.1.1.1"]);
+		const info = await guard.isIpBanned("1.1.1.1");
+		expect(info.reason).toBe("第二次");
+	});
+
+	it("listBanned 按封禁时间倒序，并剔除已过期的临时项", async () => {
+		const guard = await loadGuard();
+		await guard.banIp("1.1.1.1", { reason: "a" });
+		vi.setSystemTime(T0 + 1000);
+		await guard.banIp("2.2.2.2", { reason: "b", ttlSeconds: 60 });
+
+		expect((await guard.listBanned()).map((b) => b.ip)).toEqual([
+			"2.2.2.2",
+			"1.1.1.1",
+		]);
+
+		vi.setSystemTime(T0 + 61_000);
+		expect((await guard.listBanned()).map((b) => b.ip)).toEqual(["1.1.1.1"]);
+	});
+
+	it("黑名单使用独立存储键，不与其他状态互覆盖", async () => {
+		const guard = await loadGuard();
+		await guard.banIp("1.1.1.1");
+		await guard.registerFailure("1.1.1.1");
+
+		expect(Object.keys(store.dump()).sort()).toEqual(
+			[BAN_KEY, LOCK_KEY].sort(),
+		);
 	});
 });

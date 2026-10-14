@@ -18,6 +18,7 @@ const {
 	registerSession,
 	revokeAllExcept,
 	revokeSession,
+	revokeSessionsByIp,
 	touchSession,
 } = await import("@utils/session-store");
 
@@ -194,6 +195,33 @@ describe("revokeAllExcept", () => {
 
 		expect(await revokeAllExcept(keep)).toBe(0);
 		expect(await getSession(keep)).not.toBeNull();
+	});
+});
+
+describe("revokeSessionsByIp", () => {
+	it("删除该 IP 的全部会话并返回数量，其他 IP 不受影响", async () => {
+		const a = await registerSession(baseOpts);
+		const b = await registerSession(baseOpts);
+		const other = await registerSession({ ...baseOpts, ip: "9.9.9.9" });
+
+		expect(await revokeSessionsByIp("127.0.0.1")).toBe(2);
+		expect(await getSession(a)).toBeNull();
+		expect(await getSession(b)).toBeNull();
+		expect(await getSession(other)).not.toBeNull();
+	});
+
+	it("无匹配会话时返回 0 且不误删", async () => {
+		const sid = await registerSession(baseOpts);
+
+		expect(await revokeSessionsByIp("8.8.8.8")).toBe(0);
+		expect(await getSession(sid)).not.toBeNull();
+	});
+
+	it("空 IP 返回 0，不误删 ip 为空的会话", async () => {
+		const sid = await registerSession({ ...baseOpts, ip: "" });
+
+		expect(await revokeSessionsByIp("")).toBe(0);
+		expect(await getSession(sid)).not.toBeNull();
 	});
 });
 
