@@ -1,3 +1,4 @@
+import { sendLoginAlert } from "@/utils/alert";
 import {
 	clearAuthCookie,
 	generateSessionToken,
@@ -24,7 +25,7 @@ import {
 	SUPER_SCOPE,
 	writeAuditLog,
 } from "@/utils/login-guard";
-import { registerSession } from "@/utils/session-store";
+import { describeDevice, registerSession } from "@/utils/session-store";
 import { verifyTurnstileToken } from "@/utils/turnstile";
 
 export const prerender = false;
@@ -209,6 +210,16 @@ export async function POST({ request }) {
 			const token = generateSessionToken(maxAge, sid, role);
 			const headers = new Headers({ "Content-Type": "application/json" });
 			setAuthCookie(token, headers, maxAge);
+
+			// 带外告警：攻击者一旦登录成功，站主即使不在后台也能立刻收到通知。
+			// 未配置 ADMIN_ALERT_WEBHOOK 时为空操作；发送失败绝不影响登录。
+			await sendLoginAlert({
+				space: role,
+				username,
+				ip: clientKey,
+				device: describeDevice(request.headers.get("user-agent") || ""),
+				time: new Date().toISOString(),
+			});
 
 			return new Response(
 				JSON.stringify({
