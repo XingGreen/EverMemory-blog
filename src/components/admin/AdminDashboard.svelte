@@ -85,6 +85,9 @@ let isVerified = $state(
 		: false,
 );
 let adminUsername = $state("");
+// 当前会话空间：主密码进入为 "admin"，第二密码进入为 "super"（可访问应急控制台）。
+// 仅用于前端显隐；控制面 API 在服务端另按 role 校验。
+let adminRole = $state<"" | "admin" | "super">("");
 let posts = $state<Post[]>([]);
 let isLoading = $state(true);
 let error = $state("");
@@ -351,6 +354,9 @@ onMount(async () => {
 		if (typeof data.username === "string" && data.username) {
 			adminUsername = data.username;
 		}
+		if (data.role === "super" || data.role === "admin") {
+			adminRole = data.role;
+		}
 	} catch {
 		// 网络异常时保留空值，登录后再补
 	}
@@ -501,8 +507,17 @@ async function saveSettings() {
 	settingsSaving = true;
 	try {
 		const cfgItem = key ? getConfigItem(key) : undefined;
-		// 运行时配置（可视化表单）：写入 KV 覆盖层，即时生效、不触发重建
+		// 运行时配置（可视化表单）：写入 KV 覆盖层，即时生效、不触发重建。
+		// 属控制面，仅第二空间可改；主空间会话在此拦截并提示。
 		if (cfgItem?.runtime && settingsMode !== "source") {
+			if (adminRole !== "super") {
+				showToast(
+					"运行时配置仅限应急控制台（第二密码）修改，请从应急控制台进入后重试",
+					"error",
+					10000,
+				);
+				return;
+			}
 			const res = await fetch(`/api/admin/runtime-config/${key}/`, {
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
@@ -737,6 +752,9 @@ function handleVerify(success: boolean) {
 			.then((data) => {
 				if (typeof data.username === "string" && data.username) {
 					adminUsername = data.username;
+				}
+				if (data.role === "super" || data.role === "admin") {
+					adminRole = data.role;
 				}
 			})
 			.catch(() => {
@@ -1414,6 +1432,14 @@ function formatDate(dateStr: string | null): string {
 				{/if}
 				<span>{i18n(I18nKey.adminSessions)}</span>
 				</button>
+
+				<!-- 应急控制台（仅第二空间显示）：整页跳转到独立控制面页面 -->
+				{#if adminRole === "super"}
+					<a class="nav-item" href="/admin/console/">
+						<Icon icon="material-symbols:shield-lock-outline" />
+						<span>应急控制台</span>
+					</a>
+				{/if}
 			</nav>
 
 			<div class="sidebar-footer">
@@ -1514,6 +1540,12 @@ function formatDate(dateStr: string | null): string {
 									<span>线上环境：表单基于最近一次构建的配置快照，保存将提交 GitHub 并触发自动重建</span>
 								</div>
 							{/if}
+							{#if getConfigItem(settingsSection)?.runtime && adminRole !== "super"}
+								<div class="settings-remote-banner">
+									<Icon icon="material-symbols:info-outline" />
+									<span>此项为运行时配置，仅限应急控制台（第二密码）修改。</span>
+								</div>
+							{/if}
 							<div class="card-base settings-page-head">
 								<h2 class="page-head-title">{i18n(getConfigLabelKey(settingsSection))}</h2>
 								<div class="page-head-actions">
@@ -1528,7 +1560,10 @@ function formatDate(dateStr: string | null): string {
 									<button
 										class="page-head-btn primary"
 										onclick={saveSettings}
-										disabled={settingsSaving || settingsLoading}
+										disabled={settingsSaving ||
+											settingsLoading ||
+											(!!getConfigItem(settingsSection)?.runtime &&
+												adminRole !== "super")}
 									>
 										<Icon icon="material-symbols:save-outline" class="text-sm" />
 										<span>{settingsSaving ? i18n(I18nKey.configSaving) : i18n(I18nKey.configSave)}</span>
@@ -1612,6 +1647,7 @@ function formatDate(dateStr: string | null): string {
 				{/if}
 			{:else if activePage === "sessions"}
 				<SessionManager
+					canKick={adminRole === "super"}
 					onNotify={(message, type, duration) =>
 						showToast(message, type, duration)}
 				/>

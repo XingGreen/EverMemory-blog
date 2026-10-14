@@ -10,7 +10,10 @@ import { setTheme } from "@/utils/setting-utils";
 let {
 	onVerify,
 	avatarUrl = "",
-}: { onVerify: (success: boolean) => void; avatarUrl?: string } = $props();
+}: {
+	onVerify: (success: boolean, space?: "admin" | "super") => void;
+	avatarUrl?: string;
+} = $props();
 
 let username = $state("");
 let password = $state("");
@@ -110,7 +113,9 @@ async function handleSubmit() {
 		const data = await response.json();
 
 		if (response.ok && data.success) {
-			onVerify(true);
+			// 后端按所用密码判定空间：主密码 → admin，第二密码 → super。
+			// 前端据此分流落地页（第二空间直接进入应急控制台）。
+			onVerify(true, data.space === "super" ? "super" : "admin");
 			return;
 		}
 
