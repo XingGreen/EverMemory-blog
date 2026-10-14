@@ -21,6 +21,7 @@ vi.mock("@utils/secret-io", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@utils/secret-io")>()),
 	readSecretPreview: (key: string) =>
 		key === "ADMIN_TOKEN_VER" ? tokenVersion : (secrets[key] ?? ""),
+	readSecretValue: (key: string) => secrets[key] ?? "",
 	incrementTokenVersion: () => {
 		tokenVersion = String(Number(tokenVersion) + 1);
 		return Number(tokenVersion);
@@ -681,5 +682,155 @@ it("长度不同的输入被拒绝", async () => {
 
 		expect(auth.verifyAdminUsername("管理员")).toBe(true);
 		expect(auth.verifyAdminUsername("管理")).toBe(false);
+	});
+});
+
+describe("verifySuperPassword 第二密码验证", () => {
+	/** 真实 scrypt 哈希，密码学部分不 mock */
+	const hashOf = async (plain: string) => {
+		const { hashAdminPassword } = await import("@utils/secret-io");
+		return hashAdminPassword(plain);
+	};
+
+	it("正确的第二密码通过验证", async () => {
+		secrets.ADMIN_SUPER_PASSWORD = await hashOf("super-secret");
+		const auth = await loadAuth();
+
+		expect(auth.verifySuperPassword("super-secret")).toBe(true);
+	});
+
+	it("错误密码被拒绝", async () => {
+		secrets.ADMIN_SUPER_PASSWORD = await hashOf("super-secret");
+		const auth = await loadAuth();
+
+		expect(auth.verifySuperPassword("nope")).toBe(false);
+	});
+
+	it("未配置第二密码时一律拒绝", async () => {
+		const auth = await loadAuth();
+
+		expect(auth.verifySuperPassword("anything")).toBe(false);
+	});
+
+	it("空密码被拒绝且不触碰哈希", async () => {
+		secrets.ADMIN_SUPER_PASSWORD = await hashOf("super-secret");
+		const auth = await loadAuth();
+
+		expect(auth.verifySuperPassword("")).toBe(false);
+	});
+
+	it("主密码哈希存在时不会误判第二密码通过", async () => {
+		secrets.ADMIN_PASSWORD = await hashOf("main-pass");
+		const auth = await loadAuth();
+
+		// 两个哈希分属不同 env 键，互不干扰；拿主密码当第二密码必须失败
+		expect(auth.verifySuperPassword("main-pass")).toBe(false);
+	});
+
+	it("格式损坏的哈希返回 false 而不抛出", async () => {
+		secrets.ADMIN_SUPER_PASSWORD = "scrypt$bad";
+		const auth = await loadAuth();
+
+		expect(() => auth.verifySuperPassword("x")).not.toThrow();
+		expect(auth.verifySuperPassword("x")).toBe(false);
+	});
+});
+
+describe("isSuperPasswordConfigured", () => {
+	it("已配置返回 true", async () => {
+		secrets.ADMIN_SUPER_PASSWORD = "scrypt$2048$aa$bb";
+		const auth = await loadAuth();
+
+		expect(auth.isSuperPasswordConfigured()).toBe(true);
+	});
+
+	it("未配置返回 false", async () => {
+		const auth = await loadAuth();
+
+		expect(auth.isSuperPasswordConfigured()).toBe(false);
+	});
+});
+
+describe("角色与会话空间", () => {
+	it("默认签发 admin 角色", async () => {
+		const auth = await loadAuth();
+		const payload = await auth.verifySessionToken(await issue(auth));
+
+		expect(payload?.role).toBe("admin");
+	});
+
+	it("可签发 super 角色并通过验签", async () => {
+		const auth = await loadAuth();
+		const sid = crypto.randomUUID();
+		sessions.add(sid);
+
+		const token = auth.generateSessionToken(
+			auth.SUPER_SESSION_MAX_AGE,
+			sid,
+			"super",
+		);
+
+		expect((await auth.verifySessionToken(token))?.role).toBe("super");
+	});
+
+	it("未知角色一律视为无效", async () => {
+		const auth = await loadAuth();
+		const sid = crypto.randomUUID();
+		sessions.add(sid);
+		const now = Math.floor(Date.now() / 1000);
+
+		const token = await signRaw({
+			sub: "x",
+			role: "root",
+			ver: tokenVersion,
+			sid,
+			iat: now,
+			exp: now + 3600,
+		});
+
+		// 凭角色白名单拦截，而非靠后续会话表查询兜底
+		expect(await auth.verifySessionToken(token)).toBeNull();
+	});
+});
+
+describe("requireSuperAuth", () => {
+	const requestWith = (token?: string) =>
+		new Request("http://localhost/api/admin/x", {
+			headers: token ? { cookie: `admin_session=${token}` } : undefined,
+		});
+
+	it("无 cookie 返回 401", async () => {
+		const auth = await loadAuth();
+		const result = await auth.requireSuperAuth(requestWith());
+
+		expect(result.authenticated).toBe(false);
+		expect(result.response?.status).toBe(401);
+	});
+
+	it("主空间会话访问控制面返回 403", async () => {
+		const auth = await loadAuth();
+		const token = await issue(auth); // role=admin
+
+		const result = await auth.requireSuperAuth(requestWith(token));
+
+		expect(result.authenticated).toBe(false);
+		expect(result.response?.status).toBe(403);
+	});
+
+	it("super 会话通过并回传角色", async () => {
+		const auth = await loadAuth();
+		const sid = crypto.randomUUID();
+		sessions.add(sid);
+		const token = auth.generateSessionToken(
+			auth.SUPER_SESSION_MAX_AGE,
+			sid,
+			"super",
+		);
+
+		const result = await auth.requireSuperAuth(requestWith(token));
+
+		expect(result.authenticated).toBe(true);
+		expect(result.response).toBeUndefined();
+		expect(result.payload?.role).toBe("super");
 	});
 });

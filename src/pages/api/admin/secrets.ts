@@ -195,7 +195,11 @@ export async function POST({
 		if (authUpdated.length > 0) {
 			incrementTokenVersion();
 			setAuthCookie(
-				generateSessionToken(SESSION_MAX_AGE, auth.payload?.sid),
+				generateSessionToken(
+					SESSION_MAX_AGE,
+					auth.payload?.sid,
+					auth.payload?.role,
+				),
 				responseHeaders,
 			);
 		}
