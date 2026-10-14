@@ -83,6 +83,11 @@ interface JwtPayload {
 	ver: string;
 	/** 会话 ID：对应服务端会话表中的记录（被踢下线后此 ID 失效） */
 	sid: string;
+	/**
+	 * 有效账户名：由 verifySessionToken 在验签后从服务端会话表补全，
+	 * 不是令牌内容——令牌即使携带该字段也以会话表为准（审计用）。
+	 */
+	username?: string;
 	iat: number;
 	exp: number;
 }
@@ -175,6 +180,9 @@ export async function verifySessionToken(
 		if (!payload.sid) return null;
 		const session = await getSession(payload.sid);
 		if (!session) return null;
+
+		// 有效账户名以服务端会话表为准（审计需要，令牌本身不含该字段）
+		payload.username = session.username;
 
 		return payload;
 	} catch {
