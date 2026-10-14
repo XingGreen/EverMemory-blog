@@ -11,18 +11,20 @@ let defaultUsername = $state("admin");
 let tokenRequired = $state(true);
 let writable = $state(true);
 
-function enterDashboard() {
+function enterDashboard(target?: string) {
 	sessionStorage.setItem("admin_verified", "true");
 	// 后台主体是独立页面，登录成功后整页跳转，登录页的代码不再携带后台。
-	// 若未登录时访问过后台深链（/admin/dashboard/settings/…），登录后回跳原目标
-	const target =
-		sessionStorage.getItem("admin_redirect") || "/admin/dashboard/";
+	// 若未登录时访问过后台深链（/admin/dashboard/settings/…），登录后回跳原目标；
+	// 第二空间（super）登录则直接进入应急控制台。
+	const dest =
+		target || sessionStorage.getItem("admin_redirect") || "/admin/dashboard/";
 	sessionStorage.removeItem("admin_redirect");
-	window.location.replace(target);
+	window.location.replace(dest);
 }
 
-function handleVerify(success: boolean) {
-	if (success) enterDashboard();
+function handleVerify(success: boolean, space?: "admin" | "super") {
+	if (success)
+		enterDashboard(space === "super" ? "/admin/console/" : undefined);
 }
 
 onMount(async () => {
@@ -35,7 +37,8 @@ onMount(async () => {
 		const res = await fetch("/api/admin/session/");
 		const data = await res.json();
 		if (data.success) {
-			enterDashboard();
+			// 已有效的 super 会话刷新登录页时同样回到应急控制台
+			enterDashboard(data.role === "super" ? "/admin/console/" : undefined);
 			return;
 		}
 	} catch {
