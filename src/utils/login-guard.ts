@@ -11,6 +11,11 @@
  * 两层是互补而非重复：固定窗口粒度粗、防不住持续低速尝试；失败锁定能
  * 记住历史并指数加码，但只统计失败。单独任一层都有明显缺口。
  *
+ * IP 黑名单（banIp/unbanIp/isIpBanned）：与前两层不同，它不是自动累计，
+ * 而是管理员**显式、长期**地封禁某个客户端——用于「在日志里看到异常来源，
+ * 主动把他挡在门外」。存储不可用时降级为进程内副本并放行（fail-open），
+ * 与计数层保持一致，避免存储故障反过来把管理员自己锁在门外。
+ *
  * 存储说明：
  *  - 状态交给 persist-store 的 getStore()，本机部署走文件、配置了
  *    KV_URL/KV_REST_API_TOKEN 时走 Vercel KV，因而在 Serverless 上也能
@@ -53,6 +58,8 @@ const ATTEMPT_LIMIT = 10;
 const LOCK_STATE_KEY = "admin_login_lock";
 /** 尝试频次状态存储键 */
 const ATTEMPT_STATE_KEY = "admin_login_attempts";
+/** IP 黑名单存储键 */
+const BAN_STATE_KEY = "admin_ip_ban";
 
 /** 状态整体过期时间：24 小时无尝试即视为无需再累计，避免无界增长 */
 const STATE_TTL_SECONDS = 24 * 60 * 60;
@@ -66,6 +73,18 @@ interface LockRecord {
 interface AttemptRecord {
 	count: number;
 	windowStart: number;
+}
+
+/** 一条 IP 封禁记录；until 为 null 表示永久封禁 */
+export interface BanRecord {
+	/** 封禁原因（人工填写，便于日后回溯） */
+	reason: string;
+	/** 操作者标识（用户名 / 空间） */
+	by: string;
+	/** 封禁时间戳（ms） */
+	bannedAt: number;
+	/** 解封时间戳（ms）；null 表示永久 */
+	until: number | null;
 }
 
 /**
@@ -104,16 +123,20 @@ async function loadStateMap<T>(
 	}
 }
 
-/** 覆盖写入一类状态；存储不可用时仅更新进程内副本 */
+/**
+ * 覆盖写入一类状态；存储不可用时仅更新进程内副本。
+ * ttlSeconds 缺省用 STATE_TTL_SECONDS；传 0 表示不设过期（黑名单用）。
+ */
 async function saveStateMap<T>(
 	key: string,
 	state: Map<string, T>,
 	fallback: Map<string, T>,
+	ttlSeconds = STATE_TTL_SECONDS,
 ): Promise<void> {
 	fallback.clear();
 	for (const [k, v] of state) fallback.set(k, v);
 	try {
-		await getStore().set(key, Object.fromEntries(state), STATE_TTL_SECONDS);
+		await getStore().set(key, Object.fromEntries(state), ttlSeconds);
 	} catch (error) {
 		warnStorageFailure(error);
 	}
@@ -282,6 +305,96 @@ function saveAttemptState(state: Map<string, AttemptRecord>): Promise<void> {
 	return saveStateMap(ATTEMPT_STATE_KEY, state, attemptFallback);
 }
 
+/* ---------------- IP 黑名单 ---------------- */
+
+/** 存储不可用时的进程内副本（与计数层一致，降级为放行而非拒绝） */
+const banFallback = new Map<string, BanRecord>();
+
+function loadBanState(): Promise<Map<string, BanRecord>> {
+	return loadStateMap(BAN_STATE_KEY, banFallback);
+}
+
+function saveBanState(state: Map<string, BanRecord>): Promise<void> {
+	// 黑名单是显式人工操作：不设存储 TTL，避免「永久封禁」随时间流逝消失
+	return saveStateMap(BAN_STATE_KEY, state, banFallback, 0);
+}
+
+/** 剔除已到期的临时封禁项；永久项（until=null）保留 */
+function sweptBans(state: Map<string, BanRecord>): Map<string, BanRecord> {
+	const now = Date.now();
+	const out = new Map<string, BanRecord>();
+	for (const [ip, rec] of state) {
+		if (rec.until !== null && rec.until <= now) continue;
+		out.set(ip, rec);
+	}
+	return out;
+}
+
+/**
+ * 该 IP 当前是否被封禁。只读，不触发写入；已到期的临时封禁视为未封。
+ * retryAfterSeconds 为 0 表示永久封禁（无自动解封时间）。
+ */
+export async function isIpBanned(ip: string): Promise<{
+	banned: boolean;
+	reason: string;
+	retryAfterSeconds: number;
+}> {
+	if (!ip) return { banned: false, reason: "", retryAfterSeconds: 0 };
+	const record = (await loadBanState()).get(ip);
+	if (!record) return { banned: false, reason: "", retryAfterSeconds: 0 };
+	if (record.until !== null && record.until <= Date.now()) {
+		return { banned: false, reason: "", retryAfterSeconds: 0 };
+	}
+	return {
+		banned: true,
+		reason: record.reason,
+		retryAfterSeconds:
+			record.until === null ? 0 : Math.ceil((record.until - Date.now()) / 1000),
+	};
+}
+
+/**
+ * 封禁一个 IP。ttlSeconds 省略或 ≤0 表示永久封禁。
+ * 返回写入的记录；ip 为空时抛错（避免误把 unknown 之类的空值写进黑名单）。
+ */
+export async function banIp(
+	ip: string,
+	opts: { reason?: string; by?: string; ttlSeconds?: number } = {},
+): Promise<BanRecord> {
+	if (!ip) throw new Error("[LoginGuard] banIp 需要非空 IP");
+	const state = sweptBans(await loadBanState());
+	const now = Date.now();
+	const record: BanRecord = {
+		reason: opts.reason?.trim() || "手动封禁",
+		by: opts.by?.trim() || "admin",
+		bannedAt: now,
+		until:
+			opts.ttlSeconds && opts.ttlSeconds > 0
+				? now + opts.ttlSeconds * 1000
+				: null,
+	};
+	state.set(ip, record);
+	await saveBanState(state);
+	return record;
+}
+
+/** 解除封禁；返回是否确实存在该记录 */
+export async function unbanIp(ip: string): Promise<boolean> {
+	const state = await loadBanState();
+	if (!state.has(ip)) return false;
+	state.delete(ip);
+	await saveBanState(state);
+	return true;
+}
+
+/** 当前生效的黑名单（已剔除过期临时项），按封禁时间倒序 */
+export async function listBanned(): Promise<(BanRecord & { ip: string })[]> {
+	const state = sweptBans(await loadBanState());
+	return [...state.entries()]
+		.map(([ip, rec]) => ({ ip, ...rec }))
+		.sort((a, b) => b.bannedAt - a.bannedAt);
+}
+
 function auditLogPath(): string {
 	return path.join(os.tmpdir(), "firefly-admin-audit.log");
 }
@@ -298,7 +411,9 @@ export function writeAuditLog(entry: {
 		| "setup_completed"
 		| "sessions_listed"
 		| "session_revoked"
-		| "draft_saved";
+		| "draft_saved"
+		| "ip_banned"
+		| "ip_unbanned";
 	client: string;
 	username: string;
 	detail?: string;

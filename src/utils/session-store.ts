@@ -135,6 +135,25 @@ export async function revokeAllExcept(sid: string): Promise<number> {
 	return others.length;
 }
 
+/**
+ * 删除指定 IP 的全部会话（封禁某 IP 时连带把它踢下线）；返回被删数量。
+ * 空 IP 直接返回 0，避免误删 ip 为空的会话。
+ */
+export async function revokeSessionsByIp(ip: string): Promise<number> {
+	if (!ip) return 0;
+	const sessions = await readAll();
+	const targets = Object.keys(sessions).filter(
+		(key) => sessions[key].ip === ip,
+	);
+	if (targets.length === 0) return 0;
+	for (const key of targets) delete sessions[key];
+	await writeAll(sessions, 7 * 24 * 3600);
+	for (const key of targets) {
+		await verifyDeleted(key);
+	}
+	return targets.length;
+}
+
 /** 读取单个会话；不存在（被踢/过期）返回 null */
 export async function getSession(sid: string): Promise<AdminSession | null> {
 	const sessions = await readAll();

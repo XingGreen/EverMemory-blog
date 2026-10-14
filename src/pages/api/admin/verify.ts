@@ -14,6 +14,7 @@ import {
 	clearFailures,
 	failureCount,
 	getClientIp,
+	isIpBanned,
 	registerAttempt,
 	registerFailure,
 	writeAuditLog,
@@ -44,6 +45,27 @@ export async function POST({ request }) {
 		const body = JSON.parse(text);
 		const { username, password, rememberMe, turnstileToken } = body;
 		const clientKey = getClientIp(request);
+
+		// IP 黑名单：被人工封禁的客户端直接拒绝，置于一切闸门之前——
+		// 连 Turnstile 与 scrypt 都不必跑，不为已知恶意来源继续付费
+		const ban = await isIpBanned(clientKey);
+		if (ban.banned) {
+			writeAuditLog({
+				event: "login_locked",
+				client: clientKey,
+				username,
+				detail: `ip banned: ${ban.reason}`,
+			});
+			const banHeaders = new Headers({ "Content-Type": "application/json" });
+			clearAuthCookie(banHeaders);
+			if (ban.retryAfterSeconds > 0) {
+				retryAfterHeader(banHeaders, ban.retryAfterSeconds);
+			}
+			return new Response(
+				JSON.stringify({ success: false, message: "访问被拒绝" }),
+				{ status: 403, headers: banHeaders },
+			);
+		}
 
 		// 人机验证置于所有闸门之前：验证码本身有成本，能显著削减后续
 		// scrypt 的调用量，不必等通过频次闸门之后才拦
