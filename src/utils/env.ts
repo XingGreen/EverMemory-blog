@@ -15,6 +15,7 @@ const STATIC_ENV_GETTERS: Record<string, () => string> = {
 	GITHUB_PRIVATE_KEY_PATH: () => import.meta.env?.GITHUB_PRIVATE_KEY_PATH || "",
 	ADMIN_USERNAME: () => import.meta.env?.ADMIN_USERNAME || "",
 	ADMIN_PASSWORD: () => import.meta.env?.ADMIN_PASSWORD || "",
+	ADMIN_SUPER_PASSWORD: () => import.meta.env?.ADMIN_SUPER_PASSWORD || "",
 	ADMIN_JWT_SECRET: () => import.meta.env?.ADMIN_JWT_SECRET || "",
 	ADMIN_SCRYPT_N: () => import.meta.env?.ADMIN_SCRYPT_N || "",
 	TURNSTILE_SITE_KEY: () => import.meta.env?.TURNSTILE_SITE_KEY || "",

@@ -6,6 +6,7 @@ import {
 	hashAdminPassword,
 	isEnvFileWritable,
 	readSecretPreview,
+	readSecretValue,
 	scryptCostFactor,
 	shouldRehash,
 	verifyPasswordHash,
@@ -17,6 +18,16 @@ const JWT_EXPIRY_HOURS = 12;
 // 会话 Cookie 有效时长
 export const SESSION_MAX_AGE = JWT_EXPIRY_HOURS * 3600; // 12 小时（未勾选"记住我"）
 export const REMEMBER_MAX_AGE = 7 * 24 * 3600; // 7 天（勾选"记住我"）
+
+/**
+ * 后台会话角色：
+ * - admin：主空间，日常后台全部功能；
+ * - super：第二空间（应急控制台），主空间能力 + 控制面（踢会话 / 封禁 / 改运行时配置）。
+ */
+export type AdminRole = "admin" | "super";
+
+/** 应急控制台会话时长：1 小时，且不提供「记住我」（设计决策 Q8） */
+export const SUPER_SESSION_MAX_AGE = 3600;
 
 /** 会话撤销版本号所存储的环境变量键；修改认证信息时 +1，旧会话立即失效 */
 const TOKEN_VER_KEY = "ADMIN_TOKEN_VER";
@@ -67,7 +78,7 @@ function getJwtSecret(): string {
 
 interface JwtPayload {
 	sub: string;
-	role: string;
+	role: AdminRole;
 	/** 会话撤销版本号：与 .env.local 的 ADMIN_TOKEN_VER 一致才有效 */
 	ver: string;
 	/** 会话 ID：对应服务端会话表中的记录（被踢下线后此 ID 失效） */
@@ -79,10 +90,11 @@ interface JwtPayload {
 export function generateSessionToken(
 	maxAgeSeconds = SESSION_MAX_AGE,
 	sid?: string,
+	role: AdminRole = "admin",
 ): string {
 	const payload: JwtPayload = {
 		sub: crypto.randomUUID(),
-		role: "admin",
+		role,
 		ver: getTokenVersion(),
 		sid: sid || crypto.randomUUID(),
 		iat: Math.floor(Date.now() / 1000),
@@ -149,7 +161,7 @@ export async function verifySessionToken(
 			return null;
 		}
 
-		if (payload.role !== "admin") {
+		if (payload.role !== "admin" && payload.role !== "super") {
 			return null;
 		}
 
@@ -220,6 +232,36 @@ export async function requireAuth(request: Request): Promise<{
 	return { authenticated: true, payload };
 }
 
+/**
+ * 控制面专用授权：要求已登录且处于 super 空间（应急控制台）。
+ * 主空间（admin）会话访问控制面一律 403——踢人权只在第二空间，
+ * 攻击者即使拿到主会话也无法夺走控制权。
+ */
+export async function requireSuperAuth(request: Request): Promise<{
+	authenticated: boolean;
+	payload?: JwtPayload;
+	response?: Response;
+}> {
+	const auth = await requireAuth(request);
+	if (!auth.authenticated) return auth;
+
+	if (auth.payload?.role !== "super") {
+		return {
+			authenticated: false,
+			payload: auth.payload,
+			response: new Response(
+				JSON.stringify({
+					success: false,
+					message: "该操作仅限应急控制台，请改用第二密码进入",
+				}),
+				{ status: 403, headers: { "Content-Type": "application/json" } },
+			),
+		};
+	}
+
+	return auth;
+}
+
 export function setAuthCookie(
 	token: string,
 	headers: Headers,
@@ -275,6 +317,38 @@ export function verifyAdminPassword(password: string): boolean {
 	} catch (error) {
 		console.error(
 			"[Auth] 管理员密码验证异常:",
+			error instanceof Error ? error.message : error,
+		);
+		return false;
+	}
+}
+
+/**
+ * 第二密码（应急控制台）是否已配置。
+ * 未配置时登录降级为主空间，控制面改为主密码二次验证（设计决策 Q6）。
+ */
+export function isSuperPasswordConfigured(): boolean {
+	try {
+		return readSecretValue("ADMIN_SUPER_PASSWORD") !== "";
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * 验证「第二密码」（应急控制台）。
+ * 独立于主密码：只从 .env.local / 平台 env 读取，不提供 Web 修改，也不做自动迁移。
+ * 未配置时一律返回 false。
+ */
+export function verifySuperPassword(password: string): boolean {
+	try {
+		if (!password) return false;
+		const storedHash = readSecretValue("ADMIN_SUPER_PASSWORD");
+		if (!storedHash) return false;
+		return verifyPasswordHash(password, storedHash);
+	} catch (error) {
+		console.error(
+			"[Auth] 第二密码验证异常:",
 			error instanceof Error ? error.message : error,
 		);
 		return false;
