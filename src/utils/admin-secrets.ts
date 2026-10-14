@@ -162,3 +162,32 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 export function getSecretItem(key: string): AdminSecretItem | undefined {
 	return ADMIN_SECRETS.find((item) => item.key === key);
 }
+
+/**
+ * 保存时须二次验证当前登录密码的密钥。
+ *
+ * - `AUTH_SECRET_KEYS`：改密码 / 用户名 / JWT 密钥会直接影响谁能登录、旧会话是否失效。
+ * - `DESTRUCTIVE_SECRET_KEYS`：改 GitHub 私钥可把仓库写入重定向到攻击者的 App，
+ *   或用无效私钥直接切断同步。仅在可写环境（本地开发）生效——生产构建文件系统只读，
+ *   该保存路径本身就不可达，因此这里不是线上防线，而是本地开发的顺手加固。
+ *
+ * 该谓词同时被前端（SecretManager 决定是否弹密码框）与服务端（secrets API 强制校验）
+ * 复用，避免两边各维护一份名单而漂移。
+ */
+export const AUTH_SECRET_KEYS: readonly string[] = [
+	"ADMIN_USERNAME",
+	"ADMIN_PASSWORD",
+	"ADMIN_JWT_SECRET",
+];
+
+export const DESTRUCTIVE_SECRET_KEYS: readonly string[] = [
+	"GITHUB_PRIVATE_KEY",
+	"GITHUB_PRIVATE_KEY_PATH",
+];
+
+/** 客户端按此决定是否弹出「验证当前密码」对话框；服务端据此强制校验。 */
+export function requiresPasswordToSave(key: string): boolean {
+	return (
+		AUTH_SECRET_KEYS.includes(key) || DESTRUCTIVE_SECRET_KEYS.includes(key)
+	);
+}

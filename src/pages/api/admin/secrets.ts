@@ -1,4 +1,9 @@
-import { ADMIN_SECRETS, getSecretItem } from "@/utils/admin-secrets";
+import {
+	ADMIN_SECRETS,
+	AUTH_SECRET_KEYS,
+	getSecretItem,
+	requiresPasswordToSave,
+} from "@/utils/admin-secrets";
 import {
 	generateSessionToken,
 	requireAuth,
@@ -31,12 +36,8 @@ const json = (body: unknown, status: number, extraHeaders?: Headers) =>
 const MAX_TEXT_LENGTH = 4096;
 const MAX_KEY_LENGTH = 100 * 1024;
 
-/** 涉及管理员认证的键：修改时必须二次验证当前密码 */
-const AUTH_KEYS = new Set([
-	"ADMIN_USERNAME",
-	"ADMIN_PASSWORD",
-	"ADMIN_JWT_SECRET",
-]);
+/** 认证类密钥集合（用于判断是否需要使旧会话失效）：来自共享清单，避免前后端漂移 */
+const AUTH_KEYS = new Set(AUTH_SECRET_KEYS);
 
 export async function GET({
 	request,
@@ -119,14 +120,24 @@ export async function POST({
 			return json({ success: false, message: "没有需要保存的修改" }, 400);
 		}
 
-		// 涉及管理员认证信息的修改：二次验证当前密码（防 CSRF / 会话劫持）
+		// 涉及管理员认证信息或破坏性密钥的修改：二次验证当前密码（防 CSRF / 会话劫持）。
+		// 破坏性密钥（GitHub 私钥）可重定向仓库写入或切断同步；此保存路径在生产
+		// 构建下因文件只读本不可达，故这里只针对本地开发做加固。
 		const touchesAuth = valid.some((entry) => AUTH_KEYS.has(entry.key));
-		if (touchesAuth) {
+		const touchesProtected = valid.some((entry) =>
+			requiresPasswordToSave(entry.key),
+		);
+		if (touchesProtected) {
 			const currentPassword =
 				typeof body.currentPassword === "string" ? body.currentPassword : "";
 			if (!currentPassword) {
 				return json(
-					{ success: false, message: "修改认证信息需要验证当前登录密码" },
+					{
+						success: false,
+						message: touchesAuth
+							? "修改认证信息需要验证当前登录密码"
+							: "修改破坏性密钥需要验证当前登录密码",
+					},
 					400,
 				);
 			}
