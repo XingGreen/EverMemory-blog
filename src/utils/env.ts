@@ -18,6 +18,7 @@ const STATIC_ENV_GETTERS: Record<string, () => string> = {
 	ADMIN_SUPER_PASSWORD: () => import.meta.env?.ADMIN_SUPER_PASSWORD || "",
 	ADMIN_JWT_SECRET: () => import.meta.env?.ADMIN_JWT_SECRET || "",
 	ADMIN_SCRYPT_N: () => import.meta.env?.ADMIN_SCRYPT_N || "",
+	ADMIN_ALERT_WEBHOOK: () => import.meta.env?.ADMIN_ALERT_WEBHOOK || "",
 	TURNSTILE_SITE_KEY: () => import.meta.env?.TURNSTILE_SITE_KEY || "",
 	TURNSTILE_SECRET_KEY: () => import.meta.env?.TURNSTILE_SECRET_KEY || "",
 };
