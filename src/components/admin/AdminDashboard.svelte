@@ -347,10 +347,16 @@ function startAdmin() {
 onMount(async () => {
 	// 同步当前主题状态（深浅切换按钮图标）
 	isDark = document.documentElement.classList.contains("dark");
-	// 侧边栏底部用户卡片展示的管理员用户名（与会话接口同一来源）
+	// 侧边栏底部用户卡片展示的管理员用户名（与会话接口同一来源）；
+	// 同时以服务端会话为准校正本地登录态——Cookie 失效（过期 / 被踢 / 换设备）
+	// 时 sessionStorage 的 admin_verified 可能残留，若盲信会让后台照常渲染但
+	// 接口全部 401（各页显示「加载失败」），或与独立登录页互相重定向形成回弹循环。
 	try {
 		const res = await fetch("/api/admin/session/");
 		const data = await res.json();
+		if (!data.success) throw new Error("session invalid");
+		isVerified = true;
+		sessionStorage.setItem("admin_verified", "true");
 		if (typeof data.username === "string" && data.username) {
 			adminUsername = data.username;
 		}
@@ -358,24 +364,11 @@ onMount(async () => {
 			adminRole = data.role;
 		}
 	} catch {
-		// 网络异常时保留空值，登录后再补
-	}
-	if (!isVerified) {
-		// 未登录访问后台页：先尝试"记住我"Cookie，有效则免登录进入
-		try {
-			const res = await fetch("/api/admin/session/");
-			const data = await res.json();
-			if (data.success) {
-				isVerified = true;
-				sessionStorage.setItem("admin_verified", "true");
-				startAdmin();
-				return;
-			}
-		} catch {
-			// 网络异常时按未登录处理
-		}
-		// 记住想进入的地址，跳回独立登录页，登录后跳回原目标
-		sessionStorage.setItem("admin_redirect", window.location.pathname);
+		// 无法确认会话（未授权或网络异常）：清除残留标记，回独立登录页。
+		// 必须清 admin_verified，否则登录页会立刻把用户弹回本页形成死循环。
+		isVerified = false;
+		sessionStorage.removeItem("admin_verified");
+		sessionStorage.removeItem("admin_redirect");
 		window.location.replace("/admin/");
 		return;
 	}
