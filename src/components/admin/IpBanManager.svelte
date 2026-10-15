@@ -273,7 +273,7 @@ onMount(load);
 		color: var(--destructive);
 	}
 
-	.status-banner .spin {
+	.status-banner :global(.spin) {
 		animation: spin 1s linear infinite;
 	}
 
@@ -293,7 +293,7 @@ onMount(load);
 		font-size: 0.925rem;
 	}
 
-	.empty-icon {
+	.ban-empty :global(.empty-icon) {
 		font-size: 2.25rem;
 		opacity: 0.6;
 	}
@@ -305,7 +305,7 @@ onMount(load);
 		padding: 0.9rem 1.125rem;
 	}
 
-	.ban-icon {
+	.ban-card :global(.ban-icon) {
 		font-size: 1.5rem;
 		color: var(--destructive);
 		flex-shrink: 0;

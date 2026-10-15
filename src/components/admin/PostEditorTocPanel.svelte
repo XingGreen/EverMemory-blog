@@ -54,16 +54,13 @@ $effect(() => {
 	{#if tocItems.length > 0}
 		<nav class="toc-list" bind:this={tocListEl}>
 			{#each tocItems as item, idx (item.lineIndex)}
-				<a
-					href="#"
+				<button
+					type="button"
 					class="toc-item toc-level-{tocDepthLevelFn(item.level, tocMinDepth)}"
 					class:visible={editorState.visibleTocLines.includes(item.lineIndex)}
 					aria-label={item.text}
 					title={item.text}
-					onclick={(event) => {
-						event.preventDefault();
-						actions.jumpToToc(item);
-					}}
+					onclick={() => actions.jumpToToc(item)}
 				>
 					<div
 						class="toc-badge {item.level === tocMinDepth
@@ -85,7 +82,7 @@ $effect(() => {
 					>
 						{item.text}
 					</div>
-				</a>
+				</button>
 			{/each}
 			<div
 				class="toc-active-indicator"
@@ -111,6 +108,12 @@ $effect(() => {
 	.toc-list .toc-item {
 		position: relative;
 		z-index: 1;
+		/* toc.css 的 .toc-item 原为 <a> 设计，原生按钮需重置默认外观 */
+		background: none;
+		border: none;
+		font: inherit;
+		text-align: left;
+		cursor: pointer;
 	}
 
 	.toc-list .toc-active-indicator {

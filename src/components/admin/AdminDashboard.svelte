@@ -2163,7 +2163,7 @@ font-family: inherit;
 
 		/* 折叠态无标题，logo 的 mb-1 mr-2 只会制造偏移，归零保持居中 */
 		.admin-sidebar.collapsed .sidebar-brand .brand-logo,
-		.admin-sidebar.collapsed .sidebar-brand .brand-home {
+		.admin-sidebar.collapsed .sidebar-brand :global(.brand-home) {
 			margin-bottom: 0;
 			margin-right: 0;
 		}
