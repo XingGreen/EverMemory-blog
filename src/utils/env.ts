@@ -13,6 +13,13 @@ const STATIC_ENV_GETTERS: Record<string, () => string> = {
 	GITHUB_INSTALLATION_ID: () => import.meta.env?.GITHUB_INSTALLATION_ID || "",
 	GITHUB_PRIVATE_KEY: () => import.meta.env?.GITHUB_PRIVATE_KEY || "",
 	GITHUB_PRIVATE_KEY_PATH: () => import.meta.env?.GITHUB_PRIVATE_KEY_PATH || "",
+	GITHUB_APP_CLIENT_ID: () => import.meta.env?.GITHUB_APP_CLIENT_ID || "",
+	GITHUB_APP_CLIENT_SECRET: () =>
+		import.meta.env?.GITHUB_APP_CLIENT_SECRET || "",
+	GITHUB_OAUTH_REDIRECT_URI: () =>
+		import.meta.env?.GITHUB_OAUTH_REDIRECT_URI || "",
+	ADMIN_GITHUB_ID: () => import.meta.env?.ADMIN_GITHUB_ID || "",
+	ADMIN_BREAKGLASS_TOKEN: () => import.meta.env?.ADMIN_BREAKGLASS_TOKEN || "",
 	ADMIN_USERNAME: () => import.meta.env?.ADMIN_USERNAME || "",
 	ADMIN_PASSWORD: () => import.meta.env?.ADMIN_PASSWORD || "",
 	ADMIN_SUPER_PASSWORD: () => import.meta.env?.ADMIN_SUPER_PASSWORD || "",

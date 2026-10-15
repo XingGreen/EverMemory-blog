@@ -40,7 +40,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { getClientIp } from "./client-ip";
 import { getStore } from "./persist-store";
+
+// getClientIp 已抽到 client-ip.ts（被非登录防护路径复用，如 OAuth 会话登记）；
+// 此处再导出以保持既有 import 路径不变。
+export { getClientIp };
 
 /** 连续失败次数阈值，达到后开始锁定 */
 const FAIL_THRESHOLD = 5;
@@ -176,17 +181,7 @@ function lockSecondsFor(failures: number): number {
 	return Math.min(seconds, MAX_LOCK_SECONDS);
 }
 
-/** 从请求头解析客户端标识：CF 直连 IP > X-Forwarded-For 首项 > unknown */
-export function getClientIp(request: Request): string {
-	const cf = request.headers.get("cf-connecting-ip");
-	if (cf) return cf;
-	const fwd = request.headers.get("x-forwarded-for");
-	if (fwd) {
-		const first = fwd.split(",")[0]?.trim();
-		if (first) return first;
-	}
-	return "unknown";
-}
+/** 从请求头解析客户端标识：CF 直连 IP > X-Forwarded-For 首项 > unknown（见 client-ip.ts） */
 
 /**
  * 第二空间（应急控制台）的失败计数命名空间。
@@ -300,7 +295,8 @@ export async function registerAttempt(clientKey: string): Promise<void> {
 	const state = await loadAttemptState();
 	const prev = state.get(clientKey);
 	const inWindow =
-		prev !== undefined && now - prev.windowStart < ATTEMPT_WINDOW_SECONDS * 1000;
+		prev !== undefined &&
+		now - prev.windowStart < ATTEMPT_WINDOW_SECONDS * 1000;
 	state.set(
 		clientKey,
 		inWindow
@@ -321,7 +317,8 @@ export async function clearAttempts(clientKey: string): Promise<void> {
 export async function attemptCount(clientKey: string): Promise<number> {
 	const record = (await loadAttemptState()).get(clientKey);
 	if (!record) return 0;
-	if (Date.now() - record.windowStart >= ATTEMPT_WINDOW_SECONDS * 1000) return 0;
+	if (Date.now() - record.windowStart >= ATTEMPT_WINDOW_SECONDS * 1000)
+		return 0;
 	return record.count;
 }
 

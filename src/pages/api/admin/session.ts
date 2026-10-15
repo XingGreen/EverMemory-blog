@@ -3,6 +3,7 @@ import {
 	isSuperPasswordConfigured,
 	verifySessionToken,
 } from "@/utils/auth";
+import { isOAuthConfigured } from "@/utils/github-oauth";
 import { readSecretValue } from "@/utils/secret-io";
 
 export const prerender = false;
@@ -12,6 +13,7 @@ export const prerender = false;
 // 以实时反映 .env.local 的 ADMIN_USERNAME；未登录不返回，避免泄露用户名。
 // 同时回传 role（区分主空间/应急控制台）与 superConfigured（是否已配置第二密码），
 // 供前端决定是否渲染控制面入口；服务端仍会在控制面 API 二次校验 role。
+// oauthEnabled 与登录态无关，始终回传，供登录页决定是否渲染「使用 GitHub 登录」。
 export async function GET({ request }) {
 	const token = getAuthTokenFromRequest(request);
 	const payload = token ? await verifySessionToken(token) : null;
@@ -21,8 +23,10 @@ export async function GET({ request }) {
 		username?: string;
 		role?: string;
 		superConfigured?: boolean;
+		oauthEnabled: boolean;
 	} = {
 		success: Boolean(payload),
+		oauthEnabled: isOAuthConfigured(),
 	};
 	if (payload) {
 		body.username = readSecretValue("ADMIN_USERNAME") || "admin";
