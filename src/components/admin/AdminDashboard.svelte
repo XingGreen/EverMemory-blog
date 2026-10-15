@@ -19,7 +19,6 @@ import OnboardingTour from "./OnboardingTour.svelte";
 import PostEditor from "./PostEditor.svelte";
 import PostList from "./PostList.svelte";
 import SecretManager from "./SecretManager.svelte";
-import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
 import SettingsOverview from "./SettingsOverview.svelte";
 import VerifyScreen from "./VerifyScreen.svelte";
@@ -41,7 +40,7 @@ type Post = {
 };
 
 type ViewMode = "list" | "edit" | "create";
-type Page = "dashboard" | "posts" | "settings" | "secrets" | "sessions";
+type Page = "dashboard" | "posts" | "settings" | "secrets";
 
 // 基于 URL 路径的真实路由（History API）：
 //   /admin/dashboard/                      → 首页
@@ -57,8 +56,7 @@ type Route =
 	| { page: "create" }
 	| { page: "edit"; slug: string }
 	| { page: "settings"; section?: string }
-	| { page: "secrets" }
-	| { page: "sessions" };
+	| { page: "secrets" };
 
 let {
 	avatarUrl = "",
@@ -228,9 +226,7 @@ const activePage = $derived<Page>(
 			? "settings"
 			: route.page === "secrets"
 				? "secrets"
-				: route.page === "sessions"
-					? "sessions"
-					: "posts",
+				: "posts",
 );
 
 const viewMode = $derived<ViewMode>(
@@ -314,8 +310,6 @@ function parseRoute(pathname: string): Route {
 		}
 		case "secrets":
 			return { page: "secrets" };
-		case "sessions":
-			return { page: "sessions" };
 		default:
 			// 未知路由：返回登录态判定，由 applyRoute 决定去向
 			return { page: "login" };
@@ -385,7 +379,6 @@ const headerTitle = $derived.by(() => {
 			: i18n(I18nKey.adminSettings);
 	}
 	if (activePage === "secrets") return i18n(I18nKey.adminSecrets);
-	if (activePage === "sessions") return i18n(I18nKey.adminSessions);
 	if (viewMode === "edit" && editingPost) return i18n(I18nKey.adminEditPost);
 	if (viewMode === "create") return i18n(I18nKey.adminNewPost);
 	return i18n(I18nKey.adminPosts);
@@ -801,10 +794,6 @@ function goSettings(section?: string) {
 
 function goSecrets() {
 	navigate(`${DASHBOARD_PATH}secrets/`);
-}
-
-function goSessions() {
-	navigate(`${DASHBOARD_PATH}sessions/`);
 }
 
 function toggleSettingsSubmenu() {
@@ -1412,20 +1401,6 @@ function formatDate(dateStr: string | null): string {
 				<span>{i18n(I18nKey.adminSecrets)}</span>
 				</button>
 
-				<!-- 会话管理 -->
-				<button
-					class="nav-item"
-					class:active={activePage === "sessions"}
-					onclick={goSessions}
-				>
-					{#if activePage === "sessions"}
-					<Icon icon="material-symbols:devices" />
-				{:else}
-					<Icon icon="material-symbols:devices-outline" />
-				{/if}
-				<span>{i18n(I18nKey.adminSessions)}</span>
-				</button>
-
 				<!-- 应急控制台（仅第二空间显示）：整页跳转到独立控制面页面 -->
 				{#if adminRole === "super"}
 					<a class="nav-item" href="/admin/console/">
@@ -1638,12 +1613,6 @@ function formatDate(dateStr: string | null): string {
 							showToast(message, type, duration)}
 					/>
 				{/if}
-			{:else if activePage === "sessions"}
-				<SessionManager
-					canKick={adminRole === "super"}
-					onNotify={(message, type, duration) =>
-						showToast(message, type, duration)}
-				/>
 			{/if}
 			</div>
 		</div>
