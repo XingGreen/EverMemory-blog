@@ -2,6 +2,7 @@ import {
 	ADMIN_SECRETS,
 	AUTH_SECRET_KEYS,
 	getSecretItem,
+	PASSWORD_HASH_KEYS,
 	requiresPasswordToSave,
 } from "@/utils/admin-secrets";
 import {
@@ -38,6 +39,9 @@ const MAX_KEY_LENGTH = 100 * 1024;
 
 /** 认证类密钥集合（用于判断是否需要使旧会话失效）：来自共享清单，避免前后端漂移 */
 const AUTH_KEYS = new Set(AUTH_SECRET_KEYS);
+
+/** 存 scrypt 哈希的密钥集合：填写明文时自动转哈希（主密码 / 第二密码共用同一校验器） */
+const PASSWORD_HASH = new Set(PASSWORD_HASH_KEYS);
 
 export async function GET({
 	request,
@@ -153,10 +157,10 @@ export async function POST({
 		for (const entry of valid) {
 			const item = getSecretItem(entry.key);
 			if (!item) continue;
-			// ADMIN_PASSWORD 存哈希：填入 64 位 hex（旧版 SHA256 哈希）或 scrypt$ 开头
-			// （新版自带哈希）视为已是哈希；其余视为明文，自动转为 scrypt 哈希
+			// ADMIN_PASSWORD / ADMIN_SUPER_PASSWORD 存哈希：填入 64 位 hex（旧版 SHA256
+			// 哈希）或 scrypt$ 开头（新版自带哈希）视为已是哈希；其余视为明文，自动转 scrypt
 			if (
-				entry.key === "ADMIN_PASSWORD" &&
+				PASSWORD_HASH.has(entry.key) &&
 				entry.value &&
 				!/^[0-9a-f]{64}$/i.test(entry.value) &&
 				!entry.value.startsWith("scrypt$")

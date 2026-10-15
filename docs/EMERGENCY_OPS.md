@@ -104,7 +104,8 @@ node -e "const c=require('crypto');const s=c.randomBytes(16);const h=c.scryptSyn
 环境变量 ADMIN_SUPER_PASSWORD = <新的 scrypt 哈希>   # 生成命令同 3.2
 ```
 
-第二密码**只能**在此处（平台 env）或本地 `.env.local` 修改，**不开放 Web 修改**。
+第二密码可在本地后台「密钥配置」页修改（写入 `.env.local`），或直接改此处（平台 env）。
+生产构建文件系统只读，**Web 端改不了平台 env**，仍须回到平台层操作。
 
 ### 3.4 封 IP（不占应用 KV）
 

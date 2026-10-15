@@ -345,8 +345,8 @@ export function isSuperPasswordConfigured(): boolean {
 
 /**
  * 验证「第二密码」（应急控制台）。
- * 独立于主密码：只从 .env.local / 平台 env 读取，不提供 Web 修改，也不做自动迁移。
- * 未配置时一律返回 false。
+ * 独立于主密码：值取自 .env.local / 平台 env（本地可经后台「密钥配置」页写入，生产只读），
+ * 不做自动迁移。未配置时一律返回 false。
  */
 export function verifySuperPassword(password: string): boolean {
 	try {
