@@ -395,3 +395,15 @@ export const CONFIG_GROUPS: readonly {
 export function getConfigGroup(key: string): ConfigGroup {
 	return ITEM_GROUPS[key] ?? "feature";
 }
+
+/**
+ * 允许运行时覆盖的配置项 key 集合（来自 CONFIG_ITEMS 的 runtime 标记）。
+ *
+ * 定义放在这里而非 runtime-config.ts：后者依赖 persist-store（含 node:fs /
+ * node:path 等仅服务端可用的模块），而本常量是纯数据，会被客户端组件
+ * （RuntimeConfigPanel）直接引用——若定义在 runtime-config.ts，会把服务端
+ * 模块拖进浏览器 bundle，导致 hydration 报 "node:path externalized" 崩溃。
+ */
+export const RUNTIME_CONFIG_KEYS: string[] = CONFIG_ITEMS.filter(
+	(item) => item.runtime,
+).map((item) => item.key);

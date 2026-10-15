@@ -1,8 +1,7 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
-import { getConfigItem } from "@/utils/admin-settings";
-import { RUNTIME_CONFIG_KEYS } from "@/utils/runtime-config";
+import { getConfigItem, RUNTIME_CONFIG_KEYS } from "@/utils/admin-settings";
 
 // 运行时配置：改这些项写入 KV 覆盖层，即时生效、不触发站点重建。
 // 复用设置页的 SettingsEditor（表单/源码）与既有 /api/admin/configs、/api/admin/runtime-config 端点。
