@@ -1,4 +1,5 @@
 <script lang="ts">
+import { untrack } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -31,7 +32,9 @@ let {
 
 // html 等原始文本配置的本地编辑副本（受控组件，随 data 刷新）
 let htmlText = $state(
-	typeof data === "string" ? data : remote && source ? source : "",
+	untrack(() =>
+		typeof data === "string" ? data : remote && source ? source : "",
+	),
 );
 $effect(() => {
 	if (item.kind === "html") {
@@ -43,7 +46,9 @@ $effect(() => {
 
 // json 配置的可视表单 / 源码（真实文件）双模式
 // 远程（线上）且无快照数据时首帧即源码模式，避免 data 为空时误渲染表单组件
-let mode: "form" | "source" = $state(remote && !data ? "source" : "form");
+let mode: "form" | "source" = $state(
+	untrack(() => (remote && !data ? "source" : "form")),
+);
 let sourceDraft = $state("");
 
 // 进入源码模式：以磁盘文件原文生成草稿

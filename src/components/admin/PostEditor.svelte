@@ -1012,10 +1012,11 @@ $effect(() => {
 					onclick={() => (drawer = "none")}
 					transition:fade={{ duration: prefersReducedMotion.current ? 0 : 150 }}
 				></button>
-				<aside
+				<div
 					class="editor-drawer"
 					role="dialog"
 					aria-modal="false"
+					tabindex="-1"
 					onkeydown={handleDrawerKeydown}
 					transition:fly={{
 						x: prefersReducedMotion.current ? 0 : 24,
@@ -1051,7 +1052,7 @@ $effect(() => {
 							{i18n(I18nKey.postInfoDone)}
 						</button>
 					</footer>
-				</aside>
+				</div>
 			{/if}
 		</div>
 	{/if}

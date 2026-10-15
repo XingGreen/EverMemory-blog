@@ -1400,7 +1400,6 @@ function actionLabel(action: string, title: string): string {
 			align-self: center;
 		}
 
-		.col-author,
 		.col-category {
 			display: none;
 		}

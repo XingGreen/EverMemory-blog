@@ -280,7 +280,7 @@ onMount(load);
 		color: var(--destructive) !important;
 	}
 
-	.status-banner .spin {
+	.status-banner :global(.spin) {
 		animation: spin 1s linear infinite;
 	}
 
@@ -310,7 +310,7 @@ onMount(load);
 		color: var(--content-meta);
 	}
 
-	.hint-ok {
+	.toolbar-hint :global(.hint-ok) {
 		color: var(--primary);
 	}
 
@@ -366,7 +366,7 @@ onMount(load);
 		font-size: 0.925rem;
 	}
 
-	.empty-icon {
+	.sessions-empty :global(.empty-icon) {
 		font-size: 2.25rem;
 		opacity: 0.6;
 	}
@@ -381,7 +381,7 @@ onMount(load);
 		border: 1px solid var(--line-divider);
 	}
 
-	.session-icon {
+	.session-card :global(.session-icon) {
 		font-size: 1.5rem;
 		color: var(--primary);
 		flex-shrink: 0;
@@ -454,7 +454,7 @@ onMount(load);
 		border-bottom-color: var(--content-meta);
 	}
 
-	.ip-eye {
+	.ip-toggle :global(.ip-eye) {
 		font-size: 0.95rem;
 		flex-shrink: 0;
 	}

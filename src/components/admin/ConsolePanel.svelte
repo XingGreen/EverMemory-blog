@@ -172,8 +172,7 @@ async function logout() {
 		color: var(--deep-text);
 	}
 
-	.section-title :global(.inline-icon),
-	.section-title svg {
+	.section-title :global(.inline-icon) {
 		color: var(--primary);
 	}
 
