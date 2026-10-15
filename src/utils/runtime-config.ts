@@ -8,19 +8,19 @@
  * 存储键：runtime-config:<key>（符合 persist-store 的键规则）。
  */
 
-import { CONFIG_ITEMS } from "./admin-settings";
+import { RUNTIME_CONFIG_KEYS } from "./admin-settings";
 import { getStore } from "./persist-store";
+
+// RUNTIME_CONFIG_KEYS 定义在 admin-settings.ts（纯数据模块），此处仅转出以保持
+// 既有 import 路径不变。若定义留在本文件，会把 persist-store 的 node:fs /
+// node:path 拖进客户端 bundle（RuntimeConfigPanel 会因此 hydration 崩溃）。
+export { RUNTIME_CONFIG_KEYS };
 
 const PREFIX = "runtime-config:";
 
 function storeKey(key: string): string {
 	return `${PREFIX}${key}`;
 }
-
-/** 当前允许运行时覆盖的配置项 key 集合（来自 CONFIG_ITEMS 的 runtime 标记） */
-export const RUNTIME_CONFIG_KEYS: string[] = CONFIG_ITEMS.filter(
-	(item) => item.runtime,
-).map((item) => item.key);
 
 /** 指定 key 是否为运行时配置 */
 export function isRuntimeConfigKey(key: string): boolean {
