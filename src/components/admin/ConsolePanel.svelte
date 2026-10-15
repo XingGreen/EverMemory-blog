@@ -1,10 +1,9 @@
 <script lang="ts">
 import Icon from "@/components/common/Icon.svelte";
 import IpBanManager from "./IpBanManager.svelte";
-import RuntimeConfigPanel from "./RuntimeConfigPanel.svelte";
 import SessionManager from "./SessionManager.svelte";
 
-// 应急控制台容器：集中控制面三项操作（踢会话 / 封 IP / 运行时配置）。
+// 应急控制台容器：集中控制面两项操作（踢会话 / 封 IP）。
 // 仅第二空间（super）可达，门禁在 console.astro 服务端与各控制面 API 的 requireSuperAuth。
 let toast = $state<{ message: string; type: "success" | "error" } | null>(null);
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -37,7 +36,7 @@ async function logout() {
 			<div class="head-text">
 				<h1>应急控制台</h1>
 				<p>
-					第二空间（super）专属。可踢下线任意设备、封禁来源 IP、修改运行时配置。本会话有效期
+					第二空间（super）专属。可踢下线任意设备、封禁来源 IP。本会话有效期
 					1 小时且不提供「记住我」。
 				</p>
 			</div>
@@ -68,14 +67,6 @@ async function logout() {
 			<span>IP 黑名单</span>
 		</h2>
 		<IpBanManager onNotify={notify} />
-	</section>
-
-	<section class="console-section">
-		<h2 class="section-title">
-			<Icon icon="material-symbols:bolt" />
-			<span>运行时配置</span>
-		</h2>
-		<RuntimeConfigPanel onNotify={notify} />
 	</section>
 
 	{#if toast}
