@@ -1,4 +1,4 @@
-import type { AdminRole } from "./auth";
+import type { AdminRole, AuthMethod } from "./auth";
 import type { KVStore } from "./persist-store";
 import { getStore } from "./persist-store";
 
@@ -38,6 +38,10 @@ export interface AdminSession {
 	remember: boolean;
 	/** 会话空间：admin（主空间）| super（应急控制台） */
 	role: AdminRole;
+	/** 上次强认证时间戳（ms）：危险操作二次确认据此判定 */
+	authAt: number;
+	/** 本会话的认证方式 */
+	amr: AuthMethod;
 }
 
 async function readAll(): Promise<Record<string, AdminSession>> {
@@ -92,6 +96,10 @@ export async function registerSession(opts: {
 	maxAgeSeconds: number;
 	remember: boolean;
 	role?: AdminRole;
+	/** 上次强认证时间（ms）；缺省即本次登录时间 */
+	authAt?: number;
+	/** 认证方式；缺省视为既有密码登录 */
+	amr?: AuthMethod;
 }): Promise<string> {
 	const sid = crypto.randomUUID();
 	const now = Date.now();
@@ -106,6 +114,8 @@ export async function registerSession(opts: {
 		exp: now + opts.maxAgeSeconds * 1000,
 		remember: opts.remember,
 		role: opts.role ?? "admin",
+		authAt: opts.authAt ?? now,
+		amr: opts.amr ?? "password",
 	};
 
 	const sessions = await readAll();

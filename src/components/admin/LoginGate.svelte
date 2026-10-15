@@ -10,6 +10,7 @@ let view = $state<"loading" | "setup" | "login">("loading");
 let defaultUsername = $state("admin");
 let tokenRequired = $state(true);
 let writable = $state(true);
+let oauthEnabled = $state(false);
 
 function enterDashboard(target?: string) {
 	sessionStorage.setItem("admin_verified", "true");
@@ -34,6 +35,7 @@ onMount(async () => {
 	try {
 		const res = await fetch("/api/admin/session/");
 		const data = await res.json();
+		oauthEnabled = Boolean(data.oauthEnabled);
 		if (data.success) {
 			sessionStorage.setItem("admin_verified", "true");
 			// 已有效的 super 会话刷新登录页时同样回到应急控制台
@@ -76,7 +78,7 @@ onMount(async () => {
 		onComplete={enterDashboard}
 	/>
 {:else}
-	<VerifyScreen {avatarUrl} onVerify={handleVerify} />
+	<VerifyScreen {avatarUrl} onVerify={handleVerify} {oauthEnabled} />
 {/if}
 
 <style>

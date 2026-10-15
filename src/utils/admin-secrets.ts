@@ -107,6 +107,46 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 
 	// ── 管理后台认证配置（双重锁：用户名 + 密码 + 私钥） ──
 	{
+		key: "GITHUB_APP_CLIENT_ID",
+		group: "auth",
+		label: "GitHub OAuth Client ID",
+		description:
+			"GitHub App 的 Client ID（形如 Iv23li…；与应用页顶部的 App ID 不同）",
+		kind: "text",
+		sensitive: false,
+		required: true,
+	},
+	{
+		key: "GITHUB_APP_CLIENT_SECRET",
+		group: "auth",
+		label: "GitHub OAuth Client Secret",
+		description:
+			"GitHub App 的 Client Secret，登录回调时用于换取访问令牌。泄露后须到 GitHub 重新生成",
+		kind: "password",
+		sensitive: true,
+		required: true,
+	},
+	{
+		key: "ADMIN_GITHUB_ID",
+		group: "auth",
+		label: "管理员 GitHub 用户 ID",
+		description:
+			"允许登录的 GitHub 账号数字 ID（形如 238927366，不随用户名/头像变更）",
+		kind: "text",
+		sensitive: false,
+		required: true,
+	},
+	{
+		key: "ADMIN_BREAKGLASS_TOKEN",
+		group: "auth",
+		label: "应急登录令牌（备用）",
+		description:
+			"GitHub 不可用时的备用登录入口：一段高熵随机串（如 32 字节 base64url）。留空则关闭备用登录",
+		kind: "password",
+		sensitive: true,
+		required: false,
+	},
+	{
 		key: "ADMIN_USERNAME",
 		group: "auth",
 		label: "管理员用户名",
@@ -210,6 +250,9 @@ export const AUTH_SECRET_KEYS: readonly string[] = [
 	"ADMIN_PASSWORD",
 	"ADMIN_SUPER_PASSWORD",
 	"ADMIN_JWT_SECRET",
+	"GITHUB_APP_CLIENT_SECRET",
+	"ADMIN_GITHUB_ID",
+	"ADMIN_BREAKGLASS_TOKEN",
 ];
 
 /**

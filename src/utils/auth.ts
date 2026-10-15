@@ -26,6 +26,20 @@ export const REMEMBER_MAX_AGE = 7 * 24 * 3600; // 7 天（勾选"记住我"）
  */
 export type AdminRole = "admin" | "super";
 
+/**
+ * 本次会话的认证方式（authentication method reference）：
+ * - github：GitHub OAuth（主登录）
+ * - breakglass：应急令牌（GitHub 不可用时的备用登录）
+ * - password：既有用户名/密码（迁移期保留，后续移除）
+ */
+export type AuthMethod = "github" | "breakglass" | "password";
+
+/**
+ * 危险操作「二次确认」的有效期：距上次强认证（authAt）超过该秒数即要求重新认证。
+ * 见 requireFreshAuth。
+ */
+export const STEP_UP_WINDOW_SECONDS = 5 * 60;
+
 /** 应急控制台会话时长：1 小时，且不提供「记住我」（设计决策 Q8） */
 export const SUPER_SESSION_MAX_AGE = 3600;
 
@@ -83,6 +97,10 @@ interface JwtPayload {
 	ver: string;
 	/** 会话 ID：对应服务端会话表中的记录（被踢下线后此 ID 失效） */
 	sid: string;
+	/** 上次强认证时间（epoch 秒）：危险操作二次确认据此判定是否需重新认证 */
+	authAt: number;
+	/** 本会话的认证方式 */
+	amr: AuthMethod;
 	/**
 	 * 有效账户名：由 verifySessionToken 在验签后从服务端会话表补全，
 	 * 不是令牌内容——令牌即使携带该字段也以会话表为准（审计用）。
@@ -96,14 +114,19 @@ export function generateSessionToken(
 	maxAgeSeconds = SESSION_MAX_AGE,
 	sid?: string,
 	role: AdminRole = "admin",
+	authAt?: number,
+	amr: AuthMethod = "password",
 ): string {
+	const now = Math.floor(Date.now() / 1000);
 	const payload: JwtPayload = {
 		sub: crypto.randomUUID(),
 		role,
 		ver: getTokenVersion(),
 		sid: sid || crypto.randomUUID(),
-		iat: Math.floor(Date.now() / 1000),
-		exp: Math.floor(Date.now() / 1000) + maxAgeSeconds,
+		authAt: authAt ?? now,
+		amr,
+		iat: now,
+		exp: now + maxAgeSeconds,
 	};
 
 	const header = { alg: "HS256", typ: "JWT" };

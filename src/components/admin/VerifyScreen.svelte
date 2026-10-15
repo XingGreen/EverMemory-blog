@@ -10,9 +10,11 @@ import { setTheme } from "@/utils/setting-utils";
 let {
 	onVerify,
 	avatarUrl = "",
+	oauthEnabled = false,
 }: {
 	onVerify: (success: boolean, space?: "admin" | "super") => void;
 	avatarUrl?: string;
+	oauthEnabled?: boolean;
 } = $props();
 
 let username = $state("");
@@ -31,6 +33,28 @@ function toggleTheme() {
 	isDark = !isDark;
 	setTheme(isDark ? DARK_MODE : LIGHT_MODE);
 }
+
+// ── GitHub OAuth 登录（主方式）──
+function startGithubLogin() {
+	const params = new URLSearchParams(location.search);
+	const next =
+		params.get("next") ||
+		sessionStorage.getItem("admin_redirect") ||
+		"/admin/dashboard/";
+	// 整页跳转到后端发起点，由它 302 到 GitHub 授权页
+	location.href = `/api/admin/auth/github/?next=${encodeURIComponent(next)}`;
+}
+
+// OAuth 回调失败时以 oauth_error 查询参数带错误码回来，映射为可读提示
+const OAUTH_ERRORS: Record<string, string> = {
+	oauth_disabled: "GitHub 登录未配置",
+	state_missing: "登录状态已失效，请重试",
+	state_mismatch: "登录状态校验失败，请重试",
+	code_missing: "授权未完成，请重试",
+	token_exchange_failed: "与 GitHub 通信失败，请稍后重试",
+	identity_fetch_failed: "无法获取 GitHub 账号信息，请重试",
+	not_authorized: "该 GitHub 账号无后台访问权限",
+};
 
 // 浮动 label 状态
 let usernameFocused = $state(false);
@@ -74,6 +98,16 @@ onDestroy(() => clearInterval(countdownTimer));
 
 onMount(() => {
 	loadTurnstileConfig();
+
+	// OAuth 回调失败回跳时读取错误码并清理 URL，避免刷新重复提示
+	const params = new URLSearchParams(location.search);
+	const code = params.get("oauth_error");
+	if (code) {
+		error = OAUTH_ERRORS[code] || "GitHub 登录失败，请重试";
+		params.delete("oauth_error");
+		const qs = params.toString();
+		history.replaceState(null, "", location.pathname + (qs ? `?${qs}` : ""));
+	}
 });
 
 async function handleSubmit() {
@@ -187,6 +221,24 @@ function handleKeyDown(e: KeyboardEvent) {
 		</div>
 
 		<div class="verify-form">
+			{#if oauthEnabled}
+				<button class="github-btn" type="button" onclick={startGithubLogin}>
+					<svg
+						viewBox="0 0 16 16"
+						width="18"
+						height="18"
+						aria-hidden="true"
+						fill="currentColor"
+					>
+						<path
+							d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+						/>
+					</svg>
+					使用 GitHub 登录
+				</button>
+				<div class="divider"><span>或</span></div>
+			{/if}
+
 			<!-- 用户名 -->
 			<div class="field" class:focused={usernameFocused} class:filled={username.trim()}>
 				<input
@@ -380,6 +432,46 @@ function handleKeyDown(e: KeyboardEvent) {
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
+	}
+
+	/* ── GitHub 登录按钮（主方式）── */
+	.github-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 0.875rem;
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-large);
+		background: var(--btn-regular-bg);
+		color: var(--deep-text);
+		font-size: 0.9375rem;
+		font-weight: 600;
+		cursor: pointer;
+		font-family: inherit;
+		transition: all 0.2s;
+	}
+
+	.github-btn:hover {
+		border-color: var(--primary);
+		color: var(--primary);
+		transform: translateY(-1px);
+	}
+
+	.divider {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		color: var(--content-meta);
+		font-size: 0.75rem;
+	}
+
+	.divider::before,
+	.divider::after {
+		content: "";
+		flex: 1;
+		height: 1px;
+		background: var(--line-divider);
 	}
 
 	/* ── 浮动 label 输入框 ── */
