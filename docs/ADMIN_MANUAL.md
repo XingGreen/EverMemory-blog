@@ -1,7 +1,7 @@
 # EverMemory 博客管理员手册
 
 > 适用于：Firefly Blog + Astro 7 + GitHub App + Vercel 部署架构
-> 更新时间：2026-10-15
+> 更新时间：2026-10-17
 
 ***
 
@@ -10,7 +10,7 @@
 - [1. 架构总览](#1-架构总览)
 - [2. 环境变量配置](#2-环境变量配置)
   - [2.1 GitHub App 相关](#21-github-app-相关)
-  - [2.2 管理后台相关](#22-管理后台相关)
+  - [2.2 管理后台登录相关](#22-管理后台登录相关)
   - [2.3 生成命令速查](#23-生成命令速查)
 - [3. 管理后台使用](#3-管理后台使用)
   - [3.1 登录](#31-登录)
@@ -21,7 +21,7 @@
   - [3.6 退出登录](#36-退出登录)
   - [3.7 密钥配置](#37-密钥配置)
   - [3.8 站点配置](#38-站点配置)
-  - [3.9 应急控制台](#39-应急控制台)
+  - [3.9 会话管理](#39-会话管理)
 - [4. 本地开发（dev server）](#4-本地开发dev-server)
   - [4.1 初始化流程](#41-初始化流程)
   - [4.2 配置本地 `.env.local`](#42-配置本地-envlocal)
@@ -43,24 +43,28 @@
 | 层级       | 技术                                   | 说明                               |
 | -------- | ------------------------------------ | -------------------------------- |
 | 前端页面     | Astro 7 + Svelte 5                   | 静态构建，SSR 端点仅用于管理后台               |
-| 认证       | scrypt 密码哈希 + JWT HttpOnly Cookie | 用户名 + 密码验证通过后签发；分 admin / super 两空间 |
-| 防爆破      | 失败锁定 + 尝试频次限流 + IP 封禁（可选）       | 状态存 KV；IP 封禁需手动操作               |
+| 登录       | GitHub OAuth（复用写入用的同一个 GitHub App）  | 仅白名单 GitHub 账号可登录；签发 JWT HttpOnly Cookie |
+| 应急入口     | 应急令牌 `ADMIN_BREAKGLASS_TOKEN`（可选）    | GitHub 不可用时的备用登录入口              |
+| 危险操作确认   | 重新走 GitHub OAuth（`prompt=login`）    | 改密钥等敏感操作要求重新认证，借 GitHub 2FA 当第二因子 |
+| 会话管理     | 服务端会话表 + JWT HttpOnly Cookie        | 可查看在线设备并精确踢下线                    |
 | 人机验证（可选） | Cloudflare Turnstile               | 未配置则完全跳过，不影响既有部署                |
 | 写入操作     | GitHub App（JWT → Installation Token） | 服务端读取私钥 → 调 GitHub API 写入仓库      |
 | 读取保护（可选） | Firefly 主题内建 frontmatter `password`  | 纯前端 AES 解密，不依赖服务端                |
 | 部署平台     | Vercel                               | `GITHUB_PRIVATE_KEY` 等密钥通过环境变量注入 |
 
-四类密钥严格分离，互不干扰：
+五类凭证严格分离，互不干扰：
 
 ```
-┌─ 管理员用户名 (ADMIN_USERNAME)     ──→ 登录身份校验
-├─ 主密码 (ADMIN_PASSWORD)          ──→ 登录验证，进入 admin 主空间
-├─ 第二密码 (ADMIN_SUPER_PASSWORD)  ──→ 登录验证，进入 super 应急控制台（可选）
-├─ JWT 签名 (ADMIN_JWT_SECRET)     ──→ Cookie 签名，会话保持
-└─ GitHub App 私钥                   ──→ 服务端专用，不经过浏览器
+┌─ GitHub OAuth 凭据 (GITHUB_APP_CLIENT_ID / _SECRET) ──→ 管理员登录换取身份
+├─ 白名单账号        (ADMIN_GITHUB_ID)               ──→ 仅该 GitHub 数字 id 可登录
+├─ 应急令牌          (ADMIN_BREAKGLASS_TOKEN, 可选)   ──→ GitHub 不可用时的备用登录入口
+├─ JWT 签名         (ADMIN_JWT_SECRET)              ──→ Cookie 签名，会话保持
+└─ GitHub App 私钥                                   ──→ 服务端专用，不经过浏览器
 ```
 
-> **两个空间的区别**：`admin`（主密码）是日常后台的全部功能；`super`（第二密码）= 主空间能力 + 控制面（踢会话 / 封 IP）。**踢人权只在第二空间**，攻击者即使拿到主会话也无法夺走控制权。
+> **为什么登录外包给 GitHub**：个人博客后台自研密码存储（加盐哈希、失败锁定、频率限流）成本高且易出漏洞，业界 CMS（Decap / Keystatic / Sveltia）一律把管理员身份交给 GitHub。本项目的登录复用写入文章用的同一个 GitHub App，只认白名单里的那个 GitHub 账号。
+>
+> **应急令牌**：万一 GitHub 不可用（或账号异常），可用一段高熵随机串登录。默认不配置即为「不开放该入口」。
 
 ***
 
@@ -87,40 +91,46 @@
 | 纯文本 PEM         | 本地文件 `.key/*.pem`     | `-----BEGIN RSA PRIVATE KEY-----...` |
 | Base64 编码后的 PEM | Vercel 环境变量（避免换行符破坏值） | `LS0tLS1CRUdJTiBSU0EgUF...`          |
 
-### 2.2 管理后台相关
+> 同一个 GitHub App 还用于**管理员登录**（见下节）。登录走的是 OAuth（client id / secret），写入走的是 App 私钥，二者是同一 App 的两套凭据。
 
-| 变量名                    | 是否必填 | 说明                                                                             |
-| ---------------------- | ---- | ------------------------------------------------------------------------------ |
-| `ADMIN_USERNAME`       | ✅    | 后台登录用户名，未配置时默认 `admin`                                                    |
-| `ADMIN_PASSWORD`       | ✅    | **主密码的 scrypt 加盐哈希**，格式 `scrypt$N$salt$hash`。**填明文也可以**，服务端保存时会自动转成哈希 |
-| `ADMIN_JWT_SECRET`     | ✅    | 32 字节以上的随机字符串，作为 Cookie JWT 签名密钥；生产环境未配置会直接启动失败               |
-| `ADMIN_SUPER_PASSWORD` | 可选   | **第二密码**哈希（同样 `scrypt$…`），用于进入应急控制台。未配置时控制面降级为主密码二次验证              |
-| `ADMIN_SCRYPT_N`       | 可选   | scrypt 成本因子，默认 `131072`（约 128MB 内存）。一般无需修改                             |
-| `ADMIN_ALERT_WEBHOOK`  | 可选   | 登录成功告警：每次登录成功向该 URL POST 一条 JSON（Slack / Discord / 邮件网关）             |
-| `TURNSTILE_SITE_KEY`   | 可选   | Turnstile 人机验证 site key，**需与 Secret Key 成对配置**                          |
-| `TURNSTILE_SECRET_KEY` | 可选   | Turnstile 人机验证 secret key                                                    |
+### 2.2 管理后台登录相关
 
-> 除了上面这些，还有一个内部变量 `ADMIN_TOKEN_VER`（会话撤销版本号，一般不用手动配）：改用户名 / 密码 / JWT 密钥 / 第二密码时自动 +1，使**所有已登录会话立即失效**。
+| 变量名                        | 是否必填 | 说明                                                                    |
+| -------------------------- | ---- | --------------------------------------------------------------------- |
+| `GITHUB_APP_CLIENT_ID`     | ✅    | GitHub App 的 Client ID（形如 `Iv23li…`），**注意与应用页顶部的 App ID 不同**         |
+| `GITHUB_APP_CLIENT_SECRET` | ✅    | GitHub App 的 Client Secret，回调换取 token 用；泄露后立即到 GitHub 重新生成          |
+| `ADMIN_GITHUB_ID`          | ✅    | 允许登录后台的 GitHub 账号**数字 id**（形如 `238927366`，不随用户名/头像变化）                |
+| `GITHUB_OAUTH_REDIRECT_URI` | 可选   | 覆写 OAuth 回调地址；留空则按请求域名推导，仅反向代理/自定义域名导致推导错误时才设                  |
+| `ADMIN_BREAKGLASS_TOKEN`   | 可选   | 应急登录令牌，高熵随机串。未配置即不开放该入口                                       |
+| `ADMIN_JWT_SECRET`         | ✅    | 32 字节以上的随机字符串，作为 Cookie JWT 签名密钥；生产环境未配置会直接启动失败                      |
+| `ADMIN_ALERT_WEBHOOK`      | 可选   | 登录成功告警：每次登录成功向该 URL POST 一条 JSON（Slack / Discord / 邮件网关）            |
+| `TURNSTILE_SITE_KEY`       | 可选   | Turnstile 人机验证 site key，**需与 Secret Key 成对配置**                       |
+| `TURNSTILE_SECRET_KEY`     | 可选   | Turnstile 人机验证 secret key                                             |
+
+**GitHub App 需要登记 OAuth 回调地址（Callback URL）**，在 App 设置页填写：
+
+- 线上：`https://你的域名/api/admin/auth/github/callback`
+- 本地开发如需在 localhost 登录，在**同一个 App** 里再登记一条：`http://localhost:4321/api/admin/auth/github/callback`
+
+> 还有一个内部变量 `ADMIN_TOKEN_VER`（会话撤销版本号，一般不用手动配）：改认证相关密钥时自动 +1，使**所有已登录会话立即失效**。
 
 ### 2.3 生成命令速查
 
 ```bash
-# 1. 生成 ADMIN_PASSWORD（或 ADMIN_SUPER_PASSWORD）的 scrypt 哈希
-#    N=131072 是默认值，耗时约 1 秒属正常
-node -e "const c=require('crypto');const s=c.randomBytes(16);const h=c.scryptSync('YourPassword',s,64,{N:131072,maxmem:268435456});console.log('scrypt$131072$'+s.toString('base64')+'$'+h.toString('base64'))"
-# 输出：scrypt$131072$AbCd...==$XyZw...==
-
-# 2. 生成 ADMIN_JWT_SECRET
+# 1. 生成 ADMIN_JWT_SECRET
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 # 输出：a1b2c3d4...（64 位十六进制字符串）
+
+# 2. 生成 ADMIN_BREAKGLASS_TOKEN（应急令牌）
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+# 输出：一段 URL 安全的高熵随机串
 
 # 3. 将私钥 PEM 转为 Base64（用于 Vercel 的 GITHUB_PRIVATE_KEY）
 node -e "console.log(require('fs').readFileSync('.key/emblog-ghapp.2026-07-29.private-key.pem').toString('base64'))"
 ```
 
-> ⚠️ `ADMIN_PASSWORD` **不是明文密码**。如果你在 `.env.local` 中写 `ADMIN_PASSWORD=123456`，登录时输入 `123456` 会失败，因为验证逻辑用 scrypt 哈希比对。请务必用上方第 1 条命令生成哈希值。
->
-> 💡 例外：在后台 **「密钥配置」页** 直接粘贴明文密码是**可以**的，保存时服务端会自动转成 scrypt 哈希（仅在本地开发的可写环境下生效，详见 [3.7 密钥配置](#37-密钥配置)）。
+> `GITHUB_APP_CLIENT_ID` / `GITHUB_APP_CLIENT_SECRET` 不需要生成，直接在 GitHub App 设置页复制。
+> 查询自己的 GitHub 数字 id：登录 GitHub 后访问 `https://api.github.com/user`，取返回 JSON 里的 `"id"` 字段。
 
 ***
 
@@ -133,44 +143,26 @@ node -e "console.log(require('fs').readFileSync('.key/emblog-ghapp.2026-07-29.pr
 
 ### 3.1 登录
 
-1. 访问 `/admin/`
-2. 输入**用户名**（对应 `ADMIN_USERNAME`，默认 `admin`）
-3. 输入**密码**
-4. 勾选「记住我」（可选，见下方会话时长）
-5. 通过人机验证（**仅当**配置了 Turnstile 才会出现）
-6. 点击「验证并进入后台」
+访问 `/admin/`，会看到两种登录方式（取决于环境变量配置）：
 
-**登录去向由服务端判定（「主密码优先」）：**
+1. **使用 GitHub 登录**（主方式）：点击按钮 → 跳转 GitHub 授权 → 回调进后台。只有 `ADMIN_GITHUB_ID` 白名单里的那个账号能通过。
+2. **使用应急令牌**（备用）：展开后粘贴 `ADMIN_BREAKGLASS_TOKEN` 的值 → 提交。**仅当配置了该变量时才会出现这个入口。**
 
-| 输入的密码              | 结果                                     |
-| ------------------ | -------------------------------------- |
-| 主密码正确              | 进入主空间 `/admin/dashboard/`             |
-| 主密码错 + 第二密码正确（已配置） | 进入应急控制台 `/admin/console/`             |
-| 两者都错               | 登录失败                                  |
-
-> 「主密码优先」的设计用意：主密码通过即进主空间，且**完全不参考第二密码的结果**。这样「正确主密码 + 乱试第二密码」的请求永远返回主空间——攻击者即使拿到主密码，也无法借响应逐次试探第二密码是否正确。
-
-**会话时长：**
-
-| 空间            | 默认            | 勾选「记住我」      |
-| ------------- | ------------- | ------------ |
-| admin（主空间）    | 12 小时         | 7 天           |
-| super（应急控制台） | 1 小时          | **不提供**「记住我」 |
+通过人机验证（**仅当**配置了 Turnstile 才会出现）。
 
 验证通过后：
 
 - 服务端签发 HttpOnly Cookie `admin_session`（`Secure` + `SameSite=Strict`）
-- `sessionStorage` 仅存 `admin_verified=true` 标记（不存任何密钥）
+- `sessionStorage` 仅存 `admin_verified=true` 标记（不存任何密钥），且**始终以服务端会话为准**，本地标记残留不会让后台误渲染
 
-**防爆破（自动）：**
+**会话时长：**
 
-| 措施        | 规则                                             | 效果                 |
-| --------- | ---------------------------------------------- | ------------------ |
-| 失败锁定     | 连续失败 5 次                                       | 锁定时长 30 秒起指数翻倍，上限 30 分钟 |
-| 尝试频次限流   | 60 秒窗口内累计尝试 10 次（成功失败都算，成功会清零计数）               | 窗口内剩余时间返回 429 + `Retry-After` |
-| IP 封禁     | 手动在应急控制台操作                                    | 该 IP 一律拒绝登录          |
+| 登录方式          | 默认     |
+| ------------- | ------ |
+| GitHub OAuth  | 7 天    |
+| 应急令牌          | 12 小时 |
 
-前端登录页会按 `Retry-After` 头倒计时并禁用提交按钮，无需手动算时间。限流/锁定状态存在 KV（Upstash）；KV 不可用时降级为进程内内存，**降级策略是放行而非拒绝**。
+> **危险操作的二次确认**：修改 JWT 密钥、GitHub 私钥等敏感项时，服务端会要求**重新走一次 GitHub OAuth**（带 `prompt=login`）。这是有意为之——借 GitHub 自身的 2FA / 通行密钥作为第二因子，而不是再维护一套密码。判定基于会话里的「最近强认证时间」（默认 5 分钟内免重复认证）。
 
 ### 3.2 文章列表
 
@@ -242,17 +234,17 @@ node -e "console.log(require('fs').readFileSync('.key/emblog-ghapp.2026-07-29.pr
 
 后台集中管理服务端密钥的页面，共 **15 项**，按三组归类：
 
-| 分组             | 内容                                                     |
-| -------------- | ------------------------------------------------------ |
-| GitHub App 凭据  | App ID、仓库所有者、仓库名、分支、Installation ID、私钥、私钥文件路径 |
-| 管理员认证         | 用户名、主密码哈希、第二密码哈希、JWT 签名密钥、scrypt 成本参数、登录告警 Webhook |
-| 人机验证（可选）      | Turnstile Site Key、Secret Key                          |
+| 分组             | 内容                                                          |
+| -------------- | ----------------------------------------------------------- |
+| GitHub App 凭据  | App ID、仓库所有者、仓库名、分支、Installation ID、私钥、私钥文件路径              |
+| 管理员认证         | GitHub OAuth Client ID、Client Secret、管理员 GitHub 用户 ID、应急登录令牌、JWT 签名密钥、登录告警 Webhook |
+| 人机验证（可选）      | Turnstile Site Key、Secret Key                               |
 
 要点：
 
 - **机密项不回显真实内容**，只显示「已配置 / 未配置」状态。
-- 修改 `ADMIN_USERNAME` / `ADMIN_PASSWORD` / `ADMIN_SUPER_PASSWORD` / `ADMIN_JWT_SECRET` 时会**弹出密码二次验证**，并且保存后 `ADMIN_TOKEN_VER` 自动 +1 —— **所有已登录会话立即失效**（包括你自己）。
-- 修改 `GITHUB_PRIVATE_KEY` / `GITHUB_PRIVATE_KEY_PATH` 属于**破坏性操作**（可把仓库写入重定向到攻击者的 App，或用无效私钥直接切断同步），同样需要二次验证。
+- 修改 **危险项**（`ADMIN_JWT_SECRET` / `GITHUB_APP_CLIENT_SECRET` / `ADMIN_GITHUB_ID` / `ADMIN_BREAKGLASS_TOKEN`）时会要求**重新走一次 GitHub OAuth** 做二次确认，并且保存后 `ADMIN_TOKEN_VER` 自动 +1 —— **所有已登录会话立即失效**（包括你自己）。
+- 修改 `GITHUB_PRIVATE_KEY` / `GITHUB_PRIVATE_KEY_PATH` 属于**破坏性操作**（可把仓库写入重定向到攻击者的 App，或用无效私钥直接切断同步），同样需要二次确认。
 - **线上（Vercel）只能查看状态，不能真正改值**：生产构建的文件系统是只读的。线上要改密钥，必须去 Vercel 项目 Settings → Environment Variables 改，然后 Redeploy。
 
 ### 3.8 站点配置
@@ -264,20 +256,23 @@ node -e "console.log(require('fs').readFileSync('.key/emblog-ghapp.2026-07-29.pr
 - **运行时可改项**：保存后即时生效，直接写入运行时配置存储，不改仓库代码。
 - **静态配置项**：写入源码中的配置文件，需重新构建部署后才生效。
 
-### 3.9 应急控制台
+### 3.9 会话管理
 
-路径：`/admin/console/`
+路径：`/admin/dashboard/settings` 页面底部（「会话管理」栏目）
 
-**需要 super 会话**（用第二密码登录）才能进入。这里是控制面专属页面，只放两件事：
+登录后可以查看当前所有在线会话，并将任意会话（含本机）**踢下线**。
 
-| 功能    | 说明                        |
-| ----- | ------------------------- |
-| 会话管理  | 查看当前登录会话，可将任意会话（含本机）踢下线 |
-| IP 封禁 | 手动封禁 / 解封指定 IP，被封 IP 一律拒绝登录 |
+| 字段   | 说明                        |
+| ---- | ------------------------- |
+| 设备   | 由 User-Agent 解析出的浏览器 + 系统   |
+| IP   | 该会话最近一次登录的来源 IP           |
+| 登录时间 | 该会话首次登录时刻                 |
+| 最后活跃 | 该会话最近一次请求时刻（60 秒节流写入）     |
+| 认证方式 | GitHub OAuth / 应急令牌         |
 
-> **服务端硬门禁**：导航里隐藏入口只是 UX，真正的门在 `/admin/console/` 页面本身以及各控制面 API 的 `requireSuperAuth`。用 admin（主）会话访问会直接 302 退回 `/admin/dashboard/`，不是权限不足提示，而是根本不允许渲染。
-
-忘记第二密码时，请按 [8. 应急操作](./EMERGENCY_OPS.md) 走平台层流程恢复。
+> **同设备去重**：同一台设备（同 User-Agent）反复登录时，新会话会自动顶掉旧会话，会话表里同一设备只保留最新一条，避免列表被无意义的历史会话刷屏。
+>
+> **服务端硬门禁**：查看与踢人走 `requireAuth`（即任何已登录会话都能看到自己的会话列表）。攻击者一旦拿到会话，主人都能用「踢掉其他设备」立即收回控制权。
 
 ***
 
@@ -312,14 +307,15 @@ GITHUB_BRANCH=master
 GITHUB_INSTALLATION_ID=149804847
 GITHUB_PRIVATE_KEY_PATH=.key/emblog-ghapp.2026-07-29.private-key.pem
 
-# 用户名（留空则默认 admin）
-ADMIN_USERNAME=admin
+# GitHub OAuth 登录（与上方同一个 App 的 Client ID / Secret）
+GITHUB_APP_CLIENT_ID=Iv23li...
+GITHUB_APP_CLIENT_SECRET=...
 
-# 用第 2.3 节命令算出的 scrypt 哈希，不要写明文
-ADMIN_PASSWORD=scrypt$131072$AbCd...==$XyZw...==
+# 允许登录的 GitHub 数字 id
+ADMIN_GITHUB_ID=238927366
 
-# 第二密码（可选，强烈建议配置，务必与主密码不同）
-ADMIN_SUPER_PASSWORD=scrypt$131072$EfGh...==$RsTu...==
+# 应急令牌（可选）
+# ADMIN_BREAKGLASS_TOKEN=...
 
 # 随意写一个 32 字节随机串即可（本地开发重启后要重新登录）
 ADMIN_JWT_SECRET=a1b2c3d4...
@@ -329,6 +325,7 @@ ADMIN_JWT_SECRET=a1b2c3d4...
 ```
 
 > 完整模板见仓库根目录 `.env.example`，可直接 `cp .env.example .env.local` 后填值。
+> 本地登录还需在 GitHub App 里登记回调 `http://localhost:4321/api/admin/auth/github/callback`。
 
 ### 4.3 启动开发服务器
 
@@ -400,11 +397,11 @@ git push
 | `GITHUB_BRANCH`          | ✅  | 字符串             | `master`                 |
 | `GITHUB_INSTALLATION_ID` | ✅  | 纯数字             | `149804847`              |
 | `GITHUB_PRIVATE_KEY`     | ✅  | Base64（推荐）      | `LS0tLS1CRUdJTi...`      |
-| `ADMIN_USERNAME`         | ✅  | 字符串             | `admin`                  |
-| `ADMIN_PASSWORD`         | ✅  | scrypt 哈希       | `scrypt$131072$...`      |
+| `GITHUB_APP_CLIENT_ID`   | ✅  | 字符串             | `Iv23li...`              |
+| `GITHUB_APP_CLIENT_SECRET` | ✅  | 字符串           | `...`                    |
+| `ADMIN_GITHUB_ID`        | ✅  | 纯数字             | `238927366`              |
 | `ADMIN_JWT_SECRET`       | ✅  | 随机 64 位 hex     | `a1b2c3d4...`            |
-| `ADMIN_SUPER_PASSWORD`   | 可选 | scrypt 哈希       | `scrypt$131072$...`      |
-| `ADMIN_SCRYPT_N`         | 可选 | 数字              | `131072`                 |
+| `ADMIN_BREAKGLASS_TOKEN` | 可选 | 高熵随机串（base64url） | `xY...`                  |
 | `ADMIN_ALERT_WEBHOOK`    | 可选 | URL             | `https://hooks.slack.com/...` |
 | `TURNSTILE_SITE_KEY`     | 可选 | 字符串             | `0x4AAAAAAA...`          |
 | `TURNSTILE_SECRET_KEY`   | 可选 | 字符串             | `0x4AAAAAAA...`          |
@@ -422,21 +419,16 @@ git push
 
 ## 7. 常见问题（FAQ）
 
-### Q1. 登录时提示"管理密码错误"，但我输入的密码是对的？
+### Q1. 点「使用 GitHub 登录」没反应 / 提示回调错误？
 
-检查 `ADMIN_PASSWORD` 环境变量：
+检查 GitHub App 与 `ADMIN_GITHUB_ID`：
 
-1. 是否为 **scrypt 哈希**（`scrypt$N$salt$hash`），而不是明文
-2. 本地 `.env.local` 和 Vercel 分别核对
-3. 用户名也要一起对：`ADMIN_USERNAME` 未配置时默认 `admin`，若你改过用户名，登录要用新用户名
+1. `GITHUB_APP_CLIENT_ID` / `GITHUB_APP_CLIENT_SECRET` 是否填对（Client ID 形如 `Iv23li…`，**不是** App ID）
+2. GitHub App 设置页的 **Callback URL** 是否登记了 `https://你的域名/api/admin/auth/github/callback`（本地开发还要额外登记 localhost 那条）
+3. `ADMIN_GITHUB_ID` 是否为当前登录账号的数字 id；不是白名单账号会被拒绝
+4. 线上改过环境变量后是否 **Redeploy** 过
 
-重算命令：
-
-```bash
-node -e "const c=require('crypto');const s=c.randomBytes(16);const h=c.scryptSync('你的密码',s,64,{N:131072,maxmem:268435456});console.log('scrypt$131072$'+s.toString('base64')+'$'+h.toString('base64'))"
-```
-
-> 上面的「旧版 SHA256 哈希」在升级后会被自动迁移：如果 `.env.local` 里仍是旧的 SHA256 hex，**本地开发**下第一次用明文登录成功后会就地转成 scrypt。生产（Vercel）环境文件只读，不会自动迁移，需自己换新值。
+查询自己的 GitHub 数字 id：登录 GitHub 后访问 `https://api.github.com/user`，取 `"id"` 字段。
 
 ### Q2. 登录提示"验证失败"（500 内部错误），服务端日志显示 `GitHub App 私钥未找到`？
 
@@ -478,39 +470,35 @@ node -e "const c=require('crypto');const s=c.randomBytes(16);const h=c.scryptSyn
 
 会话有两个层级：
 
-- **HttpOnly Cookie**（JWT `admin_session`）：由 `ADMIN_JWT_SECRET` 签发，默认 12 小时（勾「记住我」为 7 天）
-- **sessionStorage 标记**：仅存 `admin_verified=true`，关闭标签页即失效
+- **HttpOnly Cookie**（JWT `admin_session`）：由 `ADMIN_JWT_SECRET` 签发，GitHub 登录默认 7 天，应急令牌 12 小时
+- **sessionStorage 标记**：仅存 `admin_verified=true`，关闭标签页即失效；但服务端会话仍在，重开页面会以服务端为准自动恢复
 
 以下情况会让旧 Cookie 立即失效，被迫重新登录：
 
 1. **`ADMIN_JWT_SECRET` 变更**：开发环境未配置时会生成临时密钥，**重启 dev server 后密钥变更**，旧 Cookie 就被判无效。解决方式：在 `.env.local` 中给 `ADMIN_JWT_SECRET` 一个固定值。
-2. **`ADMIN_TOKEN_VER` 变更**：改用户名 / 密码 / JWT 密钥 / 第二密码时会自动 +1，撤销所有旧会话。
-3. **会话被踢下线**：在应急控制台的会话管理里，该会话被删除后其 `sid` 即失效。
+2. **`ADMIN_TOKEN_VER` 变更**：改认证相关密钥时会自动 +1，撤销所有旧会话。
+3. **会话被踢下线**：在「设置 → 会话管理」里，该会话被删除（或同设备再次登录顶掉）后其 `sid` 即失效。
 
-### Q7. 管理密码是否可以多人共用？
+### Q7. 可以让别人也登录后台吗？
 
-可以。`ADMIN_PASSWORD` 是站点级的同一个哈希，知道用户名 + 密码的人都能登录。推荐密码**强度足够长**（12 位以上，字母数字符号混合），并定期更换：
+可以，但方式是**把对方的 GitHub 账号数字 id 加进白名单**——目前后台只认 `ADMIN_GITHUB_ID` 一个账号。若需要多人，需改动代码支持多 id 白名单（当前版本未提供）。
 
-1. 生成新的 `ADMIN_PASSWORD` scrypt 哈希
-2. 更新 Vercel 环境变量
-3. Redeploy 生效；同时 `ADMIN_TOKEN_VER` 会 +1，**所有已登录会话（含你当前这个）都会失效**
+> 换句话说，「登录权限」= 那个 GitHub 账号本身。要收回权限，去 GitHub 侧处理（改密码 / 移除 2FA / 删除账号），或在后台改 `ADMIN_GITHUB_ID`（保存后 `ADMIN_TOKEN_VER` +1，所有旧会话立即失效）。
 
-> 若想让「日常登录」与「控制面操作」用不同密码，可配置 `ADMIN_SUPER_PASSWORD`：主密码只能进日常后台，第二密码才能进应急控制台。
+### Q8. 后台有登录失败锁定 / 频率限制吗？
 
-### Q8. 登录时提示被锁定 / 要求等待若干秒？
+没有。密码认证整条链路（scrypt 哈希、失败锁定、频率限流、IP 封禁）已全部移除，登录安全交给 GitHub（2FA / 通行密钥 / 异常检测）。
 
-服务端内置了防爆破，见 [3.1 登录](#31-登录) 的「防爆破」表。常见触发：
+理由：登录入口只认 GitHub OAuth，攻击者要登录必须先通过 GitHub 认证并命中白名单账号，在自家端点再自研一套防爆破既无必要、又是维护负担。
 
-- 连续输错密码 5 次 → 锁定 30 秒起，每次继续错翻倍，最长 30 分钟
-- 60 秒内密集尝试超过 10 次
+### Q9. 忘记 / 进不去 GitHub，怎么登录后台？
 
-登录页会显示倒计时，等倒计时结束再试即可。**注意：锁定按你的 IP 计算，换 IP 会重新计数。**
+用**应急令牌**（前提是 `.env.local` / Vercel 里配了 `ADMIN_BREAKGLASS_TOKEN`）：
 
-### Q9. 忘记第二密码（应急控制台进不去）怎么办？
+1. 在登录页展开「使用应急令牌」
+2. 粘贴 `ADMIN_BREAKGLASS_TOKEN` 的值 → 提交
 
-`ADMIN_SUPER_PASSWORD` 未配置时，控制面会**降级为主密码二次验证**，此时用主密码在相应操作处验证即可，不会把你锁在外面。
-
-若已配置但忘记了，本地开发可在后台「密钥配置」页重设；线上只能去 Vercel 环境变量更新 `ADMIN_SUPER_PASSWORD` 后 Redeploy。彻底进不去时按 [8. 应急操作](./EMERGENCY_OPS.md) 走平台层流程。
+若从未配置该变量，请在 Vercel 环境变量里加一个（`node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` 生成）后 Redeploy。彻底进不去时按 [8. 应急操作](./EMERGENCY_OPS.md) 走平台层流程。
 
 ### Q10. GitHub App 有两个私钥，用哪个？
 
@@ -531,5 +519,5 @@ node -e "
 
 ***
 
-> 手册版本：v1.1 · 最后同步：2026-10-15
+> 手册版本：v1.2 · 最后同步：2026-10-17
 
