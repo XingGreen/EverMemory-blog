@@ -141,16 +141,21 @@ function handleKeyDown(e: KeyboardEvent) {
 </script>
 
 <div class="verify-wrapper">
+<style>
+.ref-btn { font-size: 14px; padding: 4px 8px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; line-height: 1.4; }
+.ref-btn svg, .ref-btn .icon { width: 16px; height: 16px; }
+</style>
+
 	<div class="verify-card card-base">
 		<!-- 左上角：返回首页（纯文本样式） -->
 		<div class="top-left">
 			<a
-				class="home-link icon-btn md-icon-btn"
+				class="home-link icon-btn ref-btn"
 				href="/"
 				title={i18n(I18nKey.adminHome)}
 				aria-label={i18n(I18nKey.adminHome)}
 			>
-				<Icon icon="material-symbols:arrow-back-rounded" size="md" />
+				<Icon icon="material-symbols:arrow-back-rounded" size="sm" />
 				</a>
 		</div>
 		<!-- 右上角：深浅模式切换（仅图标） -->
