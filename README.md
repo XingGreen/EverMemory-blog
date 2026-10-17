@@ -252,14 +252,35 @@ comment: true    # 是否允许评论
 - [Astro](https://astro.build)
 - [Tailwind CSS](https://tailwindcss.com)
 - [Iconify](https://iconify.design)
+- [Svelte 5](https://svelte.dev/)
+- [pnpm](https://pnpm.io/)
+- [Biome](https://biomejs.dev/)
+- [Vitest](https://vitest.dev/)
+- [Upstash KV](https://upstash.com/) (会话/缓存后端)
+
+## ✨ 已实现功能
+
+- **内容**：文章（加密/密码保护、图钉、分类/标签、草稿）、专栏页（`spec` 集合）、归档、搜索（Pagefind 站内索引）
+- **交互**：评论系统、图片灯箱、目录生成（TOC）、阅读时间估算、Mermaid 图表、PlantUML、KaTeX 公式、GitHub 卡片
+- **后台管理**：GitHub OAuth 登录 + 应急令牌（break-glass）+ 重新认证（step-up）；会话表 + 同设备（UA）去重；文章编辑 + 预览；站点设置
+- **安全**：密码内容加密（scrypt）、登录认证简化（去密码哈希/锁定/IP 封禁）、审计日志、Turnstile 验证
+- **国际化**：zh_CN / zh_TW / ja / ru 多语言支持
+
+## 🛠 维护状态（2026-10）
+
+- **架构**：Astro 7.0.2 + Svelte 5，Node ≥22，pnpm 包管理
+- **测试**：Vitest 175 tests 全部通过（`pnpm test:run`）
+- **构建**：`pnpm build`（图标 → LQIP → Astro → Pagefind 索引）
+- **文档**：设计决策与完整架构说明见 [`CLAUDE.md`](./CLAUDE.md)；管理手册见 [`docs/ADMIN_MANUAL.md`](./docs/ADMIN_MANUAL.md)
+- **最近改动**：认证路径简化为 GitHub OAuth（已完成，见 `git log`）；后台 UI 对齐通用设计模式（参考 `flare-stack-blog` 概念，独立实现）
 
 ## 📝 许可协议
 
 本项目遵循 [MIT license](https://mit-license.org/) 开源协议，详细查看 [LICENSE](./LICENSE) 文件
 
-Fork 自 [CuteLeaf/Firefly](https://github.com/CuteLeaf/Firefly)，感谢作者的贡献
+Fork 自 [CuteLeaf/Firefly](https://github.com/CuteLeaf/Firefly)，在此基础上独立扩展。
 
-**版权声明：**
+**版权声明：**本项目基于 MIT 协议开源，详见 [LICENSE](./LICENSE)。原始作者 [saicaca](https://github.com/saicaca)（[fuwari](https://github.com/saicaca/fuwari)）与 [CuteLeaf](https://github.com/CuteLeaf)（[Firefly](https://github.com/CuteLeaf/Firefly)）的贡献已在代码历史中保留；本仓库的直接上游为 Firefly。
 
 - Copyright (c) 2024 [saicaca](https://github.com/saicaca) - [fuwari](https://github.com/saicaca/fuwari)
 - Copyright (c) 2025 [CuteLeaf](https://github.com/CuteLeaf) - [Firefly](https://github.com/CuteLeaf/Firefly)
