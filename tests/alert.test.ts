@@ -10,7 +10,6 @@ vi.mock("@utils/secret-io", () => ({
 const loadAlert = () => import("@utils/alert");
 
 const sampleInfo = {
-	space: "admin" as const,
 	username: "EverMemory",
 	ip: "203.0.113.7",
 	device: "Chrome on Windows",
@@ -46,7 +45,7 @@ describe("登录带外告警", () => {
 				new Response("", { status: 200 }),
 		);
 		vi.stubGlobal("fetch", fetchSpy);
-		await alert.sendLoginAlert({ ...sampleInfo, space: "super" });
+		await alert.sendLoginAlert(sampleInfo);
 
 		expect(fetchSpy).toHaveBeenCalledTimes(1);
 		const [url, init] = fetchSpy.mock.calls[0];
@@ -54,7 +53,6 @@ describe("登录带外告警", () => {
 		expect(init.method).toBe("POST");
 		const body = JSON.parse(String(init.body));
 		expect(body.event).toBe("admin_login_success");
-		expect(body.space).toBe("super");
 		expect(body.username).toBe("EverMemory");
 		expect(body.ip).toBe("203.0.113.7");
 		expect(body.text).toContain("203.0.113.7");

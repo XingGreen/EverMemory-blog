@@ -15,18 +15,15 @@ interface SessionDTO {
 	isCurrent: boolean;
 }
 
-// 看会话列表不要求 super；踢下线是控制面能力，仅第二空间可用。
-// 主空间会话仍可查看列表，但踢人按钮隐藏并提示走应急控制台。
+// 会话管理：查看在线设备会话并精确踢下线（单管理员下登录会话即控制权）。
 let {
 	onNotify,
-	canKick = false,
 }: {
 	onNotify: (
 		message: string,
 		type: "success" | "error",
 		duration?: number,
 	) => void;
-	canKick?: boolean;
 } = $props();
 
 let sessions = $state<SessionDTO[]>([]);
@@ -162,25 +159,16 @@ onMount(load);
 				<Icon icon="material-symbols:refresh" />
 				<span>{i18n(I18nKey.secretsReload)}</span>
 			</button>
-			{#if canKick}
-				<button
-					class="sec-btn danger"
-					onclick={kickAllOther}
-					disabled={loading || kickingAll || sessions.length <= 1}
-				>
-					<Icon icon="material-symbols:devices-off" />
-					<span>{i18n(I18nKey.sessionsKickAllOther)}</span>
-				</button>
-			{/if}
+			<button
+				class="sec-btn danger"
+				onclick={kickAllOther}
+				disabled={loading || kickingAll || sessions.length <= 1}
+			>
+				<Icon icon="material-symbols:devices-off" />
+				<span>{i18n(I18nKey.sessionsKickAllOther)}</span>
+			</button>
 		</div>
 	</div>
-
-	{#if !canKick}
-		<div class="status-banner">
-			<Icon icon="material-symbols:info-outline" />
-			<span>踢下线仅限应急控制台（第二密码）操作；此处仅可查看会话。</span>
-		</div>
-	{/if}
 
 	{#if loading}
 		<div class="status-banner">
@@ -241,7 +229,7 @@ onMount(load);
 						>
 					</div>
 				</div>
-				{#if canKick && !s.isCurrent}
+				{#if !s.isCurrent}
 					<button
 						class="sec-btn danger sm"
 						onclick={() => kick(s)}

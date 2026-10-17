@@ -1,8 +1,8 @@
 /**
- * 登录成功「带外告警」：把「有谁、在何时、从哪个 IP、以哪个空间登录成功」
+ * 登录成功「带外告警」：把「有谁、在何时、从哪个 IP 登录成功」
  * 推送到站主自配的 Webhook（邮件网关 / Slack / Discord / Telegram 中转等）。
  *
- * 目的：攻击者一旦拿到密码登录成功，站主即使不在后台也能立刻收到通知——
+ * 目的：攻击者一旦登录成功，站主即使不在后台也能立刻收到通知——
  * 这是唯一能「攻击者够不着」的告警通道（走站主自己的第三方接收端，不占本项目 KV）。
  *
  * 通过 `ADMIN_ALERT_WEBHOOK` 配置（平台 env 或本地 `.env.local`）；未配置则静默跳过。
@@ -12,10 +12,7 @@
  */
 import { readSecretValue } from "./secret-io";
 
-export type LoginAlertSpace = "admin" | "super";
-
 export interface LoginAlertInfo {
-	space: LoginAlertSpace;
 	username: string;
 	ip: string;
 	device: string;
@@ -39,9 +36,7 @@ export async function sendLoginAlert(info: LoginAlertInfo): Promise<void> {
 	const url = readSecretValue("ADMIN_ALERT_WEBHOOK");
 	if (!url) return;
 
-	const spaceLabel =
-		info.space === "super" ? "应急控制台(super)" : "主空间(admin)";
-	const message = `[EverMemory] 后台登录成功 · 空间=${spaceLabel} · 用户=${info.username} · IP=${info.ip} · 设备=${info.device} · 时间=${info.time}`;
+	const message = `[EverMemory] 后台登录成功 · 用户=${info.username} · IP=${info.ip} · 设备=${info.device} · 时间=${info.time}`;
 
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), ALERT_TIMEOUT_MS);
@@ -53,7 +48,6 @@ export async function sendLoginAlert(info: LoginAlertInfo): Promise<void> {
 				text: message,
 				content: message,
 				event: "admin_login_success",
-				space: info.space,
 				username: info.username,
 				ip: info.ip,
 				device: info.device,

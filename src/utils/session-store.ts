@@ -1,4 +1,4 @@
-import type { AdminRole, AuthMethod } from "./auth";
+import type { AuthMethod } from "./auth";
 import type { KVStore } from "./persist-store";
 import { getStore } from "./persist-store";
 
@@ -34,10 +34,8 @@ export interface AdminSession {
 	lastSeenAt: number;
 	/** 过期时间戳（ms） */
 	exp: number;
-	/** 是否勾选「记住我」（7 天 / 1 小时） */
+	/** 是否勾选「记住我」（7 天 / 12 小时） */
 	remember: boolean;
-	/** 会话空间：admin（主空间）| super（应急控制台） */
-	role: AdminRole;
 	/** 上次强认证时间戳（ms）：危险操作二次确认据此判定 */
 	authAt: number;
 	/** 本会话的认证方式 */
@@ -83,11 +81,11 @@ export function describeDevice(ua: string): string {
 	return `${browser} · ${os}`;
 }
 
-/** 从请求头解析客户端 IP（与 login-guard 一致，供注册会话使用） */
+/** 从请求头解析客户端 IP（与 client-ip 一致，供注册会话使用） */
 
 /**
  * 注册新会话，返回会话 ID（写入 token 的 sid）。
- * ip 由调用方用 login-guard 的 getClientIp 解析。
+ * ip 由调用方用 client-ip 的 getClientIp 解析。
  */
 export async function registerSession(opts: {
 	username: string;
@@ -95,10 +93,9 @@ export async function registerSession(opts: {
 	ip: string;
 	maxAgeSeconds: number;
 	remember: boolean;
-	role?: AdminRole;
 	/** 上次强认证时间（ms）；缺省即本次登录时间 */
 	authAt?: number;
-	/** 认证方式；缺省视为既有密码登录 */
+	/** 认证方式；缺省视为 GitHub OAuth 登录 */
 	amr?: AuthMethod;
 }): Promise<string> {
 	const sid = crypto.randomUUID();
@@ -113,9 +110,8 @@ export async function registerSession(opts: {
 		lastSeenAt: now,
 		exp: now + opts.maxAgeSeconds * 1000,
 		remember: opts.remember,
-		role: opts.role ?? "admin",
 		authAt: opts.authAt ?? now,
-		amr: opts.amr ?? "password",
+		amr: opts.amr ?? "github",
 	};
 
 	const sessions = await readAll();
@@ -148,25 +144,6 @@ export async function revokeAllExcept(sid: string): Promise<number> {
 		await verifyDeleted(key);
 	}
 	return others.length;
-}
-
-/**
- * 删除指定 IP 的全部会话（封禁某 IP 时连带把它踢下线）；返回被删数量。
- * 空 IP 直接返回 0，避免误删 ip 为空的会话。
- */
-export async function revokeSessionsByIp(ip: string): Promise<number> {
-	if (!ip) return 0;
-	const sessions = await readAll();
-	const targets = Object.keys(sessions).filter(
-		(key) => sessions[key].ip === ip,
-	);
-	if (targets.length === 0) return 0;
-	for (const key of targets) delete sessions[key];
-	await writeAll(sessions, 7 * 24 * 3600);
-	for (const key of targets) {
-		await verifyDeleted(key);
-	}
-	return targets.length;
 }
 
 /** 读取单个会话；不存在（被踢/过期）返回 null */

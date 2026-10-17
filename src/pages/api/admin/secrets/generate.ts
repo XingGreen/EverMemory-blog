@@ -1,5 +1,5 @@
 import { requireAuth } from "@/utils/auth";
-import { generateJwtSecret, hashAdminPassword } from "@/utils/secret-io";
+import { generateJwtSecret } from "@/utils/secret-io";
 
 export const prerender = false;
 
@@ -25,23 +25,6 @@ export async function POST({
 
 		if (type === "jwt") {
 			return json({ success: true, value: generateJwtSecret() }, 200);
-		}
-
-		if (type === "password") {
-			const password = typeof body?.password === "string" ? body.password : "";
-			if (!password) {
-				return json(
-					{ success: false, message: "请输入要生成哈希的明文密码" },
-					400,
-				);
-			}
-			if (password.length > 256) {
-				return json(
-					{ success: false, message: "密码过长（最多 256 字符）" },
-					400,
-				);
-			}
-			return json({ success: true, value: hashAdminPassword(password) }, 200);
 		}
 
 		return json({ success: false, message: "未知的生成类型" }, 400);

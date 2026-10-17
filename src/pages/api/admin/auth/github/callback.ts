@@ -102,17 +102,10 @@ export const GET: APIRoute = async ({ request }) => {
 		ip,
 		maxAgeSeconds: maxAge,
 		remember: true,
-		role: "admin",
 		amr: "github",
 	});
 	const nowSeconds = Math.floor(Date.now() / 1000);
-	const sessionToken = generateSessionToken(
-		maxAge,
-		sid,
-		"admin",
-		nowSeconds,
-		"github",
-	);
+	const sessionToken = generateSessionToken(maxAge, sid, nowSeconds, "github");
 
 	const headers = new Headers();
 	setAuthCookie(sessionToken, headers, maxAge);

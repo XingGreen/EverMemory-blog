@@ -3,11 +3,7 @@ import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
-import {
-	type AdminSecretItem,
-	requiresPasswordToSave,
-	SECRET_GROUPS,
-} from "@/utils/admin-secrets";
+import { type AdminSecretItem, SECRET_GROUPS } from "@/utils/admin-secrets";
 
 type SecretItemDTO = AdminSecretItem & {
 	configured: boolean;
@@ -36,15 +32,9 @@ let drafts = $state<Record<string, string>>({});
 let toDelete = $state<Record<string, boolean>>({});
 // 密码类输入框的显隐切换
 let showInput = $state<Record<string, boolean>>({});
-// 生成工具：明文密码
-let plainPassword = $state("");
 // 导出弹窗
 let exportOpen = $state(false);
 let exportBusy = $state(false);
-// 修改认证信息前的当前密码确认
-let authConfirmOpen = $state(false);
-let currentPassword = $state("");
-let pendingEntries: { key: string; value?: string; delete?: boolean }[] = [];
 
 const groups = $derived(
 	SECRET_GROUPS.map((g) => ({
@@ -123,37 +113,33 @@ async function save() {
 		onNotify("没有需要保存的修改", "error", 5000);
 		return;
 	}
-	// 涉及管理员认证（用户名/密码/JWT）或破坏性密钥（GitHub 私钥）：先验证当前登录密码
-	const touchesAuth = entries.some((entry) =>
-		requiresPasswordToSave(entry.key),
-	);
-	if (touchesAuth) {
-		pendingEntries = entries;
-		currentPassword = "";
-		authConfirmOpen = true;
-		return;
-	}
-	await doSave(entries, "");
+	await doSave(entries);
 }
 
 async function doSave(
 	entries: { key: string; value?: string; delete?: boolean }[],
-	password: string,
 ) {
 	saving = true;
 	try {
 		const res = await fetch("/api/admin/secrets/", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ entries, currentPassword: password }),
+			body: JSON.stringify({ entries }),
 		});
 		const data = await res.json();
-		if (data.success) {
+		if (res.ok && data.success) {
 			onNotify(data.message || "保存成功", "success", 10000);
 			await load();
-		} else {
-			onNotify(data.message || "保存失败", "error", 10000);
+			return;
 		}
+		// 危险操作需「新鲜」登录态：跳 GitHub OAuth 重新授权（prompt=login）
+		if (res.status === 403 && data.code === "STEP_UP_REQUIRED") {
+			onNotify("身份凭证已过期，正在跳转重新验证…", "error", 6000);
+			const next = encodeURIComponent(location.pathname);
+			window.location.href = `/api/admin/auth/github/?force=1&next=${next}`;
+			return;
+		}
+		onNotify(data.message || "保存失败", "error", 10000);
 	} catch (err) {
 		onNotify(
 			`保存请求失败: ${err instanceof Error ? err.message : String(err)}`,
@@ -162,22 +148,7 @@ async function doSave(
 		);
 	} finally {
 		saving = false;
-		authConfirmOpen = false;
-		currentPassword = "";
-		pendingEntries = [];
 	}
-}
-
-function confirmAuthSave() {
-	if (!currentPassword.trim()) {
-		onNotify(
-			`${i18n(I18nKey.secretsAuthConfirmPlaceholder)}不能为空`,
-			"error",
-			5000,
-		);
-		return;
-	}
-	doSave(pendingEntries, currentPassword);
 }
 
 function timestampForFilename(): string {
@@ -252,33 +223,6 @@ async function generateJwt() {
 			drafts.ADMIN_JWT_SECRET = data.value;
 			toDelete.ADMIN_JWT_SECRET = false;
 			onNotify(i18n(I18nKey.secretsGenerateJwtDone), "success", 8000);
-		} else {
-			onNotify(data.message || "生成失败", "error", 8000);
-		}
-	} catch (err) {
-		onNotify(
-			`生成请求失败: ${err instanceof Error ? err.message : String(err)}`,
-			"error",
-			8000,
-		);
-	}
-}
-
-async function generateHash() {
-	const password = plainPassword.trim();
-	if (!password) return;
-	try {
-		const res = await fetch("/api/admin/secrets/generate/", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ type: "password", password }),
-		});
-		const data = await res.json();
-		if (data.success) {
-			drafts.ADMIN_PASSWORD = data.value;
-			toDelete.ADMIN_PASSWORD = false;
-			plainPassword = "";
-			onNotify(i18n(I18nKey.secretsGenerateHashDone), "success", 8000);
 		} else {
 			onNotify(data.message || "生成失败", "error", 8000);
 		}
@@ -532,26 +476,6 @@ onMount(load);
 						<span>{i18n(I18nKey.secretsGenerateJwt)}</span>
 					</button>
 				</div>
-				<div class="generator-row">
-					<span class="gen-label">{i18n(I18nKey.secretsPasswordInput)}</span>
-					<div class="input-wrap gen-password">
-						<input
-							class="secret-input"
-							type="password"
-							bind:value={plainPassword}
-							placeholder={i18n(I18nKey.secretsPasswordPlaceholder)}
-							autocomplete="off"
-						/>
-					</div>
-					<button
-						class="sec-btn"
-						onclick={generateHash}
-						disabled={saving || !plainPassword.trim()}
-					>
-						<Icon icon="material-symbols:shield-lock" />
-						<span>{i18n(I18nKey.secretsGenerateHash)}</span>
-					</button>
-				</div>
 			</section>
 		{/if}
 	{/if}
@@ -606,74 +530,6 @@ onMount(load);
 					>
 						<Icon icon="material-symbols:terminal-rounded" />
 						<span>{i18n(I18nKey.secretsExportCopyVercel)}</span>
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-
-	{#if authConfirmOpen}
-		<div
-			class="modal-overlay"
-			role="dialog"
-			aria-modal="true"
-			aria-label={i18n(I18nKey.secretsAuthConfirmTitle)}
-			tabindex="-1"
-			onclick={(e) => {
-				if (e.target === e.currentTarget && !saving) authConfirmOpen = false;
-			}}
-			onkeydown={(e) => {
-				if (e.key === "Escape" && !saving) authConfirmOpen = false;
-			}}
-		>
-			<div class="modal-card card-base">
-				<div class="modal-head">
-					<h3>
-						<Icon icon="material-symbols:shield-lock" class="modal-head-icon" />
-						<span>{i18n(I18nKey.secretsAuthConfirmTitle)}</span>
-					</h3>
-					<button
-						class="modal-close"
-						type="button"
-						aria-label={i18n(I18nKey.secretsClose)}
-						onclick={() => !saving && (authConfirmOpen = false)}
-					>
-						<Icon icon="material-symbols:close" />
-					</button>
-				</div>
-				<p class="modal-desc">{i18n(I18nKey.secretsAuthConfirmDesc)}</p>
-				<div class="modal-field">
-					<input
-						type="password"
-						class="secret-input"
-						value={currentPassword}
-						placeholder={i18n(I18nKey.secretsAuthConfirmPlaceholder)}
-						autocomplete="current-password"
-						oninput={(e) => (currentPassword = e.currentTarget.value)}
-						onkeydown={(e) => {
-							if (e.key === "Enter") confirmAuthSave();
-						}}
-					/>
-				</div>
-				<div class="modal-actions">
-					<button
-						class="sec-btn modal-cancel"
-						onclick={() => (authConfirmOpen = false)}
-						disabled={saving}
-					>
-						{i18n(I18nKey.secretsCancel)}
-					</button>
-					<button
-						class="sec-btn primary"
-						onclick={confirmAuthSave}
-						disabled={saving}
-					>
-						<Icon icon="material-symbols:shield-lock" />
-						<span
-							>{saving
-								? i18n(I18nKey.secretsSaving)
-								: i18n(I18nKey.secretsAuthConfirmSubmit)}</span
-						>
 					</button>
 				</div>
 			</div>
