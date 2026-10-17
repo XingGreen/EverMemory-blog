@@ -145,19 +145,18 @@ function handleKeyDown(e: KeyboardEvent) {
 		<!-- 左上角：返回首页（纯文本样式） -->
 		<div class="top-left">
 			<a
-				class="home-link"
+				class="home-link icon-btn"
 				href="/"
 				title={i18n(I18nKey.adminHome)}
 				aria-label={i18n(I18nKey.adminHome)}
 			>
 				<Icon icon="material-symbols:home-outline-rounded" size="sm" />
-				<span>{i18n(I18nKey.adminHome)}</span>
-			</a>
+				</a>
 		</div>
 		<!-- 右上角：深浅模式切换（仅图标） -->
 		<div class="top-right">
 			<button
-				class="theme-toggle"
+				class="theme-toggle icon-btn"
 				type="button"
 				title={isDark ? i18n(I18nKey.lightMode) : i18n(I18nKey.darkMode)}
 				aria-label={isDark ? i18n(I18nKey.lightMode) : i18n(I18nKey.darkMode)}
