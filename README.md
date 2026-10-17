@@ -267,6 +267,8 @@ Fork 自 [CuteLeaf/Firefly](https://github.com/CuteLeaf/Firefly)，感谢作者�
 
 根据 MIT 开源协议，你可以自由使用、修改、分发代码，但需保留上述版权声明。
 
+本项目的后台界面设计灵感来源于 [flare-stack-blog](https://github.com/du2333/flare-stack-blog)（GPL-3.0-only），该项目采用 GPL 协议。本项目为完全独立实现，未复制其源代码。
+
 ## ⭐ Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=XingGreen/EverMemory-blog\&type=Date)](https://star-history.com/#XingGreen/EverMemory-blog\&Date)
