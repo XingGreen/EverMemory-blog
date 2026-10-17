@@ -39,6 +39,10 @@ const baseOpts = {
 	remember: false,
 };
 
+/** 为每个逻辑设备生成不同 UA，避免被「同设备去重」合并为一条 */
+const uaOf = (id: string) =>
+	`Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0.0.${id}`;
+
 beforeEach(() => {
 	for (const key of Object.keys(store.dump())) {
 		void store.del(key);
@@ -100,12 +104,12 @@ describe("registerSession", () => {
 	});
 
 	it("顺带清理已过期会话，避免表无限膨胀", async () => {
-		const keep = await registerSession(baseOpts);
+		const keep = await registerSession({ ...baseOpts, ua: uaOf("keep") });
 
 		// 先正常注册，再把exp 改到过去——这样下一次注册时的清理逻辑
 		// 才会遇到它。不能直接用 maxAgeSeconds: -1 注册：那会让该记录
 		// 在「清理之后」才写入，测试不到清理分支。
-		const stale = await registerSession(baseOpts);
+		const stale = await registerSession({ ...baseOpts, ua: uaOf("stale") });
 		const table = store.dump()[SESSIONS_KEY] as Record<
 			string,
 			{ exp: number }
@@ -114,7 +118,7 @@ describe("registerSession", () => {
 		await store.set(SESSIONS_KEY, table);
 
 		// 下一次注册触发清理
-		await registerSession(baseOpts);
+		await registerSession({ ...baseOpts, ua: uaOf("next") });
 
 		const remaining = Object.keys(rawTable());
 		expect(remaining).toContain(keep);
@@ -141,6 +145,24 @@ describe("registerSession", () => {
 		const past = Date.now() - 10_000;
 		const sid2 = await registerSession({ ...baseOpts, authAt: past });
 		expect((await getSession(sid2))?.authAt).toBe(past);
+	});
+});
+
+describe("同设备去重", () => {
+	it("同一 UA 再次登录会替换旧会话，表内只留最新一条", async () => {
+		const first = await registerSession(baseOpts);
+		const second = await registerSession(baseOpts);
+
+		expect(await getSession(first)).toBeNull();
+		expect(await getSession(second)).not.toBeNull();
+		expect(Object.keys(rawTable())).toEqual([second]);
+	});
+
+	it("不同 UA 的会话并存", async () => {
+		const a = await registerSession({ ...baseOpts, ua: uaOf("a") });
+		const b = await registerSession({ ...baseOpts, ua: uaOf("b") });
+
+		expect(Object.keys(rawTable()).sort()).toEqual([a, b].sort());
 	});
 });
 
@@ -201,9 +223,9 @@ describe("revokeSession", () => {
 
 describe("revokeAllExcept", () => {
 	it("保留指定 sid 并返回被删数量", async () => {
-		const keep = await registerSession(baseOpts);
-		const a = await registerSession(baseOpts);
-		const b = await registerSession(baseOpts);
+		const keep = await registerSession({ ...baseOpts, ua: uaOf("keep") });
+		const a = await registerSession({ ...baseOpts, ua: uaOf("a") });
+		const b = await registerSession({ ...baseOpts, ua: uaOf("b") });
 
 		expect(await revokeAllExcept(keep)).toBe(2);
 		expect(await getSession(keep)).not.toBeNull();
@@ -272,9 +294,9 @@ describe("listSessions", () => {
 	it("按登录时间倒序排列", async () => {
 		vi.useFakeTimers();
 		try {
-			const first = await registerSession(baseOpts);
+			const first = await registerSession({ ...baseOpts, ua: uaOf("first") });
 			vi.advanceTimersByTime(1000);
-			const second = await registerSession(baseOpts);
+			const second = await registerSession({ ...baseOpts, ua: uaOf("second") });
 
 			const list = await listSessions();
 			expect(list.map((s) => s.sid)).toEqual([second, first]);
@@ -284,8 +306,8 @@ describe("listSessions", () => {
 	});
 
 	it("过滤过期项并把清理结果落盘", async () => {
-		const alive = await registerSession(baseOpts);
-		const stale = await registerSession(baseOpts);
+		const alive = await registerSession({ ...baseOpts, ua: uaOf("alive") });
+		const stale = await registerSession({ ...baseOpts, ua: uaOf("stale") });
 
 		// 同样先注册再改 exp，确保过期记录已进入表内（listSessions 的清理对象）
 		const table = store.dump()[SESSIONS_KEY] as Record<string, { exp: number }>;
@@ -343,8 +365,8 @@ describe("删除竞态防护（verifyDeleted）", () => {
 	});
 
 	it("无并发写入时 verifyDeleted 不会误删其他会话", async () => {
-		const target = await registerSession(baseOpts);
-		const other = await registerSession(baseOpts);
+		const target = await registerSession({ ...baseOpts, ua: uaOf("target") });
+		const other = await registerSession({ ...baseOpts, ua: uaOf("other") });
 
 		await revokeSession(target);
 
