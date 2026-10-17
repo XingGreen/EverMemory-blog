@@ -142,18 +142,22 @@ function handleKeyDown(e: KeyboardEvent) {
 
 <div class="verify-wrapper">
 	<div class="verify-card card-base">
-		<!-- 右上角：返回首页 + 深浅模式切换 -->
-		<div class="top-actions">
+		<!-- 左上角：返回首页（纯文本样式） -->
+		<div class="top-left">
 			<a
-				class="action-btn"
+				class="home-link"
 				href="/"
 				title={i18n(I18nKey.adminHome)}
 				aria-label={i18n(I18nKey.adminHome)}
 			>
-				<Icon icon="material-symbols:home-outline-rounded" size="md" />
+				<Icon icon="material-symbols:home-outline-rounded" size="sm" />
+				<span>{i18n(I18nKey.adminHome)}</span>
 			</a>
+		</div>
+		<!-- 右上角：深浅模式切换（仅图标） -->
+		<div class="top-right">
 			<button
-				class="action-btn"
+				class="theme-toggle"
 				type="button"
 				title={isDark ? i18n(I18nKey.lightMode) : i18n(I18nKey.darkMode)}
 				aria-label={isDark ? i18n(I18nKey.lightMode) : i18n(I18nKey.darkMode)}
@@ -279,34 +283,53 @@ function handleKeyDown(e: KeyboardEvent) {
 		border-radius: var(--radius-large);
 	}
 
-	/* ── 右上角操作按钮：返回首页 + 深浅切换 ── */
-	.top-actions {
+	/* ── 卡片顶角定位 ── */
+	.top-left {
+		position: absolute;
+		top: 0.75rem;
+		left: 0.75rem;
+	}
+
+	.top-right {
 		position: absolute;
 		top: 0.75rem;
 		right: 0.75rem;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
 	}
 
-	.action-btn {
+	.home-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.25rem 0.5rem;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+		text-decoration: none;
+		border-radius: var(--radius-sm);
+		transition: color 0.2s, background-color 0.2s;
+	}
+
+	.home-link:hover {
+		color: var(--primary);
+		background-color: color-mix(in srgb, var(--primary) 8%, transparent);
+	}
+
+	.theme-toggle {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 2.25rem;
-		height: 2.25rem;
-		border: 1px solid var(--line-divider);
-		border-radius: 50%;
-		background: var(--btn-regular-bg);
+		width: 2rem;
+		height: 2rem;
+		border: none;
+		background: transparent;
 		color: var(--content-meta);
 		cursor: pointer;
-		text-decoration: none;
-		transition: all 0.2s;
+		border-radius: var(--radius-md);
+		transition: color 0.2s, background-color 0.2s;
 	}
 
-	.action-btn:hover {
+	.theme-toggle:hover {
 		color: var(--primary);
-		border-color: var(--primary);
+		background-color: color-mix(in srgb, var(--primary) 8%, transparent);
 	}
 
 	.verify-header {
