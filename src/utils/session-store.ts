@@ -115,9 +115,12 @@ export async function registerSession(opts: {
 	};
 
 	const sessions = await readAll();
-	// 顺带清理已过期会话，避免表无限膨胀
+	// 顺带清理已过期会话，避免表无限膨胀；
+	// 同设备（同 UA）只保留最新一次登录，避免反复登录在同一设备堆积会话。
 	for (const key of Object.keys(sessions)) {
-		if (sessions[key].exp <= now) delete sessions[key];
+		if (sessions[key].exp <= now || sessions[key].ua === opts.ua) {
+			delete sessions[key];
+		}
 	}
 	sessions[sid] = record;
 	await writeAll(sessions, 7 * 24 * 3600);
