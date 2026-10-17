@@ -6,7 +6,7 @@
  *  - .env.local 中没有的键回退到平台/运行时环境变量（Vercel 等：process.env，本地 dev：import.meta.env）
  *
  * 注意：.env.local 写入后，当前进程的 import.meta.env 仍是启动时的旧快照；
- * 真正的生效（如登录密码、GitHub 同步）需要重启服务，API 会对此作出提示。
+ * 真正的生效（如 GitHub 同步）需要重启服务，API 会对此作出提示。
  */
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -20,7 +20,7 @@ function envFilePath(): string {
 	return path.resolve(process.cwd(), ENV_FILE_NAME);
 }
 
-/** 生产构建（Vercel / Cloudflare Workers 等）文件系统只读 */
+/** 生产构建（Vercel 等）文件系统只读 */
 export function isEnvFileWritable(): boolean {
 	return !import.meta.env?.PROD;
 }
@@ -85,7 +85,7 @@ export function readSecretPreview(key: string): string {
 /**
  * 读取单个密钥的真实值，不区分敏感性。
  *
- * 仅供服务端内部判定使用（例如 Turnstile 是否已启用）。调用方不得把
+ * 仅供服务端内部判定使用（例如 Turnstile / 应急令牌是否已配置）。调用方不得把
  * sensitive 字段的值回传给浏览器——面向前端的回显请走 readSecretPreview，
  * 它只用于非敏感项。
  */
@@ -169,98 +169,6 @@ export function generateJwtSecret(): string {
 	return crypto.randomBytes(32).toString("hex");
 }
 
-/**
- * scrypt 目标成本参数 N（迭代次数）。
- * 默认 2^17，与 OWASP 推荐的 N=2^17 / r=8 / p=1 对齐；原先的 16384(2^14)
- * 是 OWASP 的最低档，拿到哈希后可被离线爆破，成本偏低故上调。
- *
- * 注意内存占用 ≈ 128 × N × r = 1024 × N 字节：
- *   N=2^14 → 16MB，N=2^15 → 32MB，N=2^17 → 128MB。
- * Node 默认 maxmem 只有 32MB，超过就必须显式传 maxmem（见 SCRYPT_MAXMEM）；
- * Cloudflare Workers 内存硬上限 128MB，跑 2^17 会直接 OOM，
- * 故提供 ADMIN_SCRYPT_N 环境变量按部署环境下调。
- */
-const SCRYPT_N = 131072;
-
-/** scrypt maxmem（字节）：需 ≥ 128 × N × r + 128 × r × p + 256 × r，2^17 时约 128MB */
-const SCRYPT_MAXMEM = 256 * 1024 * 1024;
-
-/**
- * 生成管理员密码哈希：scrypt 加盐哈希，格式 `scrypt$N$salt$hash`
- * （salt 16 字节随机，hash 64 字节；均 base64）。
- * 取代早先的裸 SHA256：防彩虹表/高速破解。
- */
-export function hashAdminPassword(plain: string): string {
-	const N = targetScryptN();
-	const salt = crypto.randomBytes(16);
-	const hash = crypto.scryptSync(plain, salt, 64, { N, maxmem: SCRYPT_MAXMEM });
-	return `scrypt$${N}$${salt.toString("base64")}$${hash.toString("base64")}`;
-}
-
-/** 当前应当使用的目标 N：ADMIN_SCRYPT_N 可覆盖（供低内存环境下调） */
-function targetScryptN(): number {
-	const override = Number(readEnvValue("ADMIN_SCRYPT_N"));
-	if (Number.isFinite(override) && override >= 1024) return override;
-	return SCRYPT_N;
-}
-
-/** 是否为 scrypt 哈希格式（否则视为旧版 SHA256 hex） */
-export function isScryptHash(stored: string): boolean {
-	return typeof stored === "string" && stored.startsWith("scrypt$");
-}
-
-/**
- * 读取已存哈希使用的 N；非 scrypt 格式返回 0（调用方据此判定需迁移）。
- * scrypt$N$salt$hash 或兼容省略 N 的 scrypt$salt$hash。
- */
-export function scryptCostFactor(stored: string): number {
-	if (!isScryptHash(stored)) return 0;
-	const parts = stored.split("$");
-	const hasN = parts.length === 4 && /^\d+$/.test(parts[1]);
-	return hasN ? Number(parts[1]) : 16384;
-}
-
-/** 已存哈希是否需要在下次验证成功后重算升级（非 scrypt 格式，或成本参数低于当前目标） */
-export function shouldRehash(stored: string): boolean {
-	const n = scryptCostFactor(stored);
-	return n === 0 || n < targetScryptN();
-}
-
-/**
- * 校验明文密码是否匹配存储哈希（scrypt 或旧版 SHA256 hex）。
- * 使用 timingSafeEqual 防止时序攻击；格式/参数异常一律返回 false。
- */
-export function verifyPasswordHash(plain: string, stored: string): boolean {
-	try {
-		if (!plain || !stored) return false;
-		if (isScryptHash(stored)) {
-			const parts = stored.split("$");
-			// scrypt$N$salt$hash 或兼容省略 N 的 scrypt$salt$hash
-			const hasN = parts.length === 4 && /^\d+$/.test(parts[1]);
-			const salt = Buffer.from(hasN ? parts[2] : (parts[1] ?? ""), "base64");
-			const hash = Buffer.from(hasN ? parts[3] : (parts[2] ?? ""), "base64");
-			// 一律按哈希里记录的 N 校验，旧哈希因此不受升级影响；
-			// maxmem 必须给足，否则 N 偏大的旧哈希会因超限直接失败
-			const N = hasN ? Number(parts[1]) : 16384;
-			if (salt.length === 0 || hash.length === 0) return false;
-			const computed = crypto.scryptSync(plain, salt, 64, { N, maxmem: SCRYPT_MAXMEM });
-			if (computed.length !== hash.length) return false;
-			return crypto.timingSafeEqual(computed, hash);
-		}
-		// 旧格式：SHA256 的 hex 串
-		const inputHash = crypto
-			.createHash("sha256")
-			.update(plain, "utf8")
-			.digest("hex");
-		const inputBuf = Buffer.from(inputHash, "hex");
-		const storedBuf = Buffer.from(stored, "hex");
-		if (inputBuf.length !== storedBuf.length) return false;
-		return crypto.timingSafeEqual(inputBuf, storedBuf);
-	} catch {
-		return false;
-	}
-}
-
 /** 读取全部密钥的真实值（仅服务端导出场景使用；敏感值请谨慎处理） */
 export function readAllSecretValues(): Record<string, string> {
 	const values: Record<string, string> = {};
@@ -286,22 +194,6 @@ export function decodePrivateKey(value: string): string {
 		// 非 Base64（或解码失败）时保持原文
 	}
 	return value;
-}
-
-/**
- * 校验"当前登录密码"：对比 .env.local 中当前生效的 ADMIN_PASSWORD 哈希
- * （文件优先实时读取，避免 import.meta.env 启动快照导致的误判）。
- * 用于修改认证信息（用户名 / 密码 / JWT 密钥）时的二次确认，防 CSRF/会话劫持。
- */
-export function verifyCurrentPassword(plain: string): boolean {
-	try {
-		if (!plain) return false;
-		const storedHash = readEnvValue("ADMIN_PASSWORD");
-		if (!storedHash) return false;
-		return verifyPasswordHash(plain, storedHash);
-	} catch {
-		return false;
-	}
 }
 
 /**

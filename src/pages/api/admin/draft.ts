@@ -1,5 +1,6 @@
+import { writeAuditLog } from "@/utils/audit-log";
 import { requireAuth } from "@/utils/auth";
-import { getClientIp, writeAuditLog } from "@/utils/login-guard";
+import { getClientIp } from "@/utils/client-ip";
 import { getStore } from "@/utils/persist-store";
 
 export const prerender = false;

@@ -1,16 +1,7 @@
 import crypto from "node:crypto";
 
 import { getEnv } from "./env";
-import {
-	applyEnvFileUpdates,
-	hashAdminPassword,
-	isEnvFileWritable,
-	readSecretPreview,
-	readSecretValue,
-	scryptCostFactor,
-	shouldRehash,
-	verifyPasswordHash,
-} from "./secret-io";
+import { readSecretPreview, readSecretValue } from "./secret-io";
 import { getSession, touchSession } from "./session-store";
 
 const JWT_EXPIRY_HOURS = 12;
@@ -20,28 +11,17 @@ export const SESSION_MAX_AGE = JWT_EXPIRY_HOURS * 3600; // 12 小时（未勾选
 export const REMEMBER_MAX_AGE = 7 * 24 * 3600; // 7 天（勾选"记住我"）
 
 /**
- * 后台会话角色：
- * - admin：主空间，日常后台全部功能；
- * - super：第二空间（应急控制台），主空间能力 + 控制面（踢会话 / 封禁 / 改运行时配置）。
- */
-export type AdminRole = "admin" | "super";
-
-/**
  * 本次会话的认证方式（authentication method reference）：
  * - github：GitHub OAuth（主登录）
  * - breakglass：应急令牌（GitHub 不可用时的备用登录）
- * - password：既有用户名/密码（迁移期保留，后续移除）
  */
-export type AuthMethod = "github" | "breakglass" | "password";
+export type AuthMethod = "github" | "breakglass";
 
 /**
  * 危险操作「二次确认」的有效期：距上次强认证（authAt）超过该秒数即要求重新认证。
- * 见 requireFreshAuth。
+ * 见 hasFreshAuth。
  */
 export const STEP_UP_WINDOW_SECONDS = 5 * 60;
-
-/** 应急控制台会话时长：1 小时，且不提供「记住我」（设计决策 Q8） */
-export const SUPER_SESSION_MAX_AGE = 3600;
 
 /** 会话撤销版本号所存储的环境变量键；修改认证信息时 +1，旧会话立即失效 */
 const TOKEN_VER_KEY = "ADMIN_TOKEN_VER";
@@ -50,7 +30,7 @@ let cachedSecret: string | null = null;
 
 /**
  * 当前会话令牌版本号：读取 .env.local 的 ADMIN_TOKEN_VER（文件优先实时，
- * 保证改密/改钥后同进程内旧令牌立即失效）；未配置视为 0。
+ * 保证改钥后同进程内旧令牌立即失效）；未配置视为 0。
  */
 function getTokenVersion(): string {
 	try {
@@ -92,7 +72,6 @@ function getJwtSecret(): string {
 
 interface JwtPayload {
 	sub: string;
-	role: AdminRole;
 	/** 会话撤销版本号：与 .env.local 的 ADMIN_TOKEN_VER 一致才有效 */
 	ver: string;
 	/** 会话 ID：对应服务端会话表中的记录（被踢下线后此 ID 失效） */
@@ -113,14 +92,12 @@ interface JwtPayload {
 export function generateSessionToken(
 	maxAgeSeconds = SESSION_MAX_AGE,
 	sid?: string,
-	role: AdminRole = "admin",
 	authAt?: number,
-	amr: AuthMethod = "password",
+	amr: AuthMethod = "github",
 ): string {
 	const now = Math.floor(Date.now() / 1000);
 	const payload: JwtPayload = {
 		sub: crypto.randomUUID(),
-		role,
 		ver: getTokenVersion(),
 		sid: sid || crypto.randomUUID(),
 		authAt: authAt ?? now,
@@ -189,11 +166,7 @@ export async function verifySessionToken(
 			return null;
 		}
 
-		if (payload.role !== "admin" && payload.role !== "super") {
-			return null;
-		}
-
-		// 撤销广播：令牌签发时的版本号必须与当前一致（改密/改钥后旧会话立即失效）
+		// 撤销广播：令牌签发时的版本号必须与当前一致（改钥后旧会话立即失效）
 		if (payload.ver !== getTokenVersion()) {
 			return null;
 		}
@@ -264,33 +237,56 @@ export async function requireAuth(request: Request): Promise<{
 }
 
 /**
- * 控制面专用授权：要求已登录且处于 super 空间（应急控制台）。
- * 主空间（admin）会话访问控制面一律 403——踢人权只在第二空间，
- * 攻击者即使拿到主会话也无法夺走控制权。
+ * 危险操作的「二次确认」：距上次强认证是否足够新鲜。
+ * 登录（含 GitHub OAuth）后 5 分钟内视为新鲜；超时则要求重新认证。
  */
-export async function requireSuperAuth(request: Request): Promise<{
-	authenticated: boolean;
-	payload?: JwtPayload;
-	response?: Response;
-}> {
-	const auth = await requireAuth(request);
-	if (!auth.authenticated) return auth;
+export function hasFreshAuth(payload: JwtPayload | undefined): boolean {
+	if (!payload) return false;
+	const now = Math.floor(Date.now() / 1000);
+	return now - payload.authAt <= STEP_UP_WINDOW_SECONDS;
+}
 
-	if (auth.payload?.role !== "super") {
-		return {
-			authenticated: false,
-			payload: auth.payload,
-			response: new Response(
-				JSON.stringify({
-					success: false,
-					message: "该操作仅限应急控制台，请改用第二密码进入",
-				}),
-				{ status: 403, headers: { "Content-Type": "application/json" } },
-			),
-		};
+/** 危险操作需要重新认证时返回的标准 403（前端据此触发重新登录） */
+export function stepUpRequiredResponse(): Response {
+	return new Response(
+		JSON.stringify({
+			success: false,
+			code: "STEP_UP_REQUIRED",
+			message: "该操作需要重新验证身份，请重新登录后再试",
+		}),
+		{ status: 403, headers: { "Content-Type": "application/json" } },
+	);
+}
+
+/**
+ * 校验应急令牌（break-glass）：对比 ADMIN_BREAKGLASS_TOKEN。
+ * 使用 timingSafeEqual 防时序攻击；未配置时一律返回 false（备用入口关闭）。
+ */
+export function verifyBreakglassToken(input: string): boolean {
+	try {
+		if (!input) return false;
+		const expected = readSecretValue("ADMIN_BREAKGLASS_TOKEN");
+		if (!expected) return false;
+		const a = Buffer.from(input);
+		const b = Buffer.from(expected);
+		if (a.length !== b.length) return false;
+		return crypto.timingSafeEqual(a, b);
+	} catch (error) {
+		console.error(
+			"[Auth] 应急令牌校验异常:",
+			error instanceof Error ? error.message : error,
+		);
+		return false;
 	}
+}
 
-	return auth;
+/** 应急令牌是否已配置（未配置则登录页不展示备用入口） */
+export function isBreakglassConfigured(): boolean {
+	try {
+		return readSecretValue("ADMIN_BREAKGLASS_TOKEN") !== "";
+	} catch {
+		return false;
+	}
 }
 
 export function setAuthCookie(
@@ -309,129 +305,4 @@ export function clearAuthCookie(headers: Headers): void {
 		"Set-Cookie",
 		"admin_session=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT",
 	);
-}
-
-/**
- * 验证管理员密码
- * 环境变量 ADMIN_PASSWORD 存储 scrypt 哈希（scrypt$N$salt$hash）；
- * 兼容旧版 SHA256 hex。使用 timingSafeEqual 防止时序攻击。
- * 旧版 SHA256 验证通过后会自动迁移为 scrypt 并写回 .env.local。
- */
-export function verifyAdminPassword(password: string): boolean {
-	try {
-		if (!password) return false;
-
-		const storedHash = readSecretPreview("ADMIN_PASSWORD");
-		if (!storedHash) {
-			console.error("[Auth] ADMIN_PASSWORD 环境变量未配置，无法验证管理员密码");
-			return false;
-		}
-
-		const ok = verifyPasswordHash(password, storedHash);
-		if (!ok) return false;
-
-		// 自动迁移：旧 SHA256 哈希 → scrypt；或 scrypt 成本参数偏低 → 当前目标 N
-		// （重启后完全生效；文件不可写时保持原样，不影响本次验证）
-		if (shouldRehash(storedHash) && isEnvFileWritable()) {
-			try {
-				const upgraded = hashAdminPassword(password);
-				applyEnvFileUpdates([{ key: "ADMIN_PASSWORD", value: upgraded }]);
-				console.log(
-					`[Auth] ADMIN_PASSWORD 已验证并自动升级为 scrypt$${scryptCostFactor(upgraded)} 哈希（重启后完全生效）`,
-				);
-			} catch {
-				// 文件系统不可写：保持旧格式，不影响本次验证
-			}
-		}
-
-		return true;
-	} catch (error) {
-		console.error(
-			"[Auth] 管理员密码验证异常:",
-			error instanceof Error ? error.message : error,
-		);
-		return false;
-	}
-}
-
-/**
- * 第二密码（应急控制台）是否已配置。
- * 未配置时登录降级为主空间，控制面改为主密码二次验证（设计决策 Q6）。
- */
-export function isSuperPasswordConfigured(): boolean {
-	try {
-		return readSecretValue("ADMIN_SUPER_PASSWORD") !== "";
-	} catch {
-		return false;
-	}
-}
-
-/**
- * 验证「第二密码」（应急控制台）。
- * 独立于主密码：值取自 .env.local / 平台 env（本地可经后台「密钥配置」页写入，生产只读），
- * 不做自动迁移。未配置时一律返回 false。
- */
-export function verifySuperPassword(password: string): boolean {
-	try {
-		if (!password) return false;
-		const storedHash = readSecretValue("ADMIN_SUPER_PASSWORD");
-		if (!storedHash) return false;
-		return verifyPasswordHash(password, storedHash);
-	} catch (error) {
-		console.error(
-			"[Auth] 第二密码验证异常:",
-			error instanceof Error ? error.message : error,
-		);
-		return false;
-	}
-}
-
-/**
- * 登录成功后应进入的空间（设计决策见计划 §P0）。
- *
- * 规则是「主密码优先」：主密码通过即进主空间，且完全不参考第二密码结果。
- * 这样「正确主密码 + 猜测第二密码」的请求永远返回主空间——攻击者即使拿到
- * 主密码，也无法借响应逐次试探第二密码是否正确。只有在主密码未通过时，
- * 才由第二密码决定是否进入 super 空间。用户名不通过时一律 null。
- *
- * 抽成纯函数是为了让这条安全判定可被单测直接覆盖（路由本身不测）。
- */
-export function resolveLoginSpace(params: {
-	usernameOk: boolean;
-	passwordOk: boolean;
-	superConfigured: boolean;
-	superOk: boolean;
-}): AdminRole | null {
-	if (!params.usernameOk) return null;
-	if (params.passwordOk) return "admin";
-	if (params.superConfigured && params.superOk) return "super";
-	return null;
-}
-
-/**
- * 验证管理员用户名
- * 环境变量 ADMIN_USERNAME 默认为 "admin"
- * 使用 timingSafeEqual 防止时序攻击
- */
-export function verifyAdminUsername(username: string): boolean {
-	try {
-		if (!username) return false;
-
-		const storedUsername = getEnv("ADMIN_USERNAME") || "admin";
-
-		const inputBuf = Buffer.from(username);
-		const storedBuf = Buffer.from(storedUsername);
-
-		if (inputBuf.length !== storedBuf.length) {
-			return false;
-		}
-
-		return crypto.timingSafeEqual(inputBuf, storedBuf);
-	} catch (error) {
-		console.error(
-			"[Auth] 管理员用户名验证异常:",
-			error instanceof Error ? error.message : error,
-		);
-		return false;
-	}
 }

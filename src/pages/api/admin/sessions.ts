@@ -1,10 +1,7 @@
-import { requireAuth, requireSuperAuth } from "@/utils/auth";
-import { getClientIp, writeAuditLog } from "@/utils/login-guard";
-import {
-	listSessions,
-	revokeAllExcept,
-	revokeSession,
-} from "@/utils/session-store";
+import { writeAuditLog } from "@/utils/audit-log";
+import { requireAuth } from "@/utils/auth";
+import { getClientIp } from "@/utils/client-ip";
+import { listSessions, revokeAllExcept, revokeSession } from "@/utils/session-store";
 
 export const prerender = false;
 
@@ -41,7 +38,6 @@ export async function GET({
 			event: "sessions_listed",
 			client: getClientIp(request),
 			username: auth.payload?.username || "admin",
-			detail: `space=${auth.payload?.role ?? "admin"}`,
 		});
 
 		return json({ success: true, sessions: list });
@@ -58,14 +54,13 @@ export async function GET({
 }
 
 // 踢下线：?sid=xxx 踢指定设备；?allOther=1 踢除当前设备外的全部。
-// 仅第二空间（应急控制台）可调用——踢人权是控制面能力，主空间会话一律 403，
-// 这样攻击者即便拿到主会话也踢不了你。
+// 单管理员下登录会话即控制权，故普通登录态即可执行。
 export async function DELETE({
 	request,
 }: {
 	request: Request;
 }): Promise<Response> {
-	const auth = await requireSuperAuth(request);
+	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 	const currentSid = auth.payload?.sid;
 
@@ -107,7 +102,7 @@ export async function DELETE({
 		event: "session_revoked",
 		client: getClientIp(request),
 		username: auth.payload?.username || "admin",
-		detail: `[${auth.payload?.role ?? "super"}] ${detail}`,
+		detail,
 	});
 
 	return json({ success: true, revoked });

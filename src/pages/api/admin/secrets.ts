@@ -2,25 +2,25 @@ import {
 	ADMIN_SECRETS,
 	AUTH_SECRET_KEYS,
 	getSecretItem,
-	PASSWORD_HASH_KEYS,
-	requiresPasswordToSave,
+	requiresFreshAuth,
 } from "@/utils/admin-secrets";
+import { writeAuditLog } from "@/utils/audit-log";
 import {
 	generateSessionToken,
+	hasFreshAuth,
 	requireAuth,
 	SESSION_MAX_AGE,
 	setAuthCookie,
+	stepUpRequiredResponse,
 } from "@/utils/auth";
-import { getClientIp, writeAuditLog } from "@/utils/login-guard";
+import { getClientIp } from "@/utils/client-ip";
 import {
 	applyEnvFileUpdates,
 	decodePrivateKey,
-	hashAdminPassword,
 	incrementTokenVersion,
 	isEnvFileWritable,
 	readSecretPreview,
 	readSecretStates,
-	verifyCurrentPassword,
 } from "@/utils/secret-io";
 
 export const prerender = false;
@@ -39,9 +39,6 @@ const MAX_KEY_LENGTH = 100 * 1024;
 
 /** 认证类密钥集合（用于判断是否需要使旧会话失效）：来自共享清单，避免前后端漂移 */
 const AUTH_KEYS = new Set(AUTH_SECRET_KEYS);
-
-/** 存 scrypt 哈希的密钥集合：填写明文时自动转哈希（主密码 / 第二密码共用同一校验器） */
-const PASSWORD_HASH = new Set(PASSWORD_HASH_KEYS);
 
 export async function GET({
 	request,
@@ -124,49 +121,22 @@ export async function POST({
 			return json({ success: false, message: "没有需要保存的修改" }, 400);
 		}
 
-		// 涉及管理员认证信息或破坏性密钥的修改：二次验证当前密码（防 CSRF / 会话劫持）。
+		// 涉及管理员认证信息或破坏性密钥的修改：要求本次会话的强认证足够新鲜
+		// （登录后 5 分钟内）。陈旧会话直接 403 STEP_UP_REQUIRED，前端据此重新登录，
+		// 借 GitHub 的二次认证（2FA）作为第二因子，防 CSRF / 会话劫持。
 		// 破坏性密钥（GitHub 私钥）可重定向仓库写入或切断同步；此保存路径在生产
-		// 构建下因文件只读本不可达，故这里只针对本地开发做加固。
-		const touchesAuth = valid.some((entry) => AUTH_KEYS.has(entry.key));
+		// 构建下因文件只读本不可达，故这里主要保护本地开发环境。
 		const touchesProtected = valid.some((entry) =>
-			requiresPasswordToSave(entry.key),
+			requiresFreshAuth(entry.key),
 		);
-		if (touchesProtected) {
-			const currentPassword =
-				typeof body.currentPassword === "string" ? body.currentPassword : "";
-			if (!currentPassword) {
-				return json(
-					{
-						success: false,
-						message: touchesAuth
-							? "修改认证信息需要验证当前登录密码"
-							: "修改破坏性密钥需要验证当前登录密码",
-					},
-					400,
-				);
-			}
-			if (!verifyCurrentPassword(currentPassword)) {
-				return json(
-					{ success: false, message: "当前密码验证失败，未保存任何修改" },
-					401,
-				);
-			}
+		if (touchesProtected && !hasFreshAuth(auth.payload)) {
+			return stepUpRequiredResponse();
 		}
 
 		// 长度校验：私钥字段放宽，其余限制 4KB
 		for (const entry of valid) {
 			const item = getSecretItem(entry.key);
 			if (!item) continue;
-			// ADMIN_PASSWORD / ADMIN_SUPER_PASSWORD 存哈希：填入 64 位 hex（旧版 SHA256
-			// 哈希）或 scrypt$ 开头（新版自带哈希）视为已是哈希；其余视为明文，自动转 scrypt
-			if (
-				PASSWORD_HASH.has(entry.key) &&
-				entry.value &&
-				!/^[0-9a-f]{64}$/i.test(entry.value) &&
-				!entry.value.startsWith("scrypt$")
-			) {
-				entry.value = hashAdminPassword(entry.value);
-			}
 			const limit =
 				item.kind === "multiline" ? MAX_KEY_LENGTH : MAX_TEXT_LENGTH;
 			if (entry.value && entry.value.length > limit) {
@@ -213,7 +183,8 @@ export async function POST({
 				generateSessionToken(
 					SESSION_MAX_AGE,
 					auth.payload?.sid,
-					auth.payload?.role,
+					undefined,
+					auth.payload?.amr,
 				),
 				responseHeaders,
 			);

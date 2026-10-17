@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-/** 用户名边界：只 mock「读 .env.local / 环境变量」这一层 */
-let configuredUsername = "EverMemory";
-let superConfigured = true;
-vi.mock("@utils/secret-io", () => ({
-	readSecretValue: (key: string) =>
-		key === "ADMIN_USERNAME" ? configuredUsername : "",
+/** 登录方式开关：只 mock「是否已配置」这一层 */
+let oauthConfigured = true;
+let breakglassConfigured = true;
+vi.mock("@utils/github-oauth", () => ({
+	isOAuthConfigured: () => oauthConfigured,
 }));
 
 /** 会话校验边界：只关心 token 是否有效 */
@@ -17,8 +16,8 @@ vi.mock("@utils/auth", () => ({
 		return match ? match[1] : null;
 	},
 	verifySessionToken: async (token: string) =>
-		token === "valid-token" ? { sid: "s1", role: "admin" } : null,
-	isSuperPasswordConfigured: () => superConfigured,
+		token === "valid-token" ? { sid: "s1", username: "EverMemory" } : null,
+	isBreakglassConfigured: () => breakglassConfigured,
 }));
 
 const loadEndpoint = () => import("@/pages/api/admin/session");
@@ -31,8 +30,8 @@ const requestWith = (cookie?: string) =>
 describe("GET /api/admin/session", () => {
 	afterEach(() => {
 		vi.resetModules();
-		configuredUsername = "EverMemory";
-		superConfigured = true;
+		oauthConfigured = true;
+		breakglassConfigured = true;
 	});
 
 	it("未登录：success=false 且不回传用户名", async () => {
@@ -43,9 +42,12 @@ describe("GET /api/admin/session", () => {
 		expect(body.success).toBe(false);
 		// 去掉 payload 判断会连匿名请求也回传用户名，只断言 success 无法区分
 		expect(body.username).toBeUndefined();
+		// 登录方式开关与登录态无关，匿名也应回传（登录页据此渲染入口）
+		expect(body.oauthEnabled).toBe(true);
+		expect(body.breakglassEnabled).toBe(true);
 	});
 
-	it("已登录：回传配置的管理员用户名（而非硬编码 admin）", async () => {
+	it("已登录：回传账户名（走会话表实时值）", async () => {
 		const { GET } = await loadEndpoint();
 		const res = await GET({
 			request: requestWith("admin_session=valid-token"),
@@ -54,31 +56,16 @@ describe("GET /api/admin/session", () => {
 
 		expect(body.success).toBe(true);
 		expect(body.username).toBe("EverMemory");
-		// 前端靠 role 决定是否显示「应急控制台」入口
-		expect(body.role).toBe("admin");
-		expect(body.superConfigured).toBe(true);
 	});
 
-	it("回传 superConfigured 反映第二密码是否配置", async () => {
-		superConfigured = false;
+	it("回传的开关反映后端配置", async () => {
+		oauthConfigured = false;
+		breakglassConfigured = false;
 		const { GET } = await loadEndpoint();
-		const res = await GET({
-			request: requestWith("admin_session=valid-token"),
-		});
+		const res = await GET({ request: requestWith() });
 		const body = await res.json();
 
-		expect(body.success).toBe(true);
-		expect(body.superConfigured).toBe(false);
-	});
-
-	it("未配置 ADMIN_USERNAME 时回退为 admin", async () => {
-		configuredUsername = "";
-		const { GET } = await loadEndpoint();
-		const res = await GET({
-			request: requestWith("admin_session=valid-token"),
-		});
-		const body = await res.json();
-
-		expect(body.username).toBe("admin");
+		expect(body.oauthEnabled).toBe(false);
+		expect(body.breakglassEnabled).toBe(false);
 	});
 });

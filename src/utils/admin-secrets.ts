@@ -105,7 +105,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		required: false,
 	},
 
-	// ── 管理后台认证配置（双重锁：用户名 + 密码 + 私钥） ──
+	// ── 管理后台认证配置（GitHub OAuth + 应急令牌） ──
 	{
 		key: "GITHUB_APP_CLIENT_ID",
 		group: "auth",
@@ -147,35 +147,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		required: false,
 	},
 	{
-		key: "ADMIN_USERNAME",
-		group: "auth",
-		label: "管理员用户名",
-		description: "后台登录用户名（默认 admin，可自定义）",
-		kind: "text",
-		sensitive: false,
-		required: true,
-	},
-	{
-		key: "ADMIN_PASSWORD",
-		group: "auth",
-		label: "管理员密码哈希",
-		description:
-			"后台登录密码的 scrypt 加盐哈希（格式 scrypt$…）。直接粘贴明文密码也可以，保存时自动转换；或用下方生成工具转换",
-		kind: "password",
-		sensitive: true,
-		required: true,
-	},
-	{
-		key: "ADMIN_SUPER_PASSWORD",
-		group: "auth",
-		label: "第二密码哈希（应急控制台）",
-		description:
-			"进入「应急控制台」（super 空间）登录用的第二密码哈希（scrypt$…）。直接粘贴明文密码亦自动转换。建议与主密码不同；未配置时控制面降级为主密码二次验证",
-		kind: "password",
-		sensitive: true,
-		required: false,
-	},
-	{
 		key: "ADMIN_JWT_SECRET",
 		group: "auth",
 		label: "JWT 签名密钥",
@@ -184,16 +155,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "password",
 		sensitive: true,
 		required: true,
-	},
-	{
-		key: "ADMIN_SCRYPT_N",
-		group: "auth",
-		label: "scrypt 成本参数 N",
-		description:
-			"密码哈希的 scrypt 成本因子，默认 131072（约 128MB 内存，耗时约 1 秒）。一般无需修改，留空即用默认值",
-		kind: "text",
-		sensitive: false,
-		required: false,
 	},
 	{
 		key: "ADMIN_ALERT_WEBHOOK",
@@ -234,35 +195,23 @@ export function getSecretItem(key: string): AdminSecretItem | undefined {
 }
 
 /**
- * 保存时须二次验证当前登录密码的密钥。
+ * 保存时须「二次确认」的密钥。
  *
- * - `AUTH_SECRET_KEYS`：改密码 / 用户名 / JWT 密钥 / 第二密码会直接影响谁能登录、
- *   旧会话是否失效（第二密码改动同样需要撤销旧的 super 会话，故一并计入）。
+ * - `AUTH_SECRET_KEYS`：改 GitHub OAuth 凭据 / 管理员 GitHub ID / JWT 密钥 /
+ *   应急令牌会直接影响谁能登录、旧会话是否失效。
  * - `DESTRUCTIVE_SECRET_KEYS`：改 GitHub 私钥可把仓库写入重定向到攻击者的 App，
  *   或用无效私钥直接切断同步。仅在可写环境（本地开发）生效——生产构建文件系统只读，
  *   该保存路径本身就不可达，因此这里不是线上防线，而是本地开发的顺手加固。
  *
- * 该谓词同时被前端（SecretManager 决定是否弹密码框）与服务端（secrets API 强制校验）
- * 复用，避免两边各维护一份名单而漂移。
+ * 「二次确认」通过会话的强认证新鲜度（authAt）实现：距上次登录超过 5 分钟则要求
+ * 重新登录（GitHub OAuth）。该谓词同时被前端（SecretManager 决定是否提示重新登录）
+ * 与服务端（secrets API 强制校验）复用，避免两边各维护一份名单而漂移。
  */
 export const AUTH_SECRET_KEYS: readonly string[] = [
-	"ADMIN_USERNAME",
-	"ADMIN_PASSWORD",
-	"ADMIN_SUPER_PASSWORD",
 	"ADMIN_JWT_SECRET",
 	"GITHUB_APP_CLIENT_SECRET",
 	"ADMIN_GITHUB_ID",
 	"ADMIN_BREAKGLASS_TOKEN",
-];
-
-/**
- * 存储 scrypt 哈希的密钥：填写明文时由服务端自动转换为 scrypt 哈希。
- * ADMIN_PASSWORD 与 ADMIN_SUPER_PASSWORD 共用同一校验器（verifyPasswordHash），
- * 故两者的「明文 → 哈希」转换规则必须一致，集中在此避免逻辑漂移。
- */
-export const PASSWORD_HASH_KEYS: readonly string[] = [
-	"ADMIN_PASSWORD",
-	"ADMIN_SUPER_PASSWORD",
 ];
 
 export const DESTRUCTIVE_SECRET_KEYS: readonly string[] = [
@@ -270,8 +219,8 @@ export const DESTRUCTIVE_SECRET_KEYS: readonly string[] = [
 	"GITHUB_PRIVATE_KEY_PATH",
 ];
 
-/** 客户端按此决定是否弹出「验证当前密码」对话框；服务端据此强制校验。 */
-export function requiresPasswordToSave(key: string): boolean {
+/** 客户端按此决定是否提示「重新登录」；服务端据此强制校验强认证新鲜度。 */
+export function requiresFreshAuth(key: string): boolean {
 	return (
 		AUTH_SECRET_KEYS.includes(key) || DESTRUCTIVE_SECRET_KEYS.includes(key)
 	);

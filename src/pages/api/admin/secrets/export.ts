@@ -1,5 +1,6 @@
+import { writeAuditLog } from "@/utils/audit-log";
 import { requireAuth } from "@/utils/auth";
-import { getClientIp, writeAuditLog } from "@/utils/login-guard";
+import { getClientIp } from "@/utils/client-ip";
 import { buildEnvExport, buildVercelCliCommands } from "@/utils/secret-export";
 
 export const prerender = false;
