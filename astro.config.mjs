@@ -115,7 +115,7 @@ export default defineConfig({
 			],
 			// 后台（/admin）使用独立布局，不参与前台 SPA 导航：
 			// 凡目标或当前为后台路径的访问一律跳过 swup，交给浏览器整页加载
-			ignore: ["/admin/"],
+			ignore: ["/admin/", "/login/"],
 			smoothScrolling: false,
 			cache: true,
 			preload: true,

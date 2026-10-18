@@ -1418,11 +1418,14 @@ function disableAnimation() {
 
   document.addEventListener("astro:page-load", scheduleContentOverflowEnhancements);
 
-  // 后台（/admin）采用独立布局，与前台外壳结构完全不同。
+  // 后台（/admin、/login）采用独立布局，与前台外壳结构完全不同。
   // 若站内导航走 swup（SPA），只会替换内容容器而残留对方页面外壳，导致布局错乱。
-  // 因此在捕获阶段拦截点击：只要涉及后台页面就跳过 swup，改为浏览器整页加载。
+  // 因此在捕获阶段拦截点击：只要涉及后台页面（登录页 /login 或后台 /admin）就跳过 swup，改为浏览器整页加载。
   const adminNavPath = (pathname: string) =>
-    pathname === "/admin" || pathname.startsWith("/admin/");
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/");
   document.addEventListener(
     "click",
     (event) => {

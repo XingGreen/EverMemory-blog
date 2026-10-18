@@ -136,14 +136,14 @@ node -e "console.log(require('fs').readFileSync('.key/emblog-ghapp.2026-07-29.pr
 
 ## 3. 管理后台使用
 
-管理后台路径：`/admin/`，例如：
+管理后台路径：`/admin/`（登录页为 `/login/`），例如：
 
-- 本地开发：`http://localhost:4321/admin/`
-- 线上：`https://your-domain.com/admin/`
+- 本地开发：`http://localhost:4321/admin/`（`http://localhost:4321/login/` 为登录页）
+- 线上：`https://your-domain.com/admin/`（`https://your-domain.com/login/` 为登录页）
 
 ### 3.1 登录
 
-访问 `/admin/`，会看到两种登录方式（取决于环境变量配置）：
+访问 `/login/`，会看到两种登录方式（取决于环境变量配置）：
 
 1. **使用 GitHub 登录**（主方式）：点击按钮 → 跳转 GitHub 授权 → 回调进后台。只有 `ADMIN_GITHUB_ID` 白名单里的那个账号能通过。
 2. **使用应急令牌**（备用）：展开后粘贴 `ADMIN_BREAKGLASS_TOKEN` 的值 → 提交。**仅当配置了该变量时才会出现这个入口。**

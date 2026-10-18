@@ -59,7 +59,7 @@ const CLEAR_TX_COOKIE = `${OAUTH_TX_COOKIE}=; HttpOnly; Secure; SameSite=Lax; Pa
 function fail(reason: string): Response {
 	const headers = new Headers();
 	headers.set("Set-Cookie", CLEAR_TX_COOKIE);
-	headers.set("Location", `/admin/?oauth_error=${encodeURIComponent(reason)}`);
+	headers.set("Location", `/login/?oauth_error=${encodeURIComponent(reason)}`);
 	return new Response(null, { status: 302, headers });
 }
 

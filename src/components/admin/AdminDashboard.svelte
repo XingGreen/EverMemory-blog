@@ -314,10 +314,10 @@ function parseRoute(pathname: string): Route {
 }
 
 function applyRoute() {
-	// 未登录：跳回独立登录页（/admin/），不再在后台页内展示登录
+	// 未登录：跳回独立登录页（/login/），不再在后台页内展示登录
 	if (!isVerified) {
 		route = { page: "login" };
-		window.location.replace("/admin/");
+		window.location.replace("/login/");
 		return;
 	}
 	const next = parseRoute(window.location.pathname);
@@ -357,7 +357,7 @@ onMount(async () => {
 		isVerified = false;
 		sessionStorage.removeItem("admin_verified");
 		sessionStorage.removeItem("admin_redirect");
-		window.location.replace("/admin/");
+		window.location.replace("/login/");
 		return;
 	}
 	startAdmin();
@@ -721,7 +721,7 @@ async function handleLogout() {
 	} catch {
 		// 忽略清理失败
 	}
-	window.location.replace("/admin/");
+	window.location.replace("/login/");
 }
 
 // ── 导航（History API 真实路径路由） ──
