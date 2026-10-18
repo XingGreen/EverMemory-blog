@@ -142,16 +142,30 @@ function handleKeyDown(e: KeyboardEvent) {
 
 <div class="verify-wrapper">
 	<div class="verify-card card-base">
-		<!-- 左上角：返回首页（纯文本样式） -->
+		<!-- 左上角：返回首页（与前台一致的轻量文字按钮） -->
 		<div class="top-left">
 			<a
-				class="home-link"
+				class="expand-animation rounded-lg px-2 py-1 text-sm text-black/50 dark:text-white/50 hover:text-(--primary) inline-flex items-center gap-1"
 				href="/"
-				title={i18n(I18nKey.adminHome)}
-				aria-label={i18n(I18nKey.adminHome)}
+				title={i18n(I18nKey.backToHome)}
+				aria-label={i18n(I18nKey.backToHome)}
 			>
-				<Icon icon="material-symbols:home-outline-rounded" size="sm" />
-				<span>{i18n(I18nKey.adminHome)}</span>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"
+				>
+					<path d="m12 19-7-7 7-7"></path>
+					<path d="M19 12H5"></path>
+				</svg>
+				<span>{i18n(I18nKey.backToHome)}</span>
 			</a>
 		</div>
 		<!-- 右上角：深浅模式切换（仅图标） -->
@@ -294,23 +308,6 @@ function handleKeyDown(e: KeyboardEvent) {
 		position: absolute;
 		top: 0.75rem;
 		right: 0.75rem;
-	}
-
-	.home-link {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		padding: 0.25rem 0.5rem;
-		font-size: 0.8125rem;
-		color: var(--content-meta);
-		text-decoration: none;
-		border-radius: var(--radius-sm);
-		transition: color 0.2s, background-color 0.2s;
-	}
-
-	.home-link:hover {
-		color: var(--primary);
-		background-color: color-mix(in srgb, var(--primary) 8%, transparent);
 	}
 
 	.theme-toggle {
