@@ -1616,7 +1616,7 @@ function formatDate(dateStr: string | null): string {
 		/* position/overflow：折叠按钮悬垂在右上角外侧，滚动裁切必须放开，
 		   滚动需求交给内部 .sidebar-nav */
 		position: relative;
-		width: 240px;
+		width: 16rem;
 		flex-shrink: 0;
 		height: 100%;
 		overflow: visible;
@@ -1628,8 +1628,10 @@ function formatDate(dateStr: string | null): string {
 		padding: 1rem;
 		gap: 0.5rem;
 		box-shadow: var(--shadow-card);
-		/* 展开/收起过渡：宽度与内边距同步动画，避免侧栏瞬间伸缩造成生硬跳变 */
-		transition: width 0.25s ease, padding 0.25s ease;
+		/* 展开/收起过渡：与文字淡出共用同一条缓动曲线，避免两段动画节奏不一致 */
+		transition:
+			width 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+			padding 0.34s cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
 	/* 品牌区：与前台导航栏 Logo 一致——无 flex gap（图片自带 mb-1 mr-2），
@@ -1679,6 +1681,7 @@ function formatDate(dateStr: string | null): string {
 
 	.brand-title {
 		min-width: 0;
+		max-width: 100%;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -1688,6 +1691,10 @@ function formatDate(dateStr: string | null): string {
 		font-weight: 700;
 		color: inherit;
 		line-height: 1.45;
+		transition:
+			opacity 0.18s ease 0.05s,
+			transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+			max-width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
 	/* 折叠/展开按钮：悬垂在侧边栏右上角外侧（参考 flare admin-sidebar-toggle） */
@@ -1801,6 +1808,11 @@ font-family: inherit;
 	   :not(.nav-arrow) 排除箭头——Icon 组件渲染的也是 span。 */
 	.nav-item > span:not(.nav-arrow) {
 		min-width: 0;
+		max-width: 100%;
+		transition:
+			opacity 0.18s ease 0.05s,
+			transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+			max-width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
 	.nav-item:focus-visible {
@@ -1953,6 +1965,11 @@ font-family: inherit;
 		display: flex;
 		flex-direction: column;
 		min-width: 0;
+		max-width: 100%;
+		transition:
+			opacity 0.18s ease 0.05s,
+			transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+			max-width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
 	.user-name {
@@ -1980,29 +1997,52 @@ font-family: inherit;
 	/* 桌面端折叠模式：仅图标列 */
 	@media (min-width: 1024px) {
 		.admin-sidebar.collapsed {
-			/* 64px：容纳 28px 品牌 Logo + 左右各 0.5rem 内边距 */
-			width: 64px;
+			/* 92px = 图标列 4.25rem + 左右各 0.75rem 内边距，与参考项目一致 */
+			width: 5.75rem;
 			padding: 1rem 0.5rem;
 			/* 折叠按钮悬垂在右上角外侧，必须关掉滚动裁切才能显示 */
 			overflow: visible;
 		}
 
-		/* 折叠时隐藏文字：导航项、品牌名、用户卡片文本直接 display:none
-		   （脱离布局，图标独占按钮，避免 span 残留占位/挤压）。
-		   宽度/内边距的平滑过渡由 .admin-sidebar 与 .nav-item 的
-		   transition 承担，文字瞬时切换的突兀感被容器动画掩盖。
-		   浮层内的配置项通过下方高特异性规则恢复显示——面板内还包着一层
-		   .nav-submenu，旧版 :not(.flyout-panel) > .nav-item 的直接子级
-		   判断会漏判子项，这里改为全量隐藏 + 面板内覆盖恢复。 */
-		.admin-sidebar.collapsed .nav-item > span,
-		.admin-sidebar.collapsed .brand-title,
-		.admin-sidebar.collapsed .user-meta {
-			display: none;
+		/* 折叠时图标列居中：去掉导航项左右内边距与图标/文字间距，
+		   图标在 92px 宽的栏内自然回到中线 */
+		.admin-sidebar.collapsed .nav-item,
+		.admin-sidebar.collapsed .sidebar-brand,
+		.admin-sidebar.collapsed .sidebar-user {
+			justify-content: center;
+			gap: 0;
+			padding-inline: 0;
 		}
 
-		/* 浮层内的配置项必须保留文字（折叠态下承担预览职责） */
-		.admin-sidebar.collapsed .flyout-panel .nav-item > span {
-			display: block;
+		/* 文字改为淡出 + 左移 + 宽度收缩，而不是 display:none 瞬切：
+		   max-width 负责把占位收掉，opacity/transform 负责观感；
+		   三者的过渡时长与侧栏宽度动画对齐。 */
+		.admin-sidebar.collapsed .nav-item > span:not(.nav-arrow),
+		.admin-sidebar.collapsed .brand-title,
+		.admin-sidebar.collapsed .user-meta {
+			opacity: 0;
+			max-width: 0;
+			overflow: hidden;
+			white-space: nowrap;
+			transform: translateX(-0.375rem);
+			pointer-events: none;
+		}
+
+		/* 浮层内的配置项必须保留文字（折叠态下承担预览职责），
+		   同时把前面去掉的内边距与间距还回来 */
+		.admin-sidebar.collapsed .flyout-panel .nav-item {
+			justify-content: flex-start;
+			gap: 0.625rem;
+			padding-inline: 0.875rem;
+		}
+
+		.admin-sidebar.collapsed .flyout-panel .nav-item > span:not(.nav-arrow) {
+			opacity: 1;
+			max-width: none;
+			overflow: visible;
+			white-space: normal;
+			transform: none;
+			pointer-events: auto;
 		}
 
 		/* 折叠态「网站配置」悬停浮层：右侧滑出配置列表，侧边栏保持折叠。
@@ -3184,17 +3224,18 @@ font-family: inherit;
 
 		.admin-sidebar {
 			position: fixed;
-			top: 0;
-			left: 0;
-			bottom: 0;
-			/* 与桌面态保持一致，否则移动端抽屉会截断品牌名 */
-			width: 240px;
+			top: 1rem;
+			left: 1rem;
+			bottom: 1rem;
+			/* 浮层抽屉：78vw 但不超过 20rem，四周留 1rem 露出背景 */
+			width: 78vw;
+			max-width: 20rem;
+			height: auto;
 			z-index: 120;
-			border: none;
-			border-right: 1px solid var(--line-divider);
-			border-radius: 0;
-			transform: translateX(-100%);
-			transition: transform 0.3s;
+			border: 1px solid var(--line-divider);
+			border-radius: var(--radius-large);
+			transform: translateX(calc(-100% - 1rem));
+			transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
 		}
 
 		.admin-sidebar.open {
@@ -3206,7 +3247,8 @@ font-family: inherit;
 			display: block;
 			position: fixed;
 			inset: 0;
-			background: rgba(0, 0, 0, 0.4);
+			background: rgba(0, 0, 0, 0.2);
+			backdrop-filter: blur(4px);
 			z-index: 110;
 		}
 
