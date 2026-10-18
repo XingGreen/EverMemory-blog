@@ -2326,16 +2326,8 @@ font-family: inherit;
 		min-height: 0;
 		/* 右侧内容区在可视范围内内部滚动 */
 		overflow-y: auto;
-		/* 内容区自身限制最大宽度并居中：不依赖子元素结构，
-		   任何页面的视图都受此约束（约 1216px） */
+		/* 内容区铺满可用宽度，不再设置 max-width 限制 */
 		width: 100%;
-		max-width: 76rem;
-		margin-inline: auto;
-	}
-
-	/* 文章编辑器视图使用独立的页面宽度限制（editorConfig.maxPageWidth） */
-	.admin-content.content-wide {
-		max-width: var(--editor-max-page-width, 96rem);
 	}
 
 	/* ── 仪表板首页 ── */

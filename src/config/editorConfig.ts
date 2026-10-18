@@ -1,22 +1,18 @@
-import { siteConfig } from "./siteConfig";
 import type { EditorConfig } from "../types/editorConfig";
 
 /**
  * 文章编辑器页面尺寸限制
  *
- * 编辑器页面不沿用后台全局的 76rem 宽度限制，而是使用下列独立配置；
- * 值均为 CSS 长度，可按需调整为 px / rem / calc(...) 等任意合法写法。
+ * 后台控制面板已铺满窗口宽度，编辑器默认同样不再限宽（100%）；
+ * 如需限宽，把 maxPageWidth 改为 px / rem / calc(...) 等合法 CSS 长度即可。
  *
  * 若后续需要在后台「网站配置」中在线调整，可将本文件加入
  * src/utils/admin-settings.ts 的 CONFIG_ITEMS（先走「改源码 + 重建」链路，
  * 再按需升级为 runtime 配置）。
  */
 export const editorConfig: EditorConfig = {
-	/**
-	 * 编辑器页面最大宽度，默认与前台的 siteConfig.pageWidth 保持一致，
-	 * 前台调整页面宽度时编辑器同步跟随。
-	 */
-	maxPageWidth: `${siteConfig.pageWidth ?? 100}rem`,
+	/** 编辑器页面最大宽度，默认铺满可用宽度 */
+	maxPageWidth: "100%",
 	/** 编辑区最小高度 */
 	minContentHeight: "26rem",
 	/** 编辑区默认高度：填满视口剩余空间 */
