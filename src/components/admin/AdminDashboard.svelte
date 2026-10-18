@@ -2139,28 +2139,9 @@ font-family: inherit;
 			padding-left: 0.875rem;
 		}
 
-		/* 折叠态品牌区：只调整上下留白做垂直微调，水平 padding 必须与展开态
-		   完全一致，否则 Logo 会在宽度动画中横向滑动 */
-		.admin-sidebar.collapsed .sidebar-brand {
-			padding-top: 0.375rem;
-			padding-bottom: 0.875rem;
-		}
-
-		/* 折叠态无标题，logo 的 mb-1 mr-2 只会制造偏移，归零保持居中 */
-		.admin-sidebar.collapsed .sidebar-brand .brand-logo,
-		.admin-sidebar.collapsed .sidebar-brand :global(.brand-home) {
-			margin-bottom: 0;
-			margin-right: 0;
-		}
-
-		/* 折叠态仅图标：只压缩上下 padding，水平 padding 保持不变，
-		   图标 x 坐标因此与展开态完全一致 */
-		.admin-sidebar.collapsed .sidebar-nav > .nav-item,
-		.admin-sidebar.collapsed .sidebar-footer > .nav-item,
-		.admin-sidebar.collapsed .settings-flyout-wrap > .nav-item {
-			padding-top: 0.5rem;
-			padding-bottom: 0.5rem;
-		}
+		/* 折叠态品牌区/导航项/用户卡片不再覆盖任何 padding：
+		   上下留白必须与展开态一致，否则收起时每行高度突变，侧栏内容会抽动。
+		   折叠只影响宽度与文字可见性。 */
 
 		.admin-sidebar.collapsed .nav-item :global(.nav-arrow) {
 			display: none;
@@ -2171,20 +2152,6 @@ font-family: inherit;
 		   折叠态仅 5 个图标项，高度远小于视口，滚动需求为零，恢复 visible 让浮层可溢出 */
 		.admin-sidebar.collapsed .sidebar-nav {
 			overflow: visible;
-		}
-
-		/* 「网站配置」的浮层 wrap 在折叠态是普通 flex 子项，按钮按内容宽度左对齐，
-		   会把图标顶到整条左缘之外——这里把 wrap 自身居中，图标中心与其它项一致 */
-		.admin-sidebar.collapsed .settings-flyout-wrap {
-			display: flex;
-			justify-content: center;
-		}
-
-		/* 折叠态管理员卡片：只调整上下留白，水平 padding 与展开态一致，
-		   头像不会在折叠动画中横移 */
-		.admin-sidebar.collapsed .sidebar-user {
-			padding-top: 0.25rem;
-			padding-bottom: 1rem;
 		}
 	}
 
