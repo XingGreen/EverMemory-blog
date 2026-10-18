@@ -176,7 +176,8 @@ function toggleTheme() {
 	isDark = next === "dark";
 }
 // 侧边栏状态
-let settingsSubOpen = $state(true); // 网站配置子菜单是否展开
+// 子菜单默认收起：展开态全量配置项会把导航区撑出滚动条，需要时再点「网站配置」展开
+let settingsSubOpen = $state(false); // 网站配置子菜单是否展开
 let isSidebarOpen = $state(false); // 移动端侧边栏抽屉是否打开
 let sidebarCollapsed = $state(false); // 桌面端侧边栏是否折叠（仅图标模式）
 
