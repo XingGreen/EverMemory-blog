@@ -2335,6 +2335,10 @@ font-family: inherit;
 		overflow-y: auto;
 		/* 内容区铺满可用宽度，不再设置 max-width 限制 */
 		width: 100%;
+		/* 与参考项目 --dashboard-unit / --settings-unit 同源的视口自适应：
+		   0.07vw 在 ~1428px 视口为 1px，随视口线性放大，封顶 1.5
+		   （50% 缩放下视口约 3840px，正好取到 1.5，内容视觉密度与参考一致） */
+		zoom: clamp(1, 0.07vw / 1px, 1.5);
 	}
 
 	/* ── 仪表板首页 ── */
