@@ -1643,8 +1643,9 @@ function formatDate(dateStr: string | null): string {
 		gap: 0;
 		/* 上下对称：28px logo（含 mb-1 为 32px margin-box）中心落在
 		   品牌盒与右上角折叠按钮（中心 30px）近似同轴，不再上浮。
-		   左 1.25rem + logo 14px = 图标中心 46px，与导航图标列对齐 */
-		padding: 0.75rem 0.75rem 0.75rem 1.25rem;
+		   左 1.25rem + logo 14px = 图标中心 46px，与导航图标列对齐；
+		   上下 0.5rem：32px + 16px = 48px 行高，与参考项目 3rem 对齐 */
+		padding: 0.5rem 0.75rem 0.5rem 1.25rem;
 		/* 品牌区底部分隔：内容分隔线用 --line-color，与容器轮廓（--line-divider）区分 */
 		border-bottom: 1px solid var(--line-color);
 		margin-bottom: 0.75rem;
@@ -1771,8 +1772,9 @@ function formatDate(dateStr: string | null): string {
 		align-items: center;
 		gap: 0.625rem;
 		/* 左内边距固定为页面坐标里的图标列中心：12(侧栏) + 22 + 12 = 46px，
-		   与折叠态 92px 的中线一致，因此宽度动画时图标不会横向移动 */
-		padding: 0.875rem 0.75rem 0.875rem 1.375rem;
+		   与折叠态 92px 的中线一致，因此宽度动画时图标不会横向移动。
+		   上下 0.6875rem：图标 24px + 22px = 46px 行高，与参考项目 2.875rem 对齐 */
+		padding: 0.6875rem 0.75rem 0.6875rem 1.375rem;
 		border: none;
 		background: transparent;
 		color: var(--deep-text);
@@ -1899,7 +1901,8 @@ font-family: inherit;
 	}
 
 	.nav-item.sub {
-		padding: 0.75rem 0.875rem;
+		/* 二级项无图标列约束，上下 0.625rem：文字 20px + 20px = 40px 行高 */
+		padding: 0.625rem 0.875rem;
 		/* 二级项无箭头，可用宽度更充裕（108px），文字可安全放大到 14px */
 		font-size: 0.875rem;
 		color: var(--content-meta);
