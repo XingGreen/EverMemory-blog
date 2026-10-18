@@ -46,9 +46,9 @@ function startGithubLogin() {
 
 // OAuth 回调失败时以 oauth_error 查询参数带错误码回来，映射为可读提示
 const OAUTH_ERRORS: Record<string, string> = {
-	oauth_disabled: "GitHub 登录未配置",
-	state_missing: "登录状态已失效，请重试",
-	state_mismatch: "登录状态校验失败，请重试",
+	oauth_disabled: "GitHub 登录未配置(；′⌒`)",
+	state_missing: "登录状态已失效，请重试(x_x)",
+	state_mismatch: "登录状态校验失败，请重试(っ °Д °;)っ",
 	code_missing: "授权未完成，请重试",
 	token_exchange_failed: "与 GitHub 通信失败，请稍后重试",
 	identity_fetch_failed: "无法获取 GitHub 账号信息，请重试",
@@ -142,10 +142,10 @@ function handleKeyDown(e: KeyboardEvent) {
 
 <div class="verify-wrapper">
 	<div class="verify-card card-base">
-		<!-- 左上角：返回首页（与前台一致的轻量文字按钮） -->
-		<div class="top-left">
+		<!-- 卡片顶部：返回首页 + 深浅模式切换（同一 flex 行，保证水平/垂直对齐） -->
+		<div class="top-bar">
 			<a
-				class="expand-animation rounded-lg px-2 py-1.5 text-base text-black/50 dark:text-white/50 hover:text-(--primary) inline-flex items-center gap-2"
+				class="expand-animation rounded-lg px-2 py-1.5 text-base text-black/50 dark:text-white/50 hover:text-(--primary) inline-flex items-center gap-2 -ml-2"
 				href="/"
 				title={i18n(I18nKey.backToHome)}
 				aria-label={i18n(I18nKey.backToHome)}
@@ -167,11 +167,8 @@ function handleKeyDown(e: KeyboardEvent) {
 				</svg>
 				<span>{i18n(I18nKey.backToHome)}</span>
 			</a>
-		</div>
-		<!-- 右上角：深浅模式切换（仅图标） -->
-		<div class="top-right">
 			<button
-				class="theme-toggle"
+				class="theme-toggle -mr-1.5"
 				type="button"
 				title={isDark ? i18n(I18nKey.lightMode) : i18n(I18nKey.darkMode)}
 				aria-label={isDark ? i18n(I18nKey.lightMode) : i18n(I18nKey.darkMode)}
@@ -271,7 +268,7 @@ function handleKeyDown(e: KeyboardEvent) {
 				<div class="error-message">
 					<Icon icon="material-symbols:error-outline" class="text-base" />
 					<span
-						>未配置任何登录方式。请在 .env.local 配置 GitHub OAuth 凭据或
+						>未配置任何登录方式！请在 .env.local 配置 GitHub OAuth 凭据或
 						ADMIN_BREAKGLASS_TOKEN。</span
 					>
 				</div>
@@ -290,24 +287,21 @@ function handleKeyDown(e: KeyboardEvent) {
 
 	.verify-card {
 		position: relative;
-		padding: 2.5rem 2rem;
+		padding: 2rem;
 		width: 100%;
 		max-width: 420px;
 		box-shadow: var(--shadow-card);
 		border-radius: var(--radius-large);
 	}
 
-	/* ── 卡片顶角定位 ── */
-	.top-left {
-		position: absolute;
-		top: 0.75rem;
-		left: 0.75rem;
-	}
-
-	.top-right {
-		position: absolute;
-		top: 0.75rem;
-		right: 0.75rem;
+	/* ── 顶部操作行 ──
+	   返回与主题切换放在同一条 flex 行里，用 align-items: center 保证两者
+	   垂直居中对齐；不再各自绝对定位，避免内边距变化后出现错位。 */
+	.top-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 1.25rem;
 	}
 
 	/* 按钮盒子必须跟着图标一起改，否则只是透明热区变大，看起来"没变化"。
@@ -316,6 +310,7 @@ function handleKeyDown(e: KeyboardEvent) {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
+		flex: none;
 		width: 2.25rem;
 		height: 2.25rem;
 		border: none;
@@ -541,6 +536,13 @@ function handleKeyDown(e: KeyboardEvent) {
 	@keyframes spin {
 		to {
 			transform: rotate(360deg);
+		}
+	}
+
+	/* 小屏收紧卡片内边距，避免内容被挤压 */
+	@media (max-width: 480px) {
+		.verify-card {
+			padding: 1.5rem;
 		}
 	}
 </style>
