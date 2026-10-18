@@ -113,7 +113,7 @@ export const GET: APIRoute = async ({ request }) => {
 	headers.append("Set-Cookie", CLEAR_TX_COOKIE);
 
 	const dest =
-		tx.next && /^\/admin(\/|$)/.test(tx.next) ? tx.next : "/admin/dashboard/";
+		tx.next && /^\/admin(\/|$)/.test(tx.next) ? tx.next : "/admin/";
 	headers.set("Location", dest);
 	console.log(
 		`[Admin OAuth] 登录成功 · user=${username} · id=${identity.id} · device=${describeDevice(request.headers.get("user-agent") || "")}`,

@@ -230,7 +230,7 @@ node -e "console.log(require('fs').readFileSync('.key/emblog-ghapp.2026-07-29.pr
 
 ### 3.7 密钥配置
 
-路径：`/admin/dashboard/secrets`
+路径：`/admin/secrets`
 
 后台集中管理服务端密钥的页面，共 **15 项**，按三组归类：
 
@@ -249,7 +249,7 @@ node -e "console.log(require('fs').readFileSync('.key/emblog-ghapp.2026-07-29.pr
 
 ### 3.8 站点配置
 
-路径：`/admin/dashboard/settings`
+路径：`/admin/settings`
 
 浏览与编辑站点配置（共 24 项，按分组归类）。分两类：
 
@@ -258,7 +258,7 @@ node -e "console.log(require('fs').readFileSync('.key/emblog-ghapp.2026-07-29.pr
 
 ### 3.9 会话管理
 
-路径：`/admin/dashboard/settings` 页面底部（「会话管理」栏目）
+路径：`/admin/settings` 页面底部（「会话管理」栏目）
 
 登录后可以查看当前所有在线会话，并将任意会话（含本机）**踢下线**。
 
@@ -407,7 +407,7 @@ git push
 | `TURNSTILE_SECRET_KEY`   | 可选 | 字符串             | `0x4AAAAAAA...`          |
 
 > 配置完环境变量记得 **Redeploy** 一次。
-> ⚠️ 线上密钥页（`/admin/dashboard/secrets`）只能**查看状态**，不能改值（生产文件系统只读）——改值请走 Vercel 环境变量。
+> ⚠️ 线上密钥页（`/admin/secrets`）只能**查看状态**，不能改值（生产文件系统只读）——改值请走 Vercel 环境变量。
 
 ### 6.2 重新部署触发条件
 

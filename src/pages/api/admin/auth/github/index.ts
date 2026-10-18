@@ -24,7 +24,7 @@ interface OAuthTx {
 /** 只允许回跳到站内 /admin 路径，杜绝开放重定向 */
 function sanitizeNext(raw: string | null): string {
 	if (raw && /^\/admin(\/|$)/.test(raw)) return raw;
-	return "/admin/dashboard/";
+	return "/admin/";
 }
 
 // 发起 OAuth：生成 state + PKCE 写入事务 cookie，随后 302 到 GitHub 授权页。

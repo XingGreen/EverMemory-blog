@@ -11,9 +11,9 @@ let breakglassEnabled = $state(false);
 function enterDashboard(target?: string) {
 	sessionStorage.setItem("admin_verified", "true");
 	// 后台主体是独立页面，登录成功后整页跳转，登录页的代码不再携带后台。
-	// 若未登录时访问过后台深链（/admin/dashboard/settings/…），登录后回跳原目标。
+	// 若未登录时访问过后台深链（/admin/settings/…），登录后回跳原目标。
 	const dest =
-		target || sessionStorage.getItem("admin_redirect") || "/admin/dashboard/";
+		target || sessionStorage.getItem("admin_redirect") || "/admin/";
 	sessionStorage.removeItem("admin_redirect");
 	window.location.replace(dest);
 }

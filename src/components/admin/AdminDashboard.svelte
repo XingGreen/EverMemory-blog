@@ -43,12 +43,12 @@ type ViewMode = "list" | "edit" | "create";
 type Page = "dashboard" | "posts" | "settings" | "secrets";
 
 // 基于 URL 路径的真实路由（History API）：
-//   /admin/dashboard/                      → 首页
-//   /admin/dashboard/articles/             → 文章列表
-//   /admin/dashboard/articles/new/         → 新建文章
-//   /admin/dashboard/articles/edit/:slug/  → 编辑文章
-//   /admin/dashboard/settings/             → 网站配置（概览）
-//   /admin/dashboard/settings/:key/        → 网站配置（具体配置文件子页）
+//   /admin/                      → 首页
+//   /admin/articles/             → 文章列表
+//   /admin/articles/new/         → 新建文章
+//   /admin/articles/edit/:slug/  → 编辑文章
+//   /admin/settings/             → 网站配置（概览）
+//   /admin/settings/:key/        → 网站配置（具体配置文件子页）
 type Route =
 	| { page: "login" }
 	| { page: "dashboard" }
@@ -285,7 +285,7 @@ $effect(() => {
 });
 
 function parseRoute(pathname: string): Route {
-	const rest = pathname.replace(/^\/admin\/dashboard\/?/, "");
+	const rest = pathname.replace(/^\/admin\/?/, "");
 	// 不在后台前缀下视为未知路由，回落到登录态判定
 	if (rest === pathname) return { page: "login" };
 	const segments = rest.split("/").filter(Boolean);
@@ -725,7 +725,7 @@ async function handleLogout() {
 }
 
 // ── 导航（History API 真实路径路由） ──
-const DASHBOARD_PATH = "/admin/dashboard/";
+const DASHBOARD_PATH = "/admin/";
 
 function navigate(path: string) {
 	isSidebarOpen = false;
