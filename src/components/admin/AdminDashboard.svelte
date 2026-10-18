@@ -1625,7 +1625,8 @@ function formatDate(dateStr: string | null): string {
 		background: var(--admin-sidebar-bg);
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-large);
-		padding: 1rem;
+		/* 左右 0.75rem 是折叠态「图标列」的一部分，展开/折叠必须保持一致 */
+		padding: 1rem 0.75rem;
 		gap: 0.5rem;
 		box-shadow: var(--shadow-card);
 		/* 展开/收起过渡：与文字淡出共用同一条缓动曲线，避免两段动画节奏不一致 */
@@ -1641,8 +1642,9 @@ function formatDate(dateStr: string | null): string {
 		align-items: center;
 		gap: 0;
 		/* 上下对称：28px logo（含 mb-1 为 32px margin-box）中心落在
-		   品牌盒与右上角折叠按钮（中心 30px）近似同轴，不再上浮 */
-		padding: 0.75rem 1.5rem 0.75rem 0;
+		   品牌盒与右上角折叠按钮（中心 30px）近似同轴，不再上浮。
+		   左 1.25rem + logo 14px = 图标中心 46px，与导航图标列对齐 */
+		padding: 0.75rem 0.75rem 0.75rem 1.25rem;
 		/* 品牌区底部分隔：内容分隔线用 --line-color，与容器轮廓（--line-divider）区分 */
 		border-bottom: 1px solid var(--line-color);
 		margin-bottom: 0.75rem;
@@ -1768,7 +1770,9 @@ function formatDate(dateStr: string | null): string {
 		display: flex;
 		align-items: center;
 		gap: 0.625rem;
-		padding: 0.875rem 1rem;
+		/* 左内边距固定为页面坐标里的图标列中心：12(侧栏) + 22 + 12 = 46px，
+		   与折叠态 92px 的中线一致，因此宽度动画时图标不会横向移动 */
+		padding: 0.875rem 0.75rem 0.875rem 1.375rem;
 		border: none;
 		background: transparent;
 		color: var(--deep-text);
@@ -1928,7 +1932,8 @@ font-family: inherit;
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		padding: 0.625rem 0.5rem;
+		/* 左 0.875rem + 头像 20px = 中心 46px，与图标列对齐 */
+		padding: 0.625rem 0.75rem 0.625rem 0.875rem;
 		border-radius: var(--radius-lg);
 		margin-bottom: 0.25rem;
 		transition: background 0.15s, color 0.15s;
@@ -1999,20 +2004,13 @@ font-family: inherit;
 		.admin-sidebar.collapsed {
 			/* 92px = 图标列 4.25rem + 左右各 0.75rem 内边距，与参考项目一致 */
 			width: 5.75rem;
-			padding: 1rem 0.5rem;
 			/* 折叠按钮悬垂在右上角外侧，必须关掉滚动裁切才能显示 */
 			overflow: visible;
 		}
 
-		/* 折叠时图标列居中：去掉导航项左右内边距与图标/文字间距，
-		   图标在 92px 宽的栏内自然回到中线 */
-		.admin-sidebar.collapsed .nav-item,
-		.admin-sidebar.collapsed .sidebar-brand,
-		.admin-sidebar.collapsed .sidebar-user {
-			justify-content: center;
-			gap: 0;
-			padding-inline: 0;
-		}
+		/* 注意：折叠时不要改动 nav-item / brand / user 的任何水平内边距或
+		   justify-content——它们决定图标的 x 坐标。宽度收缩时保持这些值不变，
+		   图标才会像参考项目那样停在原地；文字只做淡出 + 宽度收缩。 */
 
 		/* 文字改为淡出 + 左移 + 宽度收缩，而不是 display:none 瞬切：
 		   max-width 负责把占位收掉，opacity/transform 负责观感；
