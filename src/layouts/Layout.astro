@@ -72,8 +72,10 @@ const configHue = siteConfig.themeColor.hue;
 const navbarTransparentMode =
 	backgroundWallpaper.common?.navbar?.transparentMode || "semi";
 // 判断是否应该显示顶部高光效果（只在full和semifull模式下显示）
+// 后台布局（excludeFrontendEffects）不参与前台视觉，不应出现顶部高光/阴影
 const shouldShowTopHighlight =
-	navbarTransparentMode === "full" || navbarTransparentMode === "semifull";
+	!excludeFrontendEffects &&
+	(navbarTransparentMode === "full" || navbarTransparentMode === "semifull");
 
 const enableBanner = backgroundWallpaper.mode === "banner";
 
