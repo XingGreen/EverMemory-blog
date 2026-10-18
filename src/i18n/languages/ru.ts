@@ -464,6 +464,7 @@ export const ru: Translation = {
 	[Key.adminSettings]: "Конфигурация сайта",
 	[Key.adminSettingsOverview]: "Обзор конфигурации",
 	[Key.adminBackHome]: "На главную",
+	[Key.adminUserCenter]: "Аккаунт",
 	[Key.adminToggleTheme]: "Переключить тему",
 	[Key.adminCollapseSidebar]: "Свернуть боковую панель",
 	[Key.adminExpandSidebar]: "Развернуть боковую панель",

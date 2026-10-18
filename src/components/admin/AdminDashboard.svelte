@@ -40,7 +40,7 @@ type Post = {
 };
 
 type ViewMode = "list" | "edit" | "create";
-type Page = "dashboard" | "posts" | "settings" | "secrets";
+type Page = "dashboard" | "posts" | "settings" | "user";
 
 // 基于 URL 路径的真实路由（History API）：
 //   /admin/                      → 首页
@@ -49,6 +49,7 @@ type Page = "dashboard" | "posts" | "settings" | "secrets";
 //   /admin/articles/edit/:slug/  → 编辑文章
 //   /admin/settings/             → 网站配置（概览）
 //   /admin/settings/:key/        → 网站配置（具体配置文件子页）
+//   /admin/user/                 → 用户中心（密钥配置等账户相关功能）
 type Route =
 	| { page: "login" }
 	| { page: "dashboard" }
@@ -56,7 +57,7 @@ type Route =
 	| { page: "create" }
 	| { page: "edit"; slug: string }
 	| { page: "settings"; section?: string }
-	| { page: "secrets" };
+	| { page: "user" };
 
 let {
 	avatarUrl = "",
@@ -222,8 +223,8 @@ const activePage = $derived<Page>(
 		? "dashboard"
 		: route.page === "settings"
 			? "settings"
-			: route.page === "secrets"
-				? "secrets"
+			: route.page === "user"
+				? "user"
 				: "posts",
 );
 
@@ -307,7 +308,10 @@ function parseRoute(pathname: string): Route {
 			return { page: "settings", section };
 		}
 		case "secrets":
-			return { page: "secrets" };
+			// 兼容旧链接：密钥配置已并入用户中心
+			return { page: "user" };
+		case "user":
+			return { page: "user" };
 		default:
 			// 未知路由：返回登录态判定，由 applyRoute 决定去向
 			return { page: "login" };
@@ -373,7 +377,7 @@ const headerTitle = $derived.by(() => {
 			? i18n(getConfigLabelKey(item.key))
 			: i18n(I18nKey.adminSettings);
 	}
-	if (activePage === "secrets") return i18n(I18nKey.adminSecrets);
+	if (activePage === "user") return i18n(I18nKey.adminUserCenter);
 	if (viewMode === "edit" && editingPost) return i18n(I18nKey.adminEditPost);
 	if (viewMode === "create") return i18n(I18nKey.adminNewPost);
 	return i18n(I18nKey.adminPosts);
@@ -752,8 +756,8 @@ function goSettings(section?: string) {
 	);
 }
 
-function goSecrets() {
-	navigate(`${DASHBOARD_PATH}secrets/`);
+function goUser() {
+	navigate(`${DASHBOARD_PATH}user/`);
 }
 
 function toggleSettingsSubmenu() {
@@ -1347,24 +1351,18 @@ function formatDate(dateStr: string | null): string {
 					</div>
 				</div>
 
-				<!-- 密钥配置 -->
-				<button
-					class="nav-item"
-					class:active={activePage === "secrets"}
-					onclick={goSecrets}
-				>
-					{#if activePage === "secrets"}
-					<Icon icon="material-symbols:shield-lock" />
-				{:else}
-					<Icon icon="material-symbols:shield-lock-outline" />
-				{/if}
-				<span>{i18n(I18nKey.adminSecrets)}</span>
-				</button>
 			</nav>
 
 			<div class="sidebar-footer">
-				<!-- 当前管理员：左侧头像 + 用户名（登录/记住我 Cookie 回填）+ 角色 -->
-				<div class="sidebar-user">
+				<!-- 用户中心入口：整块头像/用户名区域可点击 -->
+				<button
+					class="sidebar-user"
+					class:active={activePage === "user"}
+					type="button"
+					title={i18n(I18nKey.adminUserCenter)}
+					aria-label={i18n(I18nKey.adminUserCenter)}
+					onclick={goUser}
+				>
 					<span class="user-avatar">
 						{#if avatarUrl}
 							<img src={avatarUrl} alt="" class="user-avatar-img" />
@@ -1376,7 +1374,7 @@ function formatDate(dateStr: string | null): string {
 						<span class="user-name">{adminUsername || "admin"}</span>
 						<span class="user-role">{i18n(I18nKey.adminSidebarRole)}</span>
 					</div>
-				</div>
+				</button>
 				<!-- 返回前台首页 -->
 				<a class="nav-item" href="/">
 					<Icon icon="material-symbols:home-outline-rounded" />
@@ -1524,7 +1522,21 @@ function formatDate(dateStr: string | null): string {
 							<SessionManager onNotify={showToast} />
 						</div>
 					{/if}
-{:else if activePage === "secrets"}
+{:else if activePage === "user"}
+				<div class="user-page">
+					<section class="card-base user-profile-card">
+						<span class="user-profile-avatar">
+							{#if avatarUrl}
+								<img src={avatarUrl} alt="" class="user-profile-avatar-img" />
+							{:else}
+								<Icon icon="material-symbols:person-rounded" class="user-profile-avatar-icon" />
+							{/if}
+						</span>
+						<div class="user-profile-info">
+							<h2>{adminUsername || "admin"}</h2>
+							<p>{i18n(I18nKey.adminSidebarRole)}</p>
+						</div>
+					</section>
 				{#if import.meta.env.PROD}
 					<section class="card-base secrets-guide">
 						<div class="guide-head">
@@ -1560,6 +1572,7 @@ function formatDate(dateStr: string | null): string {
 							showToast(message, type, duration)}
 					/>
 				{/if}
+				</div>
 			{/if}
 			</div>
 		</div>
@@ -1594,7 +1607,7 @@ function formatDate(dateStr: string | null): string {
 		open={tourOpen}
 		onClose={() => (tourOpen = false)}
 		onNavigate={(page) => {
-			if (page === "secrets") goSecrets();
+			if (page === "secrets") goUser();
 			else if (page === "posts") goPostList();
 			else goSettings();
 		}}
@@ -1933,13 +1946,20 @@ font-family: inherit;
 		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
 	}
 
-	/* 底部管理员卡片：左头像（直接展示、无边框/描边/背景圈）+ 右用户名（env）/ 角色 */
+	/* 底部用户中心入口：整块可点击（button 需重置浏览器默认样式） */
 	.sidebar-user {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
+		width: 100%;
 		/* 左 0.875rem + 头像 20px = 中心 46px，与图标列对齐 */
 		padding: 0.625rem 0.75rem 0.625rem 0.875rem;
+		border: none;
+		background: transparent;
+		color: inherit;
+		font: inherit;
+		text-align: left;
+		cursor: pointer;
 		border-radius: var(--radius-lg);
 		margin-bottom: 0.25rem;
 		transition: background 0.15s, color 0.15s;
@@ -1947,6 +1967,64 @@ font-family: inherit;
 
 	.sidebar-user:hover {
 		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
+	}
+
+	.sidebar-user.active {
+		background: color-mix(in oklab, var(--primary) 12%, transparent);
+	}
+
+	.sidebar-user:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	/* ── 用户中心 ── */
+	.user-page {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+	}
+
+	.user-profile-card {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 1.5rem;
+	}
+
+	.user-profile-avatar {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 3.5rem;
+		height: 3.5rem;
+		flex-shrink: 0;
+		overflow: hidden;
+		border-radius: 50%;
+		background: var(--btn-regular-bg);
+	}
+
+	.user-profile-avatar-img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.user-profile-avatar-icon {
+		font-size: 1.75rem;
+		color: var(--content-meta);
+	}
+
+	.user-profile-info h2 {
+		font-size: 1.125rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.user-profile-info p {
+		margin-top: 0.25rem;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
 	}
 
 	.user-avatar {

@@ -449,6 +449,7 @@ export const zh_CN: Translation = {
 	[Key.adminSettings]: "网站配置",
 	[Key.adminSettingsOverview]: "配置概览",
 	[Key.adminBackHome]: "返回首页",
+	[Key.adminUserCenter]: "用户中心",
 	[Key.adminToggleTheme]: "切换深浅模式",
 	[Key.adminCollapseSidebar]: "收起侧边栏",
 	[Key.adminExpandSidebar]: "展开侧边栏",
