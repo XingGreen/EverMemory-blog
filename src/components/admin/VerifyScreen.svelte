@@ -145,15 +145,15 @@ function handleKeyDown(e: KeyboardEvent) {
 		<!-- 左上角：返回首页（与前台一致的轻量文字按钮） -->
 		<div class="top-left">
 			<a
-				class="expand-animation rounded-lg px-2 py-1 text-sm text-black/50 dark:text-white/50 hover:text-(--primary) inline-flex items-center gap-1"
+				class="expand-animation rounded-lg px-2 py-1.5 text-base text-black/50 dark:text-white/50 hover:text-(--primary) inline-flex items-center gap-2"
 				href="/"
 				title={i18n(I18nKey.backToHome)}
 				aria-label={i18n(I18nKey.backToHome)}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
-					width="16"
-					height="16"
+					width="24"
+					height="24"
 					viewBox="0 0 24 24"
 					fill="none"
 					stroke="currentColor"
@@ -178,9 +178,9 @@ function handleKeyDown(e: KeyboardEvent) {
 				onclick={toggleTheme}
 			>
 				{#if isDark}
-					<Icon icon="material-symbols:wb-sunny-outline-rounded" size="md" />
+					<Icon icon="material-symbols:wb-sunny-outline-rounded" size="2xl" />
 				{:else}
-					<Icon icon="material-symbols:dark-mode-outline-rounded" size="md" />
+					<Icon icon="material-symbols:dark-mode-outline-rounded" size="2xl" />
 				{/if}
 			</button>
 		</div>
@@ -310,17 +310,19 @@ function handleKeyDown(e: KeyboardEvent) {
 		right: 0.75rem;
 	}
 
+	/* 按钮盒子必须跟着图标一起改，否则只是透明热区变大，看起来"没变化"。
+	   与左上角返回按钮等高：text-base 行高 1.5rem = 2.25rem 按钮高度 */
 	.theme-toggle {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 2rem;
-		height: 2rem;
+		width: 2.25rem;
+		height: 2.25rem;
 		border: none;
 		background: transparent;
 		color: var(--content-meta);
 		cursor: pointer;
-		border-radius: var(--radius-md);
+		border-radius: 0.5rem;
 		transition: color 0.2s, background-color 0.2s;
 	}
 
