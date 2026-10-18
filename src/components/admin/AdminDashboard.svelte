@@ -2139,10 +2139,11 @@ font-family: inherit;
 			padding-left: 0.875rem;
 		}
 
-		/* 折叠态品牌区：仅 Logo，水平居中，垂直中心与导航图标同轴 */
+		/* 折叠态品牌区：只调整上下留白做垂直微调，水平 padding 必须与展开态
+		   完全一致，否则 Logo 会在宽度动画中横向滑动 */
 		.admin-sidebar.collapsed .sidebar-brand {
-			justify-content: center;
-			padding: 0.375rem 0 0.875rem;
+			padding-top: 0.375rem;
+			padding-bottom: 0.875rem;
 		}
 
 		/* 折叠态无标题，logo 的 mb-1 mr-2 只会制造偏移，归零保持居中 */
@@ -2152,15 +2153,13 @@ font-family: inherit;
 			margin-right: 0;
 		}
 
-		/* 折叠态仅图标：主视图项与「网站配置」头按钮居中。
-		   居中只命中 nav/footer 的直接子级（> ），浮层面板在
-		   .settings-flyout-wrap 内且隔了一层 .nav-submenu，任意层级
-		   都不会被命中，子项保持基础左对齐。 */
+		/* 折叠态仅图标：只压缩上下 padding，水平 padding 保持不变，
+		   图标 x 坐标因此与展开态完全一致 */
 		.admin-sidebar.collapsed .sidebar-nav > .nav-item,
 		.admin-sidebar.collapsed .sidebar-footer > .nav-item,
 		.admin-sidebar.collapsed .settings-flyout-wrap > .nav-item {
-			justify-content: center;
-			padding: 0.5rem;
+			padding-top: 0.5rem;
+			padding-bottom: 0.5rem;
 		}
 
 		.admin-sidebar.collapsed .nav-item :global(.nav-arrow) {
@@ -2181,14 +2180,11 @@ font-family: inherit;
 			justify-content: center;
 		}
 
-		/* 折叠态管理员卡片：仅头像居中（40px 中心对齐 20px 导航图标中心） */
+		/* 折叠态管理员卡片：只调整上下留白，水平 padding 与展开态一致，
+		   头像不会在折叠动画中横移 */
 		.admin-sidebar.collapsed .sidebar-user {
-			justify-content: center;
-			padding: 0.25rem 0 1rem;
-		}
-
-		.admin-sidebar.collapsed .sidebar-user .user-meta {
-			display: none;
+			padding-top: 0.25rem;
+			padding-bottom: 1rem;
 		}
 	}
 
