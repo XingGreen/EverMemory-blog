@@ -138,17 +138,28 @@ function handleKeyDown(e: KeyboardEvent) {
 		handleSubmit();
 	}
 }
+
+// ── 返回上一页 ──
+// 直接打开 /login/（无浏览历史）时没有上一页可退，回落到首页，避免点了没反应
+function goBack() {
+	if (window.history.length > 1) {
+		window.history.back();
+	} else {
+		location.href = "/";
+	}
+}
 </script>
 
 <div class="verify-wrapper">
 	<div class="verify-card card-base">
-		<!-- 卡片顶部：返回首页 + 深浅模式切换（同一 flex 行，保证水平/垂直对齐） -->
+		<!-- 卡片顶部：返回上一页 + 深浅模式切换（同一 flex 行，保证水平/垂直对齐） -->
 		<div class="top-bar">
-			<a
+			<button
 				class="expand-animation rounded-lg px-2 py-1.5 text-base text-black/50 dark:text-white/50 hover:text-(--primary) inline-flex items-center gap-2 -ml-2"
-				href="/"
-				title={i18n(I18nKey.backToHome)}
-				aria-label={i18n(I18nKey.backToHome)}
+				type="button"
+				title={i18n(I18nKey.statusDetailBack)}
+				aria-label={i18n(I18nKey.statusDetailBack)}
+				onclick={goBack}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -165,8 +176,8 @@ function handleKeyDown(e: KeyboardEvent) {
 					<path d="m12 19-7-7 7-7"></path>
 					<path d="M19 12H5"></path>
 				</svg>
-				<span>{i18n(I18nKey.backToHome)}</span>
-			</a>
+				<span>{i18n(I18nKey.statusDetailBack)}</span>
+			</button>
 			<button
 				class="theme-toggle -mr-1.5"
 				type="button"
