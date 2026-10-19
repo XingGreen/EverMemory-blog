@@ -121,9 +121,11 @@ function handleKeydown(event: KeyboardEvent, key: string) {
 		gap: 1rem;
 		padding: 4rem 1.5rem;
 		text-align: center;
-		background: var(--card-bg);
-		border: 1px dashed var(--line-color);
-		border-radius: var(--radius-2xl);
+		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
+		-webkit-backdrop-filter: blur(12px);
+		backdrop-filter: blur(12px);
+		border: 1px solid transparent;
+		border-radius: var(--radius-large);
 	}
 
 	.empty-ring {
@@ -155,43 +157,34 @@ function handleKeydown(event: KeyboardEvent, key: string) {
 	}
 
 	.empty-reset:hover {
-		background: color-mix(in srgb, var(--primary) 10%, transparent);
+		background: color-mix(in oklab, var(--primary) 10%, transparent);
 	}
 
-	/* 配置分组标题 */
+	/* 配置分组标题：去掉左侧竖线，靠字号与间距区分 */
 	.config-group {
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
+		gap: 1rem;
 	}
 
 	.group-title {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		margin: 0;
-		font-size: 0.9375rem;
+		margin: 0.5rem 0 0;
+		font-size: 1rem;
 		font-weight: 600;
+		letter-spacing: -0.01em;
 		color: var(--deep-text);
-	}
-
-	.group-title::before {
-		content: "";
-		width: 3px;
-		height: 1.1em;
-		border-radius: 999px;
-		background: var(--primary);
-		flex-shrink: 0;
 	}
 
 	.group-count {
 		margin-left: auto;
-		padding: 0.125rem 0.5rem;
-		font-size: 0.6875rem;
-		font-weight: 500;
-		color: var(--content-meta);
-		background: var(--btn-regular-bg);
-		border-radius: 999px;
+		padding: 0;
+		font-size: 0.75rem;
+		font-weight: 400;
+		color: color-mix(in oklab, var(--content-meta) 60%, transparent);
+		background: transparent;
 		font-family: var(--font-mono, monospace);
 	}
 
@@ -200,14 +193,15 @@ function handleKeydown(event: KeyboardEvent, key: string) {
 		margin: 0;
 		padding: 0;
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-		gap: 1rem;
+		grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+		gap: 20px;
 	}
 
 	.config-item {
 		display: flex;
 	}
 
+	/* 卡片：无实线边框，卡片底 + 毛玻璃，16px 圆角 */
 	.config-card {
 		position: relative;
 		display: flex;
@@ -216,19 +210,22 @@ function handleKeydown(event: KeyboardEvent, key: string) {
 		text-align: left;
 		font-family: inherit;
 		cursor: pointer;
-		background: var(--card-bg);
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-2xl);
+		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
+		-webkit-backdrop-filter: blur(12px);
+		backdrop-filter: blur(12px);
+		border: 1px solid transparent;
+		border-radius: var(--radius-large);
 		overflow: hidden;
-		transition: transform 0.25s var(--ease-decelerate, cubic-bezier(0.25, 0.46, 0.45, 0.94)),
+		transition:
+			transform 0.25s var(--ease-decelerate, cubic-bezier(0.25, 0.46, 0.45, 0.94)),
 			box-shadow 0.25s var(--ease-decelerate, cubic-bezier(0.25, 0.46, 0.45, 0.94)),
-			border-color 0.2s ease;
+			background 0.2s ease;
 	}
 
 	.config-card:hover,
 	.config-card:focus-visible {
 		transform: translateY(-3px);
-		border-color: color-mix(in srgb, var(--primary) 50%, var(--line-divider));
+		background: color-mix(in oklab, var(--card-bg) 96%, transparent);
 		box-shadow: var(--shadow-card-hover);
 	}
 
@@ -252,7 +249,7 @@ function handleKeydown(event: KeyboardEvent, key: string) {
 		display: flex;
 		align-items: flex-start;
 		gap: 1rem;
-		padding: 1.25rem;
+		padding: 1.5rem;
 	}
 
 	.config-icon {
@@ -327,21 +324,22 @@ function handleKeydown(event: KeyboardEvent, key: string) {
 		transform: translateX(0);
 	}
 
+	/* 文件路径栏：去底色与分隔线，改成极低对比度纯文本 */
 	.config-file {
 		display: flex;
 		align-items: center;
 		gap: 0.375rem;
-		padding: 0.625rem 1.25rem;
-		background: var(--btn-regular-bg);
-		border-top: 1px solid var(--line-color);
-		color: var(--content-meta);
+		padding: 0 1.5rem 1.25rem;
+		background: transparent;
+		border-top: none;
+		color: color-mix(in oklab, var(--content-meta) 55%, transparent);
 	}
 
 	.config-file code {
 		font-size: 0.75rem;
 		font-family: var(--font-mono, monospace);
 		word-break: break-all;
-		color: var(--content-meta);
+		color: inherit;
 	}
 
 	@media (max-width: 768px) {

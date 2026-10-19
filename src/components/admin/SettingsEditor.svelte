@@ -161,8 +161,13 @@ $effect(() => {
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-		/* card-base 未内置内边距，这里补充卡片内边距 */
-		padding: 1.25rem 1.5rem;
+		/* 卡片内边距 24px，留出呼吸感 */
+		padding: 1.5rem;
+		border: 1px solid transparent;
+		border-radius: var(--radius-large);
+		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
+		-webkit-backdrop-filter: blur(12px);
+		backdrop-filter: blur(12px);
 		box-shadow: var(--shadow-card);
 	}
 
@@ -183,7 +188,7 @@ $effect(() => {
 		gap: 0.25rem;
 		padding: 0.25rem;
 		background: var(--btn-regular-bg);
-		border: 1px solid var(--line-divider);
+		border: 1px solid transparent;
 		border-radius: 999px;
 		align-self: flex-start;
 	}
@@ -209,7 +214,7 @@ $effect(() => {
 
 	.mode-tabs button.active {
 		background: var(--primary);
-		color: #fff;
+		color: var(--primary-foreground);
 		font-weight: 600;
 	}
 
@@ -221,34 +226,36 @@ $effect(() => {
 		padding-top: 0.125rem;
 	}
 
+	/* 源码编辑器：无边框，底色比卡片暗一档 */
 	.json-editor {
 		width: 100%;
 		min-height: 18rem;
-		padding: 0.75rem;
+		padding: 1rem;
 		font-family: var(--font-mono, ui-monospace, monospace);
 		font-size: 0.8125rem;
 		line-height: 1.6;
 		color: var(--deep-text);
-		background: var(--btn-regular-bg);
-		border: 1px solid var(--input-border);
-		border-radius: var(--radius-md);
+		background: color-mix(in oklab, var(--page-bg) 70%, var(--card-bg));
+		border: 1px solid transparent;
+		border-radius: var(--radius-xl);
 		resize: vertical;
 		box-sizing: border-box;
-		transition: border-color 0.2s;
+		transition: background 0.2s, box-shadow 0.2s;
 		tab-size: 2;
 	}
 
 	.json-editor:focus {
 		outline: none;
-		border-color: var(--primary);
+		background: var(--page-bg);
+		box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 55%, transparent);
 	}
 
+	/* 文件位置：去掉虚线分隔，用极低对比度纯文本 */
 	.editor-file {
-		margin-top: 1rem;
-		padding-top: 0.75rem;
-		border-top: 1px dashed var(--line-color);
+		margin-top: 0.5rem;
+		padding-top: 0.5rem;
 		font-size: 0.75rem;
-		color: var(--content-meta);
+		color: color-mix(in oklab, var(--content-meta) 55%, transparent);
 		font-family: var(--font-mono, monospace);
 		word-break: break-all;
 	}

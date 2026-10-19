@@ -1638,7 +1638,13 @@ function formatDate(dateStr: string | null): string {
 		overflow: visible;
 		display: flex;
 		flex-direction: column;
-		background: color-mix(in oklab, var(--admin-sidebar-bg) 88%, transparent);
+		/* 侧栏底色：卡片底混入少量 --deep-text，得到跟随 var(--hue) 的偏暗一档，
+		   既与右侧内容区拉开层级，换色相时也自动同步 */
+		background: color-mix(
+			in oklab,
+			var(--deep-text) 8%,
+			color-mix(in oklab, var(--admin-sidebar-bg) 88%, transparent)
+		);
 		-webkit-backdrop-filter: blur(12px);
 		backdrop-filter: blur(12px);
 		border: 1px solid transparent;
@@ -1848,12 +1854,10 @@ function formatDate(dateStr: string | null): string {
 		outline-offset: 2px;
 	}
 
-	/* 一级导航项选中：涂主题色浅底 + 主色文字。
-	   底色用 --btn-regular-bg（主题色相浅色阶）而非直接叠主色，
-	   与卡片底色同族、对比更柔和；文字仍用 --title-active 保证 AA。 */
+	/* 一级导航项选中：主色调高亮（底色 + 文字都取 --primary 系列） */
 	.nav-item.active {
-		background: var(--btn-regular-bg);
-		color: var(--title-active);
+		background: color-mix(in oklab, var(--primary) 18%, transparent);
+		color: var(--primary);
 		font-weight: 600;
 	}
 
@@ -1940,7 +1944,7 @@ function formatDate(dateStr: string | null): string {
 	/* 悬停：已选中项略微加深（保持选中标识不被灰色冲掉），
 	   未选中项用中性悬停底，避免与选中态混淆。 */
 	.nav-item.active:hover {
-		background: var(--btn-regular-bg-hover);
+		background: color-mix(in oklab, var(--primary) 26%, transparent);
 	}
 
 	.nav-item.sub.active:hover {
@@ -1976,7 +1980,7 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.sidebar-user.active {
-		background: var(--btn-regular-bg);
+		background: color-mix(in oklab, var(--primary) 18%, transparent);
 	}
 
 	.sidebar-user:focus-visible {
@@ -2319,15 +2323,21 @@ function formatDate(dateStr: string | null): string {
 		justify-content: space-between;
 		gap: 1rem;
 		flex-wrap: wrap;
-		padding: 1rem 1.25rem;
-		border: none;
+		padding: 1.5rem;
+		border: 1px solid transparent;
+		border-radius: var(--radius-large);
+		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
+		-webkit-backdrop-filter: blur(12px);
+		backdrop-filter: blur(12px);
 		box-shadow: var(--shadow-card);
 	}
 
+	/* 区块标题：靠字号与上下间距区分层级，不加竖线 */
 	.overview-title {
 		margin: 0;
 		font-size: 1.125rem;
 		font-weight: 600;
+		letter-spacing: -0.01em;
 		color: var(--deep-text);
 	}
 
@@ -2338,8 +2348,12 @@ function formatDate(dateStr: string | null): string {
 		justify-content: space-between;
 		gap: 1rem;
 		flex-wrap: wrap;
-		padding: 1rem 1.25rem;
-		border: none;
+		padding: 1.5rem;
+		border: 1px solid transparent;
+		border-radius: var(--radius-large);
+		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
+		-webkit-backdrop-filter: blur(12px);
+		backdrop-filter: blur(12px);
 		box-shadow: var(--shadow-card);
 	}
 
@@ -2347,6 +2361,7 @@ function formatDate(dateStr: string | null): string {
 		margin: 0;
 		font-size: 1.125rem;
 		font-weight: 600;
+		letter-spacing: -0.01em;
 		color: var(--deep-text);
 	}
 
@@ -2358,8 +2373,8 @@ function formatDate(dateStr: string | null): string {
 
 	.page-head-btn {
 		padding: 0.5rem 1rem;
-		border: none;
-		border-radius: var(--radius-md);
+		border: 1px solid transparent;
+		border-radius: var(--radius-xl);
 		font-size: 0.875rem;
 		font-weight: 500;
 		cursor: pointer;

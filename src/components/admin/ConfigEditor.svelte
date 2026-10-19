@@ -251,21 +251,22 @@ function addItem(arr: JsonValue[]) {
 	}
 
 	/* 布尔开关 */
+	/* 布尔开关：无边框胶囊，开启时用主色浅底 + 主色文字 */
 	.toggle {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.5rem;
 		width: fit-content;
-		padding: 0.3125rem 0.75rem;
+		padding: 0.375rem 0.875rem;
 		font-size: 0.8125rem;
 		font-weight: 500;
 		font-family: inherit;
-		border: 1px solid var(--line-divider);
+		border: 1px solid transparent;
 		border-radius: 999px;
 		background: var(--btn-regular-bg);
 		color: var(--content-meta);
 		cursor: pointer;
-		transition: all 0.2s;
+		transition: background 0.2s, color 0.2s;
 	}
 
 	.toggle-dot {
@@ -277,8 +278,8 @@ function addItem(arr: JsonValue[]) {
 	}
 
 	.toggle.on {
-		background: color-mix(in srgb, var(--primary) 14%, transparent);
-		border-color: var(--primary);
+		background: color-mix(in oklab, var(--primary) 14%, transparent);
+		border-color: transparent;
 		color: var(--primary);
 	}
 
@@ -292,25 +293,28 @@ function addItem(arr: JsonValue[]) {
 		padding-top: 0.5rem;
 	}
 
-	/* 嵌套分组：通栏卡片 + 组头，卡片内复用同一套两列网格 */
+	/* 嵌套分组：去掉实线边框，用比外层卡片略深/浅的底色区分层级 */
 	.group-card {
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-md);
-		padding: 0.625rem 0.875rem 0.75rem;
+		border: 1px solid transparent;
+		border-radius: var(--radius-large);
+		padding: 1rem 1.25rem 1.25rem;
 		width: 100%;
 		box-sizing: border-box;
-		background: color-mix(in srgb, var(--card-bg) 45%, transparent);
+		background: color-mix(in oklab, var(--card-bg) 55%, transparent);
+		-webkit-backdrop-filter: blur(8px);
+		backdrop-filter: blur(8px);
 	}
 
+	/* 组标题：靠字号与灰度区分，不做整行加粗 */
 	.group-title {
 		display: flex;
 		align-items: center;
 		gap: 0.375rem;
-		font-size: 0.8rem;
+		font-size: 0.8125rem;
 		font-weight: 600;
 		color: var(--btn-content);
-		margin-bottom: 0.5rem;
-		letter-spacing: 0.02em;
+		margin-bottom: 0.75rem;
+		letter-spacing: 0.01em;
 	}
 
 	.group-body {
@@ -331,10 +335,10 @@ function addItem(arr: JsonValue[]) {
 
 	.array-item {
 		position: relative;
-		border: 1px dashed var(--line-divider);
-		border-radius: var(--radius-md);
-		padding: 0.5rem 2.25rem 0.5rem 0.625rem;
-		background: color-mix(in srgb, var(--card-bg) 40%, transparent);
+		border: 1px solid transparent;
+		border-radius: var(--radius-xl);
+		padding: 0.75rem 2.25rem 0.75rem 0.875rem;
+		background: color-mix(in oklab, var(--card-bg) 45%, transparent);
 	}
 
 	/* 纯标量列表项：不加虚线框，输入框 + 删除按钮一行排列 */
@@ -368,35 +372,37 @@ function addItem(arr: JsonValue[]) {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-sm, 0.375rem);
+		border: 1px solid transparent;
+		border-radius: var(--radius-md);
 		background: var(--btn-regular-bg);
 		color: var(--content-meta);
+		opacity: 0.6;
 		cursor: pointer;
-		transition: all 0.2s;
+		transition: opacity 0.2s, color 0.2s, background 0.2s;
 		padding: 0;
 	}
 
 	.icon-btn:hover {
+		opacity: 1;
 		color: var(--destructive);
-		border-color: var(--destructive);
+		border-color: transparent;
 	}
 
 	.add-btn {
 		width: fit-content;
-		padding: 0.3125rem 0.75rem;
+		padding: 0.375rem 0.875rem;
 		font-size: 0.8125rem;
 		font-weight: 500;
 		font-family: inherit;
-		border: 1px dashed var(--primary);
-		border-radius: var(--radius-md);
-		background: transparent;
+		border: 1px solid transparent;
+		border-radius: var(--radius-xl);
+		background: color-mix(in oklab, var(--primary) 8%, transparent);
 		color: var(--primary);
 		cursor: pointer;
-		transition: all 0.2s;
+		transition: background 0.2s;
 	}
 
 	.add-btn:hover {
-		background: color-mix(in srgb, var(--primary) 10%, transparent);
+		background: color-mix(in oklab, var(--primary) 16%, transparent);
 	}
 </style>

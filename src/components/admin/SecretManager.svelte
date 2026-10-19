@@ -558,9 +558,9 @@ onMount(load);
 	}
 
 	.status-banner.error {
-		background: color-mix(in srgb, var(--destructive) 10%, var(--card-bg));
+		background: color-mix(in oklab, var(--destructive) 10%, var(--card-bg));
 		color: var(--destructive);
-		border: 1px solid color-mix(in srgb, var(--destructive) 30%, transparent);
+		border: 1px solid transparent;
 	}
 
 	.status-banner .sec-btn {
@@ -578,22 +578,22 @@ onMount(load);
 	}
 
 	/* ── 配置完成度状态卡 ── */
+	/* 状态完成度：取消实线描边，用底色 + 文字色表达 */
 	.secrets-status {
 		display: flex;
 		align-items: center;
 		gap: 0.625rem;
 		flex-wrap: wrap;
-		padding: 0.875rem 1.125rem;
+		padding: 1rem 1.25rem;
 		border-radius: var(--radius-large);
-		background: color-mix(in srgb, var(--warning) 10%, var(--card-bg));
-		border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+		background: color-mix(in oklab, var(--warning) 10%, var(--card-bg));
+		border: 1px solid transparent;
 		color: var(--deep-text);
 		font-size: 0.875rem;
 	}
 
 	.secrets-status.all-done {
-		background: color-mix(in srgb, var(--success) 10%, var(--card-bg));
-		border-color: color-mix(in srgb, var(--success) 30%, transparent);
+		background: color-mix(in oklab, var(--success) 10%, var(--card-bg));
 	}
 
 	.secrets-status :global(.status-icon) {
@@ -623,11 +623,11 @@ onMount(load);
 		display: inline-flex;
 		align-items: center;
 		gap: 0.375rem;
-		padding: 0.1875rem 0.625rem;
-		border-radius: 999px;
-		background: var(--btn-regular-bg);
+		padding: 0;
+		border-radius: 0;
+		background: transparent;
 		font-size: 0.8125rem;
-		color: var(--deep-text);
+		color: var(--content-meta);
 		white-space: nowrap;
 	}
 
@@ -643,8 +643,12 @@ onMount(load);
 		align-items: center;
 		justify-content: space-between;
 		gap: 1rem;
-		padding: 1rem 1.25rem;
+		padding: 1.5rem;
 		flex-wrap: wrap;
+		border-radius: var(--radius-large);
+		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
+		-webkit-backdrop-filter: blur(12px);
+		backdrop-filter: blur(12px);
 	}
 
 	.toolbar-hint {
@@ -691,15 +695,15 @@ onMount(load);
 		align-items: center;
 		gap: 0.375rem;
 		padding: 0.5rem 1rem;
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-md);
+		border: 1px solid transparent;
+		border-radius: var(--radius-xl);
 		background: var(--btn-regular-bg);
 		color: var(--deep-text);
 		font-size: 0.875rem;
 		font-weight: 500;
 		font-family: inherit;
 		cursor: pointer;
-		transition: all 0.2s;
+		transition: background 0.2s, color 0.2s;
 	}
 
 	.sec-btn:hover:not(:disabled) {
@@ -728,26 +732,21 @@ onMount(load);
 	.secrets-group {
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
+		/* 分组标题与网格之间用间距区分层级，不再画竖线 */
+		gap: 1rem;
 	}
 
+	/* 区块标题：去掉左侧「|」竖线，靠字号 + 上下留白区分大区块 */
 	.group-title {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		margin: 0;
-		font-size: 0.9375rem;
+		margin: 0.5rem 0 0;
+		padding: 0;
+		font-size: 1rem;
 		font-weight: 600;
+		letter-spacing: -0.01em;
 		color: var(--deep-text);
-	}
-
-	.group-title::before {
-		content: "";
-		width: 3px;
-		height: 1.1em;
-		border-radius: 999px;
-		background: var(--primary);
-		flex-shrink: 0;
 	}
 
 	:global(.group-icon) {
@@ -756,42 +755,49 @@ onMount(load);
 
 	.group-count {
 		margin-left: auto;
-		padding: 0.125rem 0.5rem;
-		font-size: 0.6875rem;
-		font-weight: 500;
-		color: var(--content-meta);
-		background: var(--btn-regular-bg);
-		border-radius: 999px;
+		padding: 0;
+		font-size: 0.75rem;
+		font-weight: 400;
+		color: color-mix(in oklab, var(--content-meta) 60%, transparent);
+		background: transparent;
 		font-family: var(--font-mono, monospace);
 	}
 
-	/* ── 密钥卡片 ── */
+	/* ── 密钥卡片 ──
+	   auto-fill 保留空轨道：某个分组只有一张卡时它仍按列宽排布，不会被拉满整行；
+	   auto-rows 默认 1fr 让同一行的卡片等高。 */
 	.secret-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-		gap: 1rem;
+		grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+		gap: 20px;
+		align-items: stretch;
 	}
 
 	.secret-field {
-		padding: 1.25rem;
+		/* 去掉实线边框：层级由卡片底 + 毛玻璃表达 */
+		padding: 1.5rem;
 		display: flex;
 		flex-direction: column;
-		gap: 0.625rem;
-		border: 1px solid var(--line-divider);
-		transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+		gap: 0.75rem;
+		border: 1px solid transparent;
+		border-radius: var(--radius-large);
+		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
+		-webkit-backdrop-filter: blur(12px);
+		backdrop-filter: blur(12px);
+		transition: background 0.2s ease, box-shadow 0.2s ease;
 	}
 
 	.secret-field:hover {
-		border-color: color-mix(in srgb, var(--primary) 40%, var(--line-divider));
+		background: color-mix(in oklab, var(--card-bg) 96%, transparent);
 	}
 
 	.secret-field.dirty {
-		border-color: var(--primary);
-		box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+		border-color: color-mix(in oklab, var(--primary) 45%, transparent);
+		box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 12%, transparent);
 	}
 
 	.secret-field.pending-delete {
-		border-color: var(--destructive);
+		border-color: color-mix(in oklab, var(--destructive) 45%, transparent);
 		opacity: 0.75;
 	}
 
@@ -827,27 +833,26 @@ onMount(load);
 		flex-shrink: 0;
 	}
 
+	/* 状态标签：取消背景色块，只保留彩色文字 */
 	.badge {
 		flex-shrink: 0;
-		padding: 0.125rem 0.5rem;
-		border-radius: 999px;
-		font-size: 0.6875rem;
-		font-weight: 600;
+		padding: 0;
+		background: transparent;
+		border-radius: 0;
+		font-size: 0.75rem;
+		font-weight: 500;
 		line-height: 1.6;
 	}
 
 	.badge.ok {
-		background: color-mix(in srgb, var(--success) 14%, transparent);
 		color: var(--success);
 	}
 
 	.badge.missing {
-		background: color-mix(in srgb, var(--warning) 14%, transparent);
 		color: var(--warning);
 	}
 
 	.badge.pending {
-		background: color-mix(in srgb, var(--destructive) 14%, transparent);
 		color: var(--destructive);
 	}
 
@@ -872,17 +877,18 @@ onMount(load);
 		align-items: center;
 	}
 
+	/* 输入框：无边框；底色比卡片暗一档，聚焦用 outline 光晕 */
 	.secret-input {
 		width: 100%;
 		min-width: 0;
 		padding: 0.625rem 0.75rem;
-		border: 1px solid var(--input-border);
-		border-radius: var(--radius-md);
-		background: var(--page-bg);
+		border: 1px solid transparent;
+		border-radius: var(--radius-xl);
+		background: color-mix(in oklab, var(--page-bg) 70%, var(--card-bg));
 		color: var(--deep-text);
 		font-size: 0.875rem;
 		font-family: inherit;
-		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		transition: background 0.2s ease, box-shadow 0.2s ease;
 		box-sizing: border-box;
 	}
 
@@ -895,13 +901,12 @@ onMount(load);
 
 	.secret-input:focus {
 		outline: none;
-		border-color: var(--primary);
-		box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+		background: var(--page-bg);
+		box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 55%, transparent);
 	}
 
 	.secret-input::placeholder {
-		color: var(--content-meta);
-		opacity: 0.75;
+		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
 	}
 
 	.secret-input:disabled {
@@ -913,6 +918,7 @@ onMount(load);
 		padding-right: 2.5rem;
 	}
 
+	/* 密码显隐图标：默认低透明度，不抢输入内容的注意力，悬停才提亮 */
 	.input-toggle {
 		position: absolute;
 		right: 0.375rem;
@@ -922,64 +928,75 @@ onMount(load);
 		align-items: center;
 		justify-content: center;
 		border: none;
-		border-radius: var(--radius-sm);
+		border-radius: var(--radius-md);
 		background: transparent;
 		color: var(--content-meta);
+		opacity: 0.45;
 		cursor: pointer;
-		transition: background 0.15s ease, color 0.15s ease;
+		transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
 	}
 
 	.input-toggle:hover:not(:disabled) {
-		background: var(--btn-regular-bg);
+		opacity: 1;
+		background: var(--btn-plain-bg-hover);
 		color: var(--deep-text);
 	}
 
 	.input-toggle:disabled {
 		cursor: not-allowed;
-		opacity: 0.4;
+		opacity: 0.25;
 	}
 
+	/* 清除按钮：同样弱化为低透明度图标，避免与主操作用户抢焦点 */
 	.clear-btn {
 		flex-shrink: 0;
 		width: 2.5rem;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-md);
-		background: var(--btn-regular-bg);
+		border: 1px solid transparent;
+		border-radius: var(--radius-xl);
+		background: color-mix(in oklab, var(--page-bg) 55%, var(--card-bg));
 		color: var(--content-meta);
+		opacity: 0.55;
 		cursor: pointer;
-		transition: all 0.2s;
+		transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
 	}
 
 	.clear-btn:hover:not(:disabled) {
+		opacity: 1;
 		color: var(--destructive);
-		border-color: color-mix(in srgb, var(--destructive) 40%, transparent);
+		background: color-mix(in oklab, var(--destructive) 8%, transparent);
 	}
 
 	.clear-btn:disabled {
-		opacity: 0.4;
+		opacity: 0.25;
 		cursor: not-allowed;
 	}
 
+	/* 环境变量名：去掉背景色块，改成极低对比度的纯文本 */
 	.field-key {
-		font-size: 0.6875rem;
+		margin-top: auto;
+		padding: 0;
+		font-size: 0.75rem;
 		font-family: var(--font-mono, monospace);
-		color: var(--content-meta);
-		background: var(--btn-regular-bg);
-		padding: 0.1875rem 0.5rem;
-		border-radius: var(--radius-sm);
+		color: color-mix(in oklab, var(--content-meta) 55%, transparent);
+		background: transparent;
 		align-self: flex-start;
+		word-break: break-all;
 	}
 
 	/* ── 生成工具 ── */
 	.generator-card {
-		padding: 1.25rem;
+		padding: 1.5rem;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-		border: 1px dashed color-mix(in srgb, var(--primary) 40%, var(--line-divider));
+		border: 1px solid transparent;
+		border-radius: var(--radius-large);
+		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
+		-webkit-backdrop-filter: blur(12px);
+		backdrop-filter: blur(12px);
 	}
 
 	.generator-head {
@@ -1034,7 +1051,8 @@ onMount(load);
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(0, 0, 0, 0.45);
+		background: color-mix(in oklab, var(--deep-text) 45%, transparent);
+		-webkit-backdrop-filter: blur(2px);
 		backdrop-filter: blur(2px);
 		padding: 1rem;
 	}
@@ -1084,7 +1102,7 @@ onMount(load);
 	}
 
 	.modal-close:hover {
-		background: rgba(0, 0, 0, 0.05);
+		background: var(--btn-plain-bg-hover);
 		color: var(--deep-text);
 	}
 
@@ -1099,10 +1117,10 @@ onMount(load);
 		display: flex;
 		align-items: flex-start;
 		gap: 0.5rem;
-		padding: 0.625rem 0.875rem;
-		background: color-mix(in srgb, var(--warning) 10%, transparent);
-		border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
-		border-radius: var(--radius-sm);
+		padding: 0.75rem 1rem;
+		background: color-mix(in oklab, var(--warning) 10%, transparent);
+		border: 1px solid transparent;
+		border-radius: var(--radius-md);
 		color: var(--warning);
 		font-size: 0.8125rem;
 		line-height: 1.6;
