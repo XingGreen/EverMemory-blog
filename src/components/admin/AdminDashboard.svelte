@@ -1625,7 +1625,9 @@ function formatDate(dateStr: string | null): string {
 		min-height: 0;
 	}
 
-	/* ── 左侧导航栏 ── */
+	/* ── 左侧导航栏 ──
+	   卡片层级由「背景 + 毛玻璃」表达，不再用实线边框勾勒轮廓；
+	   透明边框仅用于占位，保证盒模型与图标列坐标和此前逐像素一致。 */
 	.admin-sidebar {
 		/* position/overflow：折叠按钮悬垂在右上角外侧，滚动裁切必须放开，
 		   滚动需求交给内部 .sidebar-nav */
@@ -1636,8 +1638,10 @@ function formatDate(dateStr: string | null): string {
 		overflow: visible;
 		display: flex;
 		flex-direction: column;
-		background: var(--admin-sidebar-bg);
-		border: 1px solid var(--line-divider);
+		background: color-mix(in oklab, var(--admin-sidebar-bg) 88%, transparent);
+		-webkit-backdrop-filter: blur(12px);
+		backdrop-filter: blur(12px);
+		border: 1px solid transparent;
 		border-radius: var(--radius-large);
 		/* 左右 0.75rem 是折叠态「图标列」的一部分，展开/折叠必须保持一致 */
 		padding: 1rem 0.75rem;
@@ -1660,10 +1664,10 @@ function formatDate(dateStr: string | null): string {
 		   左 1.25rem + logo 14px = 图标中心 46px，与导航图标列对齐；
 		   上下 0.5rem：32px + 16px = 48px 行高，与参考项目 3rem 对齐 */
 		padding: 0.5rem 0.75rem 0.5rem 1.25rem;
-		/* 品牌区底部分隔：内容分隔线用 --line-color，与容器轮廓（--line-divider）区分 */
+		/* 品牌区底部分隔：结构线用低对比度内容线，不用容器轮廓色 */
 		border-bottom: 1px solid var(--line-color);
 		margin-bottom: 0.75rem;
-		border-radius: var(--radius-lg);
+		border-radius: var(--radius-xl);
 		transition: background 0.15s;
 		color: var(--deep-text);
 	}
@@ -1716,7 +1720,8 @@ function formatDate(dateStr: string | null): string {
 			max-width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
-	/* 折叠/展开按钮：悬垂在侧边栏右上角外侧（参考 flare admin-sidebar-toggle） */
+	/* 折叠/展开按钮：悬垂在侧边栏右上角外侧。
+	   改用卡片底色 + 毛玻璃，与侧栏同材质，避免出现一块白底补丁。 */
 	.sidebar-collapse {
 		position: absolute;
 		top: 1rem;
@@ -1728,9 +1733,11 @@ function formatDate(dateStr: string | null): string {
 		width: 1.75rem;
 		height: 1.75rem;
 		padding: 0;
-		border: 1px solid var(--line-divider);
+		border: 1px solid transparent;
 		border-radius: 50%;
-		background: var(--float-panel-bg);
+		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
+		-webkit-backdrop-filter: blur(12px);
+		backdrop-filter: blur(12px);
 		color: var(--content-meta);
 		box-shadow: var(--shadow-sm);
 		cursor: pointer;
@@ -1738,8 +1745,8 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.sidebar-collapse:hover {
-		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
-		color: var(--deep-text);
+		background: var(--btn-plain-bg-hover);
+		color: var(--primary);
 	}
 
 	.sidebar-collapse:focus-visible {
@@ -1799,10 +1806,9 @@ function formatDate(dateStr: string | null): string {
 		   需 150px、英文「Post Management」需 122px，提到 15px 会溢出换行 */
 		font-size: 0.875rem;
 		font-weight: 500;
-		border-radius: var(--radius-lg);
+		border-radius: var(--radius-xl);
 		cursor: pointer;
-		transition: background 0.15s, color 0.15s;
-font-family: inherit;
+		font-family: inherit;
 		text-align: left;
 		line-height: 1.3;
 		/* 侧边栏内的链接项（返回首页）去除下划线 */
@@ -1842,11 +1848,11 @@ font-family: inherit;
 		outline-offset: 2px;
 	}
 
-	/* 一级导航项选中：涂主题色背景 + 主色文字。
-	   适用于「没有子菜单」的一级项——它们本身就是导航目标，
-	   选中后必须给出明确反馈（此前为 transparent，导致首页等项看不出选中）。 */
+	/* 一级导航项选中：涂主题色浅底 + 主色文字。
+	   底色用 --btn-regular-bg（主题色相浅色阶）而非直接叠主色，
+	   与卡片底色同族、对比更柔和；文字仍用 --title-active 保证 AA。 */
 	.nav-item.active {
-		background: color-mix(in oklab, var(--primary) 16%, transparent);
+		background: var(--btn-regular-bg);
 		color: var(--title-active);
 		font-weight: 600;
 	}
@@ -1896,20 +1902,20 @@ font-family: inherit;
 		gap: 0.375rem;
 		margin-left: 1.25rem;
 		padding-left: 0.875rem;
-		/* 缩进结构线（内容分隔），非容器轮廓 */
+		/* 缩进结构线（内容分隔），非容器轮廓；低对比度变量色 */
 		border-left: 2px solid var(--line-color);
 	}
 
-	/* 配置分组小标题（侧边栏"网站配置"二级菜单） */
+	/* 配置分组小标题（侧边栏"网站配置"二级菜单）
+	   中文正文不靠加粗制造层级，改用字号 + 极低对比度灰色区分 */
 	.nav-group-label {
 		margin-top: 0.5rem;
 		margin-bottom: 0.25rem;
 		padding: 0.25rem 0.875rem 0.125rem;
 		font-size: 0.75rem;
-		font-weight: 600;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--content-meta);
+		font-weight: 500;
+		letter-spacing: 0.04em;
+		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
 	}
 
 	.nav-group-label:first-child {
@@ -1922,28 +1928,28 @@ font-family: inherit;
 		/* 二级项无箭头，可用宽度更充裕（108px），文字可安全放大到 14px */
 		font-size: 0.875rem;
 		color: var(--content-meta);
-		border-radius: var(--radius-lg);
+		border-radius: var(--radius-xl);
 	}
 
 	.nav-item.sub.active {
-		/* 二级菜单高亮：底色比一级浅一半（一级 16%），以此区分内层选中 */
-		background: color-mix(in oklab, var(--primary) 8%, transparent);
+		/* 二级菜单高亮：底色比一级浅一档，以此区分内层选中 */
+		background: var(--btn-plain-bg-hover);
 		color: var(--title-active);
 	}
 
-	/* 悬停：已选中项加深主题色背景（保持选中标识不被灰色冲掉），
-	   未选中项用中性灰，避免与选中态混淆。二级选中 hover 仍低于一级选中静态值。 */
+	/* 悬停：已选中项略微加深（保持选中标识不被灰色冲掉），
+	   未选中项用中性悬停底，避免与选中态混淆。 */
 	.nav-item.active:hover {
-		background: color-mix(in oklab, var(--primary) 26%, transparent);
+		background: var(--btn-regular-bg-hover);
 	}
 
 	.nav-item.sub.active:hover {
-		background: color-mix(in oklab, var(--primary) 16%, transparent);
+		background: var(--btn-plain-bg-active);
 	}
 
 	.nav-item:hover:not(.active),
 	.nav-group-head:hover:not(.group-active) {
-		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
+		background: var(--btn-plain-bg-hover);
 	}
 
 	/* 底部用户中心入口：整块可点击（button 需重置浏览器默认样式） */
@@ -1960,17 +1966,17 @@ font-family: inherit;
 		font: inherit;
 		text-align: left;
 		cursor: pointer;
-		border-radius: var(--radius-lg);
+		border-radius: var(--radius-xl);
 		margin-bottom: 0.25rem;
 		transition: background 0.15s, color 0.15s;
 	}
 
 	.sidebar-user:hover {
-		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
+		background: var(--btn-plain-bg-hover);
 	}
 
 	.sidebar-user.active {
-		background: color-mix(in oklab, var(--primary) 12%, transparent);
+		background: var(--btn-regular-bg);
 	}
 
 	.sidebar-user:focus-visible {
@@ -2078,6 +2084,7 @@ font-family: inherit;
 	}
 
 	.sidebar-footer {
+		/* 底部结构线用低对比度内容线，不用容器轮廓色 */
 		border-top: 1px solid var(--line-color);
 		padding-top: 0.5rem;
 		margin-top: 0.5rem;
@@ -2142,10 +2149,13 @@ font-family: inherit;
 			width: 14rem;
 			max-height: calc(100vh - 8rem);
 			overflow-y: auto;
-			padding: 0.375rem;
-			background: var(--float-panel-bg);
-			border: 1px solid var(--line-divider);
-			border-radius: var(--radius-lg);
+			padding: 0.5rem;
+			/* 与侧栏同材质：卡片底 + 毛玻璃，靠明暗和模糊区分层级，不用实线边框 */
+			background: color-mix(in oklab, var(--float-panel-bg) 92%, transparent);
+			-webkit-backdrop-filter: blur(12px);
+			backdrop-filter: blur(12px);
+			border: 1px solid transparent;
+			border-radius: var(--radius-large);
 			box-shadow: var(--shadow-card-hover);
 			z-index: 40;
 			opacity: 0;
@@ -2188,7 +2198,7 @@ font-family: inherit;
 		   （:not(.group-active) 排除了它），折叠态统一补上。 */
 		.admin-sidebar.collapsed .sidebar-nav > .nav-item:hover,
 		.admin-sidebar.collapsed .sidebar-footer > .nav-item:hover {
-			background: color-mix(in oklab, var(--deep-text) 8%, transparent);
+			background: var(--btn-plain-bg-hover);
 		}
 
 		/* 「网站配置」头按钮的常驻反馈：鼠标进入 wrap（按钮本身、
@@ -2197,12 +2207,12 @@ font-family: inherit;
 		   用户可沿面板反查当前选中的子项属于哪个图标。 */
 		.admin-sidebar.collapsed .settings-flyout-wrap:hover > .nav-item,
 		.admin-sidebar.collapsed .settings-flyout-wrap:focus-within > .nav-item {
-			background: color-mix(in oklab, var(--deep-text) 8%, transparent);
+			background: var(--btn-plain-bg-hover);
 		}
 
 		/* 钉住状态：头按钮保持灰底，提示当前已固定 */
 		.admin-sidebar.collapsed .settings-flyout-wrap.flyout-pinned > .nav-item {
-			background: color-mix(in oklab, var(--deep-text) 8%, transparent);
+			background: var(--btn-plain-bg-hover);
 		}
 
 		.admin-sidebar.collapsed .flyout-panel .nav-item {
@@ -3281,7 +3291,8 @@ font-family: inherit;
 			max-width: 20rem;
 			height: auto;
 			z-index: 120;
-			border: 1px solid var(--line-divider);
+			/* 与桌面态同材质：无实线边框，靠背景/毛玻璃/阴影分层 */
+			border: 1px solid transparent;
 			border-radius: var(--radius-large);
 			transform: translateX(calc(-100% - 1rem));
 			transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
@@ -3296,7 +3307,8 @@ font-family: inherit;
 			display: block;
 			position: fixed;
 			inset: 0;
-			background: rgba(0, 0, 0, 0.2);
+			background: color-mix(in oklab, var(--deep-text) 20%, transparent);
+			-webkit-backdrop-filter: blur(4px);
 			backdrop-filter: blur(4px);
 			z-index: 110;
 		}
