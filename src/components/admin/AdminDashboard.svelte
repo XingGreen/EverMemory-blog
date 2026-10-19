@@ -1956,7 +1956,8 @@ function formatDate(dateStr: string | null): string {
 		background: var(--btn-plain-bg-hover);
 	}
 
-	/* 底部用户中心入口：整块可点击（button 需重置浏览器默认样式） */
+	/* 底部用户中心入口：整块可点击（button 需重置浏览器默认样式）。
+	   静态无底色，只在悬停/选中时给一层极淡的主色微光，避免整块深色块。 */
 	.sidebar-user {
 		display: flex;
 		align-items: center;
@@ -1972,15 +1973,20 @@ function formatDate(dateStr: string | null): string {
 		cursor: pointer;
 		border-radius: var(--radius-xl);
 		margin-bottom: 0.25rem;
-		transition: background 0.15s, color 0.15s;
+		transition: background 0.2s ease, color 0.2s ease;
 	}
 
 	.sidebar-user:hover {
-		background: var(--btn-plain-bg-hover);
+		background: color-mix(in oklab, var(--primary) 8%, transparent);
 	}
 
 	.sidebar-user.active {
-		background: color-mix(in oklab, var(--primary) 18%, transparent);
+		background: color-mix(in oklab, var(--primary) 6%, transparent);
+	}
+
+	.sidebar-user:hover .user-name,
+	.sidebar-user.active .user-name {
+		color: var(--primary);
 	}
 
 	.sidebar-user:focus-visible {

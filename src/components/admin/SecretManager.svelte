@@ -577,8 +577,9 @@ onMount(load);
 		}
 	}
 
-	/* ── 配置完成度状态卡 ── */
-	/* 状态完成度：取消实线描边，用底色 + 文字色表达 */
+	/* ── 配置完成度状态卡 ──
+	   半透明底色 + 彩色文字 + 微弱同色边框；不再与 --card-bg 混色，
+	   否则暗色下会变成一块实心暗绿。 */
 	.secrets-status {
 		display: flex;
 		align-items: center;
@@ -586,14 +587,16 @@ onMount(load);
 		flex-wrap: wrap;
 		padding: 1rem 1.25rem;
 		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--warning) 10%, var(--card-bg));
-		border: 1px solid transparent;
-		color: var(--deep-text);
+		background: color-mix(in oklab, var(--warning) 10%, transparent);
+		border: 1px solid color-mix(in oklab, var(--warning) 22%, transparent);
+		color: var(--warning);
 		font-size: 0.875rem;
 	}
 
 	.secrets-status.all-done {
-		background: color-mix(in oklab, var(--success) 10%, var(--card-bg));
+		background: color-mix(in oklab, var(--success) 10%, transparent);
+		border-color: color-mix(in oklab, var(--success) 22%, transparent);
+		color: var(--success);
 	}
 
 	.secrets-status :global(.status-icon) {
@@ -778,6 +781,8 @@ onMount(load);
 		padding: 1.5rem;
 		display: flex;
 		flex-direction: column;
+		/* 内容按 gap 均匀堆叠；环境变量名不再用 margin-top:auto 顶到底部，
+		   否则说明文字行数少的卡片会出现大段空白断层 */
 		gap: 0.75rem;
 		border: 1px solid transparent;
 		border-radius: var(--radius-large);
@@ -974,9 +979,9 @@ onMount(load);
 		cursor: not-allowed;
 	}
 
-	/* 环境变量名：去掉背景色块，改成极低对比度的纯文本 */
+	/* 环境变量名：去掉背景色块，改成极低对比度的纯文本。
+	   紧随输入框之后（不再 margin-top:auto），间距由卡片 gap 统一分配。 */
 	.field-key {
-		margin-top: auto;
 		padding: 0;
 		font-size: 0.75rem;
 		font-family: var(--font-mono, monospace);
