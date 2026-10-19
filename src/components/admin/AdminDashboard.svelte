@@ -1638,13 +1638,12 @@ function formatDate(dateStr: string | null): string {
 		overflow: visible;
 		display: flex;
 		flex-direction: column;
-		/* 侧栏底色：卡片底混入少量 --deep-text，得到跟随 var(--hue) 的偏暗一档，
-		   既与右侧内容区拉开层级，换色相时也自动同步 */
-		background: color-mix(
-			in oklab,
-			var(--deep-text) 8%,
-			color-mix(in oklab, var(--admin-sidebar-bg) 88%, transparent)
-		);
+		/* 侧栏底色：以 card-bg 为基准混入 page-bg（两种模式下 page-bg 都比
+		   card-bg 暗），得到稳定「卡片色压暗一档」的结果，明暗两态都落在
+		   page-bg 与 card-bg 之间。
+		   反例：曾混入 --deep-text，但它在暗色下是亮色(0.95)，会把侧栏抬得
+		   比内容区还亮，整条配色梯度倒置。 */
+		background: color-mix(in oklab, var(--page-bg) 22%, var(--card-bg));
 		-webkit-backdrop-filter: blur(12px);
 		backdrop-filter: blur(12px);
 		border: 1px solid transparent;
@@ -1679,7 +1678,7 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.sidebar-brand:hover {
-		background: var(--btn-plain-bg-hover);
+		background: color-mix(in oklab, var(--primary) 8%, transparent);
 	}
 
 	/* 前台 navbar 的 followTheme=true 时 Logo 与标题跟随主题色 */
@@ -1751,7 +1750,7 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.sidebar-collapse:hover {
-		background: var(--btn-plain-bg-hover);
+		background: color-mix(in oklab, var(--primary) 14%, transparent);
 		color: var(--primary);
 	}
 
@@ -1936,24 +1935,25 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.nav-item.sub.active {
-		/* 二级菜单高亮：底色比一级浅一档，以此区分内层选中 */
-		background: var(--btn-plain-bg-hover);
-		color: var(--title-active);
+		/* 二级菜单高亮：与一级同一套主色体系，只是浓度更低 */
+		background: color-mix(in oklab, var(--primary) 10%, transparent);
+		color: var(--primary);
 	}
 
-	/* 悬停：已选中项略微加深（保持选中标识不被灰色冲掉），
-	   未选中项用中性悬停底，避免与选中态混淆。 */
+	/* 悬停/选中统一走 --primary 混色，只改浓度：
+	   悬停 8% < 二级选中 10% < 一级选中 18% < 选中悬停 26%，
+	   整条梯度单调递增，不会出现「悬停比选中更重」或中性灰与主色混杂。 */
 	.nav-item.active:hover {
 		background: color-mix(in oklab, var(--primary) 26%, transparent);
 	}
 
 	.nav-item.sub.active:hover {
-		background: var(--btn-plain-bg-active);
+		background: color-mix(in oklab, var(--primary) 16%, transparent);
 	}
 
 	.nav-item:hover:not(.active),
 	.nav-group-head:hover:not(.group-active) {
-		background: var(--btn-plain-bg-hover);
+		background: color-mix(in oklab, var(--primary) 8%, transparent);
 	}
 
 	/* 底部用户中心入口：整块可点击（button 需重置浏览器默认样式）。
@@ -1981,7 +1981,8 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.sidebar-user.active {
-		background: color-mix(in oklab, var(--primary) 6%, transparent);
+		/* 选中比悬停更浓一档，与导航项梯度一致（8% 悬停 / 12% 选中） */
+		background: color-mix(in oklab, var(--primary) 12%, transparent);
 	}
 
 	.sidebar-user:hover .user-name,
@@ -2203,26 +2204,26 @@ function formatDate(dateStr: string | null): string {
 				visibility 0s;
 		}
 
-		/* 折叠态图标悬停反馈：灰底提示鼠标指向哪一项。
+		/* 折叠态图标悬停反馈：与展开态同一条主色梯度，只改浓度。
 		   展开态的基础条目不覆盖带 group-active 的设置头按钮
 		   （:not(.group-active) 排除了它），折叠态统一补上。 */
 		.admin-sidebar.collapsed .sidebar-nav > .nav-item:hover,
 		.admin-sidebar.collapsed .sidebar-footer > .nav-item:hover {
-			background: var(--btn-plain-bg-hover);
+			background: color-mix(in oklab, var(--primary) 8%, transparent);
 		}
 
 		/* 「网站配置」头按钮的常驻反馈：鼠标进入 wrap（按钮本身、
-		   悬浮面板驻留）或钉住状态时保持灰底。面板是 wrap 的直接子级，
+		   悬浮面板驻留）或钉住状态时保持高亮。面板是 wrap 的直接子级，
 		   指针移到面板上时 wrap 仍处于 :hover，按钮底色不中断，
 		   用户可沿面板反查当前选中的子项属于哪个图标。 */
 		.admin-sidebar.collapsed .settings-flyout-wrap:hover > .nav-item,
 		.admin-sidebar.collapsed .settings-flyout-wrap:focus-within > .nav-item {
-			background: var(--btn-plain-bg-hover);
+			background: color-mix(in oklab, var(--primary) 8%, transparent);
 		}
 
-		/* 钉住状态：头按钮保持灰底，提示当前已固定 */
+		/* 钉住状态：头按钮保持高亮，提示当前已固定 */
 		.admin-sidebar.collapsed .settings-flyout-wrap.flyout-pinned > .nav-item {
-			background: var(--btn-plain-bg-hover);
+			background: color-mix(in oklab, var(--primary) 12%, transparent);
 		}
 
 		.admin-sidebar.collapsed .flyout-panel .nav-item {
