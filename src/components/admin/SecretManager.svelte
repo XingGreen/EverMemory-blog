@@ -354,7 +354,8 @@ onMount(load);
 	{:else}
 		{#each groups as group}
 			{#if group.items.length > 0}
-				<!-- 每个分组是一块独立大板块：标题区 + 说明 + 内部字段网格 -->
+				<!-- 每个分组是一块独立大板块：标题区 + 说明 + 纵向字段列表。
+				     字段直接排布在板块内，不再各自套卡片容器（禁止卡片嵌套）。 -->
 				<section class="secrets-group card-base">
 					<header class="group-head">
 						<span class="group-head-icon">
@@ -368,10 +369,10 @@ onMount(load);
 							<p class="group-desc">{i18n(I18nKey[group.descKey])}</p>
 						</div>
 					</header>
-					<div class="secret-grid">
+					<div class="secret-list">
 						{#each group.items as item (item.key)}
-							<article
-								class="card-base secret-field"
+							<div
+								class="secret-field"
 								class:dirty={isDirty(item)}
 								class:pending-delete={toDelete[item.key]}
 							>
@@ -509,7 +510,7 @@ onMount(load);
 								{/if}
 
 								<code class="field-key">{item.key}</code>
-							</article>
+							</div>
 						{/each}
 					</div>
 				</section>
@@ -866,51 +867,43 @@ onMount(load);
 		font-family: var(--font-mono, monospace);
 	}
 
-	/* ── 密钥卡片 ──
-	   auto-fill 保留空轨道：某个分组只有一张卡时它仍按列宽排布，不会被拉满整行；
-	   auto-rows 默认 1fr 让同一行的卡片等高。 */
-	.secret-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-		gap: 20px;
-		align-items: stretch;
+	/* ── 字段列表 ──
+	   参考设计：字段在板块内纵向排列，标签/状态一行、说明在其下、输入框整行。
+	   字段本身不是卡片容器，只用间距和极淡的分隔线区分，避免卡片套卡片。 */
+	.secret-list {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
 	}
 
 	.secret-field {
-		/* 去掉实线边框：层级由卡片底 + 毛玻璃表达 */
-		padding: 1.5rem;
 		display: flex;
 		flex-direction: column;
-		/* 内容按 gap 均匀堆叠；环境变量名不再用 margin-top:auto 顶到底部，
-		   否则说明文字行数少的卡片会出现大段空白断层 */
-		gap: 0.75rem;
-		border: 1px solid transparent;
-		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
-		-webkit-backdrop-filter: blur(12px);
-		backdrop-filter: blur(12px);
-		transition: background 0.2s ease, box-shadow 0.2s ease;
+		gap: 0.5rem;
+		/* 无背景、无边框、无圆角：它就是板块内容本身，不是独立卡片 */
+		padding: 0;
+		border: 0;
+		background: transparent;
 	}
 
-	.secret-field:hover {
-		background: color-mix(in oklab, var(--card-bg) 96%, transparent);
-	}
-
+	/* 变更/待删除只在左侧留一道细指示线，不恢复整块卡片观感 */
 	.secret-field.dirty {
-		border-color: color-mix(in oklab, var(--primary) 45%, transparent);
-		box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 12%, transparent);
+		padding-left: 0.875rem;
+		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
 	}
 
 	.secret-field.pending-delete {
-		border-color: color-mix(in oklab, var(--destructive) 45%, transparent);
+		padding-left: 0.875rem;
+		border-left: 2px solid color-mix(in oklab, var(--destructive) 55%, transparent);
 		opacity: 0.75;
 	}
 
+	/* 标签行：标题在左、配置状态在右 */
 	.field-head {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.75rem;
+		gap: 1rem;
 	}
 
 	.field-head h3 {
