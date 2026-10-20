@@ -394,18 +394,10 @@ onMount(load);
 										{#if item.sensitive}
 											<Icon icon="material-symbols:lock-outline" class="lock-icon" />
 										{/if}
-										<span>{item.label}</span>
+										<span class="field-label">{item.label}</span>
 										{#if item.required}<span class="req-star">*</span>{/if}
-									</h3>
-									<div class="head-right">
-										{#if toDelete[item.key]}
-											<span class="badge pending">{i18n(I18nKey.secretsPendingDelete)}</span>
-										{:else if item.configured}
-											<span class="badge ok">{i18n(I18nKey.secretsConfigured)}</span>
-										{:else}
-											<span class="badge missing">{i18n(I18nKey.secretsNotConfigured)}</span>
-										{/if}
-										<!-- 说明默认隐藏：悬停问号或点击切换显示，点其他区域/Esc 关闭 -->
+										<!-- 说明默认隐藏：悬停问号或点击切换显示，点其他区域/Esc 关闭。
+										     问号紧跟配置名称，不跟随右侧状态标签。 -->
 										<div class="tip-anchor" class:open={tipOpen === item.key}>
 											<button
 												class="help-btn"
@@ -424,6 +416,15 @@ onMount(load);
 												{item.description}
 											</div>
 										</div>
+									</h3>
+									<div class="head-right">
+										{#if toDelete[item.key]}
+											<span class="badge pending">{i18n(I18nKey.secretsPendingDelete)}</span>
+										{:else if item.configured}
+											<span class="badge ok">{i18n(I18nKey.secretsConfigured)}</span>
+										{:else}
+											<span class="badge missing">{i18n(I18nKey.secretsNotConfigured)}</span>
+										{/if}
 									</div>
 								</div>
 
@@ -995,11 +996,12 @@ onMount(load);
 		outline-offset: 2px;
 	}
 
-	/* 浮层默认隐藏：opacity + visibility 双保险，避免透明元素仍被读屏聚焦 */
+	/* 浮层默认隐藏：opacity + visibility 双保险，避免透明元素仍被读屏聚焦。
+	   锚点已随问号移到名称右侧，故浮层左对齐展开，避免向左溢出遮挡状态标签。 */
 	.field-tip {
 		position: absolute;
 		bottom: calc(100% + 8px);
-		right: 0;
+		left: 0;
 		width: max-content;
 		max-width: 18rem;
 		padding: 0.375rem 0.5rem;
@@ -1013,7 +1015,7 @@ onMount(load);
 		opacity: 0;
 		visibility: hidden;
 		transform: translateY(2px) scale(0.96);
-		transform-origin: bottom right;
+		transform-origin: bottom left;
 		transition:
 			opacity 0.12s ease,
 			transform 0.12s ease,
@@ -1026,7 +1028,7 @@ onMount(load);
 		content: "";
 		position: absolute;
 		top: 100%;
-		right: 0.75rem;
+		left: 0.75rem;
 		border: 4px solid transparent;
 		border-top-color: var(--float-panel-bg);
 	}
@@ -1039,6 +1041,8 @@ onMount(load);
 		transform: translateY(0) scale(1);
 	}
 
+	/* 标题行不裁切：问号浮层挂在 h3 内，overflow:hidden 会把它剪掉。
+	   省略号下沉到 .field-label，长名称仍能正常截断。 */
 	.field-head h3 {
 		display: flex;
 		align-items: center;
@@ -1047,6 +1051,10 @@ onMount(load);
 		font-size: 0.9375rem;
 		font-weight: 600;
 		color: var(--deep-text);
+		min-width: 0;
+	}
+
+	.field-label {
 		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
