@@ -721,6 +721,7 @@ export const ja: Translation = {
 	[Key.secretsGroupGithubDesc]: "リポジトリへの書き込みに使う GitHub App の身元と秘密鍵",
 	[Key.secretsGroupAuthDesc]: "誰がログインできるか、セッションをどう署名するかを決めます",
 	[Key.secretsGroupTurnstile]: "人機認証（任意）",
+	[Key.secretsFieldHelp]: "項目の説明を表示",
 	[Key.secretsGroupTurnstileDesc]: "ログインページのボット対策。未設定なら完全にスキップされます",
 	[Key.secretsGroupGithub]: "GitHub App 認証情報",
 	[Key.secretsGroupAuth]: "管理者認証",

@@ -695,6 +695,7 @@ export const zaku: Translation = {
 	[Key.secretsGroupGithubDesc]: "往仓库里写东西要用的 GitHub App 身份和私钥",
 	[Key.secretsGroupAuthDesc]: "谁能进后台、会话怎么签名，都归这儿管",
 	[Key.secretsGroupTurnstile]: "人机验证（可选）",
+	[Key.secretsFieldHelp]: "看看这玩意儿是啥",
 	[Key.secretsGroupTurnstileDesc]: "登录页的机器人检测，不配就完全不拦",
 	[Key.secretsGroupGithub]: "GitHub App 凭据",
 	[Key.secretsGroupAuth]: "管理员认证",

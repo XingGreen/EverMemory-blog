@@ -701,6 +701,7 @@ export const zh_TW: Translation = {
 	[Key.secretsGroupGithubDesc]: "寫入倉庫所需的 GitHub App 身分與私鑰",
 	[Key.secretsGroupAuthDesc]: "決定誰能登入後台，以及後台工作階段如何簽章",
 	[Key.secretsGroupTurnstile]: "人機驗證（選用）",
+	[Key.secretsFieldHelp]: "檢視此項說明",
 	[Key.secretsGroupTurnstileDesc]: "登入頁的人機驗證，未設定則完全略過",
 	[Key.secretsGroupGithub]: "GitHub App 憑證",
 	[Key.secretsGroupAuth]: "管理員認證",

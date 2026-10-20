@@ -733,6 +733,7 @@ export const ru: Translation = {
 	[Key.secretsGroupGithubDesc]: "Идентичность GitHub App и приватный ключ для записи в репозиторий",
 	[Key.secretsGroupAuthDesc]: "Определяет, кто может входить, и как подписываются сессии",
 	[Key.secretsGroupTurnstile]: "Проверка на робота (необязательно)",
+	[Key.secretsFieldHelp]: "Показать описание поля",
 	[Key.secretsGroupTurnstileDesc]: "Проверка на странице входа; без настройки полностью пропускается",
 	[Key.secretsGroupGithub]: "Учётные данные GitHub App",
 	[Key.secretsGroupAuth]: "Аутентификация администратора",

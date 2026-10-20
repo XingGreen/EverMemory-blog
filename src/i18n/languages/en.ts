@@ -727,6 +727,7 @@ export const en: Translation = {
 	[Key.secretsGroupGithubDesc]: "GitHub App identity and private key used to write to your repository",
 	[Key.secretsGroupAuthDesc]: "Controls who can sign in and how admin sessions are signed",
 	[Key.secretsGroupTurnstile]: "Human verification (optional)",
+	[Key.secretsFieldHelp]: "Show field description",
 	[Key.secretsGroupTurnstileDesc]: "Bot check on the login page; skipped entirely when unconfigured",
 	[Key.secretsGroupGithub]: "GitHub App Credentials",
 	[Key.secretsGroupAuth]: "Admin Authentication",

@@ -38,6 +38,17 @@ let exportOpen = $state(false);
 let exportBusy = $state(false);
 // 正在轮换的托管密钥 key（用于按钮 loading 态）
 let rotating = $state("");
+// 当前展开说明的问号（空字符串表示全部收起）；同一时刻只开一个
+let tipOpen = $state("");
+
+/** 点击页面其他区域或按 Esc 时收起说明浮层 */
+function closeTipOnOutside() {
+	tipOpen = "";
+}
+
+function closeTipOnEsc(e: KeyboardEvent) {
+	if (e.key === "Escape") tipOpen = "";
+}
 
 const groups = $derived(
 	SECRET_GROUPS.map((g) => ({
@@ -256,6 +267,8 @@ async function rotate(item: SecretItemDTO) {
 onMount(load);
 </script>
 
+<svelte:window onclick={closeTipOnOutside} onkeydown={closeTipOnEsc} />
+
 <div class="secrets-page">
 	{#if loadError}
 		<div class="status-banner error">
@@ -384,16 +397,35 @@ onMount(load);
 										<span>{item.label}</span>
 										{#if item.required}<span class="req-star">*</span>{/if}
 									</h3>
-									{#if toDelete[item.key]}
-										<span class="badge pending">{i18n(I18nKey.secretsPendingDelete)}</span>
-									{:else if item.configured}
-										<span class="badge ok">{i18n(I18nKey.secretsConfigured)}</span>
-									{:else}
-										<span class="badge missing">{i18n(I18nKey.secretsNotConfigured)}</span>
-									{/if}
+									<div class="head-right">
+										{#if toDelete[item.key]}
+											<span class="badge pending">{i18n(I18nKey.secretsPendingDelete)}</span>
+										{:else if item.configured}
+											<span class="badge ok">{i18n(I18nKey.secretsConfigured)}</span>
+										{:else}
+											<span class="badge missing">{i18n(I18nKey.secretsNotConfigured)}</span>
+										{/if}
+										<!-- 说明默认隐藏：悬停问号或点击切换显示，点其他区域/Esc 关闭 -->
+										<div class="tip-anchor" class:open={tipOpen === item.key}>
+											<button
+												class="help-btn"
+												type="button"
+												aria-label={i18n(I18nKey.secretsFieldHelp)}
+												aria-describedby={`tip-${item.key}`}
+												aria-expanded={tipOpen === item.key}
+												onclick={(e) => {
+													e.stopPropagation();
+													tipOpen = tipOpen === item.key ? "" : item.key;
+												}}
+											>
+												<Icon icon="material-symbols:help-outline-rounded" />
+											</button>
+											<div class="field-tip" role="tooltip" id={`tip-${item.key}`}>
+												{item.description}
+											</div>
+										</div>
+									</div>
 								</div>
-
-								<p class="field-desc">{item.description}</p>
 
 								{#if item.managed}
 									<!-- 托管密钥：不提供输入框，只展示状态与轮换入口 -->
@@ -868,12 +900,11 @@ onMount(load);
 	}
 
 	/* ── 字段列表 ──
-	   参考设计：字段在板块内纵向排列，标签/状态一行、说明在其下、输入框整行。
-	   字段本身不是卡片容器，只用间距和极淡的分隔线区分，避免卡片套卡片。 */
+	   参考设计：字段在板块内纵向排列，标签/状态一行、说明收起为问号提示、输入框整行。
+	   字段本身不是卡片容器，只用间距和极淡分隔线区分，避免卡片套卡片。 */
 	.secret-list {
 		display: flex;
 		flex-direction: column;
-		gap: 1.5rem;
 	}
 
 	.secret-field {
@@ -881,9 +912,22 @@ onMount(load);
 		flex-direction: column;
 		gap: 0.5rem;
 		/* 无背景、无边框、无圆角：它就是板块内容本身，不是独立卡片 */
-		padding: 0;
+		padding: 1.25rem 0;
 		border: 0;
 		background: transparent;
+	}
+
+	/* 字段间极淡分隔线；首尾不画线，避免与板块边缘重叠 */
+	.secret-field + .secret-field {
+		border-top: 1px solid var(--line-color);
+	}
+
+	.secret-field:first-child {
+		padding-top: 0;
+	}
+
+	.secret-field:last-child {
+		padding-bottom: 0;
 	}
 
 	/* 变更/待删除只在左侧留一道细指示线，不恢复整块卡片观感 */
@@ -898,12 +942,101 @@ onMount(load);
 		opacity: 0.75;
 	}
 
-	/* 标签行：标题在左、配置状态在右 */
+	/* 标签行：标题在左、配置状态 + 问号在右 */
 	.field-head {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 1rem;
+	}
+
+	.head-right {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-shrink: 0;
+	}
+
+	/* ── Plain Tooltip（参考 .examples/点击触发的-Plain-Tooltip.html） ──
+	   说明默认隐藏，悬停问号或点击切换显示；点其他区域 / Esc 收起。
+	   颜色取主题的反色语义：深底浅字，与卡片底自然区分。 */
+	.tip-anchor {
+		position: relative;
+		display: inline-flex;
+	}
+
+	.help-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.5rem;
+		height: 1.5rem;
+		padding: 0;
+		border: none;
+		border-radius: 50%;
+		background: transparent;
+		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
+		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
+		transition: background 0.15s, color 0.15s;
+	}
+
+	.help-btn :global(.inline-icon) {
+		font-size: 1rem;
+	}
+
+	.help-btn:hover {
+		background: var(--btn-plain-bg-hover);
+		color: var(--primary);
+	}
+
+	.help-btn:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	/* 浮层默认隐藏：opacity + visibility 双保险，避免透明元素仍被读屏聚焦 */
+	.field-tip {
+		position: absolute;
+		bottom: calc(100% + 8px);
+		right: 0;
+		width: max-content;
+		max-width: 18rem;
+		padding: 0.375rem 0.5rem;
+		border-radius: var(--radius-sm);
+		background: var(--float-panel-bg);
+		color: var(--deep-text);
+		font-size: 0.75rem;
+		line-height: 1.5;
+		box-shadow: var(--shadow-card-hover);
+		pointer-events: none;
+		opacity: 0;
+		visibility: hidden;
+		transform: translateY(2px) scale(0.96);
+		transform-origin: bottom right;
+		transition:
+			opacity 0.12s ease,
+			transform 0.12s ease,
+			visibility 0.12s;
+		z-index: 20;
+	}
+
+	/* 小箭头 */
+	.field-tip::after {
+		content: "";
+		position: absolute;
+		top: 100%;
+		right: 0.75rem;
+		border: 4px solid transparent;
+		border-top-color: var(--float-panel-bg);
+	}
+
+	/* 悬停或点击展开 */
+	.tip-anchor:hover .field-tip,
+	.tip-anchor.open .field-tip {
+		opacity: 1;
+		visibility: visible;
+		transform: translateY(0) scale(1);
 	}
 
 	.field-head h3 {

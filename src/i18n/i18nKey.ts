@@ -703,6 +703,7 @@ enum I18nKey {
 	secretsGroupAuthDesc = "secretsGroupAuthDesc",
 	secretsGroupTurnstile = "secretsGroupTurnstile",
 	secretsGroupTurnstileDesc = "secretsGroupTurnstileDesc",
+	secretsFieldHelp = "secretsFieldHelp",
 	secretsConfigured = "secretsConfigured",
 	secretsNotConfigured = "secretsNotConfigured",
 	secretsPendingDelete = "secretsPendingDelete",
