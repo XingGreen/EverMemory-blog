@@ -35,8 +35,10 @@ vi.mock("@utils/secret-io", async (importOriginal) => ({
 /** 会话表桩：verifySessionToken 只关心 sid 是否存在，并补全有效账户名 */
 const sessions = new Set<string>();
 vi.mock("@utils/session-store", () => ({
-	getSession: async (sid: string) =>
-		sessions.has(sid) ? { sid, username: "EverMemory" } : null,
+	getSessionState: async (sid: string) =>
+		sessions.has(sid)
+			? { session: { sid, username: "EverMemory" }, degraded: false }
+			: { session: null, degraded: false },
 	touchSession: async () => {},
 }));
 
@@ -300,13 +302,33 @@ describe("verifySessionToken - 会话表检查", () => {
 		expect((await auth.verifySessionToken(token))?.username).toBe("EverMemory");
 	});
 
+	it("存储降级时回落为仅 JWT 校验（不能把所有会话都判为已撤销）", async () => {
+		// 这是「KV 故障导致全员被登出」的核心防线：会话表读不到 ≠ 会话被撤销。
+		// 若此用例失败，说明降级分支被移除，线上 KV 抖动会踢掉所有管理员。
+		vi.doMock("@utils/session-store", () => ({
+			getSessionState: async () => ({ session: null, degraded: true }),
+			touchSession: async () => {},
+		}));
+		vi.resetModules();
+		const auth = await loadAuth();
+		const sid = crypto.randomUUID();
+		const token = auth.generateSessionToken(SESSION_MAX_AGE, sid);
+
+		const payload = await auth.verifySessionToken(token);
+		expect(payload).not.toBeNull();
+		expect(payload?.sid).toBe(sid);
+	});
+
 	it("无 sid 时不得落到会话表查询（否则 sid 校验形同虚设）", async () => {
 		// 仅断言「验签失败」无法区分是哪一层拦住的：移除 sid 校验后
-		// getSession(undefined) 同样会返回 null，最终结果不变但防护已失效。
+		// getSessionState(undefined) 同样会返回 null，最终结果不变但防护已失效。
 		// 故这里断言「会话表根本没被查」。
-		const getSessionSpy = vi.fn(async (sid: string) => (sessions.has(sid) ? { sid } : null));
+		const getSessionStateSpy = vi.fn(async (sid: string) => ({
+			session: sessions.has(sid) ? { sid } : null,
+			degraded: false,
+		}));
 		vi.doMock("@utils/session-store", () => ({
-			getSession: getSessionSpy,
+			getSessionState: getSessionStateSpy,
 			touchSession: async () => {},
 		}));
 		vi.resetModules();
@@ -321,7 +343,7 @@ describe("verifySessionToken - 会话表检查", () => {
 		});
 
 		expect(await auth.verifySessionToken(token)).toBeNull();
-		expect(getSessionSpy).not.toHaveBeenCalled();
+		expect(getSessionStateSpy).not.toHaveBeenCalled();
 	});
 });
 

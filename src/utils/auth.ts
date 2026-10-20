@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 
 import { getEnv } from "./env";
 import { readSecretPreview, readSecretValue, rotateManagedSecret } from "./secret-io";
-import { getSession, touchSession } from "./session-store";
+import { getSessionState, touchSession } from "./session-store";
 
 const JWT_EXPIRY_HOURS = 12;
 
@@ -186,8 +186,20 @@ export async function verifySessionToken(
 		// 会话表检查：sid 必须存在且未过期（被「踢下线」后此校验即失败）
 		// 无 sid 的旧令牌（升级前签发）一律视为无效，强制重新登录以登记会话
 		if (!payload.sid) return null;
-		const session = await getSession(payload.sid);
-		if (!session) return null;
+		const state = await getSessionState(payload.sid);
+		if (!state.session) {
+			// 存储降级时不能断定会话已被撤销：回落到「仅 JWT 校验」放行，
+			// 代价是熔断窗口内踢下线不即时生效（KV 恢复后立即恢复精确校验）。
+			if (state.degraded) {
+				console.warn(
+					"[Auth] 会话表存储不可用，降级为仅 JWT 校验（踢下线暂不生效）",
+				);
+				payload.username = "";
+				return payload;
+			}
+			return null;
+		}
+		const session = state.session;
 
 		// 有效账户名以服务端会话表为准（审计需要，令牌本身不含该字段）
 		payload.username = session.username;

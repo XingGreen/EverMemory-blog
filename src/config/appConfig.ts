@@ -18,7 +18,7 @@ export const appConfig: AppConfig = {
 			icon: "",
 			// 支持的系统
 			platform: [""],
-			// 选择一个选项: free 免费｜paid付费｜freemium 两者皆有
+			// 选择一个选项: free 免费｜paid 付费｜freemium 两者皆有
 			priceType: "",
 		},*/
 		{

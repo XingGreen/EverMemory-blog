@@ -27,9 +27,14 @@ function setKvEnv(on: boolean): void {
 	if (on) {
 		process.env.KV_REST_API_URL = ENV.URL;
 		process.env.KV_REST_API_TOKEN = ENV.TOKEN;
+		// 显式指定后端：vitest 下 import.meta.env.DEV 为 true，
+		// 而开发模式会强制文件后端（本地不依赖远程服务），故 KV 相关用例
+		// 必须用 PERSIST_BACKEND=kv 显式覆盖，否则测的就不是 KV 路径了。
+		process.env.PERSIST_BACKEND = "kv";
 	} else {
 		delete process.env.KV_REST_API_URL;
 		delete process.env.KV_REST_API_TOKEN;
+		delete process.env.PERSIST_BACKEND;
 	}
 }
 
@@ -70,7 +75,7 @@ afterEach(() => {
 });
 
 describe("后端选择", () => {
-	it("配置了 KV 环境变量时走 KV 后端", async () => {
+	it("配置了 KV 环境变量且显式指定 kv 时走 KV 后端", async () => {
 		setKvEnv(true);
 		const { isKvBackend, getStore } = await loadStore();
 
@@ -86,16 +91,54 @@ describe("后端选择", () => {
 	});
 
 	it("环境变量不完整时视为未配置", async () => {
-		// 只有 URL 没有 Token：不能误判为 KV 后端，否则 get() 会在
-		// 线上抛「KV 后端未配置」
+		// 只有 URL 没有 Token：显式 kv 也不能用（get 会报「KV 后端未配置」），
+		// 应回落到文件后端
 		process.env.KV_REST_API_URL = ENV.URL;
 		delete process.env.KV_REST_API_TOKEN;
-		const { isKvBackend } = await loadStore();
+		delete process.env.PERSIST_BACKEND;
+		const { resolveBackendKind } = await loadStore();
 
-		expect(isKvBackend()).toBe(false);
+		expect(resolveBackendKind({ dev: false })).toBe("file");
+	});
+
+	it("开发模式强制文件后端，即使配置了 KV（本地不依赖远程服务）", async () => {
+		setKvEnv(true);
+		// 只测 dev 判定，去掉显式开关，否则显式 kv 会优先
+		delete process.env.PERSIST_BACKEND;
+		const { resolveBackendKind } = await loadStore();
+
+		expect(resolveBackendKind({ dev: true })).toBe("file");
+		expect(resolveBackendKind({ dev: false })).toBe("kv");
+	});
+
+	it("PERSIST_BACKEND=file 覆盖 KV 配置", async () => {
+		setKvEnv(true);
+		process.env.PERSIST_BACKEND = "file";
+		const { resolveBackendKind } = await loadStore();
+
+		expect(resolveBackendKind({ dev: false })).toBe("file");
+	});
+
+	it("PERSIST_BACKEND=kv 覆盖开发模式", async () => {
+		setKvEnv(false);
+		process.env.KV_REST_API_URL = ENV.URL;
+		process.env.KV_REST_API_TOKEN = ENV.TOKEN;
+		process.env.PERSIST_BACKEND = "kv";
+		const { resolveBackendKind } = await loadStore();
+
+		expect(resolveBackendKind({ dev: true })).toBe("kv");
+	});
+
+	it("PERSIST_BACKEND 非法值视为未指定", async () => {
+		setKvEnv(true);
+		process.env.PERSIST_BACKEND = "redis";
+		const { resolveBackendKind } = await loadStore();
+
+		expect(resolveBackendKind({ dev: false })).toBe("kv");
 	});
 
 	it("URL 末尾多余的斜杠被规范化", async () => {
+		process.env.PERSIST_BACKEND = "kv";
 		process.env.KV_REST_API_URL = `${ENV.URL}///`;
 		process.env.KV_REST_API_TOKEN = ENV.TOKEN;
 		const fetchMock = mockFetch(async () => kvResponse(null));
@@ -306,37 +349,94 @@ beforeEach(() => {
 	});
 });
 
-describe("kvFetch 网络重试", () => {
+describe("kvFetch 网络重试与超时", () => {
 	beforeEach(() => setKvEnv(true));
 
-	it("首次连接重置（ECONNRESET）后重试成功", async () => {
-		// 这是 Upstash 真实发生过的故障：首个请求被对端重置
-		let calls = 0;
-		vi.stubGlobal("fetch", vi.fn(async () => {
-			calls++;
-			if (calls === 1) {
-				throw Object.assign(new Error("socket hang up"), {
-					code: "ECONNRESET",
-				});
-			}
-			return kvResponse(JSON.stringify({ ok: true }));
-		}));
+	it("网络失败时不会无限重试：单次请求即刻失败并记录失败计数", async () => {
+		// 旧实现会重试一次（总等待 20s+）；现在改为「超时 + 熔断」：
+		// 单次请求只发一次，失败后由熔断器累计，连续 3 次才打开熔断。
+		const fetchMock = vi.fn(async () => {
+			throw new Error("socket hang up");
+		});
+		vi.stubGlobal("fetch", fetchMock);
 
-		const { getStore } = await loadStore();
-		expect(await getStore().get("k")).toEqual({ ok: true });
-		expect(calls).toBe(2);
+		const { getStore, isKvCircuitOpen } = await loadStore();
+		expect(await getStore().get("k")).toBeNull();
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(isKvCircuitOpen()).toBe(false);
 	});
 
-	it("连续两次失败后向上抛，由调用方降级", async () => {
+	it("请求带 AbortSignal 超时，避免网络抖动拖住整个请求", async () => {
+		const fetchMock = mockFetch(async () => kvResponse(null));
+		vi.stubGlobal("fetch", fetchMock);
+		const { getStore } = await loadStore();
+
+		await getStore().get("k");
+
+		const init = fetchMock.mock.calls[0][1];
+		expect(init?.signal).toBeInstanceOf(AbortSignal);
+	});
+
+	it("连续 3 次失败后熔断打开，不再发起新请求", async () => {
 		const fetchMock = vi.fn(async () => {
 			throw new Error("network down");
 		});
 		vi.stubGlobal("fetch", fetchMock);
+		const { getStore, isKvCircuitOpen, isDegraded } = await loadStore();
+		const store = getStore();
 
-		const { getStore } = await loadStore();
-		// get 内部有 try/catch，失败降级为 null
-		expect(await getStore().get("k")).toBeNull();
-		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(isDegraded()).toBe(false);
+		await store.get("k1");
+		await store.get("k2");
+		expect(isKvCircuitOpen()).toBe(false);
+		await store.get("k3");
+		expect(isKvCircuitOpen()).toBe(true);
+		expect(isDegraded()).toBe(true);
+
+		const before = fetchMock.mock.calls.length;
+		await store.get("k4");
+		expect(fetchMock.mock.calls.length).toBe(before);
+	});
+
+	it("一次成功重置失败计数，不会误触发熔断", async () => {
+		let fail = true;
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => {
+				if (fail) throw new Error("timeout");
+				return kvResponse(null);
+			}),
+		);
+		const { getStore, isKvCircuitOpen } = await loadStore();
+		const store = getStore();
+
+		await store.get("k1");
+		await store.get("k2");
+		fail = false;
+		await store.get("k3"); // 成功，计数归零
+		fail = true;
+		await store.get("k4");
+		await store.get("k5");
+
+		// 若未归零，此处已累计 4 次，会误判熔断
+		expect(isKvCircuitOpen()).toBe(false);
+	});
+
+	it("set 与 del 的网络失败同样计入熔断计数", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => {
+				throw new Error("network down");
+			}),
+		);
+		const { getStore, isKvCircuitOpen } = await loadStore();
+		const store = getStore();
+
+		await expect(store.set("k1", 1)).rejects.toThrow();
+		await expect(store.del("k2")).rejects.toThrow();
+		await expect(store.set("k3", 1)).rejects.toThrow();
+
+		expect(isKvCircuitOpen()).toBe(true);
 	});
 
 	it("set 的网络失败会抛出（写入不可静默失败）", async () => {

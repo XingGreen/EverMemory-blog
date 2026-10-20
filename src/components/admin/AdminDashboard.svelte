@@ -84,6 +84,8 @@ let isVerified = $state(
 		: false,
 );
 let adminUsername = $state("");
+// 存储降级：KV 熔断时后台仍可用（仅 JWT 鉴权），但会话表能力受限
+let storageDegraded = $state(false);
 let posts = $state<Post[]>([]);
 let isLoading = $state(true);
 let error = $state("");
@@ -356,6 +358,9 @@ onMount(async () => {
 		if (typeof data.username === "string" && data.username) {
 			adminUsername = data.username;
 		}
+		// 存储后端告警：KV 熔断时会话表暂不可用，踢下线等能力受限。
+		// 不阻塞进入后台（鉴权已回落到仅 JWT 校验），只做可见提示。
+		storageDegraded = Boolean(data.storage?.degraded);
 	} catch {
 		// 无法确认会话（未授权或网络异常）：清除残留标记，回独立登录页。
 		// 必须清 admin_verified，否则登录页会立刻把用户弹回本页形成死循环。
@@ -1412,6 +1417,13 @@ function formatDate(dateStr: string | null): string {
 				<h1 class="topbar-title">{headerTitle}</h1>
 			</div>
 
+			{#if storageDegraded}
+				<div class="storage-degraded" role="status">
+					<Icon icon="material-symbols:cloud-off" />
+					<span>存储服务暂时不可用，当前为降级模式：后台仍可操作，但「踢下线」等会话管理功能会延迟生效。</span>
+				</div>
+			{/if}
+
 			<div
 			class="admin-content"
 			class:content-wide={activePage === "posts" && viewMode !== "list"}
@@ -2435,6 +2447,22 @@ function formatDate(dateStr: string | null): string {
 
 	.search-box:focus-within :global(.ui-search-icon) {
 		color: var(--content-meta);
+	}
+
+	/* 存储降级提示条：半透明警告底色 + 低对比边框，不抢内容注意力 */
+	.storage-degraded {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-shrink: 0;
+		margin-bottom: 0.75rem;
+		padding: 0.625rem 1rem;
+		border-radius: var(--radius-large);
+		background: color-mix(in oklab, var(--warning) 10%, transparent);
+		border: 1px solid color-mix(in oklab, var(--warning) 22%, transparent);
+		color: var(--warning);
+		font-size: 0.8125rem;
+		line-height: 1.5;
 	}
 
 	.admin-content {

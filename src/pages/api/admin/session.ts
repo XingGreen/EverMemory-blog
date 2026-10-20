@@ -1,12 +1,15 @@
 import { getAuthTokenFromRequest, verifySessionToken } from "@/utils/auth";
 import { isBreakglassConfigured } from "@/utils/auth";
 import { isOAuthConfigured } from "@/utils/github-oauth";
+import { isKvBackend } from "@/utils/persist-store";
+import { isSessionStoreDegraded } from "@/utils/session-store";
 
 export const prerender = false;
 
 // 会话校验：供前端判断会话 Cookie 是否仍有效（免登录进入后台）。
 // 已登录时回传当前账户名（侧边栏用户卡片显示），走会话表实时值。
 // oauthEnabled / breakglassEnabled 与登录态无关，始终回传，供登录页决定渲染哪些入口。
+// storage 字段告知前端当前持久化后端与降级状态，供后台展示「降级模式」提示。
 export async function GET({ request }) {
 	const token = getAuthTokenFromRequest(request);
 	const payload = token ? await verifySessionToken(token) : null;
@@ -16,10 +19,19 @@ export async function GET({ request }) {
 		username?: string;
 		oauthEnabled: boolean;
 		breakglassEnabled: boolean;
+		storage: {
+			backend: "file" | "kv";
+			/** KV 熔断中：会话表不可用，已降级为仅 JWT 校验 */
+			degraded: boolean;
+		};
 	} = {
 		success: Boolean(payload),
 		oauthEnabled: isOAuthConfigured(),
 		breakglassEnabled: isBreakglassConfigured(),
+		storage: {
+			backend: isKvBackend() ? "kv" : "file",
+			degraded: isSessionStoreDegraded(),
+		},
 	};
 	if (payload) {
 		body.username = payload.username || "admin";
