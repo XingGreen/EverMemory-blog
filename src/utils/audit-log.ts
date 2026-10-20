@@ -24,6 +24,7 @@ export function writeAuditLog(entry: {
 		| "secrets_updated"
 		| "secrets_credentials_updated"
 		| "secrets_rotated"
+		| "secrets_value_revealed"
 		| "secrets_exported"
 		| "sessions_listed"
 		| "session_revoked"

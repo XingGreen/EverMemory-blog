@@ -61,8 +61,8 @@ export async function GET({
 		// 托管项：前端据此渲染「自动托管 + 轮换」而非输入框
 		managed: item.managed === true,
 		configured: states[item.key] === true,
-		// 仅非机密密钥回显真实值（供表单编辑），机密密钥只返回状态
-		...(!item.sensitive ? { preview: readSecretPreview(item.key) } : {}),
+		// 刻意不下发任何明文（含非敏感项）：前端默认显示空值，
+		// 用户点「显示」时才走 /api/admin/secrets/value/ 按需读取单个字段。
 	}));
 
 	return json(

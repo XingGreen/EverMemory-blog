@@ -27,8 +27,10 @@ let envFile = $state(".env.local");
 let loading = $state(true);
 let loadError = $state("");
 let saving = $state(false);
-// 每个密钥的输入草稿：非敏感回显当前值；敏感值永不下发，输入新值即覆盖
+// 每个密钥的输入草稿：默认全空，用户输入或点眼镜揭示后才写入
 let drafts = $state<Record<string, string>>({});
+// 已从后端取到的明文（仅点过「显示」的字段），用于比较是否发生修改
+let revealed = $state<Record<string, string>>({});
 // 标记待清除的密钥
 let toDelete = $state<Record<string, boolean>>({});
 // 密码类输入框的显隐切换
@@ -73,7 +75,9 @@ function isDirty(item: SecretItemDTO): boolean {
 	if (toDelete[item.key]) return true;
 	const draft = (drafts[item.key] ?? "").trim();
 	if (item.sensitive) return draft !== "";
-	return draft !== (item.preview ?? "");
+	// 非敏感项：默认不再回填明文，只有用户点过「显示」拿到原值后才能比较差异
+	if (!(item.key in revealed)) return draft !== "";
+	return draft !== (revealed[item.key] ?? "");
 }
 
 const changedCount = $derived(items.filter(isDirty).length);
@@ -88,12 +92,11 @@ async function load() {
 			items = data.items;
 			writable = data.writable;
 			envFile = data.file || ".env.local";
+			// 默认一律空值：不预填任何已配置密钥的明文，由用户点眼镜主动显示
 			drafts = {};
+			revealed = {};
 			toDelete = {};
 			showInput = {};
-			for (const item of items) {
-				drafts[item.key] = item.sensitive ? "" : (item.preview ?? "");
-			}
 		} else {
 			loadError = data.message || "读取密钥状态失败";
 		}
@@ -101,6 +104,35 @@ async function load() {
 		loadError = err instanceof Error ? err.message : "网络请求失败";
 	} finally {
 		loading = false;
+	}
+}
+
+/**
+ * 点击眼镜：首次显示时按需向后端取该字段明文，再切换显隐。
+ * 不把明文塞进列表接口，避免每次打开页面就把全部密钥暴露在响应里。
+ */
+async function toggleReveal(item: SecretItemDTO) {
+	const nextVisible = !showInput[item.key];
+	showInput[item.key] = nextVisible;
+	if (!nextVisible) return;
+	// 已拿到过明文或用户已输入过，直接复用，不重复请求
+	if (item.key in revealed) return;
+
+	try {
+		const res = await fetch(
+			`/api/admin/secrets/value/?key=${encodeURIComponent(item.key)}`,
+		);
+		const data = await res.json();
+		if (!res.ok || !data.success) {
+			onNotify(data.message || "读取该配置失败", "error", 8000);
+			showInput[item.key] = false;
+			return;
+		}
+		revealed[item.key] = data.value ?? "";
+		drafts[item.key] = data.value ?? "";
+	} catch {
+		onNotify("读取该配置失败，请检查网络", "error", 8000);
+		showInput[item.key] = false;
 	}
 }
 
@@ -113,8 +145,13 @@ function buildEntries(): { key: string; value?: string; delete?: boolean }[] {
 		}
 		const draft = (drafts[item.key] ?? "").trim();
 		if (item.sensitive) {
+			// 敏感项：只有用户主动输入了新值才提交（空值视作不修改）
 			if (draft) entries.push({ key: item.key, value: draft });
-		} else if (draft !== (item.preview ?? "")) {
+		} else if (item.key in revealed && draft !== (revealed[item.key] ?? "")) {
+			// 非敏感项：只有揭示过原值的字段才能判断是否改动
+			entries.push({ key: item.key, value: draft });
+		} else if (!(item.key in revealed) && draft) {
+			// 未揭示但用户直接输入了新值，同样视为修改
 			entries.push({ key: item.key, value: draft });
 		}
 	}
@@ -220,8 +257,10 @@ function toggleClear(item: SecretItemDTO) {
 	toDelete[item.key] = !toDelete[item.key];
 	if (toDelete[item.key]) {
 		drafts[item.key] = "";
-	} else if (!item.sensitive) {
-		drafts[item.key] = item.preview ?? "";
+		revealed[item.key] = "";
+	} else if (item.key in revealed) {
+		// 取消清除时恢复到已揭示的原值；未揭示过则保持空（不影响原值）
+		drafts[item.key] = revealed[item.key] ?? "";
 	}
 }
 
@@ -417,15 +456,9 @@ onMount(load);
 											</div>
 										</div>
 									</h3>
-									<div class="head-right">
-										{#if toDelete[item.key]}
-											<span class="badge pending">{i18n(I18nKey.secretsPendingDelete)}</span>
-										{:else if item.configured}
-											<span class="badge ok">{i18n(I18nKey.secretsConfigured)}</span>
-										{:else}
-											<span class="badge missing">{i18n(I18nKey.secretsNotConfigured)}</span>
-										{/if}
-									</div>
+									{#if toDelete[item.key]}
+										<span class="badge pending">{i18n(I18nKey.secretsPendingDelete)}</span>
+									{/if}
 								</div>
 
 								{#if item.managed}
@@ -462,84 +495,80 @@ onMount(load);
 										</button>
 									</div>
 								{:else}
+									<!-- 输入框默认不显示明文：空值 + 眼睛按钮主动揭示。
+									     已配置项点击眼睛才向后端按需取该字段明文。 -->
 									<div class="field-input-row">
-									{#if item.kind === "multiline"}
-										<textarea
-											class="secret-input mono"
-											rows="4"
-											spellcheck="false"
-											value={drafts[item.key] ?? ""}
-											placeholder={item.configured
-												? i18n(I18nKey.secretsPlaceholderConfigured)
-												: i18n(I18nKey.secretsPlaceholderEmpty)}
-											disabled={!writable || toDelete[item.key] || loading}
-											oninput={(e) => (drafts[item.key] = e.currentTarget.value)}
-										></textarea>
-									{:else if item.kind === "password"}
-										<div class="input-wrap">
-<input
-											class="secret-input"
-											type={showInput[item.key] ? "text" : "password"}
-											value={drafts[item.key] ?? ""}
-											spellcheck="false"
-											name="secret-draft"
-											autocomplete="new-password"
+										{#if item.kind === "multiline"}
+											<textarea
+												class="secret-input mono"
+												rows="4"
+												spellcheck="false"
+												value={revealed[item.key] ?? drafts[item.key] ?? ""}
 												placeholder={item.configured
 													? i18n(I18nKey.secretsPlaceholderConfigured)
 													: i18n(I18nKey.secretsPlaceholderEmpty)}
 												disabled={!writable || toDelete[item.key] || loading}
-												oninput={(e) => (drafts[item.key] = e.currentTarget.value)}
-											/>
+												oninput={(e) => {
+													drafts[item.key] = e.currentTarget.value;
+													revealed[item.key] = e.currentTarget.value;
+												}}
+											></textarea>
+										{:else}
+											<div class="input-wrap">
+												<input
+													class="secret-input"
+													type={showInput[item.key] ? "text" : "password"}
+													value={revealed[item.key] ?? drafts[item.key] ?? ""}
+													spellcheck="false"
+													name="secret-draft"
+													autocomplete="new-password"
+													placeholder={item.configured
+														? i18n(I18nKey.secretsPlaceholderConfigured)
+														: i18n(I18nKey.secretsPlaceholderEmpty)}
+													disabled={!writable || toDelete[item.key] || loading}
+													oninput={(e) => {
+														drafts[item.key] = e.currentTarget.value;
+														revealed[item.key] = e.currentTarget.value;
+													}}
+												/>
+												<button
+													type="button"
+													class="input-toggle"
+													title={showInput[item.key]
+														? i18n(I18nKey.secretsHide)
+														: i18n(I18nKey.secretsShow)}
+													aria-label={showInput[item.key]
+														? i18n(I18nKey.secretsHide)
+														: i18n(I18nKey.secretsShow)}
+													onclick={() => toggleReveal(item)}
+													disabled={!writable}
+												>
+													<Icon
+														icon={showInput[item.key]
+															? "material-symbols:visibility-off-outline-rounded"
+															: "material-symbols:visibility-outline-rounded"}
+													/>
+												</button>
+											</div>
+										{/if}
+
+										{#if writable}
 											<button
 												type="button"
-												class="input-toggle"
-												title={showInput[item.key]
-													? i18n(I18nKey.secretsHide)
-													: i18n(I18nKey.secretsShow)}
-												aria-label={showInput[item.key]
-													? i18n(I18nKey.secretsHide)
-													: i18n(I18nKey.secretsShow)}
-												onclick={() => (showInput[item.key] = !showInput[item.key])}
-												disabled={!writable}
+												class="clear-btn"
+												title={i18n(I18nKey.secretsClear)}
+												aria-label={i18n(I18nKey.secretsClear)}
+												disabled={!item.configured || loading}
+												onclick={() => toggleClear(item)}
 											>
 												<Icon
-													icon={showInput[item.key]
-														? "material-symbols:lock-outline"
-														: "material-symbols:visibility-outline-rounded"}
+													icon={toDelete[item.key]
+														? "material-symbols:check"
+														: "material-symbols:close"}
 												/>
 											</button>
-										</div>
-									{:else}
-										<input
-											class="secret-input"
-											type="text"
-											value={drafts[item.key] ?? ""}
-											spellcheck="false"
-											placeholder={item.configured
-												? i18n(I18nKey.secretsPlaceholderConfigured)
-												: i18n(I18nKey.secretsPlaceholderEmpty)}
-											disabled={!writable || toDelete[item.key] || loading}
-											oninput={(e) => (drafts[item.key] = e.currentTarget.value)}
-										/>
-									{/if}
-
-									{#if writable}
-										<button
-											type="button"
-											class="clear-btn"
-											title={i18n(I18nKey.secretsClear)}
-											aria-label={i18n(I18nKey.secretsClear)}
-											disabled={!item.configured || loading}
-											onclick={() => toggleClear(item)}
-										>
-											<Icon
-												icon={toDelete[item.key]
-													? "material-symbols:check"
-													: "material-symbols:close"}
-											/>
-										</button>
-									{/if}
-								</div>
+										{/if}
+									</div>
 								{/if}
 
 								<code class="field-key">{item.key}</code>
