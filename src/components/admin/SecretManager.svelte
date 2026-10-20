@@ -354,18 +354,20 @@ onMount(load);
 	{:else}
 		{#each groups as group}
 			{#if group.items.length > 0}
-				<section class="secrets-group">
-					<h2 class="group-title">
-						<Icon icon={group.icon} class="group-icon" />
-						<span>
-							{i18n(
-								group.id === "github"
-									? I18nKey.secretsGroupGithub
-									: I18nKey.secretsGroupAuth,
-							)}
+				<!-- 每个分组是一块独立大板块：标题区 + 说明 + 内部字段网格 -->
+				<section class="secrets-group card-base">
+					<header class="group-head">
+						<span class="group-head-icon">
+							<Icon icon={group.icon} />
 						</span>
-						<span class="group-count">{group.items.length}</span>
-					</h2>
+						<div class="group-head-text">
+							<h2 class="group-title">
+								<span>{i18n(I18nKey[group.labelKey])}</span>
+								<span class="group-count">{group.items.length}</span>
+							</h2>
+							<p class="group-desc">{i18n(I18nKey[group.descKey])}</p>
+						</div>
+					</header>
 					<div class="secret-grid">
 						{#each group.items as item (item.key)}
 							<article
@@ -791,33 +793,71 @@ onMount(load);
 		transform: translateY(-1px);
 	}
 
-	/* ── 分组 ── */
+	/* ── 分组大板块 ──
+	   每个分组是一块独立面板（外层 .card-base 提供底与圆角），
+	   内部字段卡片用更浅的层级，形成「板块 > 卡片」两级结构。 */
 	.secrets-group {
 		display: flex;
 		flex-direction: column;
-		/* 分组标题与网格之间用间距区分层级，不再画竖线 */
-		gap: 1rem;
+		gap: 1.25rem;
+		padding: 1.5rem;
+		border: 1px solid transparent;
+		background: color-mix(in oklab, var(--card-bg) 70%, transparent);
+		-webkit-backdrop-filter: blur(8px);
+		backdrop-filter: blur(8px);
 	}
 
-	/* 区块标题：去掉左侧「|」竖线，靠字号 + 上下留白区分大区块 */
+	/* 板块标题区：图标 + 标题 + 说明 */
+	.group-head {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.875rem;
+	}
+
+	.group-head-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.25rem;
+		height: 2.25rem;
+		flex-shrink: 0;
+		border-radius: var(--radius-xl);
+		background: color-mix(in oklab, var(--primary) 10%, transparent);
+		color: var(--primary);
+	}
+
+	.group-head-icon :global(.inline-icon) {
+		font-size: 1.25rem;
+	}
+
+	.group-head-text {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		min-width: 0;
+	}
+
+	/* 板块标题：靠字号与字重区分大区块，不用竖线 */
 	.group-title {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		margin: 0.5rem 0 0;
+		margin: 0;
 		padding: 0;
-		font-size: 1rem;
+		font-size: 1.0625rem;
 		font-weight: 600;
 		letter-spacing: -0.01em;
 		color: var(--deep-text);
 	}
 
-	:global(.group-icon) {
-		color: var(--primary);
+	.group-desc {
+		margin: 0;
+		font-size: 0.8125rem;
+		line-height: 1.55;
+		color: var(--content-meta);
 	}
 
 	.group-count {
-		margin-left: auto;
 		padding: 0;
 		font-size: 0.75rem;
 		font-weight: 400;

@@ -33,15 +33,29 @@ export type AdminSecretItem = {
 
 export const SECRET_GROUPS: readonly {
 	id: SecretGroup;
-	label: string;
+	/** 分组标题文案 key（i18n key 名，组件侧直接取用，避免三元判断漏组） */
+	labelKey: "secretsGroupGithub" | "secretsGroupAuth" | "secretsGroupTurnstile";
 	icon: string;
+	/** 分组用途说明，作为大板块副标题 */
+	descKey: string;
 }[] = [
-	{ id: "github", label: "GitHub App 凭据", icon: "material-symbols:cloud" },
-	{ id: "auth", label: "管理员认证", icon: "material-symbols:shield-lock" },
+	{
+		id: "github",
+		labelKey: "secretsGroupGithub",
+		icon: "material-symbols:cloud",
+		descKey: "secretsGroupGithubDesc",
+	},
+	{
+		id: "auth",
+		labelKey: "secretsGroupAuth",
+		icon: "material-symbols:shield-lock",
+		descKey: "secretsGroupAuthDesc",
+	},
 	{
 		id: "turnstile",
-		label: "人机验证（可选）",
+		labelKey: "secretsGroupTurnstile",
 		icon: "material-symbols:verified-user",
+		descKey: "secretsGroupTurnstileDesc",
 	},
 ];
 
