@@ -7,6 +7,7 @@ import { type AdminSecretItem, SECRET_GROUPS } from "@/utils/admin-secrets";
 
 type SecretItemDTO = AdminSecretItem & {
 	configured: boolean;
+	managed?: boolean;
 	preview?: string;
 };
 
@@ -35,6 +36,8 @@ let showInput = $state<Record<string, boolean>>({});
 // 导出弹窗
 let exportOpen = $state(false);
 let exportBusy = $state(false);
+// 正在轮换的托管密钥 key（用于按钮 loading 态）
+let rotating = $state("");
 
 const groups = $derived(
 	SECRET_GROUPS.map((g) => ({
@@ -211,27 +214,42 @@ function toggleClear(item: SecretItemDTO) {
 	}
 }
 
-async function generateJwt() {
+async function rotate(item: SecretItemDTO) {
+	if (rotating) return;
+	const confirmed = window.confirm(
+		i18n(I18nKey.secretsRotateConfirm).replace("{label}", item.label),
+	);
+	if (!confirmed) return;
+
+	rotating = item.key;
 	try {
-		const res = await fetch("/api/admin/secrets/generate/", {
+		const res = await fetch("/api/admin/secrets/rotate/", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ type: "jwt" }),
+			body: JSON.stringify({ key: item.key }),
 		});
 		const data = await res.json();
-		if (data.success) {
-			drafts.ADMIN_JWT_SECRET = data.value;
-			toDelete.ADMIN_JWT_SECRET = false;
-			onNotify(i18n(I18nKey.secretsGenerateJwtDone), "success", 8000);
-		} else {
-			onNotify(data.message || "生成失败", "error", 8000);
+		// 危险操作需「新鲜」登录态：跳 GitHub OAuth 重新授权（prompt=login）
+		if (res.status === 403 && data.code === "STEP_UP_REQUIRED") {
+			onNotify(i18n(I18nKey.secretsStepUpRequired), "error", 6000);
+			const next = encodeURIComponent(location.pathname);
+			window.location.href = `/api/admin/auth/github/?force=1&next=${next}`;
+			return;
 		}
+		if (res.ok && data.success) {
+			onNotify(data.message || i18n(I18nKey.secretsRotateDone), "success", 10000);
+			await load();
+			return;
+		}
+		onNotify(data.message || i18n(I18nKey.secretsRotateFailed), "error", 10000);
 	} catch (err) {
 		onNotify(
-			`生成请求失败: ${err instanceof Error ? err.message : String(err)}`,
+			`${i18n(I18nKey.secretsRotateFailed)}: ${err instanceof Error ? err.message : String(err)}`,
 			"error",
-			8000,
+			10000,
 		);
+	} finally {
+		rotating = "";
 	}
 }
 
@@ -374,7 +392,41 @@ onMount(load);
 
 								<p class="field-desc">{item.description}</p>
 
-								<div class="field-input-row">
+								{#if item.managed}
+									<!-- 托管密钥：不提供输入框，只展示状态与轮换入口 -->
+									<div class="managed-row">
+										<span class="managed-state">
+											<Icon
+												icon={item.configured
+													? "material-symbols:verified-user"
+													: "material-symbols:error-outline"}
+												class={item.configured ? "managed-ok" : "managed-warn"}
+											/>
+											<span>
+												{item.configured
+													? i18n(I18nKey.secretsManagedConfigured)
+													: i18n(I18nKey.secretsManagedMissing)}
+											</span>
+										</span>
+										<button
+											type="button"
+											class="sec-btn"
+											disabled={!writable || loading || rotating === item.key}
+											title={writable
+												? i18n(I18nKey.secretsRotateHint)
+												: i18n(I18nKey.secretsRotateReadonly)}
+											onclick={() => rotate(item)}
+										>
+											<Icon icon="material-symbols:autorenew" />
+											<span>
+												{rotating === item.key
+													? i18n(I18nKey.secretsRotating)
+													: i18n(I18nKey.secretsRotate)}
+											</span>
+										</button>
+									</div>
+								{:else}
+									<div class="field-input-row">
 									{#if item.kind === "multiline"}
 										<textarea
 											class="secret-input mono"
@@ -452,6 +504,7 @@ onMount(load);
 										</button>
 									{/if}
 								</div>
+								{/if}
 
 								<code class="field-key">{item.key}</code>
 							</article>
@@ -471,9 +524,16 @@ onMount(load);
 					</div>
 				</div>
 				<div class="generator-row">
-					<button class="sec-btn" onclick={generateJwt} disabled={saving}>
-						<Icon icon="material-symbols:auto-awesome" />
-						<span>{i18n(I18nKey.secretsGenerateJwt)}</span>
+					<button
+						class="sec-btn"
+						onclick={() => {
+							const jwt = items.find((i) => i.managed);
+							if (jwt) rotate(jwt);
+						}}
+						disabled={saving || rotating !== ""}
+					>
+						<Icon icon="material-symbols:autorenew" />
+						<span>{i18n(I18nKey.secretsRotateJwt)}</span>
 					</button>
 				</div>
 			</section>
@@ -872,6 +932,37 @@ onMount(load);
 		display: flex;
 		align-items: stretch;
 		gap: 0.5rem;
+	}
+
+	/* 托管密钥：状态 + 轮换按钮，替代输入框 */
+	.managed-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+		padding: 0.75rem 1rem;
+		border-radius: var(--radius-xl);
+		background: color-mix(in oklab, var(--page-bg) 55%, var(--card-bg));
+	}
+
+	.managed-state {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+		min-width: 0;
+	}
+
+	:global(.managed-ok) {
+		color: var(--success);
+		flex-shrink: 0;
+	}
+
+	:global(.managed-warn) {
+		color: var(--warning);
+		flex-shrink: 0;
 	}
 
 	.input-wrap {

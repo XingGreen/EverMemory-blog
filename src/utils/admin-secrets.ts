@@ -21,6 +21,14 @@ export type AdminSecretItem = {
 	sensitive: boolean;
 	/** 是否为核心必配项（站点同步等基础功能依赖） */
 	required: boolean;
+	/**
+	 * 是否由服务端自动托管（不暴露给用户手动填写）。
+	 *
+	 * 托管项不出现在表单里，只展示「已托管 / 未配置」状态，并提供「轮换」按钮。
+	 * 判定标准：值不依赖任何第三方平台，纯随机数即可——目前只有 ADMIN_JWT_SECRET。
+	 * 其余密钥都必须从外部平台复制，无法自动生成。
+	 */
+	managed?: boolean;
 };
 
 export const SECRET_GROUPS: readonly {
@@ -151,10 +159,11 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "auth",
 		label: "JWT 签名密钥",
 		description:
-			"用于签发后台会话 Cookie 的随机密钥（32 字节以上）。可直接点击下方生成工具一键生成",
+			"用于签发后台会话 Cookie 的随机密钥。由服务端自动生成与托管，无需手动填写；仅在需要让所有会话立即失效时点击「轮换」",
 		kind: "password",
 		sensitive: true,
 		required: true,
+		managed: true,
 	},
 	{
 		key: "ADMIN_ALERT_WEBHOOK",
@@ -192,6 +201,16 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 
 export function getSecretItem(key: string): AdminSecretItem | undefined {
 	return ADMIN_SECRETS.find((item) => item.key === key);
+}
+
+/** 托管项清单：这些键由服务端自动生成，拒绝通过表单直接写入 */
+export const MANAGED_SECRET_KEYS: readonly string[] = ADMIN_SECRETS.filter(
+	(item) => item.managed,
+).map((item) => item.key);
+
+/** 是否由服务端托管的密钥（表单/保存接口据此拒绝手动写入） */
+export function isManagedSecret(key: string): boolean {
+	return MANAGED_SECRET_KEYS.includes(key);
 }
 
 /**

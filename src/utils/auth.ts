@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 
 import { getEnv } from "./env";
-import { readSecretPreview, readSecretValue } from "./secret-io";
+import { readSecretPreview, readSecretValue, rotateManagedSecret } from "./secret-io";
 import { getSession, touchSession } from "./session-store";
 
 const JWT_EXPIRY_HOURS = 12;
@@ -42,9 +42,11 @@ function getTokenVersion(): string {
 
 /**
  * 获取 JWT 签名密钥
- * - 优先读取 ADMIN_JWT_SECRET 环境变量
- * - 生产环境未配置时抛错，防止使用可预测的默认密钥导致令牌被伪造
- * - 开发环境未配置时生成临时随机密钥（进程重启后失效）并打印警告
+ * - 优先读取 ADMIN_JWT_SECRET 环境变量（平台环境变量 / .env.local）
+ * - 开发（文件可写）环境未配置时：自动生成 32 字节随机密钥并写入 .env.local，
+ *   之后每次重启都复用同一把，不会造成会话失效
+ * - 生产（文件只读）环境未配置时：抛错并提示去部署平台配置，防止使用可预测
+ *   的默认密钥导致令牌被伪造
  */
 function getJwtSecret(): string {
 	if (cachedSecret) return cachedSecret;
@@ -57,15 +59,25 @@ function getJwtSecret(): string {
 
 	if (import.meta.env.PROD) {
 		const msg =
-			"ADMIN_JWT_SECRET 环境变量未设置。请参考 .env.example 配置一个足够随机的密钥后再启动生产服务。";
+			"ADMIN_JWT_SECRET 环境变量未设置。请在部署平台的环境变量设置中配置 ADMIN_JWT_SECRET（32 字节以上随机串）后重新部署。";
 		console.error(`[Auth] ${msg}`);
 		throw new Error(msg);
 	}
 
-	// 仅开发环境：生成临时随机密钥（进程重启后失效）
+	// 开发环境：自动生成并持久化到 .env.local，保证重启后会话不失效
+	const generated = rotateManagedSecret("ADMIN_JWT_SECRET");
+	if (generated) {
+		cachedSecret = generated;
+		console.warn(
+			"[Auth] ADMIN_JWT_SECRET 未配置，已自动生成并写入 .env.local。可在后台「用户中心 → 密钥配置」中轮换。",
+		);
+		return cachedSecret;
+	}
+
+	// 落盘失败（如目录不可写）时的兜底：进程内临时密钥，重启后失效
 	cachedSecret = crypto.randomBytes(32).toString("hex");
 	console.warn(
-		"[Auth] ADMIN_JWT_SECRET 未配置，已生成临时开发密钥。会话将在进程重启后失效，请尽快在 .env.local 中配置 ADMIN_JWT_SECRET。",
+		"[Auth] ADMIN_JWT_SECRET 未配置且写入 .env.local 失败，已使用临时密钥。会话将在进程重启后失效，请检查目录写入权限。",
 	);
 	return cachedSecret;
 }

@@ -23,6 +23,7 @@ export function writeAuditLog(entry: {
 		| "login_failure"
 		| "secrets_updated"
 		| "secrets_credentials_updated"
+		| "secrets_rotated"
 		| "secrets_exported"
 		| "sessions_listed"
 		| "session_revoked"

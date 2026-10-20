@@ -2,6 +2,7 @@ import {
 	ADMIN_SECRETS,
 	AUTH_SECRET_KEYS,
 	getSecretItem,
+	isManagedSecret,
 	requiresFreshAuth,
 } from "@/utils/admin-secrets";
 import { writeAuditLog } from "@/utils/audit-log";
@@ -57,6 +58,8 @@ export async function GET({
 		kind: item.kind,
 		sensitive: item.sensitive,
 		required: item.required,
+		// 托管项：前端据此渲染「自动托管 + 轮换」而非输入框
+		managed: item.managed === true,
 		configured: states[item.key] === true,
 		// 仅非机密密钥回显真实值（供表单编辑），机密密钥只返回状态
 		...(!item.sensitive ? { preview: readSecretPreview(item.key) } : {}),
@@ -101,10 +104,16 @@ export async function POST({
 
 		const valid: { key: string; value?: string; delete?: boolean }[] = [];
 		const ignored: string[] = [];
+		const managedRejected: string[] = [];
 		for (const entry of entries) {
 			const key = typeof entry?.key === "string" ? entry.key : "";
 			if (!getSecretItem(key)) {
 				ignored.push(key || "(未知)");
+				continue;
+			}
+			// 托管密钥由服务端生成与维护，不接受表单直接写入/删除
+			if (isManagedSecret(key)) {
+				managedRejected.push(key);
 				continue;
 			}
 			const isDelete = entry.delete === true;
@@ -115,6 +124,19 @@ export async function POST({
 				value: rawValue,
 				...(isDelete ? { delete: true } : {}),
 			});
+		}
+
+		// 只提交了托管密钥：明确告知应走轮换接口，而不是静默成功
+		if (valid.length === 0 && managedRejected.length > 0) {
+			return json(
+				{
+					success: false,
+					message:
+						"该密钥由服务端自动托管，不能手动修改。如需使其失效，请使用「轮换」操作。",
+					managed: managedRejected,
+				},
+				400,
+			);
 		}
 
 		if (valid.length === 0) {

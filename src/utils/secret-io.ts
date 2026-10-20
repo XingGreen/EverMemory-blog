@@ -169,6 +169,44 @@ export function generateJwtSecret(): string {
 	return crypto.randomBytes(32).toString("hex");
 }
 
+/**
+ * 托管密钥的自动初始化：若 .env.local 中尚无该键且文件可写，则生成并写入。
+ *
+ * 仅用于「服务端能自主生成」的密钥（目前是 ADMIN_JWT_SECRET）。为什么不直接
+ * 在内存里生成一份：那样每次进程重启都会换密钥，所有已签发会话立即失效，且多实例
+ * 部署时各实例密钥不同、会话互相踢。持久化到 .env.local 后行为与手动配置完全一致。
+ *
+ * 返回 true 表示本次调用执行了生成写入；false 表示已存在或不可写（调用方自行降级）。
+ */
+export function ensureManagedSecret(key: string): boolean {
+	if (!isEnvFileWritable()) return false;
+	try {
+		// 已配置（文件或平台环境变量）时不做任何事，避免覆盖用户已有的密钥
+		if (readEnvValue(key) !== "") return false;
+		if (key !== "ADMIN_JWT_SECRET") return false;
+		applyEnvFileUpdates([{ key, value: generateJwtSecret() }]);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * 轮换托管密钥：无条件生成新值并写入 .env.local。
+ * 返回新值（供调用方续签会话）；不可写或写入失败返回 null。
+ */
+export function rotateManagedSecret(key: string): string | null {
+	if (!isEnvFileWritable()) return null;
+	if (key !== "ADMIN_JWT_SECRET") return null;
+	try {
+		const next = generateJwtSecret();
+		applyEnvFileUpdates([{ key, value: next }]);
+		return readEnvValue(key) === next ? next : null;
+	} catch {
+		return null;
+	}
+}
+
 /** 读取全部密钥的真实值（仅服务端导出场景使用；敏感值请谨慎处理） */
 export function readAllSecretValues(): Record<string, string> {
 	const values: Record<string, string> = {};
