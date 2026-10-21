@@ -29,6 +29,12 @@ export type AdminSecretItem = {
 	 * 其余密钥都必须从外部平台复制，无法自动生成。
 	 */
 	managed?: boolean;
+	/**
+	 * 栅格布局下的列跨度（12 栅格系统）。
+	 * 省略时按 6 处理（一行两个）。短字段用 6，长 URL/路径用 12，
+	 * 需要与相邻字段凑满 12 的场合用 8/4、7/5 这类组合。
+	 */
+	span?: 4 | 5 | 6 | 7 | 8 | 12;
 };
 
 export const SECRET_GROUPS: readonly {
@@ -69,6 +75,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "text",
 		sensitive: false,
 		required: true,
+		span: 6,
 	},
 	{
 		key: "GITHUB_OWNER",
@@ -78,6 +85,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "text",
 		sensitive: false,
 		required: true,
+		span: 6,
 	},
 	{
 		key: "GITHUB_REPO",
@@ -87,6 +95,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "text",
 		sensitive: false,
 		required: true,
+		span: 8,
 	},
 	{
 		key: "GITHUB_BRANCH",
@@ -96,6 +105,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "text",
 		sensitive: false,
 		required: true,
+		span: 4,
 	},
 	{
 		key: "GITHUB_INSTALLATION_ID",
@@ -105,6 +115,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "text",
 		sensitive: false,
 		required: true,
+		span: 7,
 	},
 	{
 		key: "GITHUB_PRIVATE_KEY",
@@ -115,6 +126,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "multiline",
 		sensitive: true,
 		required: true,
+		span: 5,
 	},
 	{
 		key: "GITHUB_PRIVATE_KEY_PATH",
@@ -125,6 +137,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "text",
 		sensitive: false,
 		required: false,
+		span: 12,
 	},
 
 	// ── 管理后台认证配置（GitHub OAuth + 应急令牌） ──
@@ -137,6 +150,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "text",
 		sensitive: false,
 		required: true,
+		span: 6,
 	},
 	{
 		key: "GITHUB_APP_CLIENT_SECRET",
@@ -147,6 +161,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "password",
 		sensitive: true,
 		required: true,
+		span: 6,
 	},
 	{
 		key: "ADMIN_GITHUB_ID",
@@ -157,6 +172,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "text",
 		sensitive: false,
 		required: true,
+		span: 6,
 	},
 	{
 		key: "ADMIN_BREAKGLASS_TOKEN",
@@ -167,6 +183,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "password",
 		sensitive: true,
 		required: false,
+		span: 6,
 	},
 	{
 		key: "ADMIN_JWT_SECRET",
@@ -177,6 +194,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "password",
 		sensitive: true,
 		required: true,
+		span: 7,
 		managed: true,
 	},
 	{
@@ -188,6 +206,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "text",
 		sensitive: false,
 		required: false,
+		span: 5,
 	},
 
 	// ── Cloudflare Turnstile 人机验证（可选，未配置则完全跳过） ──
@@ -200,6 +219,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "text",
 		sensitive: false,
 		required: false,
+		span: 6,
 	},
 	{
 		key: "TURNSTILE_SECRET_KEY",
@@ -210,6 +230,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "password",
 		sensitive: true,
 		required: false,
+		span: 6,
 	},
 ];
 

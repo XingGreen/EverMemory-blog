@@ -58,6 +58,8 @@ export async function GET({
 		kind: item.kind,
 		sensitive: item.sensitive,
 		required: item.required,
+		// 栅格布局下的列跨度（12 栅格），前端据此渲染 data-span
+		span: item.span ?? 6,
 		// 托管项：前端据此渲染「自动托管 + 轮换」而非输入框
 		managed: item.managed === true,
 		configured: states[item.key] === true,
