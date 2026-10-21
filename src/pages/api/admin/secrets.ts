@@ -61,8 +61,9 @@ export async function GET({
 		// 托管项：前端据此渲染「自动托管 + 轮换」而非输入框
 		managed: item.managed === true,
 		configured: states[item.key] === true,
-		// 刻意不下发任何明文（含非敏感项）：前端默认显示空值，
-		// 用户点「显示」时才走 /api/admin/secrets/value/ 按需读取单个字段。
+		// 本地开发环境（文件可写）回填明文，便于查看与局部修改；
+		// 只读部署环境仍不下发真实值，避免线上把密钥渲染到页面
+		...(isEnvFileWritable() ? { value: readSecretPreview(item.key) } : {}),
 	}));
 
 	return json(

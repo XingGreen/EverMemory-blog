@@ -27,10 +27,10 @@ let envFile = $state(".env.local");
 let loading = $state(true);
 let loadError = $state("");
 let saving = $state(false);
-// 每个密钥的输入草稿：默认全空，用户输入或点眼镜揭示后才写入
+// 每个密钥的输入草稿：本地开发环境直接回填明文，便于查看与局部修改
 let drafts = $state<Record<string, string>>({});
-// 已从后端取到的明文（仅点过「显示」的字段），用于比较是否发生修改
-let revealed = $state<Record<string, string>>({});
+// 回填时的原始值，用于判断是否发生修改
+let draftsOrigin = $state<Record<string, string>>({});
 // 标记待清除的密钥
 let toDelete = $state<Record<string, boolean>>({});
 // 密码类输入框的显隐切换
@@ -74,10 +74,11 @@ const allRequiredConfigured = $derived(
 function isDirty(item: SecretItemDTO): boolean {
 	if (toDelete[item.key]) return true;
 	const draft = (drafts[item.key] ?? "").trim();
-	if (item.sensitive) return draft !== "";
-	// 非敏感项：默认不再回填明文，只有用户点过「显示」拿到原值后才能比较差异
-	if (!(item.key in revealed)) return draft !== "";
-	return draft !== (revealed[item.key] ?? "");
+	// 非敏感项已预填原值，直接与草稿比较
+	if (!item.sensitive) return draft !== (draftsOrigin[item.key] ?? "");
+	// 敏感项：预填了原值则比较差异，否则「有输入即修改」
+	if (item.key in draftsOrigin) return draft !== (draftsOrigin[item.key] ?? "");
+	return draft !== "";
 }
 
 const changedCount = $derived(items.filter(isDirty).length);
@@ -92,11 +93,18 @@ async function load() {
 			items = data.items;
 			writable = data.writable;
 			envFile = data.file || ".env.local";
-			// 默认一律空值：不预填任何已配置密钥的明文，由用户点眼镜主动显示
+			// 本地开发环境：直接把明文回填到表单，便于查看与局部修改
 			drafts = {};
-			revealed = {};
+			draftsOrigin = {};
 			toDelete = {};
 			showInput = {};
+			for (const item of items) {
+				const value = item.value ?? "";
+				if (value) {
+					drafts[item.key] = value;
+					draftsOrigin[item.key] = value;
+				}
+			}
 		} else {
 			loadError = data.message || "读取密钥状态失败";
 		}
@@ -107,33 +115,9 @@ async function load() {
 	}
 }
 
-/**
- * 点击眼镜：首次显示时按需向后端取该字段明文，再切换显隐。
- * 不把明文塞进列表接口，避免每次打开页面就把全部密钥暴露在响应里。
- */
-async function toggleReveal(item: SecretItemDTO) {
-	const nextVisible = !showInput[item.key];
-	showInput[item.key] = nextVisible;
-	if (!nextVisible) return;
-	// 已拿到过明文或用户已输入过，直接复用，不重复请求
-	if (item.key in revealed) return;
-
-	try {
-		const res = await fetch(
-			`/api/admin/secrets/value/?key=${encodeURIComponent(item.key)}`,
-		);
-		const data = await res.json();
-		if (!res.ok || !data.success) {
-			onNotify(data.message || "读取该配置失败", "error", 8000);
-			showInput[item.key] = false;
-			return;
-		}
-		revealed[item.key] = data.value ?? "";
-		drafts[item.key] = data.value ?? "";
-	} catch {
-		onNotify("读取该配置失败，请检查网络", "error", 8000);
-		showInput[item.key] = false;
-	}
+/** 点击眼镜：切换该字段明文的显示/隐藏（值已预填，无需再请求后端） */
+function toggleReveal(item: SecretItemDTO) {
+	showInput[item.key] = !showInput[item.key];
 }
 
 function buildEntries(): { key: string; value?: string; delete?: boolean }[] {
@@ -144,14 +128,12 @@ function buildEntries(): { key: string; value?: string; delete?: boolean }[] {
 			continue;
 		}
 		const draft = (drafts[item.key] ?? "").trim();
-		if (item.sensitive) {
-			// 敏感项：只有用户主动输入了新值才提交（空值视作不修改）
-			if (draft) entries.push({ key: item.key, value: draft });
-		} else if (item.key in revealed && draft !== (revealed[item.key] ?? "")) {
-			// 非敏感项：只有揭示过原值的字段才能判断是否改动
-			entries.push({ key: item.key, value: draft });
-		} else if (!(item.key in revealed) && draft) {
-			// 未揭示但用户直接输入了新值，同样视为修改
+		// 敏感项未预填时「空值视作不修改」；预填过的按差异判断，避免无改动也提交
+		if (item.key in draftsOrigin) {
+			if (draft !== (draftsOrigin[item.key] ?? "")) {
+				entries.push({ key: item.key, value: draft });
+			}
+		} else if (draft) {
 			entries.push({ key: item.key, value: draft });
 		}
 	}
@@ -257,10 +239,9 @@ function toggleClear(item: SecretItemDTO) {
 	toDelete[item.key] = !toDelete[item.key];
 	if (toDelete[item.key]) {
 		drafts[item.key] = "";
-		revealed[item.key] = "";
-	} else if (item.key in revealed) {
-		// 取消清除时恢复到已揭示的原值；未揭示过则保持空（不影响原值）
-		drafts[item.key] = revealed[item.key] ?? "";
+	} else {
+		// 取消清除：恢复到回填时的原值（未预填则保持空，不影响磁盘上的原值）
+		drafts[item.key] = draftsOrigin[item.key] ?? "";
 	}
 }
 
@@ -495,30 +476,29 @@ onMount(load);
 										</button>
 									</div>
 								{:else}
-									<!-- 输入框默认不显示明文：空值 + 眼睛按钮主动揭示。
-									     已配置项点击眼睛才向后端按需取该字段明文。 -->
+									<!-- 本地开发环境：明文已回填，可直接查看与局部修改；
+									     敏感项默认掩码，点眼镜切换显示/隐藏。 -->
 									<div class="field-input-row">
 										{#if item.kind === "multiline"}
 											<textarea
 												class="secret-input mono"
 												rows="4"
 												spellcheck="false"
-												value={revealed[item.key] ?? drafts[item.key] ?? ""}
+												value={drafts[item.key] ?? ""}
 												placeholder={item.configured
 													? i18n(I18nKey.secretsPlaceholderConfigured)
 													: i18n(I18nKey.secretsPlaceholderEmpty)}
 												disabled={!writable || toDelete[item.key] || loading}
 												oninput={(e) => {
 													drafts[item.key] = e.currentTarget.value;
-													revealed[item.key] = e.currentTarget.value;
 												}}
 											></textarea>
 										{:else}
 											<div class="input-wrap">
 												<input
 													class="secret-input"
-													type={showInput[item.key] ? "text" : "password"}
-													value={revealed[item.key] ?? drafts[item.key] ?? ""}
+													type={!item.sensitive || showInput[item.key] ? "text" : "password"}
+													value={drafts[item.key] ?? ""}
 													spellcheck="false"
 													name="secret-draft"
 													autocomplete="new-password"
@@ -528,27 +508,28 @@ onMount(load);
 													disabled={!writable || toDelete[item.key] || loading}
 													oninput={(e) => {
 														drafts[item.key] = e.currentTarget.value;
-														revealed[item.key] = e.currentTarget.value;
 													}}
 												/>
-												<button
-													type="button"
-													class="input-toggle"
-													title={showInput[item.key]
-														? i18n(I18nKey.secretsHide)
-														: i18n(I18nKey.secretsShow)}
-													aria-label={showInput[item.key]
-														? i18n(I18nKey.secretsHide)
-														: i18n(I18nKey.secretsShow)}
-													onclick={() => toggleReveal(item)}
-													disabled={!writable}
-												>
-													<Icon
-														icon={showInput[item.key]
-															? "material-symbols:visibility-off-outline-rounded"
-															: "material-symbols:visibility-outline-rounded"}
-													/>
-												</button>
+												{#if item.sensitive}
+													<button
+														type="button"
+														class="input-toggle"
+														title={showInput[item.key]
+															? i18n(I18nKey.secretsHide)
+															: i18n(I18nKey.secretsShow)}
+														aria-label={showInput[item.key]
+															? i18n(I18nKey.secretsHide)
+															: i18n(I18nKey.secretsShow)}
+														onclick={() => toggleReveal(item)}
+														disabled={!writable}
+													>
+														<Icon
+															icon={showInput[item.key]
+																? "material-symbols:visibility-off-outline-rounded"
+																: "material-symbols:visibility-outline-rounded"}
+														/>
+													</button>
+												{/if}
 											</div>
 										{/if}
 
