@@ -38,8 +38,6 @@ let exportOpen = $state(false);
 let exportBusy = $state(false);
 // 正在轮换的托管密钥 key（用于按钮 loading 态）
 let rotating = $state("");
-// 当前展开说明的问号（空字符串表示全部收起）；同一时刻只开一个
-let tipOpen = $state("");
 // 已展开的配置项（折叠交互）：默认全部收起，点击摘要行展开编辑区
 let expanded = $state<Record<string, boolean>>({});
 
@@ -64,15 +62,6 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 		e.preventDefault();
 		e.returnValue = "";
 	}
-}
-
-/** 点击页面其他区域或按 Esc 时收起说明浮层 */
-function closeTipOnOutside() {
-	tipOpen = "";
-}
-
-function closeTipOnEsc(e: KeyboardEvent) {
-	if (e.key === "Escape") tipOpen = "";
 }
 
 const groups = $derived(
@@ -104,27 +93,6 @@ function isDirty(item: SecretItemDTO): boolean {
 }
 
 const changedCount = $derived(items.filter(isDirty).length);
-
-/**
- * 摘要行展示的「当前值」：
- * - 托管项：显示托管状态文案
- * - 私钥（multiline）：不展示内容，只说明已保存
- * - 敏感项：显示掩码长度，不暴露字符
- * - 非敏感项：直接显示明文，方便收起时核对
- * - 空值：显示占位提示
- */
-function summaryValue(item: SecretItemDTO): string {
-	const value = drafts[item.key] ?? "";
-	if (item.managed) {
-		return item.configured
-			? i18n(I18nKey.secretsManagedConfigured)
-			: i18n(I18nKey.secretsManagedMissing);
-	}
-	if (!value) return i18n(I18nKey.secretsNotConfigured);
-	if (item.kind === "multiline") return i18n(I18nKey.secretsUploadedNote);
-	if (item.sensitive) return "•".repeat(Math.min(16, value.length));
-	return value;
-}
 
 async function load() {
 	loading = true;
@@ -375,11 +343,7 @@ async function rotate(item: SecretItemDTO) {
 onMount(load);
 </script>
 
-<svelte:window
-	onclick={closeTipOnOutside}
-	onkeydown={closeTipOnEsc}
-	onbeforeunload={onBeforeUnload}
-/>
+<svelte:window onbeforeunload={onBeforeUnload} />
 
 <div class="secrets-page">
 	{#if loadError}
@@ -507,8 +471,8 @@ onMount(load);
 												<span class="summary-warn">{i18n(I18nKey.secretsNotConfigured)}</span>
 											{/if}
 										</span>
-										<!-- 收起态显示当前值，不展开也能核对 -->
-										<span class="summary-value">{summaryValue(item)}</span>
+										<!-- 说明直接常驻显示（原先藏在问号 Tooltip 里） -->
+										<span class="summary-desc">{item.description}</span>
 									</span>
 									<span class="summary-action">
 										{isOpen ? i18n(I18nKey.secretsCollapse) : i18n(I18nKey.secretsEdit)}
@@ -525,29 +489,6 @@ onMount(load);
 								<div class="field-panel" id={`panel-${item.key}`}>
 									<div class="field-panel-inner">
 										<div class="field-meta">
-											<div class="field-head">
-												<h3 title={item.key}>
-													<!-- 说明默认隐藏：悬停问号或点击切换显示，点其他区域/Esc 关闭 -->
-													<div class="tip-anchor" class:open={tipOpen === item.key}>
-														<button
-															class="help-btn"
-															type="button"
-															aria-label={i18n(I18nKey.secretsFieldHelp)}
-															aria-describedby={`tip-${item.key}`}
-															aria-expanded={tipOpen === item.key}
-															onclick={(e) => {
-																e.stopPropagation();
-																tipOpen = tipOpen === item.key ? "" : item.key;
-															}}
-														>
-															<Icon icon="material-symbols:help-outline-rounded" />
-														</button>
-														<div class="field-tip" role="tooltip" id={`tip-${item.key}`}>
-															{item.description}
-														</div>
-													</div>
-												</h3>
-											</div>
 											<code class="field-key">{item.key}</code>
 										</div>
 
@@ -1197,14 +1138,13 @@ onMount(load);
 		color: var(--warning);
 	}
 
-	/* 收起态的当前值：单行省略，等宽字体便于核对 */
-	.summary-value {
+	/* 说明文字常驻显示（原先藏在问号 Tooltip 里） */
+	.summary-desc {
 		font-size: 0.8125rem;
-		font-family: var(--font-mono, monospace);
-		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
+		line-height: 1.5;
+		color: var(--content-meta);
 		overflow: hidden;
 		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 
 	.summary-action {
@@ -1240,10 +1180,11 @@ onMount(load);
 		display: flex;
 		align-items: flex-start;
 		gap: 1rem;
-		padding: 0.25rem 0 1.25rem;
+		/* 摘要行下内边距 14px 已提供呼吸感，这里只补底部留白 */
+		padding: 0.25rem 0 1rem;
 	}
 
-	/* 左栏：变量名 + 问号 */
+	/* 左栏：变量名 */
 	.field-meta {
 		display: flex;
 		flex-direction: column;
@@ -1252,6 +1193,8 @@ onMount(load);
 		flex-shrink: 0;
 		min-width: 0;
 		padding-right: 1rem;
+		/* 与右侧输入框首行文字基线近似对齐 */
+		padding-top: 0.5rem;
 	}
 
 	/* 右栏：输入控件 */
@@ -1287,14 +1230,6 @@ onMount(load);
 		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
 	}
 
-	/* 左栏只剩说明问号（标签已在摘要行），与变量名放同一行 */
-	.field-head {
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-		min-height: 1.25rem;
-	}
-
 	.field-meta .field-key {
 		margin-top: 0;
 	}
@@ -1304,102 +1239,6 @@ onMount(load);
 		align-items: center;
 		gap: 0.5rem;
 		flex-shrink: 0;
-	}
-
-	/* ── Plain Tooltip（参考 .examples/点击触发的-Plain-Tooltip.html） ──
-	   说明默认隐藏，悬停问号或点击切换显示；点其他区域 / Esc 收起。
-	   颜色取主题的反色语义：深底浅字，与卡片底自然区分。 */
-	.tip-anchor {
-		position: relative;
-		display: inline-flex;
-	}
-
-	.help-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.5rem;
-		height: 1.5rem;
-		padding: 0;
-		border: none;
-		border-radius: 50%;
-		background: transparent;
-		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
-		cursor: pointer;
-		-webkit-tap-highlight-color: transparent;
-		transition: background 0.15s, color 0.15s;
-	}
-
-	.help-btn :global(.inline-icon) {
-		font-size: 1rem;
-	}
-
-	.help-btn:hover {
-		background: var(--btn-plain-bg-hover);
-		color: var(--primary);
-	}
-
-	.help-btn:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 2px;
-	}
-
-	/* 浮层默认隐藏：opacity + visibility 双保险，避免透明元素仍被读屏聚焦。
-	   锚点已随问号移到名称右侧，故浮层左对齐展开，避免向左溢出遮挡状态标签。 */
-	.field-tip {
-		position: absolute;
-		bottom: calc(100% + 8px);
-		left: 0;
-		width: max-content;
-		max-width: 18rem;
-		padding: 0.375rem 0.5rem;
-		border-radius: var(--radius-sm);
-		background: var(--float-panel-bg);
-		color: var(--deep-text);
-		font-size: 0.75rem;
-		line-height: 1.5;
-		box-shadow: var(--shadow-card-hover);
-		pointer-events: none;
-		opacity: 0;
-		visibility: hidden;
-		transform: translateY(2px) scale(0.96);
-		transform-origin: bottom left;
-		transition:
-			opacity 0.12s ease,
-			transform 0.12s ease,
-			visibility 0.12s;
-		z-index: 20;
-	}
-
-	/* 小箭头 */
-	.field-tip::after {
-		content: "";
-		position: absolute;
-		top: 100%;
-		left: 0.75rem;
-		border: 4px solid transparent;
-		border-top-color: var(--float-panel-bg);
-	}
-
-	/* 悬停或点击展开 */
-	.tip-anchor:hover .field-tip,
-	.tip-anchor.open .field-tip {
-		opacity: 1;
-		visibility: visible;
-		transform: translateY(0) scale(1);
-	}
-
-	/* 标题行不裁切：问号浮层挂在 h3 内，overflow:hidden 会把它剪掉。
-	   省略号下沉到 .field-label，长名称仍能正常截断。 */
-	.field-head h3 {
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-		margin: 0;
-		font-size: 0.9375rem;
-		font-weight: 600;
-		color: var(--deep-text);
-		min-width: 0;
 	}
 
 	.field-label {
