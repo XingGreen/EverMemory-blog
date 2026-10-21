@@ -752,7 +752,7 @@ export const en: Translation = {
 		"Changes are written to {file} in the project root. Restart the service to apply.",
 	[Key.secretsReadonlyHint]:
 		"Read-only in production. Configure these in your deploy platform's environment variables (e.g. Vercel).",
-	[Key.secretsStatusAllDone]: "All required configuration is complete! 🎉",
+	[Key.secretsStatusAllDone]: "All required configuration is complete! Changes are written to {file} at the project root",
 	[Key.secretsStatusPartial]: "Completed {done}/{total} required items",
 	[Key.secretsStatusMissing]: "Missing: ",
 	[Key.secretsExportInlineHint]:

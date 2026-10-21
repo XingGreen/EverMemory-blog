@@ -719,7 +719,7 @@ export const zaku: Translation = {
 	[Key.secretsWritableHint]: "修改将写入项目根目录的 {file}，重启服务后生效",
 	[Key.secretsReadonlyHint]:
 		"当前为生产构建，文件系统只读；请到部署平台（如 Vercel）的环境变量设置中配置",
-	[Key.secretsStatusAllDone]: "该有的全齐了！🎉",
+	[Key.secretsStatusAllDone]: "该有的全齐了！改动会写进项目根目录的 {file}",
 	[Key.secretsStatusPartial]: "必配项搞定 {done}/{total}",
 	[Key.secretsStatusMissing]: "还差：",
 	[Key.secretsExportInlineHint]:

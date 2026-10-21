@@ -758,7 +758,7 @@ export const ru: Translation = {
 		"Изменения будут записаны в {file} в корне проекта. Применятся после перезапуска.",
 	[Key.secretsReadonlyHint]:
 		"В продакшене файловая система доступна только для чтения. Настройте переменные окружения на платформе развёртывания (например, Vercel).",
-	[Key.secretsStatusAllDone]: "Все обязательные настройки выполнены! 🎉",
+	[Key.secretsStatusAllDone]: "Все обязательные настройки выполнены! Изменения записываются в {file} в корне проекта",
 	[Key.secretsStatusPartial]: "Выполнено {done}/{total} обязательных",
 	[Key.secretsStatusMissing]: "Отсутствуют: ",
 	[Key.secretsExportInlineHint]:

@@ -723,7 +723,7 @@ export const zh_CN: Translation = {
 	[Key.secretsWritableHint]: "修改将写入项目根目录的 {file}，重启服务后生效",
 	[Key.secretsReadonlyHint]:
 		"当前为生产构建，文件系统只读；请到部署平台（如 Vercel）的环境变量设置中配置",
-	[Key.secretsStatusAllDone]: "你已完成所有必要配置！🎉",
+	[Key.secretsStatusAllDone]: "你已完成所有必要配置！修改将写入项目根目录的 {file}",
 	[Key.secretsStatusPartial]: "已完成 {done}/{total} 项必要配置",
 	[Key.secretsStatusMissing]: "还缺：",
 	[Key.secretsExportInlineHint]:

@@ -344,11 +344,14 @@ onMount(load);
 	{/if}
 
 	{#if !loading && !loadError}
-		<div class="secrets-status" class:all-done={allRequiredConfigured}>
-			{#if allRequiredConfigured}
-				<Icon icon="material-symbols:task-alt" class="status-icon" />
-				<span class="status-text">{i18n(I18nKey.secretsStatusAllDone)}</span>
-			{:else}
+		<!-- 成功提示：一行说完「已完成配置 + 写入位置」（新设计稿） -->
+		{#if allRequiredConfigured}
+			<div class="success-bar">
+				<Icon icon="material-symbols:check-circle-outline" />
+				<span>{i18n(I18nKey.secretsStatusAllDone).replace("{file}", envFile)}</span>
+			</div>
+		{:else}
+			<div class="pending-bar">
 				<Icon icon="material-symbols:info-outline" class="status-icon" />
 				<span class="status-text">
 					{i18n(I18nKey.secretsStatusPartial)
@@ -358,15 +361,12 @@ onMount(load);
 				<span class="status-missing">
 					{i18n(I18nKey.secretsStatusMissing)}
 					{#each missingRequired as item, i (item.key)}
-						<span class="status-key" title={item.key}>
-							{item.label}
-							<code class="status-key-code">{item.key}</code>
-						</span>
+						<span class="status-key" title={item.key}>{item.label}</span>
 						{#if i < missingRequired.length - 1}、{/if}
 					{/each}
 				</span>
-			{/if}
-		</div>
+			</div>
+		{/if}
 	{/if}
 
 	<div class="toolbar card-base">
@@ -760,35 +760,40 @@ onMount(load);
 		}
 	}
 
-	/* ── 配置完成度状态卡 ──
-	   半透明底色 + 彩色文字 + 微弱同色边框；不再与 --card-bg 混色，
-	   否则暗色下会变成一块实心暗绿。 */
-	.secrets-status {
+	/* ── 顶部提示条（新设计稿） ──
+	   成功态：一行说清「已完成 + 写入位置」，绿色半透明底 + 同色微边框；
+	   未完成态：琥珀色，附带缺失项列表。 */
+	.success-bar,
+	.pending-bar {
 		display: flex;
 		align-items: center;
-		gap: 0.625rem;
+		gap: 0.5rem;
 		flex-wrap: wrap;
-		padding: 1rem 1.25rem;
-		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--warning) 10%, transparent);
-		border: 1px solid color-mix(in oklab, var(--warning) 22%, transparent);
-		color: var(--warning);
+		padding: 0.75rem 1rem;
+		border-radius: var(--radius-xl);
 		font-size: 0.875rem;
+		line-height: 1.5;
 	}
 
-	.secrets-status.all-done {
+	.success-bar {
 		background: color-mix(in oklab, var(--success) 10%, transparent);
-		border-color: color-mix(in oklab, var(--success) 22%, transparent);
+		border: 1px solid color-mix(in oklab, var(--success) 20%, transparent);
 		color: var(--success);
 	}
 
-	.secrets-status :global(.status-icon) {
-		color: var(--warning);
+	.success-bar :global(.inline-icon) {
 		flex-shrink: 0;
 	}
 
-	.secrets-status.all-done :global(.status-icon) {
-		color: var(--success);
+	.pending-bar {
+		background: color-mix(in oklab, var(--warning) 10%, transparent);
+		border: 1px solid color-mix(in oklab, var(--warning) 20%, transparent);
+		color: var(--warning);
+	}
+
+	.pending-bar :global(.status-icon) {
+		color: var(--warning);
+		flex-shrink: 0;
 	}
 
 	.status-text {
