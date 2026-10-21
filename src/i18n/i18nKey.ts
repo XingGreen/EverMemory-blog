@@ -719,6 +719,8 @@ enum I18nKey {
 	secretsCollapse = "secretsCollapse",
 	secretsUnsavedCount = "secretsUnsavedCount",
 	secretsDiscard = "secretsDiscard",
+	secretsLayoutSwitchToTwoCol = "secretsLayoutSwitchToTwoCol",
+	secretsLayoutSwitchToFold = "secretsLayoutSwitchToFold",
 	secretsConfigured = "secretsConfigured",
 	secretsNotConfigured = "secretsNotConfigured",
 	secretsPendingDelete = "secretsPendingDelete",

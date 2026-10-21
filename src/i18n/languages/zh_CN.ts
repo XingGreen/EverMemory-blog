@@ -711,6 +711,8 @@ export const zh_CN: Translation = {
 	[Key.secretsEdit]: "编辑",
 	[Key.secretsCollapse]: "收起",
 	[Key.secretsUnsavedCount]: "还有 {count} 项未保存",
+	[Key.secretsLayoutSwitchToTwoCol]: "切换为两栏布局（全部展开）",
+	[Key.secretsLayoutSwitchToFold]: "切换为折叠布局（可收起）",
 	[Key.secretsDiscard]: "放弃修改",
 	[Key.secretsUploadRemove]: "移除该文件",
 	[Key.secretsUploadReadFailed]: "读取文件失败，请重试",

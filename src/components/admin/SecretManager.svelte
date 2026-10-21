@@ -41,8 +41,40 @@ let rotating = $state("");
 // 已展开的配置项（折叠交互）：默认全部收起，点击摘要行展开编辑区
 let expanded = $state<Record<string, boolean>>({});
 
-/** 摘要行：展开/收起某一项 */
+/**
+ * 布局模式：
+ * - fold：摘要行可折叠，默认全部收起（信息密度高）
+ * - two-col：所有字段常驻展开，左标签右输入（一眼看全）
+ * 持久化到 localStorage，与 admin-sidebar-collapsed 同一套做法。
+ */
+type SecretsLayout = "fold" | "two-col";
+const LAYOUT_KEY = "admin-secrets-layout";
+
+function readStoredLayout(): SecretsLayout {
+	try {
+		return localStorage.getItem(LAYOUT_KEY) === "two-col" ? "two-col" : "fold";
+	} catch {
+		return "fold";
+	}
+}
+
+let layout = $state<SecretsLayout>("fold");
+onMount(() => {
+	layout = readStoredLayout();
+});
+
+function toggleLayout() {
+	layout = layout === "fold" ? "two-col" : "fold";
+	try {
+		localStorage.setItem(LAYOUT_KEY, layout);
+	} catch {
+		// localStorage 不可用时仅本次会话生效
+	}
+}
+
+/** 摘要行：展开/收起某一项（两栏模式下无折叠概念，直接忽略） */
 function toggleExpanded(key: string) {
+	if (layout === "two-col") return;
 	expanded[key] = !expanded[key];
 }
 
@@ -345,7 +377,7 @@ onMount(load);
 
 <svelte:window onbeforeunload={onBeforeUnload} />
 
-<div class="secrets-page">
+<div class="secrets-page" data-layout={layout}>
 	{#if loadError}
 		<div class="status-banner error">
 			<Icon icon="material-symbols:error-outline" />
@@ -409,6 +441,24 @@ onMount(load);
 				<Icon icon="material-symbols:refresh" />
 				<span>{i18n(I18nKey.secretsReload)}</span>
 			</button>
+			<!-- 布局切换：折叠式（可收起）⇄ 两栏式（常驻展开） -->
+			<button
+				class="sec-btn layout-toggle"
+				type="button"
+				title={layout === "fold"
+					? i18n(I18nKey.secretsLayoutSwitchToTwoCol)
+					: i18n(I18nKey.secretsLayoutSwitchToFold)}
+				aria-label={layout === "fold"
+					? i18n(I18nKey.secretsLayoutSwitchToTwoCol)
+					: i18n(I18nKey.secretsLayoutSwitchToFold)}
+				onclick={toggleLayout}
+			>
+				<Icon
+					icon={layout === "fold"
+						? "material-symbols:view-quilt-outline"
+						: "material-symbols:view-list-outline"}
+				/>
+			</button>
 			{#if writable}
 				<button
 					class="sec-btn"
@@ -449,40 +499,61 @@ onMount(load);
 					<div class="secret-list">
 						{#each group.items as item (item.key)}
 							{@const isOpen = expanded[item.key] === true}
-							<div class="secret-field" class:dirty={isDirty(item)} class:open={isOpen}>
-								<!-- 摘要行：点击整行展开/收起编辑区。
-								     用 button 承载，保证键盘可操作与 aria-expanded 语义。 -->
-								<button
-									type="button"
-									class="field-summary"
-									aria-expanded={isOpen}
-									aria-controls={`panel-${item.key}`}
-									onclick={() => toggleExpanded(item.key)}
-								>
-									<span class="summary-text">
-										<span class="summary-title">
-											{#if item.sensitive}
-												<Icon icon="material-symbols:lock-outline" class="lock-icon" />
-											{/if}
-											<span class="field-label">{item.label}</span>
-											{#if item.required}<span class="req-star">*</span>{/if}
-											<!-- 未配置才提示，已配置保持安静 -->
-											{#if !item.configured && !item.managed}
-												<span class="summary-warn">{i18n(I18nKey.secretsNotConfigured)}</span>
-											{/if}
+							{@const twoCol = layout === "two-col"}
+							<div
+								class="secret-field"
+								class:dirty={isDirty(item)}
+								class:open={isOpen || twoCol}
+							>
+								<!-- 摘要行：折叠模式下点击整行展开/收起编辑区。
+								     两栏模式无折叠概念，改用 div 承载，避免给读屏一个按不动的按钮。 -->
+								{#if twoCol}
+									<div class="field-summary" role="group" aria-label={item.label}>
+										<span class="summary-text">
+											<span class="summary-title">
+												{#if item.sensitive}
+													<Icon icon="material-symbols:lock-outline" class="lock-icon" />
+												{/if}
+												<span class="field-label">{item.label}</span>
+												{#if item.required}<span class="req-star">*</span>{/if}
+												{#if !item.configured && !item.managed}
+													<span class="summary-warn">{i18n(I18nKey.secretsNotConfigured)}</span>
+												{/if}
+											</span>
+											<span class="summary-desc">{item.description}</span>
 										</span>
-										<!-- 说明直接常驻显示（原先藏在问号 Tooltip 里） -->
-										<span class="summary-desc">{item.description}</span>
-									</span>
-									<span class="summary-action">
-										{isOpen ? i18n(I18nKey.secretsCollapse) : i18n(I18nKey.secretsEdit)}
-										<Icon
-											icon={isOpen
-												? "material-symbols:keyboard-arrow-up-rounded"
-												: "material-symbols:keyboard-arrow-down-rounded"}
-										/>
-									</span>
-								</button>
+									</div>
+								{:else}
+									<button
+										type="button"
+										class="field-summary"
+										aria-expanded={isOpen}
+										aria-controls={`panel-${item.key}`}
+										onclick={() => toggleExpanded(item.key)}
+									>
+										<span class="summary-text">
+											<span class="summary-title">
+												{#if item.sensitive}
+													<Icon icon="material-symbols:lock-outline" class="lock-icon" />
+												{/if}
+												<span class="field-label">{item.label}</span>
+												{#if item.required}<span class="req-star">*</span>{/if}
+												{#if !item.configured && !item.managed}
+													<span class="summary-warn">{i18n(I18nKey.secretsNotConfigured)}</span>
+												{/if}
+											</span>
+											<span class="summary-desc">{item.description}</span>
+										</span>
+										<span class="summary-action">
+											{isOpen ? i18n(I18nKey.secretsCollapse) : i18n(I18nKey.secretsEdit)}
+											<Icon
+												icon={isOpen
+													? "material-symbols:keyboard-arrow-up-rounded"
+													: "material-symbols:keyboard-arrow-down-rounded"}
+											/>
+										</span>
+									</button>
+								{/if}
 
 								<!-- 编辑区：用 grid 行高动画展开，不用 {#if} 卸载，
 								     避免折叠时输入框卸载丢失草稿 -->
@@ -1214,6 +1285,67 @@ onMount(load);
 		}
 
 		.field-meta {
+			width: 100%;
+			padding-right: 0;
+		}
+	}
+
+	/* ── 两栏模式 ──
+	   与折叠模式共用同一份 DOM，只改变「摘要行是否可折叠」与「面板是否常显」：
+	   - 摘要行保留（标签与说明仍在这里），仅隐藏展开按钮并禁用点击
+	   - 编辑区强制展开（grid 行高始终 1fr）
+	   - 摘要行两侧留白去掉，让标签与输入框两侧对齐 */
+	.secrets-page[data-layout="two-col"] .field-summary {
+		cursor: default;
+		padding-left: 0;
+		padding-right: 0;
+	}
+
+	.secrets-page[data-layout="two-col"] .field-summary:hover {
+		background: transparent;
+	}
+
+	.secrets-page[data-layout="two-col"] .summary-action {
+		display: none;
+	}
+
+	.secrets-page[data-layout="two-col"] .field-panel {
+		grid-template-rows: 1fr;
+	}
+
+	.secrets-page[data-layout="two-col"] .field-panel-inner {
+		display: flex;
+		align-items: flex-start;
+		gap: 1rem;
+		padding: 0.25rem 0 1rem;
+	}
+
+	.secrets-page[data-layout="two-col"] .field-meta {
+		width: 41.6667%;
+		flex-shrink: 0;
+		padding-right: 1rem;
+		/* 右栏输入框高约 40px，变量名垂直居中与之对齐 */
+		padding-top: 0.75rem;
+	}
+
+	/* 分隔线两端不再内缩 */
+	.secrets-page[data-layout="two-col"] .secret-field.dirty .field-summary {
+		padding-left: 0;
+		border-left: none;
+	}
+
+	.secrets-page[data-layout="two-col"] .secret-field.dirty {
+		padding-left: 0.875rem;
+		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
+	}
+
+	@media (max-width: 768px) {
+		.secrets-page[data-layout="two-col"] .field-panel-inner {
+			flex-direction: column;
+			gap: 0.5rem;
+		}
+
+		.secrets-page[data-layout="two-col"] .field-meta {
 			width: 100%;
 			padding-right: 0;
 		}

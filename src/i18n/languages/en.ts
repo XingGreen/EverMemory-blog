@@ -739,6 +739,8 @@ export const en: Translation = {
 	[Key.secretsEdit]: "Edit",
 	[Key.secretsCollapse]: "Collapse",
 	[Key.secretsUnsavedCount]: "{count} unsaved change(s)",
+	[Key.secretsLayoutSwitchToTwoCol]: "Switch to two-column layout (all expanded)",
+	[Key.secretsLayoutSwitchToFold]: "Switch to collapsible layout",
 	[Key.secretsDiscard]: "Discard changes",
 	[Key.secretsUploadRemove]: "Remove this file",
 	[Key.secretsUploadReadFailed]: "Could not read the file, please try again",

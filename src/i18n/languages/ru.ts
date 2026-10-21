@@ -745,6 +745,8 @@ export const ru: Translation = {
 	[Key.secretsEdit]: "Изменить",
 	[Key.secretsCollapse]: "Свернуть",
 	[Key.secretsUnsavedCount]: "Несохранённых изменений: {count}",
+	[Key.secretsLayoutSwitchToTwoCol]: "Переключить на двухколоночный вид (все раскрыто)",
+	[Key.secretsLayoutSwitchToFold]: "Переключить на сворачиваемый вид",
 	[Key.secretsDiscard]: "Отменить изменения",
 	[Key.secretsUploadRemove]: "Удалить этот файл",
 	[Key.secretsUploadReadFailed]: "Не удалось прочитать файл, попробуйте ещё раз",
