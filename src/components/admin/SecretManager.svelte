@@ -504,7 +504,6 @@ onMount(load);
 								class="secret-field"
 								class:dirty={isDirty(item)}
 								class:open={isOpen || twoCol}
-								data-span={item.span ?? 6}
 							>
 								<!-- 摘要行：折叠模式下点击整行展开/收起编辑区。
 								     两栏模式无折叠概念，改用 div 承载，避免给读屏一个按不动的按钮。 -->
@@ -1291,52 +1290,33 @@ onMount(load);
 		}
 	}
 
-	/* ── 栅格布局（参考 .examples/deepseek_html_20261021_d9c48f.html） ──
-	   12 栅格系统：字段按各自 span 占 4/5/6/7/8/12 列，一行可并排多个。
-	   字段内部改为纵向堆叠：标签 → 说明 → 变量名 → 输入框。 */
+	/* ── 两栏布局 ──
+	   真正的字段两列网格：.secret-list 变成两列，一行放两个字段。
+	   字段内部结构不变（摘要行 + 展开后的编辑区），只是排布方式变了。
+	   两栏模式下全部展开（不折叠），避免一列已展开一列还收着的高低不齐。 */
 	.secrets-page[data-layout="two-col"] .secret-list {
 		display: grid;
-		grid-template-columns: repeat(12, minmax(0, 1fr));
-		gap: 1.5rem;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0 1.5rem;
 		align-items: start;
 	}
 
+	/* 网格里没有「上一项」可言，分隔线改为每项自带上下边框 */
 	.secrets-page[data-layout="two-col"] .secret-field {
-		grid-column: span 6;
-		border-top: none;
-		padding-bottom: 0;
+		border-top: 1px solid var(--line-color);
+		padding-bottom: 0.75rem;
 	}
 
-	/* 按配置项的 span 分配列宽 */
-	.secrets-page[data-layout="two-col"] .secret-field[data-span="4"] {
-		grid-column: span 4;
-	}
-	.secrets-page[data-layout="two-col"] .secret-field[data-span="5"] {
-		grid-column: span 5;
-	}
-	.secrets-page[data-layout="two-col"] .secret-field[data-span="6"] {
-		grid-column: span 6;
-	}
-	.secrets-page[data-layout="two-col"] .secret-field[data-span="7"] {
-		grid-column: span 7;
-	}
-	.secrets-page[data-layout="two-col"] .secret-field[data-span="8"] {
-		grid-column: span 8;
-	}
-	.secrets-page[data-layout="two-col"] .secret-field[data-span="12"] {
-		grid-column: span 12;
-	}
-
-	/* 栅格下字段内部纵向排列，字段间不再画分隔线 */
 	.secrets-page[data-layout="two-col"] .secret-field + .secret-field {
-		border-top: none;
+		border-top: 1px solid var(--line-color);
 	}
 
+	/* 两栏下字段内部改回纵向（标签在上、输入框在下），避免列宽被再次切半 */
 	.secrets-page[data-layout="two-col"] .field-panel-inner {
 		display: flex;
 		flex-direction: column;
 		gap: 0.375rem;
-		padding: 0 0 0.25rem;
+		padding: 0.25rem 0 0.5rem;
 	}
 
 	.secrets-page[data-layout="two-col"] .field-meta {
@@ -1345,16 +1325,11 @@ onMount(load);
 		padding-top: 0;
 	}
 
-	/* 变量名移到输入框上方，与设计稿一致 */
-	.secrets-page[data-layout="two-col"] .field-meta .field-key {
-		order: -1;
-		margin-bottom: 0.125rem;
-	}
-
-	/* 摘要行退化为「标签 + 说明」的纯展示区 */
+	/* 两栏下不需要折叠按钮与可点语义 */
 	.secrets-page[data-layout="two-col"] .field-summary {
 		cursor: default;
-		padding: 0;
+		padding-left: 0;
+		padding-right: 0;
 	}
 
 	.secrets-page[data-layout="two-col"] .field-summary:hover {
@@ -1369,17 +1344,20 @@ onMount(load);
 		grid-template-rows: 1fr;
 	}
 
-	/* 变更状态：栅格下用左侧细竖线标示 */
+	/* 变更指示线：网格下边框已承担分隔，改用外发光式描边避免与网格线混淆 */
+	.secrets-page[data-layout="two-col"] .secret-field.dirty {
+		border-top-color: color-mix(in oklab, var(--primary) 45%, transparent);
+	}
+
 	.secrets-page[data-layout="two-col"] .secret-field.dirty .field-summary {
 		padding-left: 0.5rem;
 		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
 	}
 
-	/* 窄屏：所有字段占满 12 列 */
-	@media (max-width: 1023px) {
-		.secrets-page[data-layout="two-col"] .secret-field,
-		.secrets-page[data-layout="two-col"] .secret-field[data-span] {
-			grid-column: span 12;
+	/* 窄屏：两列降为一列 */
+	@media (max-width: 1100px) {
+		.secrets-page[data-layout="two-col"] .secret-list {
+			grid-template-columns: minmax(0, 1fr);
 		}
 	}
 
