@@ -1290,11 +1290,42 @@ onMount(load);
 		}
 	}
 
-	/* ── 两栏模式 ──
-	   与折叠模式共用同一份 DOM，只改变「摘要行是否可折叠」与「面板是否常显」：
-	   - 摘要行保留（标签与说明仍在这里），仅隐藏展开按钮并禁用点击
-	   - 编辑区强制展开（grid 行高始终 1fr）
-	   - 摘要行两侧留白去掉，让标签与输入框两侧对齐 */
+	/* ── 两栏布局 ──
+	   真正的字段两列网格：.secret-list 变成两列，一行放两个字段。
+	   字段内部结构不变（摘要行 + 展开后的编辑区），只是排布方式变了。
+	   两栏模式下全部展开（不折叠），避免一列已展开一列还收着的高低不齐。 */
+	.secrets-page[data-layout="two-col"] .secret-list {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0 1.5rem;
+		align-items: start;
+	}
+
+	/* 网格里没有「上一项」可言，分隔线改为每项自带上下边框 */
+	.secrets-page[data-layout="two-col"] .secret-field {
+		border-top: 1px solid var(--line-color);
+		padding-bottom: 0.75rem;
+	}
+
+	.secrets-page[data-layout="two-col"] .secret-field + .secret-field {
+		border-top: 1px solid var(--line-color);
+	}
+
+	/* 两栏下字段内部改回纵向（标签在上、输入框在下），避免列宽被再次切半 */
+	.secrets-page[data-layout="two-col"] .field-panel-inner {
+		display: flex;
+		flex-direction: column;
+		gap: 0.375rem;
+		padding: 0.25rem 0 0.5rem;
+	}
+
+	.secrets-page[data-layout="two-col"] .field-meta {
+		width: 100%;
+		padding-right: 0;
+		padding-top: 0;
+	}
+
+	/* 两栏下不需要折叠按钮与可点语义 */
 	.secrets-page[data-layout="two-col"] .field-summary {
 		cursor: default;
 		padding-left: 0;
@@ -1313,41 +1344,20 @@ onMount(load);
 		grid-template-rows: 1fr;
 	}
 
-	.secrets-page[data-layout="two-col"] .field-panel-inner {
-		display: flex;
-		align-items: flex-start;
-		gap: 1rem;
-		padding: 0.25rem 0 1rem;
-	}
-
-	.secrets-page[data-layout="two-col"] .field-meta {
-		width: 41.6667%;
-		flex-shrink: 0;
-		padding-right: 1rem;
-		/* 右栏输入框高约 40px，变量名垂直居中与之对齐 */
-		padding-top: 0.75rem;
-	}
-
-	/* 分隔线两端不再内缩 */
-	.secrets-page[data-layout="two-col"] .secret-field.dirty .field-summary {
-		padding-left: 0;
-		border-left: none;
-	}
-
+	/* 变更指示线：网格下边框已承担分隔，改用外发光式描边避免与网格线混淆 */
 	.secrets-page[data-layout="two-col"] .secret-field.dirty {
-		padding-left: 0.875rem;
+		border-top-color: color-mix(in oklab, var(--primary) 45%, transparent);
+	}
+
+	.secrets-page[data-layout="two-col"] .secret-field.dirty .field-summary {
+		padding-left: 0.5rem;
 		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
 	}
 
-	@media (max-width: 768px) {
-		.secrets-page[data-layout="two-col"] .field-panel-inner {
-			flex-direction: column;
-			gap: 0.5rem;
-		}
-
-		.secrets-page[data-layout="two-col"] .field-meta {
-			width: 100%;
-			padding-right: 0;
+	/* 窄屏：两列降为一列 */
+	@media (max-width: 1100px) {
+		.secrets-page[data-layout="two-col"] .secret-list {
+			grid-template-columns: minmax(0, 1fr);
 		}
 	}
 
