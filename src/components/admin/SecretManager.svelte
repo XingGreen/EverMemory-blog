@@ -447,37 +447,42 @@ onMount(load);
 					<div class="secret-list">
 						{#each group.items as item (item.key)}
 							<div class="secret-field" class:dirty={isDirty(item)}>
-								<div class="field-head">
-									<h3 title={item.key}>
-										{#if item.sensitive}
-											<Icon icon="material-symbols:lock-outline" class="lock-icon" />
-										{/if}
-										<span class="field-label">{item.label}</span>
-										{#if item.required}<span class="req-star">*</span>{/if}
-										<!-- 说明默认隐藏：悬停问号或点击切换显示，点其他区域/Esc 关闭。
-										     问号紧跟配置名称，不跟随右侧状态标签。 -->
-										<div class="tip-anchor" class:open={tipOpen === item.key}>
-											<button
-												class="help-btn"
-												type="button"
-												aria-label={i18n(I18nKey.secretsFieldHelp)}
-												aria-describedby={`tip-${item.key}`}
-												aria-expanded={tipOpen === item.key}
-												onclick={(e) => {
-													e.stopPropagation();
-													tipOpen = tipOpen === item.key ? "" : item.key;
-												}}
-											>
-												<Icon icon="material-symbols:help-outline-rounded" />
-											</button>
-											<div class="field-tip" role="tooltip" id={`tip-${item.key}`}>
-												{item.description}
+								<!-- 左栏：标签 + 必填星号 + 问号，下一行环境变量名 -->
+								<div class="field-meta">
+									<div class="field-head">
+										<h3 title={item.key}>
+											{#if item.sensitive}
+												<Icon icon="material-symbols:lock-outline" class="lock-icon" />
+											{/if}
+											<span class="field-label">{item.label}</span>
+											{#if item.required}<span class="req-star">*</span>{/if}
+											<!-- 说明默认隐藏：悬停问号或点击切换显示，点其他区域/Esc 关闭 -->
+											<div class="tip-anchor" class:open={tipOpen === item.key}>
+												<button
+													class="help-btn"
+													type="button"
+													aria-label={i18n(I18nKey.secretsFieldHelp)}
+													aria-describedby={`tip-${item.key}`}
+													aria-expanded={tipOpen === item.key}
+													onclick={(e) => {
+														e.stopPropagation();
+														tipOpen = tipOpen === item.key ? "" : item.key;
+													}}
+												>
+													<Icon icon="material-symbols:help-outline-rounded" />
+												</button>
+												<div class="field-tip" role="tooltip" id={`tip-${item.key}`}>
+													{item.description}
+												</div>
 											</div>
-										</div>
-									</h3>
+										</h3>
+									</div>
+									<code class="field-key">{item.key}</code>
 								</div>
 
-								{#if item.managed}
+								<!-- 右栏：输入控件 -->
+								<div class="field-control">
+									{#if item.managed}
 									<!-- 托管密钥：不提供输入框，只展示状态与轮换入口 -->
 									<div class="managed-row">
 										<span class="managed-state">
@@ -514,8 +519,7 @@ onMount(load);
 									<!-- 本地开发环境：明文已回填，可直接查看与局部修改；
 									     敏感项默认掩码，点眼镜切换显示/隐藏。
 									     multiline（App 私钥）改为文件上传，避免手工粘贴丢失换行。 -->
-									<div class="field-input-row">
-										{#if item.kind === "multiline"}
+									{#if item.kind === "multiline"}
 											{#if drafts[item.key]}
 												<!-- 状态二：已上传 —— 文件信息卡 + 极简清除按钮 -->
 												<div class="uploaded-card">
@@ -626,10 +630,8 @@ onMount(load);
 												{/if}
 											</div>
 										{/if}
-									</div>
 								{/if}
-
-								<code class="field-key">{item.key}</code>
+								</div>
 							</div>
 						{/each}
 					</div>
@@ -993,8 +995,8 @@ onMount(load);
 	}
 
 	/* ── 字段列表 ──
-	   参考设计：字段在板块内纵向排列，标签/状态一行、说明收起为问号提示、输入框整行。
-	   字段本身不是卡片容器，只用间距和极淡分隔线区分，避免卡片套卡片。 */
+	   参考设计：每行做成「左标签 + 右输入」的两栏结构，桌面端左 5/12、
+	   右 7/12，窄屏折行成上下。字段本身不是卡片，只用极淡分隔线区分。 */
 	.secret-list {
 		display: flex;
 		flex-direction: column;
@@ -1002,12 +1004,44 @@ onMount(load);
 
 	.secret-field {
 		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		/* 无背景、无边框、无圆角：它就是板块内容本身，不是独立卡片 */
+		align-items: flex-start;
+		gap: 1rem;
 		padding: 1.25rem 0;
 		border: 0;
 		background: transparent;
+	}
+
+	/* 左栏：标签 + 变量名 */
+	.field-meta {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		width: 41.6667%;
+		flex-shrink: 0;
+		min-width: 0;
+		padding-right: 1rem;
+	}
+
+	/* 右栏：输入控件 */
+	.field-control {
+		display: flex;
+		flex-direction: column;
+		gap: 0.375rem;
+		flex: 1;
+		min-width: 0;
+	}
+
+	/* 窄屏：折成上下两段 */
+	@media (max-width: 768px) {
+		.secret-field {
+			flex-direction: column;
+			gap: 0.5rem;
+		}
+
+		.field-meta {
+			width: 100%;
+			padding-right: 0;
+		}
 	}
 
 	/* 字段间极淡分隔线；首尾不画线，避免与板块边缘重叠 */
@@ -1023,18 +1057,16 @@ onMount(load);
 		padding-bottom: 0;
 	}
 
-	/* 变更/待删除只在左侧留一道细指示线，不恢复整块卡片观感 */
+	/* 变更状态：左侧一道细指示线 */
 	.secret-field.dirty {
 		padding-left: 0.875rem;
 		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
 	}
 
-	/* 标签行：标题在左、配置状态 + 问号在右 */
 	.field-head {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
+		gap: 0.375rem;
 	}
 
 	.head-right {
@@ -1163,12 +1195,6 @@ onMount(load);
 		font-size: 0.8125rem;
 		color: var(--content-meta);
 		line-height: 1.55;
-	}
-
-	.field-input-row {
-		display: flex;
-		align-items: stretch;
-		gap: 0.5rem;
 	}
 
 	/* 托管密钥：状态 + 轮换按钮，替代输入框 */
@@ -1447,6 +1473,7 @@ onMount(load);
 		padding: 0;
 		font-size: 0.75rem;
 		font-family: var(--font-mono, monospace);
+		letter-spacing: 0.05em;
 		color: color-mix(in oklab, var(--content-meta) 55%, transparent);
 		background: transparent;
 		align-self: flex-start;
