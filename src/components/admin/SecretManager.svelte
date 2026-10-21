@@ -31,8 +31,6 @@ let saving = $state(false);
 let drafts = $state<Record<string, string>>({});
 // 回填时的原始值，用于判断是否发生修改
 let draftsOrigin = $state<Record<string, string>>({});
-// 标记待清除的密钥
-let toDelete = $state<Record<string, boolean>>({});
 // 密码类输入框的显隐切换
 let showInput = $state<Record<string, boolean>>({});
 // 导出弹窗
@@ -72,7 +70,6 @@ const allRequiredConfigured = $derived(
 );
 
 function isDirty(item: SecretItemDTO): boolean {
-	if (toDelete[item.key]) return true;
 	const draft = (drafts[item.key] ?? "").trim();
 	// 非敏感项已预填原值，直接与草稿比较
 	if (!item.sensitive) return draft !== (draftsOrigin[item.key] ?? "");
@@ -96,7 +93,6 @@ async function load() {
 			// 本地开发环境：直接把明文回填到表单，便于查看与局部修改
 			drafts = {};
 			draftsOrigin = {};
-			toDelete = {};
 			showInput = {};
 			for (const item of items) {
 				const value = item.value ?? "";
@@ -165,15 +161,14 @@ async function readPemFile(
 }
 
 /**
- * 移除已上传的私钥：回到拖拽框状态。
+ * 丢弃本次上传的私钥，恢复到进入页面时的状态。
  *
- * 这里清空的是「本次会话刚上传的内容」，不回填磁盘上的旧值——否则点清除后
- * drafts 仍是旧值，界面会一直停在已上传态。磁盘上的私钥要用字段右侧的
- * 清除按钮（标记删除）才会真正移除。
+ * 语义是「撤销这次上传」而非「删除已有配置」：磁盘上原本有值就恢复原值
+ * （界面回到已上传态、显示「已保存的私钥」）；原本没有就回到拖拽框。
+ * 要真正移除配置项，把输入框清空后保存即可（清空 = 删除）。
  */
 function clearPem(item: SecretItemDTO) {
-	drafts[item.key] = "";
-	delete draftsOrigin[item.key];
+	drafts[item.key] = draftsOrigin[item.key] ?? "";
 	uploadNames[item.key] = "";
 	uploadError[item.key] = "";
 }
@@ -181,16 +176,16 @@ function clearPem(item: SecretItemDTO) {
 function buildEntries(): { key: string; value?: string; delete?: boolean }[] {
 	const entries: { key: string; value?: string; delete?: boolean }[] = [];
 	for (const item of items) {
-		if (toDelete[item.key]) {
-			entries.push({ key: item.key, delete: true });
-			continue;
-		}
 		const draft = (drafts[item.key] ?? "").trim();
-		// 敏感项未预填时「空值视作不修改」；预填过的按差异判断，避免无改动也提交
 		if (item.key in draftsOrigin) {
-			if (draft !== (draftsOrigin[item.key] ?? "")) {
-				entries.push({ key: item.key, value: draft });
+			const origin = draftsOrigin[item.key] ?? "";
+			if (draft === origin) continue;
+			// 清空输入框即视为删除该配置项（用户手动清空即可移除）
+			if (!draft) {
+				entries.push({ key: item.key, delete: true });
+				continue;
 			}
+			entries.push({ key: item.key, value: draft });
 		} else if (draft) {
 			entries.push({ key: item.key, value: draft });
 		}
@@ -289,17 +284,6 @@ async function copyVercelCommands() {
 		);
 	} finally {
 		exportBusy = false;
-	}
-}
-
-function toggleClear(item: SecretItemDTO) {
-	if (!item.configured) return;
-	toDelete[item.key] = !toDelete[item.key];
-	if (toDelete[item.key]) {
-		drafts[item.key] = "";
-	} else {
-		// 取消清除：恢复到回填时的原值（未预填则保持空，不影响磁盘上的原值）
-		drafts[item.key] = draftsOrigin[item.key] ?? "";
 	}
 }
 
@@ -462,11 +446,7 @@ onMount(load);
 					</header>
 					<div class="secret-list">
 						{#each group.items as item (item.key)}
-							<div
-								class="secret-field"
-								class:dirty={isDirty(item)}
-								class:pending-delete={toDelete[item.key]}
-							>
+							<div class="secret-field" class:dirty={isDirty(item)}>
 								<div class="field-head">
 									<h3 title={item.key}>
 										{#if item.sensitive}
@@ -495,9 +475,6 @@ onMount(load);
 											</div>
 										</div>
 									</h3>
-									{#if toDelete[item.key]}
-										<span class="badge pending">{i18n(I18nKey.secretsPendingDelete)}</span>
-									{/if}
 								</div>
 
 								{#if item.managed}
@@ -582,7 +559,7 @@ onMount(load);
 														type="file"
 														class="upload-input"
 														accept=".pem,.key"
-														disabled={!writable || toDelete[item.key] || loading}
+														disabled={!writable || loading}
 														aria-label={i18n(I18nKey.secretsUploadLabel)}
 														onchange={(e) => readPemFile(e, item)}
 													/>
@@ -622,7 +599,7 @@ onMount(load);
 													placeholder={item.configured
 														? i18n(I18nKey.secretsPlaceholderConfigured)
 														: i18n(I18nKey.secretsPlaceholderEmpty)}
-													disabled={!writable || toDelete[item.key] || loading}
+													disabled={!writable || loading}
 													oninput={(e) => {
 														drafts[item.key] = e.currentTarget.value;
 													}}
@@ -648,23 +625,6 @@ onMount(load);
 													</button>
 												{/if}
 											</div>
-										{/if}
-
-										{#if writable}
-											<button
-												type="button"
-												class="clear-btn"
-												title={i18n(I18nKey.secretsClear)}
-												aria-label={i18n(I18nKey.secretsClear)}
-												disabled={!item.configured || loading}
-												onclick={() => toggleClear(item)}
-											>
-												<Icon
-													icon={toDelete[item.key]
-														? "material-symbols:check"
-														: "material-symbols:close"}
-												/>
-											</button>
 										{/if}
 									</div>
 								{/if}
@@ -1064,12 +1024,6 @@ onMount(load);
 		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
 	}
 
-	.secret-field.pending-delete {
-		padding-left: 0.875rem;
-		border-left: 2px solid color-mix(in oklab, var(--destructive) 55%, transparent);
-		opacity: 0.75;
-	}
-
 	/* 标签行：标题在左、配置状态 + 问号在右 */
 	.field-head {
 		display: flex;
@@ -1197,29 +1151,6 @@ onMount(load);
 		color: var(--destructive);
 		font-size: 0.875rem;
 		flex-shrink: 0;
-	}
-
-	/* 状态标签：取消背景色块，只保留彩色文字 */
-	.badge {
-		flex-shrink: 0;
-		padding: 0;
-		background: transparent;
-		border-radius: 0;
-		font-size: 0.75rem;
-		font-weight: 500;
-		line-height: 1.6;
-	}
-
-	.badge.ok {
-		color: var(--success);
-	}
-
-	.badge.missing {
-		color: var(--warning);
-	}
-
-	.badge.pending {
-		color: var(--destructive);
 	}
 
 	.field-desc {
@@ -1503,33 +1434,6 @@ onMount(load);
 	.input-toggle:disabled {
 		cursor: not-allowed;
 		opacity: 0.25;
-	}
-
-	/* 清除按钮：同样弱化为低透明度图标，避免与主操作用户抢焦点 */
-	.clear-btn {
-		flex-shrink: 0;
-		width: 2.5rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border: 1px solid transparent;
-		border-radius: var(--radius-xl);
-		background: color-mix(in oklab, var(--page-bg) 55%, var(--card-bg));
-		color: var(--content-meta);
-		opacity: 0.55;
-		cursor: pointer;
-		transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
-	}
-
-	.clear-btn:hover:not(:disabled) {
-		opacity: 1;
-		color: var(--destructive);
-		background: color-mix(in oklab, var(--destructive) 8%, transparent);
-	}
-
-	.clear-btn:disabled {
-		opacity: 0.25;
-		cursor: not-allowed;
 	}
 
 	/* 环境变量名：去掉背景色块，改成极低对比度的纯文本。
