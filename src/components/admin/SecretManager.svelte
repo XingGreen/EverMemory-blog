@@ -120,6 +120,50 @@ function toggleReveal(item: SecretItemDTO) {
 	showInput[item.key] = !showInput[item.key];
 }
 
+/** 上传文件名（仅用于回显，不参与保存） */
+let uploadNames = $state<Record<string, string>>({});
+/** 上传校验错误 */
+let uploadError = $state<Record<string, string>>({});
+
+const PEM_MAX_BYTES = 100 * 1024;
+
+/**
+ * 读取上传的 PEM 私钥文件并写入草稿。
+ * 不做格式强校验（只拦明显错误），真正的语法校验交给保存接口；
+ * 这里重点拦住「选错文件」与「文件过大」两类常见失误。
+ */
+async function readPemFile(
+	event: Event & { currentTarget: HTMLInputElement },
+	item: SecretItemDTO,
+) {
+	const file = event.currentTarget.files?.[0];
+	// 允许重复选择同一文件：清空 value，否则 change 不再触发
+	event.currentTarget.value = "";
+	if (!file) return;
+
+	uploadError[item.key] = "";
+	if (file.size > PEM_MAX_BYTES) {
+		uploadError[item.key] = i18n(I18nKey.secretsUploadTooLarge);
+		return;
+	}
+
+	let text = "";
+	try {
+		text = await file.text();
+	} catch {
+		uploadError[item.key] = i18n(I18nKey.secretsUploadReadFailed);
+		return;
+	}
+
+	if (!text.includes("-----BEGIN")) {
+		uploadError[item.key] = i18n(I18nKey.secretsUploadInvalid);
+		return;
+	}
+
+	drafts[item.key] = text;
+	uploadNames[item.key] = file.name;
+}
+
 function buildEntries(): { key: string; value?: string; delete?: boolean }[] {
 	const entries: { key: string; value?: string; delete?: boolean }[] = [];
 	for (const item of items) {
@@ -477,22 +521,53 @@ onMount(load);
 									</div>
 								{:else}
 									<!-- 本地开发环境：明文已回填，可直接查看与局部修改；
-									     敏感项默认掩码，点眼镜切换显示/隐藏。 -->
+									     敏感项默认掩码，点眼镜切换显示/隐藏。
+									     multiline（App 私钥）改为文件上传，避免手工粘贴丢失换行。 -->
 									<div class="field-input-row">
 										{#if item.kind === "multiline"}
-											<textarea
-												class="secret-input mono"
-												rows="4"
-												spellcheck="false"
-												value={drafts[item.key] ?? ""}
-												placeholder={item.configured
-													? i18n(I18nKey.secretsPlaceholderConfigured)
-													: i18n(I18nKey.secretsPlaceholderEmpty)}
-												disabled={!writable || toDelete[item.key] || loading}
-												oninput={(e) => {
-													drafts[item.key] = e.currentTarget.value;
-												}}
-											></textarea>
+											<div class="upload-zone">
+												<input
+													type="file"
+													class="upload-input"
+													accept=".pem,.key"
+													disabled={!writable || toDelete[item.key] || loading}
+													aria-label={i18n(I18nKey.secretsUploadLabel)}
+													onchange={(e) => readPemFile(e, item)}
+												/>
+												<div class="upload-inner">
+													<!-- 内联上传图标：避免依赖构建期 icons.ts 是否收录该图标 -->
+													<svg
+														class="upload-icon"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+														aria-hidden="true"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="1.5"
+															d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+														></path>
+													</svg>
+													<span class="upload-title">
+														{drafts[item.key]
+															? i18n(I18nKey.secretsUploadReplace)
+															: i18n(I18nKey.secretsUploadHint)}
+													</span>
+													<span class="upload-sub">
+														{drafts[item.key]
+															? i18n(I18nKey.secretsUploadLoaded).replace(
+																	"{name}",
+																	uploadNames[item.key] ?? "PEM",
+																)
+															: i18n(I18nKey.secretsUploadFormats)}
+													</span>
+												</div>
+											</div>
+											{#if uploadError[item.key]}
+												<span class="upload-error">{uploadError[item.key]}</span>
+											{/if}
 										{:else}
 											<div class="input-wrap">
 												<input
@@ -1155,6 +1230,81 @@ onMount(load);
 		min-width: 0;
 		display: flex;
 		align-items: center;
+	}
+
+	/* ── PEM 私钥上传区（参考 .examples/deepseek_html_20261021_604d10.html） ──
+	   整个区域即点击热区：透明 file input 绝对定位铺满，不需要额外 JS 触发。
+	   虚线边框用低对比度变量色，悬停转主色，与整页的克制配色一致。 */
+	.upload-zone {
+		position: relative;
+		flex: 1;
+		min-width: 0;
+		border: 2px dashed color-mix(in oklab, var(--line-color) 80%, transparent);
+		border-radius: var(--radius-large);
+		background: color-mix(in oklab, var(--page-bg) 45%, transparent);
+		transition: border-color 0.2s ease, background 0.2s ease;
+	}
+
+	.upload-zone:hover {
+		border-color: var(--primary);
+		background: color-mix(in oklab, var(--page-bg) 60%, transparent);
+	}
+
+	.upload-input {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		opacity: 0;
+		cursor: pointer;
+		z-index: 1;
+	}
+
+	.upload-input:disabled {
+		cursor: not-allowed;
+	}
+
+	.upload-inner {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 1.75rem 1.5rem;
+		text-align: center;
+		pointer-events: none;
+	}
+
+	.upload-zone :global(svg.upload-icon) {
+		width: 2rem;
+		height: 2rem;
+		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
+		transition: color 0.2s ease;
+	}
+
+	.upload-zone:hover :global(svg.upload-icon) {
+		color: var(--primary);
+	}
+
+	.upload-title {
+		font-size: 0.875rem;
+		color: var(--content-meta);
+		transition: color 0.2s ease;
+	}
+
+	.upload-zone:hover .upload-title {
+		color: var(--deep-text);
+	}
+
+	.upload-sub {
+		font-size: 0.75rem;
+		color: color-mix(in oklab, var(--content-meta) 60%, transparent);
+	}
+
+	.upload-error {
+		margin-top: 0.25rem;
+		font-size: 0.75rem;
+		color: var(--destructive);
+		align-self: flex-start;
 	}
 
 	/* 输入框：无边框；底色比卡片暗一档，聚焦用 outline 光晕 */
