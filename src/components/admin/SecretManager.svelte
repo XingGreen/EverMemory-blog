@@ -164,6 +164,20 @@ async function readPemFile(
 	uploadNames[item.key] = file.name;
 }
 
+/**
+ * 移除已上传的私钥：回到拖拽框状态。
+ *
+ * 这里清空的是「本次会话刚上传的内容」，不回填磁盘上的旧值——否则点清除后
+ * drafts 仍是旧值，界面会一直停在已上传态。磁盘上的私钥要用字段右侧的
+ * 清除按钮（标记删除）才会真正移除。
+ */
+function clearPem(item: SecretItemDTO) {
+	drafts[item.key] = "";
+	delete draftsOrigin[item.key];
+	uploadNames[item.key] = "";
+	uploadError[item.key] = "";
+}
+
 function buildEntries(): { key: string; value?: string; delete?: boolean }[] {
 	const entries: { key: string; value?: string; delete?: boolean }[] = [];
 	for (const item of items) {
@@ -525,46 +539,74 @@ onMount(load);
 									     multiline（App 私钥）改为文件上传，避免手工粘贴丢失换行。 -->
 									<div class="field-input-row">
 										{#if item.kind === "multiline"}
-											<div class="upload-zone">
-												<input
-													type="file"
-													class="upload-input"
-													accept=".pem,.key"
-													disabled={!writable || toDelete[item.key] || loading}
-													aria-label={i18n(I18nKey.secretsUploadLabel)}
-													onchange={(e) => readPemFile(e, item)}
-												/>
-												<div class="upload-inner">
-													<!-- 内联上传图标：避免依赖构建期 icons.ts 是否收录该图标 -->
-													<svg
-														class="upload-icon"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-														aria-hidden="true"
+											{#if drafts[item.key]}
+												<!-- 状态二：已上传 —— 文件信息卡 + 极简清除按钮 -->
+												<div class="uploaded-card">
+													<span class="uploaded-icon">
+														<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+															></path>
+														</svg>
+													</span>
+													<div class="uploaded-meta">
+														<span class="uploaded-name"
+															>{uploadNames[item.key] ?? i18n(I18nKey.secretsUploadedDefaultName)}</span
+														>
+														<span class="uploaded-note">{i18n(I18nKey.secretsUploadedNote)}</span>
+													</div>
+													<button
+														type="button"
+														class="uploaded-clear"
+														title={i18n(I18nKey.secretsUploadRemove)}
+														aria-label={i18n(I18nKey.secretsUploadRemove)}
+														onclick={() => clearPem(item)}
 													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="1.5"
-															d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-														></path>
-													</svg>
-													<span class="upload-title">
-														{drafts[item.key]
-															? i18n(I18nKey.secretsUploadReplace)
-															: i18n(I18nKey.secretsUploadHint)}
-													</span>
-													<span class="upload-sub">
-														{drafts[item.key]
-															? i18n(I18nKey.secretsUploadLoaded).replace(
-																	"{name}",
-																	uploadNames[item.key] ?? "PEM",
-																)
-															: i18n(I18nKey.secretsUploadFormats)}
-													</span>
+														<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M6 18L18 6M6 6l12 12"
+															></path>
+														</svg>
+													</button>
 												</div>
-											</div>
+											{:else}
+												<!-- 状态一：未上传 —— 虚线拖拽框 -->
+												<div class="upload-zone">
+													<input
+														type="file"
+														class="upload-input"
+														accept=".pem,.key"
+														disabled={!writable || toDelete[item.key] || loading}
+														aria-label={i18n(I18nKey.secretsUploadLabel)}
+														onchange={(e) => readPemFile(e, item)}
+													/>
+													<div class="upload-inner">
+														<!-- 内联上传图标：避免依赖构建期 icons.ts 是否收录该图标 -->
+														<svg
+															class="upload-icon"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+															aria-hidden="true"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="1.5"
+																d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+															></path>
+														</svg>
+														<span class="upload-title">{i18n(I18nKey.secretsUploadHint)}</span>
+														<span class="upload-sub">{i18n(I18nKey.secretsUploadFormats)}</span>
+													</div>
+												</div>
+											{/if}
 											{#if uploadError[item.key]}
 												<span class="upload-error">{uploadError[item.key]}</span>
 											{/if}
@@ -1305,6 +1347,92 @@ onMount(load);
 		font-size: 0.75rem;
 		color: var(--destructive);
 		align-self: flex-start;
+	}
+
+	/* ── 状态二：已上传的文件信息卡（参考同一份示例的 uploaded-status） ──
+	   实线细边框 + 卡片底色，与上方虚线拖拽框形成「未完成 → 已完成」的视觉区分。 */
+	.uploaded-card {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		flex: 1;
+		min-width: 0;
+		padding: 1rem;
+		border: 1px solid color-mix(in oklab, var(--line-color) 80%, transparent);
+		border-radius: var(--radius-large);
+		background: color-mix(in oklab, var(--page-bg) 45%, transparent);
+	}
+
+	.uploaded-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		flex-shrink: 0;
+		border-radius: var(--radius-lg);
+		background: color-mix(in oklab, var(--primary) 10%, transparent);
+		color: var(--primary);
+	}
+
+	.uploaded-icon :global(svg) {
+		width: 1rem;
+		height: 1rem;
+	}
+
+	.uploaded-meta {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		min-width: 0;
+		flex: 1;
+	}
+
+	.uploaded-name {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--deep-text);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.uploaded-note {
+		font-size: 0.75rem;
+		color: color-mix(in oklab, var(--content-meta) 60%, transparent);
+	}
+
+	/* 极简清除按钮：默认低透明度，悬停转危险色 */
+	.uploaded-clear {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		flex-shrink: 0;
+		padding: 0;
+		border: none;
+		border-radius: var(--radius-lg);
+		background: transparent;
+		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
+		cursor: pointer;
+		transition: color 0.15s ease, background 0.15s ease;
+	}
+
+	.uploaded-clear :global(svg) {
+		width: 1rem;
+		height: 1rem;
+	}
+
+	.uploaded-clear:hover {
+		color: var(--destructive);
+		background: color-mix(in oklab, var(--destructive) 10%, transparent);
+	}
+
+	.uploaded-clear:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
 	}
 
 	/* 输入框：无边框；底色比卡片暗一档，聚焦用 outline 光晕 */
