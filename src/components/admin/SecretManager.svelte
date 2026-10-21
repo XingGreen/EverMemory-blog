@@ -40,6 +40,31 @@ let exportBusy = $state(false);
 let rotating = $state("");
 // 当前展开说明的问号（空字符串表示全部收起）；同一时刻只开一个
 let tipOpen = $state("");
+// 已展开的配置项（折叠交互）：默认全部收起，点击摘要行展开编辑区
+let expanded = $state<Record<string, boolean>>({});
+
+/** 摘要行：展开/收起某一项 */
+function toggleExpanded(key: string) {
+	expanded[key] = !expanded[key];
+}
+
+/**
+ * 放弃修改：把所有草稿回滚到载入时的 baseline。
+ * 对应参考项目 settings-savebar 的「放弃修改」。
+ */
+function discardAll() {
+	drafts = { ...draftsOrigin };
+	uploadNames = {};
+	uploadError = {};
+}
+
+/** 有未保存改动时，离开页面前拦截（对应参考项目 enableBeforeUnload） */
+function onBeforeUnload(e: BeforeUnloadEvent) {
+	if (changedCount > 0) {
+		e.preventDefault();
+		e.returnValue = "";
+	}
+}
 
 /** 点击页面其他区域或按 Esc 时收起说明浮层 */
 function closeTipOnOutside() {
@@ -79,6 +104,27 @@ function isDirty(item: SecretItemDTO): boolean {
 }
 
 const changedCount = $derived(items.filter(isDirty).length);
+
+/**
+ * 摘要行展示的「当前值」：
+ * - 托管项：显示托管状态文案
+ * - 私钥（multiline）：不展示内容，只说明已保存
+ * - 敏感项：显示掩码长度，不暴露字符
+ * - 非敏感项：直接显示明文，方便收起时核对
+ * - 空值：显示占位提示
+ */
+function summaryValue(item: SecretItemDTO): string {
+	const value = drafts[item.key] ?? "";
+	if (item.managed) {
+		return item.configured
+			? i18n(I18nKey.secretsManagedConfigured)
+			: i18n(I18nKey.secretsManagedMissing);
+	}
+	if (!value) return i18n(I18nKey.secretsNotConfigured);
+	if (item.kind === "multiline") return i18n(I18nKey.secretsUploadedNote);
+	if (item.sensitive) return "•".repeat(Math.min(16, value.length));
+	return value;
+}
 
 async function load() {
 	loading = true;
@@ -329,7 +375,11 @@ async function rotate(item: SecretItemDTO) {
 onMount(load);
 </script>
 
-<svelte:window onclick={closeTipOnOutside} onkeydown={closeTipOnEsc} />
+<svelte:window
+	onclick={closeTipOnOutside}
+	onkeydown={closeTipOnEsc}
+	onbeforeunload={onBeforeUnload}
+/>
 
 <div class="secrets-page">
 	{#if loadError}
@@ -405,18 +455,6 @@ onMount(load);
 					<Icon icon="material-symbols:download" />
 					<span>{i18n(I18nKey.secretsExport)}</span>
 				</button>
-				<button
-					class="sec-btn primary"
-					onclick={save}
-					disabled={saving || loading || changedCount === 0}
-				>
-					<Icon icon="material-symbols:save-outline" />
-					<span
-						>{saving
-							? i18n(I18nKey.secretsSaving)
-							: i18n(I18nKey.secretsSave)}{changedCount > 0 ? ` (${changedCount})` : ""}</span
-					>
-				</button>
 			{/if}
 		</div>
 	</div>
@@ -446,43 +484,76 @@ onMount(load);
 					</header>
 					<div class="secret-list">
 						{#each group.items as item (item.key)}
-							<div class="secret-field" class:dirty={isDirty(item)}>
-								<!-- 左栏：标签 + 必填星号 + 问号，下一行环境变量名 -->
-								<div class="field-meta">
-									<div class="field-head">
-										<h3 title={item.key}>
+							{@const isOpen = expanded[item.key] === true}
+							<div class="secret-field" class:dirty={isDirty(item)} class:open={isOpen}>
+								<!-- 摘要行：点击整行展开/收起编辑区。
+								     用 button 承载，保证键盘可操作与 aria-expanded 语义。 -->
+								<button
+									type="button"
+									class="field-summary"
+									aria-expanded={isOpen}
+									aria-controls={`panel-${item.key}`}
+									onclick={() => toggleExpanded(item.key)}
+								>
+									<span class="summary-text">
+										<span class="summary-title">
 											{#if item.sensitive}
 												<Icon icon="material-symbols:lock-outline" class="lock-icon" />
 											{/if}
 											<span class="field-label">{item.label}</span>
 											{#if item.required}<span class="req-star">*</span>{/if}
-											<!-- 说明默认隐藏：悬停问号或点击切换显示，点其他区域/Esc 关闭 -->
-											<div class="tip-anchor" class:open={tipOpen === item.key}>
-												<button
-													class="help-btn"
-													type="button"
-													aria-label={i18n(I18nKey.secretsFieldHelp)}
-													aria-describedby={`tip-${item.key}`}
-													aria-expanded={tipOpen === item.key}
-													onclick={(e) => {
-														e.stopPropagation();
-														tipOpen = tipOpen === item.key ? "" : item.key;
-													}}
-												>
-													<Icon icon="material-symbols:help-outline-rounded" />
-												</button>
-												<div class="field-tip" role="tooltip" id={`tip-${item.key}`}>
-													{item.description}
-												</div>
-											</div>
-										</h3>
-									</div>
-									<code class="field-key">{item.key}</code>
-								</div>
+											<!-- 未配置才提示，已配置保持安静 -->
+											{#if !item.configured && !item.managed}
+												<span class="summary-warn">{i18n(I18nKey.secretsNotConfigured)}</span>
+											{/if}
+										</span>
+										<!-- 收起态显示当前值，不展开也能核对 -->
+										<span class="summary-value">{summaryValue(item)}</span>
+									</span>
+									<span class="summary-action">
+										{isOpen ? i18n(I18nKey.secretsCollapse) : i18n(I18nKey.secretsEdit)}
+										<Icon
+											icon={isOpen
+												? "material-symbols:keyboard-arrow-up-rounded"
+												: "material-symbols:keyboard-arrow-down-rounded"}
+										/>
+									</span>
+								</button>
 
-								<!-- 右栏：输入控件 -->
-								<div class="field-control">
-									{#if item.managed}
+								<!-- 编辑区：用 grid 行高动画展开，不用 {#if} 卸载，
+								     避免折叠时输入框卸载丢失草稿 -->
+								<div class="field-panel" id={`panel-${item.key}`}>
+									<div class="field-panel-inner">
+										<div class="field-meta">
+											<div class="field-head">
+												<h3 title={item.key}>
+													<!-- 说明默认隐藏：悬停问号或点击切换显示，点其他区域/Esc 关闭 -->
+													<div class="tip-anchor" class:open={tipOpen === item.key}>
+														<button
+															class="help-btn"
+															type="button"
+															aria-label={i18n(I18nKey.secretsFieldHelp)}
+															aria-describedby={`tip-${item.key}`}
+															aria-expanded={tipOpen === item.key}
+															onclick={(e) => {
+																e.stopPropagation();
+																tipOpen = tipOpen === item.key ? "" : item.key;
+															}}
+														>
+															<Icon icon="material-symbols:help-outline-rounded" />
+														</button>
+														<div class="field-tip" role="tooltip" id={`tip-${item.key}`}>
+															{item.description}
+														</div>
+													</div>
+												</h3>
+											</div>
+											<code class="field-key">{item.key}</code>
+										</div>
+
+										<!-- 右栏：输入控件 -->
+										<div class="field-control">
+											{#if item.managed}
 									<!-- 托管密钥：不提供输入框，只展示状态与轮换入口 -->
 									<div class="managed-row">
 										<span class="managed-state">
@@ -630,7 +701,9 @@ onMount(load);
 												{/if}
 											</div>
 										{/if}
-								{/if}
+										{/if}
+										</div>
+									</div>
 								</div>
 							</div>
 						{/each}
@@ -720,6 +793,30 @@ onMount(load);
 			</div>
 		</div>
 	{/if}
+
+	<!-- 底部保存条（参考 flare settings-savebar）：仅在可写环境且存在改动时出现 -->
+	{#if writable && changedCount > 0}
+		<div class="savebar" role="status">
+			<div class="savebar-notice">
+				<Icon icon="material-symbols:error-outline" />
+				<span>{i18n(I18nKey.secretsUnsavedCount).replace("{count}", String(changedCount))}</span>
+			</div>
+			<div class="savebar-actions">
+				<button class="sec-btn" type="button" disabled={saving} onclick={discardAll}>
+					{i18n(I18nKey.secretsDiscard)}
+				</button>
+				<button
+					class="sec-btn primary"
+					type="button"
+					onclick={save}
+					disabled={saving || loading}
+				>
+					<Icon icon="material-symbols:save-outline" />
+					<span>{saving ? i18n(I18nKey.secretsSaving) : i18n(I18nKey.secretsSave)}</span>
+				</button>
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -728,6 +825,45 @@ onMount(load);
 		flex-direction: column;
 		gap: 1.25rem;
 		padding: 0.25rem;
+	}
+
+	/* ── 底部保存条（参考 flare settings-savebar） ──
+	   只在有未保存改动时出现，悬浮在内容之上，避免用户找不到保存入口。 */
+	.savebar {
+		position: sticky;
+		bottom: 0.5rem;
+		z-index: 30;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		flex-wrap: wrap;
+		padding: 0.875rem 1.25rem;
+		border-radius: var(--radius-large);
+		background: color-mix(in oklab, var(--float-panel-bg) 94%, transparent);
+		-webkit-backdrop-filter: blur(12px);
+		backdrop-filter: blur(12px);
+		border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent);
+		box-shadow: var(--shadow-card-hover);
+	}
+
+	.savebar-notice {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.8125rem;
+		color: var(--warning);
+	}
+
+	.savebar-notice :global(.inline-icon) {
+		flex-shrink: 0;
+	}
+
+	.savebar-actions {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-shrink: 0;
 	}
 
 	/* ── 状态横幅 ── */
@@ -1004,14 +1140,110 @@ onMount(load);
 
 	.secret-field {
 		display: flex;
-		align-items: flex-start;
-		gap: 1rem;
-		padding: 1.25rem 0;
+		flex-direction: column;
+		padding: 0;
 		border: 0;
 		background: transparent;
 	}
 
-	/* 左栏：标签 + 变量名 */
+	/* ── 摘要行：整行可点，悬停给出反馈 ── */
+	.field-summary {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		width: 100%;
+		padding: 0.875rem 0.5rem 0.875rem 0;
+		border: none;
+		border-radius: var(--radius-xl);
+		background: transparent;
+		color: inherit;
+		font-family: inherit;
+		text-align: left;
+		cursor: pointer;
+		transition: background 0.15s ease;
+	}
+
+	.field-summary:hover {
+		background: var(--btn-plain-bg-hover);
+	}
+
+	.field-summary:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: -2px;
+	}
+
+	.summary-text {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		min-width: 0;
+		flex: 1;
+	}
+
+	.summary-title {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	/* 未配置才显示的警示文字；已配置保持安静 */
+	.summary-warn {
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: var(--warning);
+	}
+
+	/* 收起态的当前值：单行省略，等宽字体便于核对 */
+	.summary-value {
+		font-size: 0.8125rem;
+		font-family: var(--font-mono, monospace);
+		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.summary-action {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		flex-shrink: 0;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+	}
+
+	.field-summary:hover .summary-action {
+		color: var(--primary);
+	}
+
+	/* ── 编辑区：grid 行高动画展开，不卸载 DOM，避免折叠丢失草稿 ── */
+	.field-panel {
+		display: grid;
+		grid-template-rows: 0fr;
+		transition: grid-template-rows 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.secret-field.open .field-panel {
+		grid-template-rows: 1fr;
+	}
+
+	.field-panel-inner {
+		overflow: hidden;
+		min-height: 0;
+	}
+
+	.secret-field.open .field-panel-inner {
+		display: flex;
+		align-items: flex-start;
+		gap: 1rem;
+		padding: 0.25rem 0 1.25rem;
+	}
+
+	/* 左栏：变量名 + 问号 */
 	.field-meta {
 		display: flex;
 		flex-direction: column;
@@ -1031,9 +1263,9 @@ onMount(load);
 		min-width: 0;
 	}
 
-	/* 窄屏：折成上下两段 */
+	/* 窄屏：编辑区内两栏折成上下 */
 	@media (max-width: 768px) {
-		.secret-field {
+		.secret-field.open .field-panel-inner {
 			flex-direction: column;
 			gap: 0.5rem;
 		}
@@ -1049,24 +1281,22 @@ onMount(load);
 		border-top: 1px solid var(--line-color);
 	}
 
-	.secret-field:first-child {
-		padding-top: 0;
-	}
-
-	.secret-field:last-child {
-		padding-bottom: 0;
-	}
-
-	/* 变更状态：左侧一道细指示线 */
-	.secret-field.dirty {
+	/* 变更状态：摘要行左侧一道细指示线 */
+	.secret-field.dirty .field-summary {
 		padding-left: 0.875rem;
 		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
 	}
 
+	/* 左栏只剩说明问号（标签已在摘要行），与变量名放同一行 */
 	.field-head {
 		display: flex;
 		align-items: center;
 		gap: 0.375rem;
+		min-height: 1.25rem;
+	}
+
+	.field-meta .field-key {
+		margin-top: 0;
 	}
 
 	.head-right {
