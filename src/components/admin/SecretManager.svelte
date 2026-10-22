@@ -1251,6 +1251,10 @@ onMount(load);
 		min-height: 0;
 	}
 
+	/* 编辑区的 overflow:hidden 是折叠动画必需的（grid 0fr→1fr 靠它裁切内容），
+	   但它会把输入框聚焦时向外扩张的光晕一起裁掉——表现为左右边缘被切平。
+	   光晕改用内阴影（inset），画在盒子内部，天然不会被祖先裁切，
+	   也不必给容器加左右内边距（那会让输入框比标签缩进、破坏对齐）。 */
 	.secret-field.open .field-panel-inner {
 		display: flex;
 		align-items: flex-start;
@@ -1663,9 +1667,10 @@ onMount(load);
 		background: color-mix(in oklab, var(--destructive) 10%, transparent);
 	}
 
+	/* 负偏移让轮廓画在元素内侧，避免被祖先 overflow:hidden 裁掉 */
 	.uploaded-clear:focus-visible {
 		outline: 2px solid var(--primary);
-		outline-offset: 2px;
+		outline-offset: -2px;
 	}
 
 	/* 输入框：无边框；底色比卡片暗一档，聚焦用 outline 光晕 */
@@ -1690,10 +1695,12 @@ onMount(load);
 		line-height: 1.5;
 	}
 
+	/* 聚焦环用 inset 内阴影：画在盒子内部，不会被祖先的 overflow:hidden 裁切，
+	   也不必为了容纳外扩光晕而调整容器内边距（那会破坏与其他字段的左缘对齐）。 */
 	.secret-input:focus {
 		outline: none;
 		background: var(--page-bg);
-		box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 55%, transparent);
+		box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--primary) 55%, transparent);
 	}
 
 	.secret-input::placeholder {
