@@ -1116,6 +1116,7 @@ onMount(load);
 	}
 
 	/* 板块标题：靠字号与字重区分大区块，不用竖线 */
+	/* 板块标题：对齐参考页 settings-group-title（17px / 600 / 上下 24、18） */
 	.group-title {
 		display: flex;
 		align-items: center;
@@ -1128,10 +1129,11 @@ onMount(load);
 		color: var(--deep-text);
 	}
 
+	/* 说明：参考页 settings-muted 为 13px，行高 1.7 */
 	.group-desc {
 		margin: 0;
 		font-size: 0.8125rem;
-		line-height: 1.55;
+		line-height: 1.6;
 		color: var(--content-meta);
 	}
 
@@ -1195,6 +1197,9 @@ onMount(load);
 		flex: 1;
 	}
 
+	/* 字段标题：参考页字段标签为 13px/400 的 fg-75，
+	   但这里是每组配置的主标题（参考页对应 settings-group-title 的 17px），
+	   取 15px/600 作为两级之间的折中，保持层级可辨。 */
 	.summary-title {
 		display: flex;
 		align-items: center;
@@ -1342,12 +1347,13 @@ onMount(load);
 	}
 
 	/* 字段内部：单列直立堆叠。关键是把 .field-panel-inner 变成纵向，
-	   同时让 .field-meta 不再占据独立一栏（否则输入框会被推到右侧）。 */
+	   同时让 .field-meta 不再占据独立一栏（否则输入框会被推到右侧）。
+	   间距对齐参考页 .settings-field 的 gap: 8px。 */
 	.secrets-page[data-layout="two-col"] .field-panel-inner {
 		display: flex;
 		flex-direction: column;
 		align-items: stretch;
-		gap: 0.375rem;
+		gap: 0.5rem;
 		padding: 0;
 	}
 
@@ -1683,9 +1689,11 @@ onMount(load);
 	.secret-input {
 		width: 100%;
 		min-width: 0;
-		padding: 0.625rem 0.75rem;
+		/* 参考页 .settings-field input：min-height 40px、圆角 9px、字号 14px */
+		min-height: 2.5rem;
+		padding: 0.5rem 0.75rem;
 		border: 1px solid color-mix(in oklab, var(--content-meta) 75%, transparent);
-		border-radius: var(--radius-xl);
+		border-radius: 0.5625rem;
 		background: color-mix(in oklab, var(--page-bg) 70%, var(--card-bg));
 		color: var(--deep-text);
 		font-size: 0.875rem;
