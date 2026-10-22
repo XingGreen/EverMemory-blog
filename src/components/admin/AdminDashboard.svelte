@@ -1477,27 +1477,12 @@ function formatDate(dateStr: string | null): string {
 									<span>线上环境：表单基于最近一次构建的配置快照，保存将提交 GitHub 并触发自动重建</span>
 								</div>
 							{/if}
-							<div class="card-base settings-page-head">
-								<h2 class="page-head-title">{i18n(getConfigLabelKey(settingsSection))}</h2>
-								<div class="page-head-actions">
-									<button
-										class="page-head-btn"
-										onclick={() => loadSettings(settingsSection)}
-										disabled={settingsLoading}
-									>
-										<Icon icon="material-symbols:refresh" class="text-sm" />
-										<span>{i18n(I18nKey.configReload)}</span>
-									</button>
-									<button
-										class="page-head-btn primary"
-										onclick={saveSettings}
-										disabled={settingsSaving || settingsLoading}
-									>
-										<Icon icon="material-symbols:save-outline" class="text-sm" />
-										<span>{settingsSaving ? i18n(I18nKey.configSaving) : i18n(I18nKey.configSave)}</span>
-									</button>
-								</div>
-							</div>
+							<!-- 标题区：对齐参考 settings-shell 的 settings-heading——
+							     纯文字（28px/650 标题 + 灰字简介），不套卡片；操作归底部 savebar -->
+							<header class="settings-heading">
+								<h1>{i18n(getConfigLabelKey(settingsSection))}</h1>
+								<p>{i18n(getConfigDescKey(settingsSection))}</p>
+							</header>
 							<SettingsEditor
 								item={getConfigItem(settingsSection)!}
 								data={settingsData}
@@ -1509,6 +1494,35 @@ function formatDate(dateStr: string | null): string {
 								onModeChange={(m) => (settingsMode = m)}
 								onSourceChange={(s) => (settingsSource = s)}
 							/>
+							<!-- 保存栏：对齐参考 settings-savebar——顶部分隔线、
+							     40px 高按钮、左侧提示右侧动作 -->
+							<footer class="settings-savebar">
+								<p>
+									{i18n(I18nKey.configFile)
+										.replace("{file}", getConfigItem(settingsSection)!.file)
+										.replace("{exportName}", getConfigItem(settingsSection)!.exportName ?? "")}
+								</p>
+								<div>
+									<button
+										type="button"
+										class="settings-action-btn"
+										onclick={() => loadSettings(settingsSection)}
+										disabled={settingsLoading || settingsSaving}
+									>
+										<Icon icon="material-symbols:refresh" />
+										<span>{i18n(I18nKey.configReload)}</span>
+									</button>
+									<button
+										type="submit"
+										class="settings-action-btn primary"
+										onclick={saveSettings}
+										disabled={settingsSaving || settingsLoading}
+									>
+										<Icon icon="material-symbols:save-outline" />
+										<span>{settingsSaving ? i18n(I18nKey.configSaving) : i18n(I18nKey.configSave)}</span>
+									</button>
+								</div>
+							</footer>
 						{:else}
 							{@render placeholder(i18n(I18nKey.adminSettings), i18n(I18nKey.configSectionUnknown), "material-symbols:settings")}
 						{/if}
@@ -2346,68 +2360,97 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	/* 设置详情页头：标题 + 重新加载/保存 */
-	.settings-page-head {
+	/* ── 设置详情页标题区：对齐参考 settings-heading ──
+	   纯文字、不套卡片：28px/650 标题 + fg-50 灰字简介。 */
+	.settings-heading {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding: 0.5rem 0.25rem 0;
+	}
+
+	.settings-heading h1 {
+		margin: 0;
+		font-size: 1.75rem;
+		font-weight: 650;
+		line-height: 1.4;
+		color: var(--deep-text);
+	}
+
+	.settings-heading p {
+		margin: 0;
+		font-size: 0.8125rem;
+		line-height: 1.7;
+		color: var(--content-meta);
+	}
+
+	/* ── 设置保存栏：对齐参考 settings-savebar ──
+	   顶部分隔线、左提示右动作、40px 高按钮（10px 圆角）。 */
+	.settings-savebar {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 1rem;
+		gap: 1.25rem;
 		flex-wrap: wrap;
-		padding: 1.5rem;
-		border: 1px solid transparent;
-		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
-		-webkit-backdrop-filter: blur(12px);
-		backdrop-filter: blur(12px);
-		box-shadow: var(--shadow-card);
+		padding: 0.875rem 1.5rem;
+		border-top: 1px solid var(--line-divider);
 	}
 
-	.page-head-title {
+	.settings-savebar p {
 		margin: 0;
-		font-size: 1.125rem;
-		font-weight: 600;
-		letter-spacing: -0.01em;
-		color: var(--deep-text);
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+		min-width: 0;
 	}
 
-	.page-head-actions {
+	.settings-savebar > div {
 		display: flex;
-		gap: 0.5rem;
+		gap: 0.625rem;
+		margin-left: auto;
 		flex-shrink: 0;
 	}
 
-	.page-head-btn {
-		padding: 0.5rem 1rem;
-		border: 1px solid transparent;
-		border-radius: var(--radius-xl);
-		font-size: 0.875rem;
-		font-weight: 500;
-		cursor: pointer;
-		display: flex;
+	/* 保存栏按钮：40px 高、10px 圆角（对齐参考 .settings-button） */
+	.settings-action-btn {
+		display: inline-flex;
 		align-items: center;
-		gap: 0.375rem;
-		font-family: inherit;
+		justify-content: center;
+		gap: 0.5rem;
+		min-height: 2.5rem;
+		padding: 0.5rem 1.125rem;
+		border: 1px solid transparent;
+		border-radius: 0.625rem;
 		background: var(--btn-regular-bg);
 		color: var(--deep-text);
-		transition: background 0.15s, color 0.15s;
+		font-size: 0.875rem;
+		font-weight: 500;
+		font-family: inherit;
+		cursor: pointer;
+		flex-shrink: 0;
+		transition: background 0.2s ease;
 	}
 
-	.page-head-btn:hover:not(:disabled) {
+	.settings-action-btn:hover:not(:disabled) {
 		background: var(--btn-regular-bg-hover);
 	}
 
-	.page-head-btn:disabled {
-		opacity: 0.6;
+	.settings-action-btn.primary {
+		background: var(--primary);
+		color: var(--page-bg);
+	}
+
+	.settings-action-btn.primary:hover:not(:disabled) {
+		background: color-mix(in oklab, var(--primary) 88%, var(--page-bg));
+	}
+
+	.settings-action-btn:disabled {
+		opacity: 0.5;
 		cursor: not-allowed;
 	}
 
-	.page-head-btn.primary {
-		background: var(--primary);
-		color: var(--primary-foreground);
-		border-radius: var(--radius-large);
-	}
-
-	.page-head-btn.primary:hover:not(:disabled) {
-		background: color-mix(in oklch, var(--primary) 88%, black);
+	.settings-action-btn:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 3px;
 	}
 
 	.search-box {
