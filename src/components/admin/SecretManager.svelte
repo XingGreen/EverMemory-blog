@@ -1073,15 +1073,16 @@ onMount(load);
 	/* ── 分组大板块 ──
 	   每个分组是一块独立面板（外层 .card-base 提供底与圆角），
 	   内部字段卡片用更浅的层级，形成「板块 > 卡片」两级结构。 */
+	/* 板块卡片：与参考项目一致，直接用不透明的 --card-bg。
+	   此前用 70% 透明叠加，实际颜色会比 --card-bg 深一档，与参考项目不一致；
+	   板块与字段的层级改由间距和内部分隔承担，不再靠透明混合。 */
 	.secrets-group {
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
 		padding: 1.5rem;
 		border: 1px solid transparent;
-		background: color-mix(in oklab, var(--card-bg) 70%, transparent);
-		-webkit-backdrop-filter: blur(8px);
-		backdrop-filter: blur(8px);
+		background: var(--card-bg);
 	}
 
 	/* 板块标题区：图标 + 标题 + 说明 */
@@ -1673,18 +1674,23 @@ onMount(load);
 		outline-offset: -2px;
 	}
 
-	/* 输入框：无边框；底色比卡片暗一档，聚焦用 outline 光晕 */
+	/* 输入框：可见边框（WCAG 1.4.11 要求界面组件边界对相邻背景 ≥ 3:1）。
+	   此前 border 透明、底色与卡片仅差 1.11:1，未聚焦时几乎看不出输入框边界。
+	   实测结论：加深底色对这条标准没有帮助（仍 1.07:1），只能靠边框本身。
+	   注意 --content-meta 本身带 alpha（暗色白 0.6 / 亮色黑 0.5），叠加 75% 后
+	   最终 alpha 约 0.45，合成色为暗 rgb(130,130,135)=4.44:1、亮 rgb(139,140,140)=3.36:1，
+	   两种模式均满足 AA。 */
 	.secret-input {
 		width: 100%;
 		min-width: 0;
 		padding: 0.625rem 0.75rem;
-		border: 1px solid transparent;
+		border: 1px solid color-mix(in oklab, var(--content-meta) 75%, transparent);
 		border-radius: var(--radius-xl);
 		background: color-mix(in oklab, var(--page-bg) 70%, var(--card-bg));
 		color: var(--deep-text);
 		font-size: 0.875rem;
 		font-family: inherit;
-		transition: background 0.2s ease, box-shadow 0.2s ease;
+		transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 		box-sizing: border-box;
 	}
 
@@ -1700,7 +1706,8 @@ onMount(load);
 	.secret-input:focus {
 		outline: none;
 		background: var(--page-bg);
-		box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--primary) 55%, transparent);
+		border-color: color-mix(in oklab, var(--primary) 60%, transparent);
+		box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 55%, transparent);
 	}
 
 	.secret-input::placeholder {
