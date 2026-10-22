@@ -1378,6 +1378,7 @@ function formatDate(dateStr: string | null): string {
 			<div
 			class="admin-content"
 			class:content-wide={activePage === "posts" && viewMode !== "list"}
+			class:content-fixed={activePage === "settings" && settingsSection}
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
 		>
 				{#if activePage === "dashboard"}
@@ -1413,86 +1414,47 @@ function formatDate(dateStr: string | null): string {
 						/>
 					{/if}
 				{:else if activePage === "settings"}
-					<!-- 设置工作区容器：对齐参考 settings-workspace——
-					     卡片外壳 + 纵向 flex，标题/标签/内容/保存栏各占一段，
-					     内容区独立滚动，保存栏常驻底部 -->
-					<div class="settings-workspace card-base">
-						<header class="settings-heading">
-							<h1>{i18n(I18nKey.adminSettings)}</h1>
-							<p>{i18n(I18nKey.configSettingsIntro)}</p>
-						</header>
-						<nav class="settings-tabs" aria-label={i18n(I18nKey.adminSettings)}>
-							{#each settingsTabs as tab (tab.id)}
-								<button
-									type="button"
-									class="settings-tab"
-									class:active={settingsTab === tab.id}
-									aria-current={settingsTab === tab.id ? "page" : undefined}
-									onclick={() => goSettingsTab(tab.id)}
-								>
-									{i18n(tab.labelKey)}
-								</button>
-							{/each}
-						</nav>
-						<div class="settings-body">
-							{#if settingsSection}
-								{#if getConfigItem(settingsSection)}
-									{#if settingsRemote}
-										<div class="settings-remote-banner">
-											<Icon icon="material-symbols:cloud-sync" />
-											<span>线上环境：表单基于最近一次构建的配置快照，保存将提交 GitHub 并触发自动重建</span>
-										</div>
-									{/if}
-									<!-- 当前配置项标题：容器内的小节标题，不另套卡片 -->
-									<div class="settings-section-heading">
-										<h2>{i18n(getConfigLabelKey(settingsSection))}</h2>
-										<p>{i18n(getConfigDescKey(settingsSection))}</p>
+					<!-- 嵌套结构对齐参考 settings-form-page 的 SettingsSectionFrame：
+					     概览页不套工作区外壳（children 直接渲染），
+					     详情页才包进 SettingsShell（.settings-workspace.fuwari-card-base） -->
+					{#if settingsSection && getConfigItem(settingsSection)}
+						<div class="settings-workspace card-base">
+							<header class="settings-heading">
+								<h1>{i18n(getConfigLabelKey(settingsSection))}</h1>
+								<p>{i18n(getConfigDescKey(settingsSection))}</p>
+							</header>
+							<nav class="settings-tabs" aria-label={i18n(I18nKey.adminSettings)}>
+								{#each settingsTabs as tab (tab.id)}
+									<button
+										type="button"
+										class="settings-tab"
+										class:active={settingsTab === tab.id}
+										aria-current={settingsTab === tab.id ? "page" : undefined}
+										onclick={() => goSettingsTab(tab.id)}
+									>
+										{i18n(tab.labelKey)}
+									</button>
+								{/each}
+							</nav>
+							<div class="settings-body">
+								{#if settingsRemote}
+									<div class="settings-remote-banner">
+										<Icon icon="material-symbols:cloud-sync" />
+										<span>线上环境：表单基于最近一次构建的配置快照，保存将提交 GitHub 并触发自动重建</span>
 									</div>
-									<SettingsEditor
-										item={getConfigItem(settingsSection)!}
-										data={settingsData}
-										source={settingsSource}
-										error={settingsError}
-										isLoading={settingsLoading}
-										remote={settingsRemote}
-										onUpdate={(v) => (settingsData = v)}
-										onModeChange={(m) => (settingsMode = m)}
-										onSourceChange={(s) => (settingsSource = s)}
-									/>
-								{:else}
-									{@render placeholder(i18n(I18nKey.adminSettings), i18n(I18nKey.configSectionUnknown), "material-symbols:settings")}
 								{/if}
-							{:else}
-								<div class="settings-overview-head">
-									<h2 class="overview-title">{i18n(I18nKey.adminSettingsOverview)}</h2>
-									<div class="ui-search search-box" class:focused={settingsSearchTerm.length > 0}>
-										<Icon icon="material-symbols:search" class="ui-search-icon" size="lg" />
-										<input
-											type="text"
-											bind:value={settingsSearchTerm}
-											placeholder="{i18n(I18nKey.search)}..."
-											class="ui-search-input"
-											aria-label={i18n(I18nKey.search)}
-										/>
-										{#if settingsSearchTerm}
-											<button class="ui-search-clear" onclick={() => (settingsSearchTerm = "")} aria-label="清除">
-												<Icon icon="material-symbols:close" size="sm" />
-											</button>
-										{/if}
-									</div>
-								</div>
-								<SettingsOverview
-									onNavigate={(key) => goSettings(key)}
-									searchTerm={settingsSearchTerm}
-									onSearchChange={(value) => (settingsSearchTerm = value)}
+								<SettingsEditor
+									item={getConfigItem(settingsSection)!}
+									data={settingsData}
+									source={settingsSource}
+									error={settingsError}
+									isLoading={settingsLoading}
+									remote={settingsRemote}
+									onUpdate={(v) => (settingsData = v)}
+									onModeChange={(m) => (settingsMode = m)}
+									onSourceChange={(s) => (settingsSource = s)}
 								/>
-								<div class="settings-sessions">
-									<h2 class="overview-title">会话管理</h2>
-									<SessionManager onNotify={showToast} />
-								</div>
-							{/if}
-						</div>
-						{#if settingsSection && getConfigItem(settingsSection)}
+							</div>
 							<footer class="settings-savebar">
 								<p>
 									{i18n(I18nKey.configFile)
@@ -1520,8 +1482,39 @@ function formatDate(dateStr: string | null): string {
 									</button>
 								</div>
 							</footer>
-						{/if}
-					</div>
+						</div>
+					{:else if settingsSection}
+						{@render placeholder(i18n(I18nKey.adminSettings), i18n(I18nKey.configSectionUnknown), "material-symbols:settings")}
+					{:else}
+						<!-- 概览页：参考项目此层不套 SettingsShell，直接渲染目录 -->
+						<div class="card-base settings-overview-head">
+							<h2 class="overview-title">{i18n(I18nKey.adminSettings)}</h2>
+							<div class="ui-search search-box" class:focused={settingsSearchTerm.length > 0}>
+								<Icon icon="material-symbols:search" class="ui-search-icon" size="lg" />
+								<input
+									type="text"
+									bind:value={settingsSearchTerm}
+									placeholder="{i18n(I18nKey.search)}..."
+									class="ui-search-input"
+									aria-label={i18n(I18nKey.search)}
+								/>
+								{#if settingsSearchTerm}
+									<button class="ui-search-clear" onclick={() => (settingsSearchTerm = "")} aria-label="清除">
+										<Icon icon="material-symbols:close" size="sm" />
+									</button>
+								{/if}
+							</div>
+						</div>
+						<SettingsOverview
+							onNavigate={(key) => goSettings(key)}
+							searchTerm={settingsSearchTerm}
+							onSearchChange={(value) => (settingsSearchTerm = value)}
+						/>
+						<div class="card-base settings-sessions">
+							<h2 class="overview-title">会话管理</h2>
+							<SessionManager onNotify={showToast} />
+						</div>
+					{/if}
 {:else if activePage === "user"}
 				<div class="user-page">
 					<section class="card-base user-profile-card">
@@ -2099,13 +2092,14 @@ function formatDate(dateStr: string | null): string {
 		background: var(--btn-regular-bg-hover);
 	}
 
-	/* 概览页头部：标题 + 搜索框；位于工作区容器内，不再自己套卡片 */
+	/* 概览页头部：参考项目概览层不套 SettingsShell，此处保留自己的卡片 */
 	.settings-overview-head {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 1rem;
 		flex-wrap: wrap;
+		padding: 1.5rem;
 	}
 
 	/* 区块标题：靠字号与上下间距区分层级，不加竖线 */
@@ -2117,19 +2111,22 @@ function formatDate(dateStr: string | null): string {
 		color: var(--deep-text);
 	}
 
-	/* 设置详情页头：标题 + 重新加载/保存 */
 	/* ── 设置工作区容器：对齐参考 .settings-workspace ──
-	   卡片外壳（card-base）+ 纵向 flex；标题/标签/内容/保存栏各占一段，
-	   内容区独立滚动，保存栏常驻底部。 */
+	   卡片外壳（card-base）+ 纵向 flex；标题/标签/内容/保存栏各占一段。
+	   关键：必须有确定高度（height:100% + min-height:0），
+	   否则高度被内容撑开，.settings-body 的 flex:1 拿不到可分配空间，
+	   overflow-y:auto 失效，滚动会落到外层 .admin-content 上。 */
 	.settings-workspace {
 		display: flex;
 		flex-direction: column;
+		flex: 1;
+		height: 100%;
 		min-height: 0;
 		overflow: hidden;
 		padding: 0;
 	}
 
-	/* 内容区：唯一可滚动区域，上下留白 24px、左右 24px */
+	/* 内容区：设置页自己的滚动区域，上下留白 24px、左右 24px */
 	.settings-body {
 		flex: 1;
 		min-height: 0;
@@ -2140,27 +2137,6 @@ function formatDate(dateStr: string | null): string {
 		flex-direction: column;
 		gap: 1.25rem;
 		padding: 1.5rem;
-	}
-
-	/* 容器内的配置项小节标题（不另套卡片） */
-	.settings-section-heading {
-		display: flex;
-		flex-direction: column;
-		gap: 0.375rem;
-	}
-
-	.settings-section-heading h2 {
-		margin: 0;
-		font-size: 1.125rem;
-		font-weight: 600;
-		color: var(--deep-text);
-	}
-
-	.settings-section-heading p {
-		margin: 0;
-		font-size: 0.8125rem;
-		line-height: 1.7;
-		color: var(--content-meta);
 	}
 
 	/* ── 设置页 tab 导航：对齐参考 .settings-tabs ──
@@ -2356,6 +2332,12 @@ function formatDate(dateStr: string | null): string {
 		   0.07vw 在 ~1428px 视口为 1px，随视口线性放大，封顶 1.5
 		   （50% 缩放下视口约 3840px，正好取到 1.5，内容视觉密度与参考一致） */
 		zoom: clamp(1, 0.07vw / 1px, 1.5);
+	}
+
+	/* 设置详情页：外层不再滚动，滚动交给内部 .settings-body，
+	   保存栏因此能常驻底部而不随内容滚走。 */
+	.admin-content.content-fixed {
+		overflow-y: hidden;
 	}
 
 	/* ── 仪表板首页 ── */
