@@ -459,6 +459,7 @@ export const ja: Translation = {
 	[Key.adminNewPost]: "新規記事",
 	[Key.adminEditPost]: "記事を編集",
 	[Key.adminSettings]: "サイト設定",
+	[Key.configSettingsIntro]: "サイト設定はここで管理され、変更は対応する設定ファイルに書き込まれます",
 	[Key.adminSettingsOverview]: "設定の概要",
 	[Key.adminBackHome]: "ホームに戻る",
 	[Key.adminEnvVars]: "環境変数",

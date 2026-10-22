@@ -447,6 +447,7 @@ export const zh_CN: Translation = {
 	[Key.adminNewPost]: "新建文章",
 	[Key.adminEditPost]: "编辑文章",
 	[Key.adminSettings]: "网站配置",
+	[Key.configSettingsIntro]: "站点配置集中在此处管理，修改会写入对应的配置文件",
 	[Key.adminSettingsOverview]: "配置概览",
 	[Key.adminBackHome]: "返回首页",
 	[Key.adminEnvVars]: "环境变量",

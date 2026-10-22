@@ -449,6 +449,7 @@ export const zh_TW: Translation = {
 	[Key.adminNewPost]: "新增文章",
 	[Key.adminEditPost]: "編輯文章",
 	[Key.adminSettings]: "網站設定",
+	[Key.configSettingsIntro]: "站點設定集中在此處管理，修改會寫入對應的設定檔",
 	[Key.adminSettingsOverview]: "設定總覽",
 	[Key.adminBackHome]: "返回首頁",
 	[Key.adminEnvVars]: "環境變數",

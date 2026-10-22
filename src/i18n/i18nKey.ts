@@ -445,6 +445,7 @@ enum I18nKey {
 	adminEditPost = "adminEditPost",
 	adminSettings = "adminSettings",
 	adminSettingsOverview = "adminSettingsOverview",
+	configSettingsIntro = "configSettingsIntro",
 	adminLogout = "adminLogout",
 	adminBackHome = "adminBackHome",
 	adminUserCenter = "adminUserCenter",

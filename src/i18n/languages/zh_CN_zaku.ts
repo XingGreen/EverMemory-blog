@@ -444,6 +444,7 @@ export const zaku: Translation = {
 	[Key.adminNewPost]: "新建文章",
 	[Key.adminEditPost]: "编辑文章",
 	[Key.adminSettings]: "网站配置",
+	[Key.configSettingsIntro]: "站点配置都在这管，改了会写进对应配置文件",
 	[Key.adminSettingsOverview]: "配置概览",
 	[Key.adminBackHome]: "返回首页",
 	[Key.adminEnvVars]: "环境变量",

@@ -462,6 +462,7 @@ export const en: Translation = {
 	[Key.adminNewPost]: "New Post",
 	[Key.adminEditPost]: "Edit Post",
 	[Key.adminSettings]: "Site Configuration",
+	[Key.configSettingsIntro]: "Site configuration is managed here; changes are written to the matching config files",
 	[Key.adminSettingsOverview]: "Configuration Overview",
 	[Key.adminBackHome]: "Back to home",
 	[Key.adminEnvVars]: "Env Vars",

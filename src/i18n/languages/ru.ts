@@ -462,6 +462,7 @@ export const ru: Translation = {
 	[Key.adminNewPost]: "Новая статья",
 	[Key.adminEditPost]: "Редактировать статью",
 	[Key.adminSettings]: "Конфигурация сайта",
+	[Key.configSettingsIntro]: "Настройки сайта управляются здесь; изменения записываются в соответствующие файлы конфигурации",
 	[Key.adminSettingsOverview]: "Обзор конфигурации",
 	[Key.adminBackHome]: "На главную",
 	[Key.adminEnvVars]: "Переменные среды",
