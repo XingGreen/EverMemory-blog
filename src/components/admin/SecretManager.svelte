@@ -584,7 +584,7 @@ onMount(load);
 										</span>
 										<button
 											type="button"
-											class="sec-btn"
+											class="text-action"
 											disabled={!writable || loading || rotating === item.key}
 											title={writable
 												? i18n(I18nKey.secretsRotateHint)
@@ -1052,6 +1052,37 @@ onMount(load);
 		background: var(--btn-regular-bg-hover);
 	}
 
+	/* 文本动作按钮：对齐参考页 .settings-text-action（主色文字、13px、无边框背景） */
+	.text-action {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.25rem 0;
+		border: none;
+		background: transparent;
+		color: var(--primary);
+		font-family: inherit;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: color 0.15s ease, opacity 0.15s ease;
+	}
+
+	.text-action:hover:not(:disabled) {
+		color: var(--primary);
+		opacity: 0.8;
+	}
+
+	.text-action:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.text-action:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
 	.sec-btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
@@ -1479,16 +1510,18 @@ onMount(load);
 		line-height: 1.55;
 	}
 
-	/* 托管密钥：状态 + 轮换按钮，替代输入框 */
+	/* 托管密钥：状态 + 轮换按钮，对应参考页的「已存储凭据摘要」形态
+	   （.settings-secret-summary：min-height 40px、两端对齐、无背景和边框）。 */
 	.managed-row {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.75rem;
 		flex-wrap: wrap;
-		padding: 0.75rem 1rem;
-		border-radius: var(--radius-xl);
-		background: color-mix(in oklab, var(--page-bg) 55%, var(--card-bg));
+		min-height: 2.5rem;
+		padding: 0;
+		border-radius: 0;
+		background: transparent;
 	}
 
 	.managed-state {
@@ -1689,11 +1722,12 @@ onMount(load);
 	.secret-input {
 		width: 100%;
 		min-width: 0;
-		/* 参考页 .settings-field input：min-height 40px、圆角 9px、字号 14px */
+		/* 参考页实际生效值：SETTINGS_FIELD_CLASS 里的 h-10 / rounded-xl / px-3
+		   会覆盖 .settings-field input 的 CSS（9px 圆角），最终是 40px 高、12px 圆角 */
 		min-height: 2.5rem;
 		padding: 0.5rem 0.75rem;
 		border: 1px solid color-mix(in oklab, var(--content-meta) 75%, transparent);
-		border-radius: 0.5625rem;
+		border-radius: var(--radius-xl);
 		background: color-mix(in oklab, var(--page-bg) 70%, var(--card-bg));
 		color: var(--deep-text);
 		font-size: 0.875rem;
@@ -1727,16 +1761,20 @@ onMount(load);
 		cursor: not-allowed;
 	}
 
+	/* 密码输入右侧留出按钮位：对齐参考页 .settings-secret-input input 的 40px */
 	.input-wrap .secret-input {
 		padding-right: 2.5rem;
 	}
 
-	/* 密码显隐图标：默认低透明度，不抢输入内容的注意力，悬停才提亮 */
+	/* 密码显隐按钮：对齐参考页 .settings-secret-input > button
+	   （32x32 绝对定位 right:4px / top:4px）。
+	   默认低透明度，不抢输入内容的注意力，悬停才提亮。 */
 	.input-toggle {
 		position: absolute;
-		right: 0.375rem;
-		width: 1.75rem;
-		height: 1.75rem;
+		right: 0.25rem;
+		top: 0.25rem;
+		width: 2rem;
+		height: 2rem;
 		display: flex;
 		align-items: center;
 		justify-content: center;
