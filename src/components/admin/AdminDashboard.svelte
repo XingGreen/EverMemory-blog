@@ -36,7 +36,7 @@ type Post = {
 };
 
 type ViewMode = "list" | "edit" | "create";
-type Page = "dashboard" | "posts" | "settings" | "user";
+type Page = "dashboard" | "posts" | "settings" | "user" | "404";
 
 // 基于 URL 路径的真实路由（History API）：
 //   /admin/                      → 首页
@@ -53,7 +53,8 @@ type Route =
 	| { page: "create" }
 	| { page: "edit"; slug: string }
 	| { page: "settings"; section?: string }
-	| { page: "user" };
+	| { page: "user" }
+	| { page: "404" };
 
 let {
 	avatarUrl = "",
@@ -86,6 +87,9 @@ let posts = $state<Post[]>([]);
 let isLoading = $state(true);
 let error = $state("");
 let route = $state<Route>({ page: "login" });
+
+/** 404 页展示的无效地址（便于用户核对输错的路径） */
+let admin404Path = $state("");
 let editingPost = $state<Post | null>(null);
 let showDeleteModal = $state(false);
 let deletingPost = $state<Post | null>(null);
@@ -189,13 +193,15 @@ function toggleCollapseSidebar() {
 }
 
 const activePage = $derived<Page>(
-	route.page === "dashboard"
-		? "dashboard"
-		: route.page === "settings"
-			? "settings"
-			: route.page === "user"
-				? "user"
-				: "posts",
+	route.page === "404"
+		? "404"
+		: route.page === "dashboard"
+			? "dashboard"
+			: route.page === "settings"
+				? "settings"
+				: route.page === "user"
+					? "user"
+					: "posts",
 );
 
 const viewMode = $derived<ViewMode>(
@@ -293,24 +299,26 @@ function parseRoute(pathname: string): Route {
 			if (segments[1] === "new") return { page: "create" };
 			if (segments[1] === "edit" && segments[2])
 				return { page: "edit", slug: segments[2] };
-			return { page: "posts" };
+			// 仅 /admin/articles/ 是列表页；其余子路径一律 404
+			return segments.length === 1 ? { page: "posts" } : { page: "404" };
 		case "settings": {
-			// 仅接受已知配置项作为子页，否则回落到配置概览
-			const section =
-				segments[1] && CONFIG_ITEMS.some((item) => item.key === segments[1])
-					? segments[1]
-					: undefined;
-			// 概览页已移除：无 section（或未知 section）时落到第一个配置项
-			return { page: "settings", section: section ?? CONFIG_ITEMS[0]?.key };
+			// /admin/settings/ 无子段时落到第一个配置项（概览层已移除）；
+			// 但显式给了未知 section 就是无效地址，返回 404 而不是悄悄回退
+			if (!segments[1]) return { page: "settings", section: CONFIG_ITEMS[0]?.key };
+			const section = CONFIG_ITEMS.some((item) => item.key === segments[1])
+				? segments[1]
+				: undefined;
+			return section ? { page: "settings", section } : { page: "404" };
 		}
 		case "secrets":
 			// 兼容旧链接：密钥配置已并入用户中心
 			return { page: "user" };
 		case "user":
-			return { page: "user" };
+			// 仅 /admin/user/；多余子段为无效地址
+			return segments.length === 1 ? { page: "user" } : { page: "404" };
 		default:
-			// 未知路由：返回登录态判定，由 applyRoute 决定去向
-			return { page: "login" };
+			// 未知路由：交给 404 页面，不再静默回退到首页
+			return { page: "404" };
 	}
 }
 
@@ -322,8 +330,9 @@ function applyRoute() {
 		return;
 	}
 	const next = parseRoute(window.location.pathname);
-	// 已登录用户落在未知路由时，回落到控制面板首页（保持地址不变）
-	route = next.page === "login" ? { page: "dashboard" } : next;
+	// 无效路径渲染后台 404，保留原地址，不再静默回退到首页
+	route = next;
+	admin404Path = window.location.pathname;
 	// 设置页已无概览层：/admin/settings/ 归一化到第一个配置项的真实地址，
 	// 避免地址栏与渲染内容不一致
 	if (
@@ -382,6 +391,7 @@ onMount(async () => {
 
 // 移动端 TopBar 标题随页面联动（桌面端已无全局 header）
 const headerTitle = $derived.by(() => {
+	if (activePage === "404") return i18n(I18nKey.notFound);
 	if (activePage === "dashboard") return i18n(I18nKey.adminDashboard);
 	if (activePage === "settings") {
 		const item = settingsSection ? getConfigItem(settingsSection) : undefined;
@@ -902,6 +912,29 @@ function formatDate(dateStr: string | null): string {
 		<h2>{title}</h2>
 		<p>{desc}</p>
 		<span class="placeholder-badge">{i18n(I18nKey.placeholderBadge)}</span>
+	</div>
+{/snippet}
+
+<!-- 后台 404：结构参照前台 404.astro（大号 404 + 图标 + 标题 + 说明 + 返回按钮） -->
+{#snippet adminNotFound()}
+	<div class="card-base admin-404">
+		<div class="admin-404-inner">
+			<div class="admin-404-code" aria-hidden="true">
+				{i18n(I18nKey.notFound)}
+			</div>
+			<div class="admin-404-icon">
+				<Icon icon="material-symbols:error-outline" />
+			</div>
+			<h2 class="admin-404-title">{i18n(I18nKey.notFoundTitle)}</h2>
+			<p class="admin-404-desc">{i18n(I18nKey.notFoundDescription)}</p>
+			<div class="admin-404-path">
+				<code>{admin404Path}</code>
+			</div>
+			<button class="admin-404-home" type="button" onclick={goDashboard}>
+				<Icon icon="material-symbols:home-rounded" />
+				<span>{i18n(I18nKey.backToHome)}</span>
+			</button>
+		</div>
 	</div>
 {/snippet}
 
@@ -1494,6 +1527,8 @@ function formatDate(dateStr: string | null): string {
 					{:else}
 						{@render placeholder(i18n(I18nKey.adminSettings), i18n(I18nKey.configSectionUnknown), "material-symbols:settings")}
 					{/if}
+				{:else if activePage === "404"}
+					{@render adminNotFound()}
 {:else if activePage === "user"}
 				<div class="user-page">
 					<section class="card-base user-profile-card">
@@ -3039,6 +3074,102 @@ function formatDate(dateStr: string | null): string {
 		to {
 			transform: rotate(360deg);
 		}
+	}
+
+	/* ── 后台 404（结构参照前台 404.astro：大号 404 数字 + 图标 + 标题 +
+	     说明 + 返回按钮，配色全部走主题变量） ── */
+	.admin-404 {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 24rem;
+		padding: 3rem 2rem;
+	}
+
+	.admin-404-inner {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		gap: 0.75rem;
+		max-width: 32rem;
+	}
+
+	/* 大号 404 数字：主色低透明度，作为背景装饰 */
+	.admin-404-code {
+		font-size: 6rem;
+		line-height: 1;
+		font-weight: 700;
+		color: var(--primary);
+		opacity: 0.2;
+		margin-bottom: 0.25rem;
+	}
+
+	.admin-404-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--primary);
+		font-size: 3rem;
+		margin-bottom: 0.25rem;
+	}
+
+	.admin-404-title {
+		margin: 0;
+		font-size: 1.75rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.admin-404-desc {
+		margin: 0;
+		font-size: 1rem;
+		line-height: 1.7;
+		color: color-mix(in oklab, var(--deep-text) 75%, transparent);
+	}
+
+	/* 无效路径展示：等宽字体 + 浅底，方便用户核对输错的地址 */
+	.admin-404-path {
+		margin-top: 0.25rem;
+		padding: 0.5rem 0.875rem;
+		border-radius: var(--radius-xl);
+		background: color-mix(in oklab, var(--page-bg) 70%, var(--card-bg));
+		max-width: 100%;
+		overflow-wrap: anywhere;
+	}
+
+	.admin-404-path code {
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+	}
+
+	.admin-404-home {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 1rem;
+		padding: 0.625rem 1.25rem;
+		border: 1px solid transparent;
+		border-radius: var(--radius-xl);
+		background: var(--primary);
+		color: var(--page-bg);
+		font-size: 0.875rem;
+		font-weight: 500;
+		font-family: inherit;
+		cursor: pointer;
+		transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.admin-404-home:hover {
+		background: color-mix(in oklab, var(--primary) 88%, var(--page-bg));
+		transform: translateY(-2px);
+		box-shadow: var(--shadow-md);
+	}
+
+	.admin-404-home:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 3px;
 	}
 
 	/* ── 占位页（首页 / 网站配置，待后续实现） ── */
