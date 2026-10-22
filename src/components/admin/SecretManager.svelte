@@ -415,35 +415,26 @@ onMount(load);
 		{/if}
 	{/if}
 
-	<div class="toolbar card-base">
-		<div class="toolbar-hint">
-			<Icon
-				icon={writable ? "material-symbols:save-outline" : "material-symbols:lock-outline"}
-				class={writable ? "hint-ok" : "hint-warn"}
-			/>
-			<span>
+	<!-- 操作栏：左侧两行说明 + 右侧按钮组（对照设计稿 .action-bar） -->
+	<div class="action-bar">
+		<div class="action-info">
+			<strong>
 				{writable
 					? i18n(I18nKey.secretsWritableHint).replace("{file}", envFile)
 					: i18n(I18nKey.secretsReadonlyHint)}
-			</span>
+			</strong>
 			{#if writable}
-				<span class="hint-sub">
-					<Icon
-						icon="material-symbols:download"
-						class={writable ? "hint-ok" : "hint-warn"}
-					/>
-					{i18n(I18nKey.secretsExportInlineHint)}
-				</span>
+				<span>{i18n(I18nKey.secretsExportInlineHint)}</span>
 			{/if}
 		</div>
-		<div class="toolbar-actions">
-			<button class="sec-btn" onclick={load} disabled={loading}>
+		<div class="action-buttons">
+			<button class="btn" type="button" onclick={load} disabled={loading}>
 				<Icon icon="material-symbols:refresh" />
 				<span>{i18n(I18nKey.secretsReload)}</span>
 			</button>
-			<!-- 布局切换：折叠式（可收起）⇄ 两栏式（常驻展开） -->
+			<!-- 布局切换：旧设计（列表）⇄ 新设计（栅格表单） -->
 			<button
-				class="sec-btn layout-toggle"
+				class="btn layout-toggle"
 				type="button"
 				title={layout === "fold"
 					? i18n(I18nKey.secretsLayoutSwitchToTwoCol)
@@ -461,7 +452,8 @@ onMount(load);
 			</button>
 			{#if writable}
 				<button
-					class="sec-btn"
+					class="btn"
+					type="button"
 					title={i18n(I18nKey.secretsExport)}
 					onclick={() => (exportOpen = true)}
 					disabled={exportBusy || loading}
@@ -584,7 +576,7 @@ onMount(load);
 										</span>
 										<button
 											type="button"
-											class="text-action"
+											class="btn btn-sm"
 											disabled={!writable || loading || rotating === item.key}
 											title={writable
 												? i18n(I18nKey.secretsRotateHint)
@@ -979,57 +971,90 @@ onMount(load);
 		color: var(--warning);
 	}
 
-	/* ── 顶部工具栏 ── */
-	.toolbar {
+	/* ── 操作栏 ──
+	   遵循项目规范：不用实线边框，层级靠卡片底 + 毛玻璃表达；
+	   容器圆角 16px、内边距 24px，与其余板块卡片一致。 */
+	.action-bar {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 1rem;
-		padding: 1.5rem;
 		flex-wrap: wrap;
+		padding: 1.5rem;
+		border: 1px solid transparent;
 		border-radius: var(--radius-large);
 		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
 		-webkit-backdrop-filter: blur(12px);
 		backdrop-filter: blur(12px);
 	}
 
-	.toolbar-hint {
+	.action-info {
 		display: flex;
 		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.25rem;
+		gap: 0.125rem;
 		font-size: 0.8125rem;
+		line-height: 1.6;
 		color: var(--content-meta);
-		line-height: 1.5;
 		min-width: 0;
-		flex: 1;
 	}
 
-	.toolbar-hint > span {
+	.action-info strong {
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.action-buttons {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex-shrink: 0;
+	}
+
+	/* ── 按钮 ──
+	   遵循项目规范：12px 圆角（--radius-xl）、无实线边框，
+	   底色与悬停走 --btn-regular-bg 系列变量。 */
+	.btn {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.375rem;
+		padding: 0.5rem 1rem;
+		border: 1px solid transparent;
+		border-radius: var(--radius-xl);
+		background: var(--btn-regular-bg);
+		color: var(--deep-text);
+		font-size: 0.8125rem;
+		font-weight: 500;
+		font-family: inherit;
+		cursor: pointer;
+		transition: background 0.2s ease, color 0.2s ease;
 	}
 
-	.toolbar-hint .hint-sub {
-		opacity: 0.85;
+	.btn:hover:not(:disabled) {
+		background: var(--btn-regular-bg-hover);
 	}
 
-	.toolbar-hint :global(.hint-ok) {
-		color: var(--success);
-		flex-shrink: 0;
+	.btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
-	.toolbar-hint :global(.hint-warn) {
-		color: var(--warning);
-		flex-shrink: 0;
+	.btn:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
 	}
 
-	.toolbar-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-shrink: 0;
+	/* 小号按钮：设计稿里 status-pill 内的「轮换」为 4px 12px / 12px 字 */
+	.btn.btn-sm {
+		padding: 0.25rem 0.75rem;
+		font-size: 0.75rem;
+	}
+
+	.btn :global(.inline-icon) {
+		font-size: 0.875rem;
+	}
+
+	.btn.btn-sm :global(.inline-icon) {
+		font-size: 0.75rem;
 	}
 
 	.sec-btn {
@@ -1510,18 +1535,20 @@ onMount(load);
 		line-height: 1.55;
 	}
 
-	/* 托管密钥：状态 + 轮换按钮，对应参考页的「已存储凭据摘要」形态
-	   （.settings-secret-summary：min-height 40px、两端对齐、无背景和边框）。 */
+	/* 托管密钥状态条：遵循项目规范——
+	   不用实线边框，层级由半透明同色底表达；圆角 12px、内边距 12/16px。 */
 	.managed-row {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.75rem;
 		flex-wrap: wrap;
-		min-height: 2.5rem;
-		padding: 0;
-		border-radius: 0;
-		background: transparent;
+		padding: 0.75rem 1rem;
+		border: 1px solid transparent;
+		border-radius: var(--radius-xl);
+		background: color-mix(in oklab, var(--success) 10%, transparent);
+		font-size: 0.8125rem;
+		color: color-mix(in oklab, var(--success) 55%, var(--deep-text));
 	}
 
 	.managed-state {
@@ -1529,7 +1556,6 @@ onMount(load);
 		align-items: center;
 		gap: 0.5rem;
 		font-size: 0.8125rem;
-		color: var(--content-meta);
 		min-width: 0;
 	}
 
@@ -1551,22 +1577,22 @@ onMount(load);
 		align-items: center;
 	}
 
-	/* ── PEM 私钥上传区（参考 .examples/deepseek_html_20261021_604d10.html） ──
-	   整个区域即点击热区：透明 file input 绝对定位铺满，不需要额外 JS 触发。
-	   虚线边框用低对比度变量色，悬停转主色，与整页的克制配色一致。 */
+	/* ── 私钥上传区 ──
+	   虚线框是上传语义的必要表达（规范允许结构性虚线），
+	   但圆角与底色回归项目变量：16px 容器圆角 + 前景色 8% 混卡片底。 */
 	.upload-zone {
 		position: relative;
 		flex: 1;
 		min-width: 0;
-		border: 2px dashed color-mix(in oklab, var(--line-color) 80%, transparent);
+		border: 1px dashed color-mix(in oklab, var(--content-meta) 35%, transparent);
 		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--page-bg) 45%, transparent);
+		background: color-mix(in oklab, var(--content-meta) 8%, var(--card-bg));
 		transition: border-color 0.2s ease, background 0.2s ease;
 	}
 
 	.upload-zone:hover {
 		border-color: var(--primary);
-		background: color-mix(in oklab, var(--page-bg) 60%, transparent);
+		background: color-mix(in oklab, var(--content-meta) 12%, var(--card-bg));
 	}
 
 	.upload-input {
@@ -1626,8 +1652,9 @@ onMount(load);
 		align-self: flex-start;
 	}
 
-	/* ── 状态二：已上传的文件信息卡（参考同一份示例的 uploaded-status） ──
-	   实线细边框 + 卡片底色，与上方虚线拖拽框形成「未完成 → 已完成」的视觉区分。 */
+	/* ── 状态二：已上传的文件信息 ──
+	   遵循项目规范：无实线边框，层级靠底色表达；
+	   16px 容器圆角 + 12/16px 内边距，左侧文件名 + 已安全读取、右侧 × 按钮。 */
 	.uploaded-card {
 		display: flex;
 		align-items: center;
@@ -1635,18 +1662,18 @@ onMount(load);
 		gap: 0.75rem;
 		flex: 1;
 		min-width: 0;
-		padding: 1rem;
-		border: 1px solid color-mix(in oklab, var(--line-color) 80%, transparent);
+		padding: 0.75rem 1rem;
+		border: 1px solid transparent;
 		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--page-bg) 45%, transparent);
+		background: color-mix(in oklab, var(--content-meta) 8%, var(--card-bg));
 	}
 
 	.uploaded-icon {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 2rem;
-		height: 2rem;
+		width: 1.75rem;
+		height: 1.75rem;
 		flex-shrink: 0;
 		border-radius: var(--radius-lg);
 		background: color-mix(in oklab, var(--primary) 10%, transparent);
