@@ -477,9 +477,6 @@ onMount(load);
 				     字段直接排布在板块内，不再各自套卡片容器（禁止卡片嵌套）。 -->
 				<section class="secrets-group card-base">
 					<header class="group-head">
-						<span class="group-head-icon">
-							<Icon icon={group.icon} />
-						</span>
 						<div class="group-head-text">
 							<h2 class="group-title">
 								<span>{i18n(I18nKey[group.labelKey])}</span>
@@ -538,7 +535,6 @@ onMount(load);
 											<span class="summary-desc">{item.description}</span>
 										</span>
 										<span class="summary-action">
-											{isOpen ? i18n(I18nKey.secretsCollapse) : i18n(I18nKey.secretsEdit)}
 											<Icon
 												icon={isOpen
 													? "material-symbols:keyboard-arrow-up-rounded"
@@ -597,24 +593,12 @@ onMount(load);
 									     multiline（App 私钥）改为文件上传，避免手工粘贴丢失换行。 -->
 									{#if item.kind === "multiline"}
 											{#if drafts[item.key]}
-												<!-- 状态二：已上传 —— 文件信息卡 + 极简清除按钮 -->
+												<!-- 状态二：已上传 —— 文件名与状态并列一行，无图标 -->
 												<div class="uploaded-card">
-													<span class="uploaded-icon">
-														<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-															></path>
-														</svg>
-													</span>
-													<div class="uploaded-meta">
-														<span class="uploaded-name"
-															>{uploadNames[item.key] ?? i18n(I18nKey.secretsUploadedDefaultName)}</span
-														>
-														<span class="uploaded-note">{i18n(I18nKey.secretsUploadedNote)}</span>
-													</div>
+													<span class="uploaded-name"
+														>{uploadNames[item.key] ?? i18n(I18nKey.secretsUploadedDefaultName)}</span
+													>
+													<span class="uploaded-note">{i18n(I18nKey.secretsUploadedNote)}</span>
 													<button
 														type="button"
 														class="uploaded-clear"
@@ -1141,27 +1125,11 @@ onMount(load);
 		background: var(--card-bg);
 	}
 
-	/* 板块标题区：图标 + 标题 + 说明 */
+	/* 板块标题区：标题 + 说明（无图标） */
 	.group-head {
 		display: flex;
 		align-items: flex-start;
 		gap: 0.875rem;
-	}
-
-	.group-head-icon {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.25rem;
-		height: 2.25rem;
-		flex-shrink: 0;
-		border-radius: var(--radius-xl);
-		background: color-mix(in oklab, var(--primary) 10%, transparent);
-		color: var(--primary);
-	}
-
-	.group-head-icon :global(.inline-icon) {
-		font-size: 1.25rem;
 	}
 
 	.group-head-text {
@@ -1265,11 +1233,12 @@ onMount(load);
 		color: var(--deep-text);
 	}
 
-	/* 未配置才显示的警示文字；已配置保持安静 */
+	/* 未配置标记：对齐参考项目 .settings-muted（fg-50 灰、13px、400 字重），
+	   不用警告橙色——「未配置」是常态而非异常，用警示色会让整页发红。 */
 	.summary-warn {
-		font-size: 0.75rem;
-		font-weight: 500;
-		color: var(--warning);
+		font-size: 0.8125rem;
+		font-weight: 400;
+		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
 	}
 
 	/* 说明文字：强制单行 + 省略号。
@@ -1654,11 +1623,11 @@ onMount(load);
 
 	/* ── 状态二：已上传的文件信息 ──
 	   遵循项目规范：无实线边框，层级靠底色表达；
-	   16px 容器圆角 + 12/16px 内边距，左侧文件名 + 已安全读取、右侧 × 按钮。 */
+	   16px 容器圆角 + 12/16px 内边距。
+	   文件名与「已安全读取」并列一行、无图标，右侧保留 × 按钮。 */
 	.uploaded-card {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
 		gap: 0.75rem;
 		flex: 1;
 		min-width: 0;
@@ -1666,31 +1635,6 @@ onMount(load);
 		border: 1px solid transparent;
 		border-radius: var(--radius-large);
 		background: color-mix(in oklab, var(--content-meta) 8%, var(--card-bg));
-	}
-
-	.uploaded-icon {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.75rem;
-		height: 1.75rem;
-		flex-shrink: 0;
-		border-radius: var(--radius-lg);
-		background: color-mix(in oklab, var(--primary) 10%, transparent);
-		color: var(--primary);
-	}
-
-	.uploaded-icon :global(svg) {
-		width: 1rem;
-		height: 1rem;
-	}
-
-	.uploaded-meta {
-		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
-		min-width: 0;
-		flex: 1;
 	}
 
 	.uploaded-name {
@@ -1705,9 +1649,10 @@ onMount(load);
 	.uploaded-note {
 		font-size: 0.75rem;
 		color: color-mix(in oklab, var(--content-meta) 60%, transparent);
+		flex-shrink: 0;
 	}
 
-	/* 极简清除按钮：默认低透明度，悬停转危险色 */
+	/* 极简清除按钮：靠右、默认低透明度，悬停转危险色 */
 	.uploaded-clear {
 		display: flex;
 		align-items: center;
@@ -1715,6 +1660,7 @@ onMount(load);
 		width: 2rem;
 		height: 2rem;
 		flex-shrink: 0;
+		margin-left: auto;
 		padding: 0;
 		border: none;
 		border-radius: var(--radius-lg);
