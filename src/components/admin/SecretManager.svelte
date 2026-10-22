@@ -591,7 +591,7 @@ onMount(load);
 												: i18n(I18nKey.secretsRotateReadonly)}
 											onclick={() => rotate(item)}
 										>
-											<Icon icon="material-symbols:autorenew" />
+											<Icon icon="material-symbols:update-rounded" />
 											<span>
 												{rotating === item.key
 													? i18n(I18nKey.secretsRotating)
@@ -743,7 +743,7 @@ onMount(load);
 						}}
 						disabled={saving || rotating !== ""}
 					>
-						<Icon icon="material-symbols:autorenew" />
+						<Icon icon="material-symbols:update-rounded" />
 						<span>{i18n(I18nKey.secretsRotateJwt)}</span>
 					</button>
 				</div>
