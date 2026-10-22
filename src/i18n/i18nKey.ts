@@ -235,6 +235,8 @@ enum I18nKey {
 	notFoundTitle = "notFoundTitle",
 	notFoundDescription = "notFoundDescription",
 	backToHome = "backToHome",
+	adminNotFoundDescription = "adminNotFoundDescription",
+	errorBackDashboard = "errorBackDashboard",
 
 	// RSS页面
 	rss = "rss",

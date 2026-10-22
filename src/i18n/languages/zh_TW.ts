@@ -239,6 +239,8 @@ export const zh_TW: Translation = {
 	[Key.notFoundTitle]: "頁面未找到",
 	[Key.notFoundDescription]: "抱歉，您訪問的頁面不存在或已被移動。",
 	[Key.backToHome]: "返回首頁",
+	[Key.adminNotFoundDescription]: "後台沒有這個頁面，請檢查網址是否輸入正確。",
+	[Key.errorBackDashboard]: "返回控制台",
 
 	// RSS頁面
 	[Key.rss]: "RSS 訂閱",

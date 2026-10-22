@@ -87,9 +87,6 @@ let posts = $state<Post[]>([]);
 let isLoading = $state(true);
 let error = $state("");
 let route = $state<Route>({ page: "login" });
-
-/** 404 页展示的无效地址（便于用户核对输错的路径） */
-let admin404Path = $state("");
 let editingPost = $state<Post | null>(null);
 let showDeleteModal = $state(false);
 let deletingPost = $state<Post | null>(null);
@@ -332,7 +329,6 @@ function applyRoute() {
 	const next = parseRoute(window.location.pathname);
 	// 无效路径渲染后台 404，保留原地址，不再静默回退到首页
 	route = next;
-	admin404Path = window.location.pathname;
 	// 设置页已无概览层：/admin/settings/ 归一化到第一个配置项的真实地址，
 	// 避免地址栏与渲染内容不一致
 	if (
@@ -915,26 +911,27 @@ function formatDate(dateStr: string | null): string {
 	</div>
 {/snippet}
 
-<!-- 后台 404：结构参照前台 404.astro（大号 404 + 图标 + 标题 + 说明 + 返回按钮） -->
+<!-- 后台 404：借鉴参考项目 StatusPage 的结构思路——
+     外层承担滚动与留白，内层一张居中卡片，内容为
+     状态码 + 标题 + 描述 + 两个动作（主/次）。
+     类名与配色沿用本项目既有约定（placeholder-page / settings-action-btn）。 -->
 {#snippet adminNotFound()}
-	<div class="card-base admin-404">
-		<div class="admin-404-inner">
-			<div class="admin-404-code" aria-hidden="true">
-				{i18n(I18nKey.notFound)}
+	<div class="notfound-frame">
+		<section class="card-base notfound-card">
+			<p class="notfound-code">{i18n(I18nKey.notFound)}</p>
+			<h2 class="notfound-title">{i18n(I18nKey.notFoundTitle)}</h2>
+			<p class="notfound-desc">{i18n(I18nKey.adminNotFoundDescription)}</p>
+			<div class="notfound-actions">
+				<button class="settings-action-btn primary" type="button" onclick={goDashboard}>
+					<Icon icon="material-symbols:home-rounded" />
+					<span>{i18n(I18nKey.errorBackDashboard)}</span>
+				</button>
+				<button class="settings-action-btn" type="button" onclick={goPostList}>
+					<Icon icon="material-symbols:article-outline" />
+					<span>{i18n(I18nKey.adminPosts)}</span>
+				</button>
 			</div>
-			<div class="admin-404-icon">
-				<Icon icon="material-symbols:error-outline" />
-			</div>
-			<h2 class="admin-404-title">{i18n(I18nKey.notFoundTitle)}</h2>
-			<p class="admin-404-desc">{i18n(I18nKey.notFoundDescription)}</p>
-			<div class="admin-404-path">
-				<code>{admin404Path}</code>
-			</div>
-			<button class="admin-404-home" type="button" onclick={goDashboard}>
-				<Icon icon="material-symbols:home-rounded" />
-				<span>{i18n(I18nKey.backToHome)}</span>
-			</button>
-		</div>
+		</section>
 	</div>
 {/snippet}
 
@@ -3076,100 +3073,87 @@ function formatDate(dateStr: string | null): string {
 		}
 	}
 
-	/* ── 后台 404（结构参照前台 404.astro：大号 404 数字 + 图标 + 标题 +
-	     说明 + 返回按钮，配色全部走主题变量） ── */
-	.admin-404 {
+	/* ── 后台 404 ──
+	   结构借鉴参考项目：外层滚动容器 + 居中卡片 + 状态码/标题/描述/双动作。
+	   具体数值按本项目既有节奏取：卡片 16px 圆角（--radius-large）、
+	   内容区 24px 留白、按钮复用 .settings-action-btn。 */
+	.notfound-frame {
 		display: flex;
-		align-items: center;
-		justify-content: center;
-		min-height: 24rem;
-		padding: 3rem 2rem;
+		flex-direction: column;
+		flex: 1;
+		min-width: 0;
+		min-height: 0;
+		overflow-y: auto;
+		padding: 1.5rem;
 	}
 
-	.admin-404-inner {
+	.notfound-card {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
+		width: 100%;
+		max-width: 40rem;
+		margin-block: auto;
+		margin-inline: auto;
+		padding: 3rem 2rem;
 		text-align: center;
-		gap: 0.75rem;
-		max-width: 32rem;
+		flex-shrink: 0;
 	}
 
-	/* 大号 404 数字：主色低透明度，作为背景装饰 */
-	.admin-404-code {
-		font-size: 6rem;
+	/* 状态码：主色实色，字号随视口自适应，作为视觉锚点 */
+	.notfound-code {
+		margin: 0 0 1.25rem;
+		color: var(--primary);
+		font-size: clamp(3rem, 5vw, 4rem);
 		line-height: 1;
 		font-weight: 700;
-		color: var(--primary);
-		opacity: 0.2;
-		margin-bottom: 0.25rem;
+		letter-spacing: 0.02em;
 	}
 
-	.admin-404-icon {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: var(--primary);
-		font-size: 3rem;
-		margin-bottom: 0.25rem;
-	}
-
-	.admin-404-title {
+	.notfound-title {
 		margin: 0;
-		font-size: 1.75rem;
+		font-size: 1.5rem;
 		font-weight: 600;
+		line-height: 1.4;
 		color: var(--deep-text);
+		text-wrap: balance;
 	}
 
-	.admin-404-desc {
-		margin: 0;
-		font-size: 1rem;
-		line-height: 1.7;
-		color: color-mix(in oklab, var(--deep-text) 75%, transparent);
-	}
-
-	/* 无效路径展示：等宽字体 + 浅底，方便用户核对输错的地址 */
-	.admin-404-path {
-		margin-top: 0.25rem;
-		padding: 0.5rem 0.875rem;
-		border-radius: var(--radius-xl);
-		background: color-mix(in oklab, var(--page-bg) 70%, var(--card-bg));
-		max-width: 100%;
+	.notfound-desc {
+		max-width: 26rem;
+		margin: 0.75rem 0 0;
+		font-size: 0.875rem;
+		line-height: 1.8;
+		color: var(--content-meta);
 		overflow-wrap: anywhere;
 	}
 
-	.admin-404-path code {
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: 0.8125rem;
-		color: var(--content-meta);
-	}
-
-	.admin-404-home {
-		display: inline-flex;
+	.notfound-actions {
+		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.5rem;
-		margin-top: 1rem;
-		padding: 0.625rem 1.25rem;
-		border: 1px solid transparent;
-		border-radius: var(--radius-xl);
-		background: var(--primary);
-		color: var(--page-bg);
-		font-size: 0.875rem;
-		font-weight: 500;
-		font-family: inherit;
-		cursor: pointer;
-		transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+		justify-content: center;
+		gap: 0.75rem;
+		margin-top: 1.75rem;
 	}
 
-	.admin-404-home:hover {
-		background: color-mix(in oklab, var(--primary) 88%, var(--page-bg));
-		transform: translateY(-2px);
-		box-shadow: var(--shadow-md);
-	}
+	@media (max-width: 639px) {
+		.notfound-frame {
+			padding: 0.5rem 0;
+		}
 
-	.admin-404-home:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 3px;
+		.notfound-card {
+			padding: 2.25rem 1.5rem;
+		}
+
+		.notfound-code {
+			font-size: 2.75rem;
+			margin-bottom: 1rem;
+		}
+
+		.notfound-title {
+			font-size: 1.25rem;
+		}
 	}
 
 	/* ── 占位页（首页 / 网站配置，待后续实现） ── */

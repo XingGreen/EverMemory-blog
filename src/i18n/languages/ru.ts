@@ -245,6 +245,8 @@ export const ru: Translation = {
 	[Key.notFoundDescription]:
 		"Извините, страница, которую вы посетили, не существует или была перемещена.",
 	[Key.backToHome]: "Вернуться на главную",
+	[Key.adminNotFoundDescription]: "Такой страницы в панели нет. Проверьте адрес.",
+	[Key.errorBackDashboard]: "Вернуться на панель",
 
 	// RSS Страница
 	[Key.rss]: "RSS лента",
