@@ -2126,7 +2126,10 @@ function formatDate(dateStr: string | null): string {
 		padding: 0;
 	}
 
-	/* 内容区：设置页自己的滚动区域，上下留白 24px、左右 24px */
+	/* 内容区：设置页自己的滚动区域，上下留白 24px、左右 24px。
+	   子项必须 flex-shrink: 0 —— 否则长表单会被压缩到容器高度，
+	   内容被自身 overflow 裁掉，scrollHeight 与 clientHeight 相等，
+	   结果就是「看起来不能滚」（外层已 hidden，内层又没溢出）。 */
 	.settings-body {
 		flex: 1;
 		min-height: 0;
@@ -2137,6 +2140,10 @@ function formatDate(dateStr: string | null): string {
 		flex-direction: column;
 		gap: 1.25rem;
 		padding: 1.5rem;
+	}
+
+	.settings-body > :global(*) {
+		flex-shrink: 0;
 	}
 
 	/* ── 设置页 tab 导航：对齐参考 .settings-tabs ──
