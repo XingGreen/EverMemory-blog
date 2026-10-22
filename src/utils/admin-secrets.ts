@@ -71,7 +71,8 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		key: "GITHUB_APP_ID",
 		group: "github",
 		label: "GitHub App ID",
-		description: "GitHub App Settings 页面顶部的 App ID（纯数字）",
+		description:
+			"GitHub App Settings 页顶部的数字 ID",
 		kind: "text",
 		sensitive: false,
 		required: true,
@@ -81,7 +82,8 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		key: "GITHUB_OWNER",
 		group: "github",
 		label: "仓库所有者",
-		description: "GitHub 仓库所有者（用户名或组织名，不带 @）",
+		description:
+			"仓库所有者，用户名或组织名，不带 @",
 		kind: "text",
 		sensitive: false,
 		required: true,
@@ -91,7 +93,8 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		key: "GITHUB_REPO",
 		group: "github",
 		label: "仓库名称",
-		description: "GitHub 仓库名称（不带 .git 后缀）",
+		description:
+			"仓库名称，不带 .git 后缀",
 		kind: "text",
 		sensitive: false,
 		required: true,
@@ -101,7 +104,8 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		key: "GITHUB_BRANCH",
 		group: "github",
 		label: "仓库分支",
-		description: "GitHub 仓库分支（新建仓库默认为 main）",
+		description:
+			"仓库分支，通常为 main 或 master",
 		kind: "text",
 		sensitive: false,
 		required: true,
@@ -111,7 +115,8 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		key: "GITHUB_INSTALLATION_ID",
 		group: "github",
 		label: "Installation ID",
-		description: "App 安装页 URL 末尾的数字，如 /installations/149804847",
+		description:
+			"App 安装页 URL 末尾的数字 ID",
 		kind: "text",
 		sensitive: false,
 		required: true,
@@ -122,7 +127,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "github",
 		label: "GitHub App 私钥",
 		description:
-			"用于签发 GitHub App JWT 的 PEM 私钥。粘贴 -----BEGIN 开头的原文即可，保存时自动转换为 Base64（适配 Vercel 环境变量不允许换行的限制）",
+			"用于签发 JWT 的 PEM 私钥，保存时自动转 Base64",
 		kind: "multiline",
 		sensitive: true,
 		required: true,
@@ -133,7 +138,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "github",
 		label: "私钥文件路径",
 		description:
-			"仅本地开发使用；留空时默认查找 .key/ 与 .keys/ 目录下的 *.pem 文件",
+			"仅本地开发使用；留空时自动在 .key/ 与 .keys/ 中查找",
 		kind: "text",
 		sensitive: false,
 		required: false,
@@ -146,7 +151,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "auth",
 		label: "GitHub OAuth Client ID",
 		description:
-			"GitHub App 的 Client ID（形如 Iv23li…；与应用页顶部的 App ID 不同）",
+			"GitHub App 的 Client ID，与应用 ID 不同",
 		kind: "text",
 		sensitive: false,
 		required: true,
@@ -157,7 +162,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "auth",
 		label: "GitHub OAuth Client Secret",
 		description:
-			"GitHub App 的 Client Secret，登录回调时用于换取访问令牌。泄露后须到 GitHub 重新生成",
+			"换取访问令牌的密钥，泄露后须重新生成",
 		kind: "password",
 		sensitive: true,
 		required: true,
@@ -168,7 +173,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "auth",
 		label: "管理员 GitHub 用户 ID",
 		description:
-			"允许登录的 GitHub 账号数字 ID（形如 238927366，不随用户名/头像变更）",
+			"允许登录的 GitHub 账号数字 ID",
 		kind: "text",
 		sensitive: false,
 		required: true,
@@ -179,7 +184,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "auth",
 		label: "应急登录令牌（备用）",
 		description:
-			"GitHub 不可用时的备用登录入口：一段高熵随机串（如 32 字节 base64url）。留空则关闭备用登录",
+			"GitHub 不可用时的备用登录令牌，留空则关闭",
 		kind: "password",
 		sensitive: true,
 		required: false,
@@ -190,7 +195,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "auth",
 		label: "JWT 签名密钥",
 		description:
-			"用于签发后台会话 Cookie 的随机密钥。由服务端自动生成与托管，无需手动填写；仅在需要让所有会话立即失效时点击「轮换」",
+			"由服务端自动生成托管，仅在需要强制下线时轮换",
 		kind: "password",
 		sensitive: true,
 		required: true,
@@ -202,7 +207,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "auth",
 		label: "登录告警 Webhook",
 		description:
-			"可选。配置后每次后台登录成功都会向该 URL POST 一条 JSON（Slack / Discord / 邮件网关），便于及时察觉异常登录。留空则不发送",
+			"登录成功时向该 URL 发送通知，留空则不发送",
 		kind: "text",
 		sensitive: false,
 		required: false,
@@ -215,7 +220,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "turnstile",
 		label: "Turnstile Site Key",
 		description:
-			"Cloudflare Turnstile 的 site key（公开值，登录页据此渲染验证码）。需与 Secret Key 成对配置",
+			"公开值，需与 Secret Key 成对配置",
 		kind: "text",
 		sensitive: false,
 		required: false,
@@ -226,7 +231,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "turnstile",
 		label: "Turnstile Secret Key",
 		description:
-			"服务端用于向 Cloudflare 校验 token 的私钥。只配 Site Key 而不配此项会导致登录被拒（不做假验证）",
+			"服务端校验用的私钥，只配 Site Key 会导致登录被拒",
 		kind: "password",
 		sensitive: true,
 		required: false,

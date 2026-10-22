@@ -1210,13 +1210,16 @@ onMount(load);
 		color: var(--warning);
 	}
 
-	/* 说明文字常驻显示（原先藏在问号 Tooltip 里） */
+	/* 说明文字：强制单行 + 省略号。
+	   强制单行是为了让同一行内的两个字段高度一致——说明折行会让下方的
+	   变量名与输入框错位，这是栅格布局里最常见的对齐问题。 */
 	.summary-desc {
 		font-size: 0.8125rem;
 		line-height: 1.5;
 		color: var(--content-meta);
 		overflow: hidden;
 		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.summary-action {
@@ -1350,25 +1353,34 @@ onMount(load);
 		padding: 0;
 	}
 
-	/* 变量名移到输入框上方 */
+	/* 变量名：与输入框同宽、同一左缘，字号统一 */
 	.secrets-page[data-layout="two-col"] .field-meta .field-key {
 		order: 0;
 		margin: 0;
+		align-self: stretch;
 	}
 
 	.secrets-page[data-layout="two-col"] .field-control {
 		width: 100%;
 		flex: none;
+		/* 输入控件统一高度，保证同一行两个字段的输入框底边齐平 */
+		min-height: 2.5rem;
 	}
 
-	/* 摘要行退化为纯展示区（标签 + 说明），不再可点 */
+	/* 摘要行退化为纯展示区（标签 + 说明），不再可点。
+	   左右内边距归零，让文字块与下方变量名、输入框共用同一左缘。 */
 	.secrets-page[data-layout="two-col"] .field-summary {
 		cursor: default;
 		padding: 0;
+		align-items: flex-start;
 	}
 
 	.secrets-page[data-layout="two-col"] .field-summary:hover {
 		background: transparent;
+	}
+
+	.secrets-page[data-layout="two-col"] .summary-text {
+		gap: 0.25rem;
 	}
 
 	.secrets-page[data-layout="two-col"] .summary-action {
@@ -1379,14 +1391,20 @@ onMount(load);
 		grid-template-rows: 1fr;
 	}
 
-	/* 变更状态：左侧细竖线，缩进不破坏对齐 */
+	/* 变更状态：左侧细竖线。缩进同时作用于摘要行与编辑区，
+	   两者始终共用同一条左缘，不会出现文字块错位。 */
+	.secrets-page[data-layout="two-col"] .secret-field.dirty .field-summary,
+	.secrets-page[data-layout="two-col"] .secret-field.dirty .field-panel-inner {
+		padding-left: 0.625rem;
+	}
+
 	.secrets-page[data-layout="two-col"] .secret-field.dirty .field-summary {
-		padding-left: 0.5rem;
 		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
 	}
 
 	.secrets-page[data-layout="two-col"] .secret-field.dirty .field-panel-inner {
-		padding-left: 0.5rem;
+		border-left: 2px solid transparent;
+		margin-left: -2px;
 	}
 
 	/* 窄屏：所有字段占满 12 列 */
@@ -1429,6 +1447,12 @@ onMount(load);
 	:global(.lock-icon) {
 		color: var(--content-meta);
 		flex-shrink: 0;
+	}
+
+	/* 栅格布局下隐藏锁图标：它会推开标题文字导致这一项与其他项左缘不齐，
+	   而锁只表示「敏感」，同类字段全都有，信息量低、对齐代价高。 */
+	.secrets-page[data-layout="two-col"] .summary-title :global(.lock-icon) {
+		display: none;
 	}
 
 	.req-star {
