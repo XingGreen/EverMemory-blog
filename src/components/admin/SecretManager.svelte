@@ -1719,21 +1719,56 @@ onMount(load);
 	   注意 --content-meta 本身带 alpha（暗色白 0.6 / 亮色黑 0.5），叠加 75% 后
 	   最终 alpha 约 0.45，合成色为暗 rgb(130,130,135)=4.44:1、亮 rgb(139,140,140)=3.36:1，
 	   两种模式均满足 AA。 */
+	/* 完全对照参考项目 input.settings-input（settings.css:400-440）
+	   + SETTINGS_FIELD_CLASS 的 px-3 / rounded-xl / text-sm：
+	   42px 高、12px 圆角、左右 12px 内边距、14px 字号。
+	   底色用「前景色 8% 混卡片色」——比卡片略亮，而非比卡片更暗；
+	   静态态边框为 transparent，边界靠底色与 hover/focus 的逐级提亮表达。 */
 	.secret-input {
 		width: 100%;
 		min-width: 0;
-		/* 参考页实际生效值：SETTINGS_FIELD_CLASS 里的 h-10 / rounded-xl / px-3
-		   会覆盖 .settings-field input 的 CSS（9px 圆角），最终是 40px 高、12px 圆角 */
-		min-height: 2.5rem;
+		min-height: 2.625rem;
 		padding: 0.5rem 0.75rem;
-		border: 1px solid color-mix(in oklab, var(--content-meta) 75%, transparent);
+		border: 1px solid transparent;
 		border-radius: var(--radius-xl);
-		background: color-mix(in oklab, var(--page-bg) 70%, var(--card-bg));
+		background: color-mix(in srgb, var(--content-meta) 8%, var(--card-bg));
 		color: var(--deep-text);
 		font-size: 0.875rem;
 		font-family: inherit;
-		transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+		outline: none;
+		box-shadow: none;
+		transition:
+			background-color 240ms ease,
+			border-color 240ms ease,
+			box-shadow 240ms ease;
 		box-sizing: border-box;
+	}
+
+	.secret-input::placeholder {
+		color: var(--content-meta);
+		opacity: 0.65;
+	}
+
+	.secret-input:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--content-meta) 12%, var(--card-bg));
+	}
+
+	.secret-input:focus {
+		outline: none;
+		border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+		background: color-mix(in srgb, var(--primary) 7%, var(--card-bg));
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
+	}
+
+	.secret-input:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.secret-input {
+			transition: none;
+		}
 	}
 
 	.secret-input.mono {
@@ -1743,26 +1778,10 @@ onMount(load);
 		line-height: 1.5;
 	}
 
-	/* 聚焦环用 inset 内阴影：画在盒子内部，不会被祖先的 overflow:hidden 裁切，
-	   也不必为了容纳外扩光晕而调整容器内边距（那会破坏与其他字段的左缘对齐）。 */
-	.secret-input:focus {
-		outline: none;
-		background: var(--page-bg);
-		border-color: color-mix(in oklab, var(--primary) 60%, transparent);
-		box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 55%, transparent);
-	}
-
-	.secret-input::placeholder {
-		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
-	}
-
-	.secret-input:disabled {
-		opacity: 0.55;
-		cursor: not-allowed;
-	}
-
-	/* 密码输入右侧留出按钮位：对齐参考页 .settings-secret-input input 的 40px */
-	.input-wrap .secret-input {
+	/* 只有真正带显隐按钮的密码框才需要右侧留位。
+	   .input-wrap 包裹了所有输入框，若用后代选择器会让普通输入框也
+	   平白多出 40px 右内边距（光标区与文字缩进异常）。 */
+	.input-wrap:has(.input-toggle) .secret-input {
 		padding-right: 2.5rem;
 	}
 
