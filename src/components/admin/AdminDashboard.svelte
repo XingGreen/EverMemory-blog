@@ -179,8 +179,6 @@ function toggleTheme() {
 	isDark = next === "dark";
 }
 // 侧边栏状态
-// 子菜单默认收起：展开态全量配置项会把导航区撑出滚动条，需要时再点「网站配置」展开
-let settingsSubOpen = $state(false); // 网站配置子菜单是否展开
 let isSidebarOpen = $state(false); // 移动端侧边栏抽屉是否打开
 let sidebarCollapsed = $state(false); // 桌面端侧边栏是否折叠（仅图标模式）
 
@@ -189,35 +187,10 @@ if (typeof window !== "undefined") {
 	if (savedCollapsed === "true") sidebarCollapsed = true;
 }
 
-// 折叠/展开侧边栏：折叠时自动收起所有子菜单，仅保留图标，悬停图标滑出二级菜单
+// 折叠/展开侧边栏：折叠时仅保留图标
 function toggleCollapseSidebar() {
 	sidebarCollapsed = !sidebarCollapsed;
-	if (sidebarCollapsed) {
-		settingsSubOpen = false;
-	}
 	localStorage.setItem("admin-sidebar-collapsed", String(sidebarCollapsed));
-}
-
-// 折叠态点击带二级菜单的项：钉住悬浮浮层（flyout-pinned）。
-// 钉住后浮层不再依赖 hover，鼠标移出也保持显示，直到用户点击页面
-// 空白处（onWindowClick）或从浮层内选择了配置项才解除。
-let flyoutPinned = $state(false);
-
-function handleSettingsHeadClick() {
-	if (sidebarCollapsed) {
-		flyoutPinned = !flyoutPinned;
-		return;
-	}
-	toggleSettingsSubmenu();
-}
-
-// 钉住状态下点击空白处解除：浮层内（按钮/面板）的点击不处理，
-// 避免选择路径上的点击误关闭面板
-function onWindowClick(e: MouseEvent) {
-	if (!flyoutPinned) return;
-	const target = e.target as Element | null;
-	if (target?.closest(".settings-flyout-wrap")) return;
-	flyoutPinned = false;
 }
 
 const activePage = $derived<Page>(
@@ -237,6 +210,34 @@ const viewMode = $derived<ViewMode>(
 const settingsSection = $derived(
 	route.page === "settings" ? route.section : undefined,
 );
+
+/**
+ * 设置页当前 tab：概览（无 section）或某个分组。
+ *
+ * 配置项（如 site / wallpaper）本身不是 tab，而是归属到某个分组；
+ * 从概览卡片点进具体配置项时，对应分组的 tab 高亮。
+ */
+const settingsTab = $derived.by(() => {
+	if (route.page !== "settings") return null;
+	if (!route.section) return "overview";
+	return getConfigGroup(route.section);
+});
+
+/** 设置页 tab 列表：概览 + 5 个分组 */
+const settingsTabs = $derived([
+	{ id: "overview" as const, labelKey: I18nKey.adminSettingsOverview },
+	...CONFIG_GROUPS.map((g) => ({ id: g.id, labelKey: g.labelKey })),
+]);
+
+/** 切到某个 tab：概览走 settings/，分组走该组第一个配置项 */
+function goSettingsTab(tabId: string) {
+	if (tabId === "overview") {
+		goSettings();
+		return;
+	}
+	const first = CONFIG_ITEMS.find((item) => getConfigGroup(item.key) === tabId);
+	if (first) goSettings(first.key);
+}
 
 const stats = $derived({
 	total: posts.length,
@@ -752,8 +753,6 @@ function goDashboard() {
 }
 
 function goSettings(section?: string) {
-	// 从折叠态浮层选择配置项后解除钉住
-	flyoutPinned = false;
 	navigate(
 		section
 			? `${DASHBOARD_PATH}settings/${section}/`
@@ -763,12 +762,6 @@ function goSettings(section?: string) {
 
 function goUser() {
 	navigate(`${DASHBOARD_PATH}user/`);
-}
-
-function toggleSettingsSubmenu() {
-	// 折叠态下组头仅作为 hover 滑出触发点，不允许内联展开
-	if (sidebarCollapsed) return;
-	settingsSubOpen = !settingsSubOpen;
 }
 
 function goPostList() {
@@ -1222,8 +1215,6 @@ function formatDate(dateStr: string | null): string {
 	</div>
 {/snippet}
 
-<svelte:window onclick={onWindowClick} />
-
 {#if !isVerified}
 	<div class="login-loading"></div>
 {:else}
@@ -1296,65 +1287,20 @@ function formatDate(dateStr: string | null): string {
 					<span>{i18n(I18nKey.adminPosts)}</span>
 				</button>
 
-				<!-- 网站配置：展开态点击切换子菜单；折叠态悬停图标 → 右侧浮层预览配置列表 -->
-				<div class="settings-flyout-wrap" class:open={settingsSubOpen} class:flyout-pinned={flyoutPinned}>
-					<button
-						class="nav-item nav-group-head"
-						class:group-active={activePage === "settings"}
-						class:flyout-pinned={flyoutPinned}
-						onclick={handleSettingsHeadClick}
-						aria-expanded={settingsSubOpen}
-					>
-{#if activePage === "settings"}
+				<!-- 网站配置：单一入口，不再展开子菜单——
+				     具体配置项改由设置页内的 tab + 概览卡片导航 -->
+				<button
+					class="nav-item"
+					class:active={activePage === "settings"}
+					onclick={() => goSettings()}
+				>
+					{#if activePage === "settings"}
 						<Icon icon="material-symbols:settings" />
 					{:else}
 						<Icon icon="material-symbols:settings-outline" />
 					{/if}
 					<span>{i18n(I18nKey.adminSettings)}</span>
-						{#if !sidebarCollapsed}
-							<Icon
-								icon={settingsSubOpen ? "material-symbols:keyboard-arrow-up-rounded" : "material-symbols:keyboard-arrow-down-rounded"}
-								class="nav-arrow"
-							/>
-						{/if}
-					</button>
-					<div class="flyout-panel" aria-hidden={!sidebarCollapsed}>
-						<div class="nav-submenu">
-							<button
-								class="nav-item sub"
-								class:active={activePage === "settings" && !settingsSection}
-								onclick={() => goSettings()}
-							>
-								{#if activePage === "settings" && !settingsSection}
-									<Icon icon="material-symbols:extension-rounded" />
-								{:else}
-									<Icon icon="material-symbols:extension-outline" />
-								{/if}
-								<span>{i18n(I18nKey.adminSettingsOverview)}</span>
-							</button>
-							{#each CONFIG_GROUPS as group}
-							{@const groupItems = CONFIG_ITEMS.filter(
-								(item) => getConfigGroup(item.key) === group.id,
-							)}
-							{#if groupItems.length > 0}
-								<div class="nav-group-label">{i18n(group.labelKey)}</div>
-								{#each groupItems as item (item.key)}
-									{@const itemActive =
-										activePage === "settings" && settingsSection === item.key}
-									<button
-										class="nav-item sub"
-										class:active={itemActive}
-										onclick={() => goSettings(item.key)}
-									>
-										<Icon icon={itemActive ? item.icon : item.iconOutline} />
-										<span>{i18n(getConfigLabelKey(item.key))}</span>
-									</button>
-								{/each}
-							{/if}
-						{/each}
-						</div>
-					</div>
-				</div>
+				</button>
 
 				<!-- 环境变量（原用户中心）：从侧栏导航进入，不再由底部用户卡片进入 -->
 				<button
@@ -1469,6 +1415,21 @@ function formatDate(dateStr: string | null): string {
 						/>
 					{/if}
 				{:else if activePage === "settings"}
+					<!-- 页内 tab 导航（对齐参考 settings-tabs）：概览 + 5 个配置分组，
+					     替换原侧栏子菜单；标题区与内容随 tab 切换 -->
+					<nav class="settings-tabs" aria-label={i18n(I18nKey.adminSettings)}>
+						{#each settingsTabs as tab (tab.id)}
+							<button
+								type="button"
+								class="settings-tab"
+								class:active={settingsTab === tab.id}
+								aria-current={settingsTab === tab.id ? "page" : undefined}
+								onclick={() => goSettingsTab(tab.id)}
+							>
+								{i18n(tab.labelKey)}
+							</button>
+						{/each}
+					</nav>
 					{#if settingsSection}
 						{#if getConfigItem(settingsSection)}
 							{#if settingsRemote}
@@ -1893,99 +1854,19 @@ function formatDate(dateStr: string | null): string {
 		font-weight: 600;
 	}
 
-	/* 有子菜单的父级项：子项选中时仅文字高亮，不涂背景。
-	   父级点击是展开/收起子菜单而非导航，若同样涂背景会与真正选中的子项混淆。 */
-	.nav-group-head.group-active {
-		background: transparent;
-		color: var(--title-active);
-		font-weight: 600;
-	}
-
 	.nav-arrow {
 		margin-left: auto;
 		flex-shrink: 0;
 	}
 
-	/* ── 网站配置：展开态内联二级菜单；折叠态右侧悬浮浮层（旧版 flyout 写法）── */
-	.settings-flyout-wrap {
-		position: relative;
-	}
-
-	/* 浮层面板默认隐藏，仅折叠态由 :hover/:focus-within 触发显示 */
-	.flyout-panel {
-		display: none;
-	}
-
-	/* 展开态：子菜单用 grid 行高动画展开收起 */
-	.settings-flyout-wrap > .flyout-panel {
-		display: grid;
-		grid-template-rows: 0fr;
-		transition: grid-template-rows 0.32s cubic-bezier(0.4, 0, 0.2, 1);
-	}
-
-	.settings-flyout-wrap.open > .flyout-panel {
-		grid-template-rows: 1fr;
-	}
-
-	.settings-flyout-wrap > .flyout-panel .nav-submenu {
-		overflow: hidden;
-		min-height: 0;
-	}
-
-	.nav-submenu {
-		display: flex;
-		flex-direction: column;
-		gap: 0.375rem;
-		margin-left: 1.25rem;
-		padding-left: 0.875rem;
-		/* 缩进结构线（内容分隔），非容器轮廓；低对比度变量色 */
-		border-left: 2px solid var(--line-color);
-	}
-
-	/* 配置分组小标题（侧边栏"网站配置"二级菜单）
-	   中文正文不靠加粗制造层级，改用字号 + 极低对比度灰色区分 */
-	.nav-group-label {
-		margin-top: 0.5rem;
-		margin-bottom: 0.25rem;
-		padding: 0.25rem 0.875rem 0.125rem;
-		font-size: 0.75rem;
-		font-weight: 500;
-		letter-spacing: 0.04em;
-		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
-	}
-
-	.nav-group-label:first-child {
-		margin-top: 0;
-	}
-
-	.nav-item.sub {
-		/* 二级项无图标列约束，上下 0.625rem：文字 20px + 20px = 40px 行高 */
-		padding: 0.625rem 0.875rem;
-		/* 二级项无箭头，可用宽度更充裕（108px），文字可安全放大到 14px */
-		font-size: 0.875rem;
-		color: var(--content-meta);
-		border-radius: var(--radius-xl);
-	}
-
-	.nav-item.sub.active {
-		/* 二级菜单高亮：与一级同一套主色体系，只是浓度更低 */
-		background: color-mix(in oklab, var(--primary) 10%, transparent);
-		color: var(--primary);
-	}
-
 	/* 悬停/选中统一走 --primary 混色，只改浓度：
-	   悬停 8% < 二级选中 10% < 一级选中 18% < 选中悬停 26%，
+	   悬停 8% < 一级选中 18% < 选中悬停 26%，
 	   整条梯度单调递增，不会出现「悬停比选中更重」或中性灰与主色混杂。 */
 	.nav-item.active:hover {
 		background: color-mix(in oklab, var(--primary) 26%, transparent);
 	}
 
-	.nav-item.sub.active:hover {
-		background: color-mix(in oklab, var(--primary) 16%, transparent);
-	}
-
-	.nav-item:hover:not(.active),
-	.nav-group-head:hover:not(.group-active) {
+	.nav-item:hover:not(.active) {
 		background: color-mix(in oklab, var(--primary) 8%, transparent);
 	}
 
@@ -2139,122 +2020,6 @@ function formatDate(dateStr: string | null): string {
 			pointer-events: none;
 		}
 
-		/* 浮层内的配置项必须保留文字（折叠态下承担预览职责），
-		   同时把前面去掉的内边距与间距还回来 */
-		.admin-sidebar.collapsed .flyout-panel .nav-item {
-			justify-content: flex-start;
-			gap: 0.625rem;
-			padding-inline: 0.875rem;
-		}
-
-		.admin-sidebar.collapsed .flyout-panel .nav-item > span:not(.nav-arrow) {
-			opacity: 1;
-			max-width: none;
-			overflow: visible;
-			white-space: normal;
-			transform: none;
-			pointer-events: auto;
-		}
-
-		/* 折叠态「网站配置」悬停浮层：右侧滑出配置列表，侧边栏保持折叠。
-		   显示由 :hover/:focus-within/:flyout-pinned 驱动；关闭带 0.25s 延迟
-		   与 0.15s 淡出（visibility 延迟切换、opacity 过渡）。滑过 16px 间隙
-		   主要靠下方的安全三角桥兜底，延迟只是二道保险，纯 CSS 实现，无 JS。 */
-		.admin-sidebar.collapsed .flyout-panel {
-			display: flex;
-			flex-direction: column;
-			gap: 0.375rem;
-			position: absolute;
-			top: 0;
-			/* 与侧边栏右缘留 1rem 间隔（0.5rem + 追加 0.5rem），避免面板贴着栏身而难以分辨归属 */
-			left: calc(100% + 1rem);
-			width: 14rem;
-			max-height: calc(100vh - 8rem);
-			overflow-y: auto;
-			padding: 0.5rem;
-			/* 与侧栏同材质：卡片底 + 毛玻璃，靠明暗和模糊区分层级，不用实线边框 */
-			background: color-mix(in oklab, var(--float-panel-bg) 92%, transparent);
-			-webkit-backdrop-filter: blur(12px);
-			backdrop-filter: blur(12px);
-			border: 1px solid transparent;
-			border-radius: var(--radius-large);
-			box-shadow: var(--shadow-card-hover);
-			z-index: 40;
-			opacity: 0;
-			visibility: hidden;
-			pointer-events: none;
-			transition:
-				opacity 0.15s ease,
-				visibility 0s linear 0.25s;
-		}
-
-		/* 图标与面板之间的判断区域缓冲带：挂在 wrap 的 ::after 上。
-		   不能挂面板 ::before——面板自身 overflow-y:auto 会把位于边界
-		   外的伪元素（即整个间隙）裁掉，间隙从未真正可命中。
-		   wrap 无溢出裁剪：矩形通道从按钮右缘（left:100%）向右延伸
-		   2rem，覆盖 1rem 间隙并深入面板左缘，鼠标沿任意高度移向
-		   面板都落在带内，悬停不中断 */
-		.admin-sidebar.collapsed .settings-flyout-wrap::after {
-			content: "";
-			position: absolute;
-			top: -1rem;
-			bottom: -1rem;
-			left: 100%;
-			width: 2rem;
-		}
-
-		.admin-sidebar.collapsed .settings-flyout-wrap:hover > .flyout-panel,
-		.admin-sidebar.collapsed .settings-flyout-wrap:focus-within > .flyout-panel,
-		.admin-sidebar.collapsed .settings-flyout-wrap.flyout-pinned > .flyout-panel {
-			visibility: visible;
-			opacity: 1;
-			pointer-events: auto;
-			/* 显示即时（跳过隐藏态的 visibility 延迟），opacity 过渡不变 */
-			transition:
-				opacity 0.15s ease,
-				visibility 0s;
-		}
-
-		/* 折叠态图标悬停反馈：与展开态同一条主色梯度，只改浓度。
-		   展开态的基础条目不覆盖带 group-active 的设置头按钮
-		   （:not(.group-active) 排除了它），折叠态统一补上。 */
-		.admin-sidebar.collapsed .sidebar-nav > .nav-item:hover,
-		.admin-sidebar.collapsed .sidebar-footer > .nav-item:hover {
-			background: color-mix(in oklab, var(--primary) 8%, transparent);
-		}
-
-		/* 「网站配置」头按钮的常驻反馈：鼠标进入 wrap（按钮本身、
-		   悬浮面板驻留）或钉住状态时保持高亮。面板是 wrap 的直接子级，
-		   指针移到面板上时 wrap 仍处于 :hover，按钮底色不中断，
-		   用户可沿面板反查当前选中的子项属于哪个图标。 */
-		.admin-sidebar.collapsed .settings-flyout-wrap:hover > .nav-item,
-		.admin-sidebar.collapsed .settings-flyout-wrap:focus-within > .nav-item {
-			background: color-mix(in oklab, var(--primary) 8%, transparent);
-		}
-
-		/* 钉住状态：头按钮保持高亮，提示当前已固定 */
-		.admin-sidebar.collapsed .settings-flyout-wrap.flyout-pinned > .nav-item {
-			background: color-mix(in oklab, var(--primary) 12%, transparent);
-		}
-
-		.admin-sidebar.collapsed .flyout-panel .nav-item {
-			width: 100%;
-			flex-shrink: 0;
-			justify-content: flex-start;
-		}
-
-		/* 浮层内的展开态缩进/左线只属于内联形态，折叠浮层中还原顶格 */
-		.admin-sidebar.collapsed .flyout-panel .nav-submenu {
-			margin-left: 0;
-			padding-left: 0;
-			border-left: none;
-			overflow: visible;
-		}
-
-		.admin-sidebar.collapsed .flyout-panel .nav-group-label {
-			padding-left: 0.875rem;
-		}
-
 		/* 折叠态品牌区/导航项/用户卡片不再覆盖任何 padding：
 		   上下留白必须与展开态一致，否则收起时每行高度突变，侧栏内容会抽动。
 		   折叠只影响宽度与文字可见性。 */
@@ -2263,12 +2028,6 @@ function formatDate(dateStr: string | null): string {
 			display: none;
 		}
 
-		/* 释放溢出裁剪：sidebar-nav 默认 overflow-y:auto 会把 overflow-x 强制成 auto，
-		   折叠态悬停浮层（absolute 定位于 wrap 右侧）会被滚动容器裁掉。
-		   折叠态仅 5 个图标项，高度远小于视口，滚动需求为零，恢复 visible 让浮层可溢出 */
-		.admin-sidebar.collapsed .sidebar-nav {
-			overflow: visible;
-		}
 	}
 
 	.sidebar-backdrop {
@@ -2360,6 +2119,52 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	/* 设置详情页头：标题 + 重新加载/保存 */
+	/* ── 设置页 tab 导航：对齐参考 .settings-tabs ──
+	   横排、底部 1px 分隔线、当前项主色下划线（2px）；
+	   窄屏横向滚动，不换行。 */
+	.settings-tabs {
+		display: flex;
+		gap: 1.75rem;
+		padding: 0 0.25rem;
+		border-bottom: 1px solid var(--line-divider);
+		overflow-x: auto;
+		flex-shrink: 0;
+		scrollbar-width: none;
+	}
+
+	.settings-tabs::-webkit-scrollbar {
+		display: none;
+	}
+
+	.settings-tab {
+		display: inline-flex;
+		align-items: center;
+		white-space: nowrap;
+		padding: 0.875rem 0.1875rem;
+		border: none;
+		border-bottom: 2px solid transparent;
+		background: transparent;
+		color: color-mix(in oklab, var(--deep-text) 75%, transparent);
+		font-size: 0.875rem;
+		font-family: inherit;
+		cursor: pointer;
+		transition: color 0.22s, border-color 0.22s;
+	}
+
+	.settings-tab:hover {
+		color: var(--deep-text);
+	}
+
+	.settings-tab.active {
+		border-bottom-color: var(--primary);
+		color: var(--primary);
+	}
+
+	.settings-tab:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 3px;
+	}
+
 	/* ── 设置详情页标题区：对齐参考 settings-heading ──
 	   纯文字、不套卡片：28px/650 标题 + fg-50 灰字简介。 */
 	.settings-heading {
