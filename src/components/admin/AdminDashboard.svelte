@@ -6,10 +6,8 @@ import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import { probeAdminService, runProbeWithStages } from "@/utils/admin-probe";
 import {
-	CONFIG_GROUPS,
 	CONFIG_ITEMS,
 	getConfigDescKey,
-	getConfigGroup,
 	getConfigItem,
 	getConfigLabelKey,
 } from "@/utils/admin-settings";
@@ -56,7 +54,7 @@ type Route =
 	| { page: "posts" }
 	| { page: "create" }
 	| { page: "edit"; slug: string }
-	| { page: "settings"; section?: string; group?: string }
+	| { page: "settings"; section?: string }
 	| { page: "user" };
 
 let {
@@ -211,37 +209,26 @@ const settingsSection = $derived(
 	route.page === "settings" ? route.section : undefined,
 );
 
-/** 当前 tab 处于分组列表模式时，这里是分组 id（/admin/settings/<group>/） */
-const settingsGroup = $derived(
-	route.page === "settings" ? route.group : undefined,
-);
-
-/** 分组列表模式下该组包含的配置项 */
-const settingsGroupItems = $derived(
-	settingsGroup
-		? CONFIG_ITEMS.filter((item) => getConfigGroup(item.key) === settingsGroup)
-		: [],
-);
-
 /**
- * 设置页当前 tab：概览（无 section/group）、分组列表（group）或配置项详情。
- * 配置项（如 site / wallpaper）本身不是 tab，而是归属到某个分组；
- * 从概览卡片点进具体配置项时，对应分组的 tab 高亮。
+ * 设置页当前 tab：概览（无 section）或具体配置项。
+ *
+ * 当前阶段所有配置项直接作为 tab 展示，暂不做分组归纳。
  */
 const settingsTab = $derived.by(() => {
 	if (route.page !== "settings") return null;
-	if (route.group) return route.group;
-	if (!route.section) return "overview";
-	return getConfigGroup(route.section);
+	return route.section ?? "overview";
 });
 
-/** 设置页 tab 列表：概览 + 5 个分组 */
+/** 设置页 tab 列表：概览 + 全部配置项（按 CONFIG_ITEMS 原顺序） */
 const settingsTabs = $derived([
-	{ id: "overview" as const, labelKey: I18nKey.adminSettingsOverview },
-	...CONFIG_GROUPS.map((g) => ({ id: g.id, labelKey: g.labelKey })),
+	{ id: "overview", labelKey: I18nKey.adminSettingsOverview },
+	...CONFIG_ITEMS.map((item) => ({
+		id: item.key,
+		labelKey: getConfigLabelKey(item.key),
+	})),
 ]);
 
-/** 切到某个 tab：概览走 settings/，分组走 /settings/<group>/ 显示组内列表 */
+/** 切到某个 tab：概览走 settings/，配置项走 /settings/<key>/ */
 function goSettingsTab(tabId: string) {
 	if (tabId === "overview") {
 		goSettings();
@@ -314,12 +301,12 @@ function parseRoute(pathname: string): Route {
 				return { page: "edit", slug: segments[2] };
 			return { page: "posts" };
 		case "settings": {
-			// 子段可以是配置项（详情页）或分组名（组内列表页），
-			// 都不认识时回落到配置概览
-			const seg = segments[1];
-			const section = seg && CONFIG_ITEMS.some((item) => item.key === seg) ? seg : undefined;
-			const group = seg && CONFIG_GROUPS.some((g) => g.id === seg) ? seg : undefined;
-			return { page: "settings", section, group };
+			// 仅接受已知配置项作为子页，否则回落到配置概览
+			const section =
+				segments[1] && CONFIG_ITEMS.some((item) => item.key === segments[1])
+					? segments[1]
+					: undefined;
+			return { page: "settings", section };
 		}
 		case "secrets":
 			// 兼容旧链接：密钥配置已并入用户中心
@@ -1498,63 +1485,6 @@ function formatDate(dateStr: string | null): string {
 						{:else}
 							{@render placeholder(i18n(I18nKey.adminSettings), i18n(I18nKey.configSectionUnknown), "material-symbols:settings")}
 						{/if}
-					{:else if settingsGroup}
-						<!-- 分组列表：该组全部配置项的卡片，沿用概览的卡片结构 -->
-						<div class="card-base settings-overview-head">
-							<h2 class="overview-title">
-								{i18n(CONFIG_GROUPS.find((g) => g.id === settingsGroup)?.labelKey ?? I18nKey.adminSettings)}
-							</h2>
-							<div class="ui-search search-box" class:focused={settingsSearchTerm.length > 0}>
-								<Icon icon="material-symbols:search" class="ui-search-icon" size="lg" />
-								<input
-									type="text"
-									bind:value={settingsSearchTerm}
-									placeholder="{i18n(I18nKey.search)}..."
-									class="ui-search-input"
-									aria-label={i18n(I18nKey.search)}
-								/>
-								{#if settingsSearchTerm}
-									<button class="ui-search-clear" onclick={() => (settingsSearchTerm = "")} aria-label="清除">
-										<Icon icon="material-symbols:close" size="sm" />
-									</button>
-								{/if}
-							</div>
-						</div>
-						<div class="settings-overview">
-							<section class="config-group">
-								<ul class="config-list" role="list">
-									{#each settingsGroupItems as item, index (item.key)}
-										<li class="config-item" style="--index: {index}">
-											<button
-												class="config-card"
-												type="button"
-												onclick={() => goSettings(item.key)}
-												aria-label="{i18n(getConfigLabelKey(item.key))} - {getConfigItem(item.key)?.file}"
-											>
-												<div class="card-body">
-													<div class="card-main">
-														<div class="config-icon">
-															<Icon icon={item.icon} size="xl" />
-														</div>
-														<div class="config-info">
-															<h3>{i18n(getConfigLabelKey(item.key))}</h3>
-															<p>{i18n(getConfigDescKey(item.key))}</p>
-														</div>
-														<div class="config-action">
-															<span class="edit-label">{i18n(I18nKey.postEdit)}</span>
-														</div>
-													</div>
-													<div class="config-file">
-														<Icon icon="material-symbols:article" size="xs" />
-														<code>{getConfigItem(item.key)?.file}</code>
-													</div>
-												</div>
-											</button>
-										</li>
-									{/each}
-								</ul>
-							</section>
-						</div>
 					{:else}
 						<div class="card-base settings-overview-head">
 							<h2 class="overview-title">{i18n(I18nKey.adminSettings)}</h2>
