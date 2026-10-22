@@ -461,6 +461,7 @@ export const ja: Translation = {
 	[Key.adminSettings]: "サイト設定",
 	[Key.adminSettingsOverview]: "設定の概要",
 	[Key.adminBackHome]: "ホームに戻る",
+	[Key.adminEnvVars]: "環境変数",
 	[Key.adminUserCenter]: "アカウント",
 	[Key.adminToggleTheme]: "テーマ切り替え",
 	[Key.adminCollapseSidebar]: "サイドバーを折りたたむ",

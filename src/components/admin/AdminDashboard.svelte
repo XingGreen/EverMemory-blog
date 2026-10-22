@@ -382,7 +382,7 @@ const headerTitle = $derived.by(() => {
 			? i18n(getConfigLabelKey(item.key))
 			: i18n(I18nKey.adminSettings);
 	}
-	if (activePage === "user") return i18n(I18nKey.adminUserCenter);
+	if (activePage === "user") return i18n(I18nKey.adminEnvVars);
 	if (viewMode === "edit" && editingPost) return i18n(I18nKey.adminEditPost);
 	if (viewMode === "create") return i18n(I18nKey.adminNewPost);
 	return i18n(I18nKey.adminPosts);
@@ -1356,18 +1356,25 @@ function formatDate(dateStr: string | null): string {
 					</div>
 				</div>
 
+				<!-- 环境变量（原用户中心）：从侧栏导航进入，不再由底部用户卡片进入 -->
+				<button
+					class="nav-item"
+					class:active={activePage === "user"}
+					onclick={goUser}
+				>
+					{#if activePage === "user"}
+						<Icon icon="material-symbols:shield-lock" />
+					{:else}
+						<Icon icon="material-symbols:shield-lock-outline" />
+					{/if}
+					<span>{i18n(I18nKey.adminEnvVars)}</span>
+				</button>
+
 			</nav>
 
 			<div class="sidebar-footer">
-				<!-- 用户中心入口：整块头像/用户名区域可点击 -->
-				<button
-					class="sidebar-user"
-					class:active={activePage === "user"}
-					type="button"
-					title={i18n(I18nKey.adminUserCenter)}
-					aria-label={i18n(I18nKey.adminUserCenter)}
-					onclick={goUser}
-				>
+				<!-- 当前管理员信息：纯展示，不可点击、无 hover 效果 -->
+				<div class="sidebar-user">
 					<span class="user-avatar">
 						{#if avatarUrl}
 							<img src={avatarUrl} alt="" class="user-avatar-img" />
@@ -1379,7 +1386,7 @@ function formatDate(dateStr: string | null): string {
 						<span class="user-name">{adminUsername || "admin"}</span>
 						<span class="user-role">{i18n(I18nKey.adminSidebarRole)}</span>
 					</div>
-				</button>
+				</div>
 				<!-- 返回前台首页 -->
 				<a class="nav-item" href="/">
 					<Icon icon="material-symbols:home-outline-rounded" />
@@ -1968,8 +1975,7 @@ function formatDate(dateStr: string | null): string {
 		background: color-mix(in oklab, var(--primary) 8%, transparent);
 	}
 
-	/* 底部用户中心入口：整块可点击（button 需重置浏览器默认样式）。
-	   静态无底色，只在悬停/选中时给一层极淡的主色微光，避免整块深色块。 */
+	/* 底部管理员信息：纯展示，不可点击、无 hover 与选中态 */
 	.sidebar-user {
 		display: flex;
 		align-items: center;
@@ -1982,29 +1988,8 @@ function formatDate(dateStr: string | null): string {
 		color: inherit;
 		font: inherit;
 		text-align: left;
-		cursor: pointer;
 		border-radius: var(--radius-xl);
 		margin-bottom: 0.25rem;
-		transition: background 0.2s ease, color 0.2s ease;
-	}
-
-	.sidebar-user:hover {
-		background: color-mix(in oklab, var(--primary) 8%, transparent);
-	}
-
-	.sidebar-user.active {
-		/* 选中比悬停更浓一档，与导航项梯度一致（8% 悬停 / 12% 选中） */
-		background: color-mix(in oklab, var(--primary) 12%, transparent);
-	}
-
-	.sidebar-user:hover .user-name,
-	.sidebar-user.active .user-name {
-		color: var(--primary);
-	}
-
-	.sidebar-user:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 2px;
 	}
 
 	/* ── 用户中心 ── */

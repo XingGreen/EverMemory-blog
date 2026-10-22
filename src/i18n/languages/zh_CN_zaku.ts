@@ -446,6 +446,7 @@ export const zaku: Translation = {
 	[Key.adminSettings]: "网站配置",
 	[Key.adminSettingsOverview]: "配置概览",
 	[Key.adminBackHome]: "返回首页",
+	[Key.adminEnvVars]: "环境变量",
 	[Key.adminUserCenter]: "用户中心",
 	[Key.adminToggleTheme]: "切换深浅模式",
 	[Key.adminCollapseSidebar]: "收起侧边栏",

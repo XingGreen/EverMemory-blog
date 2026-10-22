@@ -448,6 +448,7 @@ enum I18nKey {
 	adminLogout = "adminLogout",
 	adminBackHome = "adminBackHome",
 	adminUserCenter = "adminUserCenter",
+	adminEnvVars = "adminEnvVars",
 	adminToggleTheme = "adminToggleTheme",
 	adminCollapseSidebar = "adminCollapseSidebar",
 	adminExpandSidebar = "adminExpandSidebar",

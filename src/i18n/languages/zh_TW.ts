@@ -451,6 +451,7 @@ export const zh_TW: Translation = {
 	[Key.adminSettings]: "網站設定",
 	[Key.adminSettingsOverview]: "設定總覽",
 	[Key.adminBackHome]: "返回首頁",
+	[Key.adminEnvVars]: "環境變數",
 	[Key.adminUserCenter]: "使用者中心",
 	[Key.adminToggleTheme]: "切換深淺模式",
 	[Key.adminCollapseSidebar]: "收起側邊欄",
