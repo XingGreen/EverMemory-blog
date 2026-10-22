@@ -17,9 +17,7 @@ import OnboardingTour from "./OnboardingTour.svelte";
 import PostEditor from "./PostEditor.svelte";
 import PostList from "./PostList.svelte";
 import SecretManager from "./SecretManager.svelte";
-import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
-import SettingsOverview from "./SettingsOverview.svelte";
 
 type Post = {
 	id: string;
@@ -159,7 +157,6 @@ let settingsData = $state<Record<string, any> | string | null>(null);
 let settingsError = $state("");
 let settingsLoading = $state(false);
 let settingsSaving = $state(false);
-let settingsSearchTerm = $state("");
 // 配置文件的磁盘原文（源码模式用）；settingsMode 记录当前编辑模式
 let settingsSource = $state("");
 let settingsMode = $state<"form" | "source">("form");
@@ -210,30 +207,27 @@ const settingsSection = $derived(
 );
 
 /**
- * 设置页当前 tab：概览（无 section）或具体配置项。
+ * 设置页当前 tab：直接对应具体配置项。
  *
- * 当前阶段所有配置项直接作为 tab 展示，暂不做分组归纳。
+ * 没有「配置概览」这一层——/admin/settings/ 会重定向到第一个配置项，
+ * 概览页已移除（它会让 admin-content 走无 workspace 容器的分支，
+ * 高度计算异常，影响整体布局）。
  */
 const settingsTab = $derived.by(() => {
 	if (route.page !== "settings") return null;
-	return route.section ?? "overview";
+	return route.section ?? CONFIG_ITEMS[0]?.key ?? null;
 });
 
-/** 设置页 tab 列表：概览 + 全部配置项（按 CONFIG_ITEMS 原顺序） */
-const settingsTabs = $derived([
-	{ id: "overview", labelKey: I18nKey.adminSettingsOverview },
-	...CONFIG_ITEMS.map((item) => ({
+/** 设置页 tab 列表：全部配置项（按 CONFIG_ITEMS 原顺序） */
+const settingsTabs = $derived(
+	CONFIG_ITEMS.map((item) => ({
 		id: item.key,
 		labelKey: getConfigLabelKey(item.key),
 	})),
-]);
+);
 
-/** 切到某个 tab：概览走 settings/，配置项走 /settings/<key>/ */
+/** 切到某个 tab：直接跳对应配置项详情页 */
 function goSettingsTab(tabId: string) {
-	if (tabId === "overview") {
-		goSettings();
-		return;
-	}
 	goSettings(tabId);
 }
 
@@ -306,7 +300,8 @@ function parseRoute(pathname: string): Route {
 				segments[1] && CONFIG_ITEMS.some((item) => item.key === segments[1])
 					? segments[1]
 					: undefined;
-			return { page: "settings", section };
+			// 概览页已移除：无 section（或未知 section）时落到第一个配置项
+			return { page: "settings", section: section ?? CONFIG_ITEMS[0]?.key };
 		}
 		case "secrets":
 			// 兼容旧链接：密钥配置已并入用户中心
@@ -329,6 +324,19 @@ function applyRoute() {
 	const next = parseRoute(window.location.pathname);
 	// 已登录用户落在未知路由时，回落到控制面板首页（保持地址不变）
 	route = next.page === "login" ? { page: "dashboard" } : next;
+	// 设置页已无概览层：/admin/settings/ 归一化到第一个配置项的真实地址，
+	// 避免地址栏与渲染内容不一致
+	if (
+		next.page === "settings" &&
+		next.section &&
+		!window.location.pathname.replace(/\/$/, "").endsWith(next.section)
+	) {
+		window.history.replaceState(
+			{},
+			"",
+			`${DASHBOARD_PATH}settings/${next.section}/`,
+		);
+	}
 }
 
 function startAdmin() {
@@ -1378,7 +1386,7 @@ function formatDate(dateStr: string | null): string {
 			<div
 			class="admin-content"
 			class:content-wide={activePage === "posts" && viewMode !== "list"}
-			class:content-fixed={activePage === "settings" && settingsSection}
+			class:content-fixed={activePage === "settings"}
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
 		>
 				{#if activePage === "dashboard"}
@@ -1483,37 +1491,8 @@ function formatDate(dateStr: string | null): string {
 								</div>
 							</footer>
 						</div>
-					{:else if settingsSection}
-						{@render placeholder(i18n(I18nKey.adminSettings), i18n(I18nKey.configSectionUnknown), "material-symbols:settings")}
 					{:else}
-						<!-- 概览页：参考项目此层不套 SettingsShell，直接渲染目录 -->
-						<div class="card-base settings-overview-head">
-							<h2 class="overview-title">{i18n(I18nKey.adminSettings)}</h2>
-							<div class="ui-search search-box" class:focused={settingsSearchTerm.length > 0}>
-								<Icon icon="material-symbols:search" class="ui-search-icon" size="lg" />
-								<input
-									type="text"
-									bind:value={settingsSearchTerm}
-									placeholder="{i18n(I18nKey.search)}..."
-									class="ui-search-input"
-									aria-label={i18n(I18nKey.search)}
-								/>
-								{#if settingsSearchTerm}
-									<button class="ui-search-clear" onclick={() => (settingsSearchTerm = "")} aria-label="清除">
-										<Icon icon="material-symbols:close" size="sm" />
-									</button>
-								{/if}
-							</div>
-						</div>
-						<SettingsOverview
-							onNavigate={(key) => goSettings(key)}
-							searchTerm={settingsSearchTerm}
-							onSearchChange={(value) => (settingsSearchTerm = value)}
-						/>
-						<div class="card-base settings-sessions">
-							<h2 class="overview-title">会话管理</h2>
-							<SessionManager onNotify={showToast} />
-						</div>
+						{@render placeholder(i18n(I18nKey.adminSettings), i18n(I18nKey.configSectionUnknown), "material-symbols:settings")}
 					{/if}
 {:else if activePage === "user"}
 				<div class="user-page">
@@ -2090,25 +2069,6 @@ function formatDate(dateStr: string | null): string {
 
 	.menu-toggle:hover {
 		background: var(--btn-regular-bg-hover);
-	}
-
-	/* 概览页头部：参考项目概览层不套 SettingsShell，此处保留自己的卡片 */
-	.settings-overview-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		flex-wrap: wrap;
-		padding: 1.5rem;
-	}
-
-	/* 区块标题：靠字号与上下间距区分层级，不加竖线 */
-	.overview-title {
-		margin: 0;
-		font-size: 1.125rem;
-		font-weight: 600;
-		letter-spacing: -0.01em;
-		color: var(--deep-text);
 	}
 
 	/* ── 设置工作区容器：对齐参考 .settings-workspace ──
