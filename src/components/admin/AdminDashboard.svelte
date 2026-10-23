@@ -912,8 +912,10 @@ function formatDate(dateStr: string | null): string {
 <!-- 后台 404：结构与 src/pages/404.astro 一致（大号 404 + 图标 + 标题 +
      描述 + 返回按钮 + 两枚角落装饰），改用后台路由（返回控制面板） -->
 {#snippet adminNotFound()}
-	<div class="relative flex w-full min-h-96 overflow-hidden rounded-(--radius-large)">
-		<div class="card-base notfound-card relative z-10 flex w-full flex-col items-center justify-center px-9 py-12 text-center">
+	<!-- 卡片宽高与内边距对齐参考项目 404：max-width 680、padding 48/32、
+	     外层 24 留白、块方向自动居中，不铺满整屏 -->
+	<div class="flex min-h-full w-full flex-col p-6">
+		<div class="card-base notfound-card relative z-10 my-auto flex w-full max-w-[680px] flex-col items-center justify-center px-8 py-12 text-center max-sm:px-6 max-sm:py-9">
 			<div class="mb-4 text-8xl font-bold text-(--primary) opacity-20 md:text-9xl">
 				{i18n(I18nKey.notFound)}
 			</div>
