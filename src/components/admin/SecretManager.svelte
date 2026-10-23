@@ -38,11 +38,20 @@ let exportOpen = $state(false);
 let exportBusy = $state(false);
 // 正在轮换的托管密钥 key（用于按钮 loading 态）
 let rotating = $state("");
-// 「凭据操作」折叠区的展开状态（按配置项 key 记录，默认收起）
-let disclosureOpen = $state<Record<string, boolean>>({});
+// 当前展开三点菜单的配置项 key（同一时刻只允许一个）
+let menuOpen = $state("");
 
-function toggleDisclosure(key: string) {
-	disclosureOpen[key] = disclosureOpen[key] !== true;
+/** 点击页面其他位置时收起三点菜单 */
+function closeMenuOnOutside(e: MouseEvent) {
+	if (!menuOpen) return;
+	const el = e.target as Element | null;
+	if (el?.closest(".field-menu-wrap")) return;
+	menuOpen = "";
+}
+
+/** Esc 收起三点菜单 */
+function closeMenuOnEsc(e: KeyboardEvent) {
+	if (e.key === "Escape" && menuOpen) menuOpen = "";
 }
 
 /**
@@ -342,7 +351,11 @@ async function rotate(item: SecretItemDTO) {
 onMount(load);
 </script>
 
-<svelte:window onbeforeunload={onBeforeUnload} />
+<svelte:window
+	onbeforeunload={onBeforeUnload}
+	onclick={closeMenuOnOutside}
+	onkeydown={closeMenuOnEsc}
+/>
 
 <div class="secrets-page">
 	{#if loadError}
@@ -436,16 +449,97 @@ onMount(load);
 								class:dirty={isDirty(item)}
 								class:span-full={item.span === 12}
 							>
-								<span class="field-label">
-									{#if item.sensitive}
-										<Icon icon="material-symbols:lock-outline" class="lock-icon" />
+								<div class="field-label-row">
+									<span class="field-label">
+										{#if item.sensitive}
+											<Icon icon="material-symbols:lock-outline" class="lock-icon" />
+										{/if}
+										<span>{item.label}</span>
+										{#if item.required}<span class="req-star">*</span>{/if}
+										{#if !item.configured && !item.managed}
+											<span class="summary-warn">{i18n(I18nKey.secretsNotConfigured)}</span>
+										{/if}
+									</span>
+
+									{#if !item.managed && writable}
+										<div class="field-menu-wrap">
+											<button
+												type="button"
+												class="field-menu-trigger"
+												aria-haspopup="menu"
+												aria-expanded={menuOpen === item.key}
+												aria-label={i18n(I18nKey.secretsFieldMenu)}
+												onclick={(e) => {
+													e.stopPropagation();
+													menuOpen = menuOpen === item.key ? "" : item.key;
+												}}
+											>
+												<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+													<circle cx="12" cy="5" r="1.8"></circle>
+													<circle cx="12" cy="12" r="1.8"></circle>
+													<circle cx="12" cy="19" r="1.8"></circle>
+												</svg>
+											</button>
+
+											{#if menuOpen === item.key}
+												<div class="field-menu" role="menu">
+													<button
+														type="button"
+														role="menuitem"
+														class="field-menu-item"
+														onclick={() => {
+															navigator.clipboard?.writeText(item.key);
+															menuOpen = "";
+															onNotify?.(i18n(I18nKey.secretsMenuCopied), "success", 2500);
+														}}
+													>
+														{i18n(I18nKey.secretsMenuCopyKey)}
+													</button>
+													{#if item.sensitive && drafts[item.key]}
+														<button
+															type="button"
+															role="menuitem"
+															class="field-menu-item"
+															onclick={() => {
+																toggleReveal(item);
+																menuOpen = "";
+															}}
+														>
+															{showInput[item.key]
+																? i18n(I18nKey.secretsHide)
+																: i18n(I18nKey.secretsShow)}
+														</button>
+													{/if}
+													{#if item.kind === "multiline" && drafts[item.key]}
+														<button
+															type="button"
+															role="menuitem"
+															class="field-menu-item danger"
+															onclick={() => {
+																clearPem(item);
+																menuOpen = "";
+															}}
+														>
+															{i18n(I18nKey.secretsMenuRemoveKeyFile)}
+														</button>
+													{:else if drafts[item.key]}
+														<button
+															type="button"
+															role="menuitem"
+															class="field-menu-item danger"
+															onclick={() => {
+																drafts[item.key] = "";
+																menuOpen = "";
+															}}
+														>
+															{i18n(I18nKey.secretsMenuClearValue)}
+														</button>
+													{/if}
+												</div>
+											{/if}
+										</div>
 									{/if}
-									<span>{item.label}</span>
-									{#if item.required}<span class="req-star">*</span>{/if}
-									{#if !item.configured && !item.managed}
-										<span class="summary-warn">{i18n(I18nKey.secretsNotConfigured)}</span>
-									{/if}
-								</span>
+								</div>
 
 								<p class="field-note">{item.description}</p>
 
@@ -483,11 +577,24 @@ onMount(load);
 									</div>
 								{:else if item.kind === "multiline"}
 									{#if drafts[item.key]}
+										<!-- 已上传：展示当前文件名，并保留「替换」入口，
+										     避免上传后无法再换文件 -->
 										<div class="uploaded-card">
 											<span class="uploaded-name"
 												>{uploadNames[item.key] ?? i18n(I18nKey.secretsUploadedDefaultName)}</span
 											>
 											<span class="uploaded-note">{i18n(I18nKey.secretsUploadedNote)}</span>
+											<label class="uploaded-replace">
+												<input
+													type="file"
+													class="upload-input"
+													accept=".pem,.key"
+													disabled={!writable || loading}
+													aria-label={i18n(I18nKey.secretsUploadReplace)}
+													onchange={(e) => readPemFile(e, item)}
+												/>
+												<span>{i18n(I18nKey.secretsUploadReplace)}</span>
+											</label>
 										</div>
 									{:else}
 										<div class="upload-zone">
@@ -565,48 +672,6 @@ onMount(load);
 							</div>
 						{/each}
 					</div>
-
-					<!-- 凭据操作：位于网格之外、分组末尾（与演示稿一致），
-					     收集该组内所有已上传私钥的移除入口 -->
-					{#if group.items.some((it) => it.kind === "multiline" && drafts[it.key])}
-						<div class="settings-disclosure">
-							<button
-								type="button"
-								class="settings-disclosure-trigger"
-								aria-expanded={disclosureOpen[group.id] === true}
-								aria-controls={"cred-" + group.id}
-								onclick={() => toggleDisclosure(group.id)}
-							>
-								<span>{i18n(I18nKey.secretsCredentialActions)}</span>
-								<Icon
-									icon={disclosureOpen[group.id]
-										? "material-symbols:keyboard-arrow-up-rounded"
-										: "material-symbols:keyboard-arrow-down-rounded"}
-								/>
-							</button>
-							<div
-								id={"cred-" + group.id}
-								class="settings-disclosure-content"
-								data-open={disclosureOpen[group.id] === true}
-							>
-								<div>
-									<div class="disclosure-inner">
-										{#each group.items as it (it.key)}
-											{#if it.kind === "multiline" && drafts[it.key]}
-												<button
-													type="button"
-													class="text-action"
-													onclick={() => clearPem(it)}
-												>
-													{i18n(I18nKey.secretsUploadRemove)}
-												</button>
-											{/if}
-										{/each}
-									</div>
-								</div>
-							</div>
-						</div>
-					{/if}
 				</section>
 			{/if}
 		{/each}
@@ -937,6 +1002,41 @@ onMount(load);
 		outline-offset: 2px;
 	}
 
+	/* ── 托管密钥状态行（JWT 等）──
+	   与输入框同高、同圆角，带 success 语义底色与边框，
+	   让「已由服务端托管」的状态在表单里仍是一个可见的控件位。 */
+	.managed-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+		min-height: 2.625rem;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid color-mix(in oklab, var(--success) 30%, transparent);
+		border-radius: var(--radius-xl);
+		background: color-mix(in oklab, var(--success) 10%, transparent);
+		font-size: 0.8125rem;
+		color: color-mix(in oklab, var(--success) 55%, var(--deep-text));
+	}
+
+	.managed-state {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-width: 0;
+	}
+
+	.managed-state :global(.managed-ok) {
+		color: var(--success);
+		flex-shrink: 0;
+	}
+
+	.managed-state :global(.managed-warn) {
+		color: var(--warning);
+		flex-shrink: 0;
+	}
+
 	/* 小号按钮：设计稿里 status-pill 内的「轮换」为 4px 12px / 12px 字 */
 	.btn.btn-sm {
 		padding: 0.25rem 0.75rem;
@@ -1206,6 +1306,35 @@ onMount(load);
 		background: color-mix(in oklab, var(--content-meta) 8%, var(--card-bg));
 	}
 
+	/* 替换按钮：已上传状态下重新选文件。
+	   必须自带 position:relative —— 内部的 file input 是绝对定位，
+	   若没有定位祖先，它会相对整个页面铺开，导致全屏都成了点击区。 */
+	.uploaded-replace {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		flex-shrink: 0;
+		margin-left: auto;
+		padding: 0.25rem 0.75rem;
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-xl);
+		color: var(--primary);
+		font-size: 0.75rem;
+		cursor: pointer;
+		transition: background 0.2s ease, border-color 0.2s ease;
+	}
+
+	.uploaded-replace:hover {
+		background: color-mix(in oklab, var(--primary) 10%, transparent);
+		border-color: color-mix(in oklab, var(--primary) 35%, transparent);
+	}
+
+	/* 替换按钮内的 input 只覆盖按钮自身区域 */
+	.uploaded-replace .upload-input {
+		inset: 0;
+	}
+
 	.uploaded-name {
 		font-size: 0.875rem;
 		font-weight: 500;
@@ -1221,57 +1350,97 @@ onMount(load);
 		flex-shrink: 0;
 	}
 
-	/* ── 凭据操作折叠区（对齐参考项目 .settings-disclosure）──
-	   位于字段网格之外、分组末尾，低频且破坏性的操作收在此处。
-	   展开动画走 grid-template-rows 0fr→1fr，不需要 JS 计算高度。 */
-	.settings-disclosure {
-		border-top: 1px solid var(--line-divider);
-		margin-top: 1.25rem;
-	}
-
-	.settings-disclosure-trigger {
+	/* ── 字段标签行 + 三点菜单 ──
+	   菜单承载低频操作（复制变量名、显隐、清空/移除文件），
+	   替代原先分组末尾的「凭据操作」折叠区。 */
+	.field-label-row {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.625rem;
-		width: 100%;
-		padding: 0.75rem 0;
-		border: none;
-		background: none;
-		color: var(--content-meta);
-		font-size: 0.8125rem;
-		font-family: inherit;
-		cursor: pointer;
-		text-align: left;
-		transition: color 0.2s ease;
+		gap: 0.5rem;
+		min-width: 0;
 	}
 
-	.settings-disclosure-trigger:hover {
-		color: var(--deep-text);
-	}
-
-	.settings-disclosure-trigger :global(.inline-icon) {
-		font-size: 1rem;
+	.field-menu-wrap {
+		position: relative;
 		flex-shrink: 0;
 	}
 
-	.settings-disclosure-content {
-		display: grid;
-		grid-template-rows: 0fr;
-		transition: grid-template-rows 0.24s ease;
+	.field-menu-trigger {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.5rem;
+		height: 1.5rem;
+		padding: 0;
+		border: none;
+		border-radius: var(--radius-md);
+		background: transparent;
+		color: var(--content-meta);
+		cursor: pointer;
+		opacity: 0.6;
+		transition: opacity 0.15s ease, background 0.15s ease;
 	}
 
-	.settings-disclosure-content[data-open="true"] {
-		grid-template-rows: 1fr;
+	.field-menu-trigger svg {
+		width: 1rem;
+		height: 1rem;
 	}
 
-	.settings-disclosure-content > div {
-		overflow: hidden;
-		min-height: 0;
+	.field-menu-trigger:hover,
+	.field-menu-trigger[aria-expanded="true"] {
+		opacity: 1;
+		background: var(--btn-plain-bg-hover);
+		color: var(--deep-text);
 	}
 
-	.disclosure-inner {
-		padding-bottom: 0.25rem;
+	.field-menu-trigger:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	.field-menu {
+		position: absolute;
+		top: calc(100% + 0.25rem);
+		right: 0;
+		z-index: 40;
+		display: flex;
+		flex-direction: column;
+		min-width: 11rem;
+		padding: 0.25rem;
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-xl);
+		background: var(--float-panel-bg);
+		box-shadow: var(--shadow-card-hover);
+	}
+
+	.field-menu-item {
+		display: flex;
+		align-items: center;
+		width: 100%;
+		padding: 0.5rem 0.625rem;
+		border: none;
+		border-radius: var(--radius-md);
+		background: transparent;
+		color: var(--deep-text);
+		font-size: 0.8125rem;
+		font-family: inherit;
+		text-align: left;
+		cursor: pointer;
+		white-space: nowrap;
+		transition: background 0.15s ease;
+	}
+
+	.field-menu-item:hover {
+		background: var(--btn-plain-bg-hover);
+	}
+
+	.field-menu-item.danger {
+		color: var(--destructive);
+	}
+
+	.field-menu-item.danger:hover {
+		background: color-mix(in oklab, var(--destructive) 10%, transparent);
 	}
 
 	/* 输入框：可见边框（WCAG 1.4.11 要求界面组件边界对相邻背景 ≥ 3:1）。
@@ -1339,6 +1508,17 @@ onMount(load);
 		line-height: 1.5;
 	}
 
+	/* 输入框容器：为眼睛按钮提供定位基准。
+	   缺少 position:relative 时，绝对定位的按钮会跑到最近的定位祖先
+	   （页面容器右上角），这是按钮错位的根因。 */
+	.input-wrap {
+		position: relative;
+		display: flex;
+		align-items: center;
+		width: 100%;
+		min-width: 0;
+	}
+
 	/* 只有真正带显隐按钮的密码框才需要右侧留位。
 	   .input-wrap 包裹了所有输入框，若用后代选择器会让普通输入框也
 	   平白多出 40px 右内边距（光标区与文字缩进异常）。 */
@@ -1347,12 +1527,13 @@ onMount(load);
 	}
 
 	/* 密码显隐按钮：对齐参考页 .settings-secret-input > button
-	   （32x32 绝对定位 right:4px / top:4px）。
+	   （32x32，水平靠右、垂直居中于输入框）。
 	   默认低透明度，不抢输入内容的注意力，悬停才提亮。 */
 	.input-toggle {
 		position: absolute;
 		right: 0.25rem;
-		top: 0.25rem;
+		top: 50%;
+		transform: translateY(-50%);
 		width: 2rem;
 		height: 2rem;
 		display: flex;
