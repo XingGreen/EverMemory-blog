@@ -622,7 +622,7 @@ onMount(load);
 														uploadNames[item.key],
 													)}
 												{:else if drafts[item.key]}
-													{i18n(I18nKey.secretsUploadedNote)}
+													{i18n(I18nKey.secretsUploadedConfigured)}
 												{:else}
 													{i18n(I18nKey.secretsUploadFormats)}
 												{/if}
