@@ -245,8 +245,6 @@ export const en: Translation = {
 	[Key.notFoundDescription]:
 		"Sorry, the page you visited does not exist or has been moved.",
 	[Key.backToHome]: "Back to Home",
-	[Key.adminNotFoundDescription]: "This admin page does not exist. Please check the URL.",
-	[Key.errorBackDashboard]: "Back to dashboard",
 
 	// RSS Page
 	[Key.rss]: "RSS Feed",

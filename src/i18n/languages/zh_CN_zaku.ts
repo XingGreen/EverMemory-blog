@@ -236,8 +236,6 @@ export const zaku: Translation = {
 	[Key.notFoundTitle]: "页面消失不见啦",
 	[Key.notFoundDescription]: "哎呀呀杂鱼,你点的页面不存在或是被挪走咯",
 	[Key.backToHome]: "滚回主页去",
-	[Key.adminNotFoundDescription]: "后台没这个页面，看看地址是不是打错了。",
-	[Key.errorBackDashboard]: "回控制面板",
 
 	// RSS页面
 	[Key.rss]: "RSS订阅",

@@ -36,7 +36,7 @@ type Post = {
 };
 
 type ViewMode = "list" | "edit" | "create";
-type Page = "dashboard" | "posts" | "settings" | "user" | "404";
+type Page = "dashboard" | "posts" | "settings" | "user";
 
 // 基于 URL 路径的真实路由（History API）：
 //   /admin/                      → 首页
@@ -54,6 +54,7 @@ type Route =
 	| { page: "edit"; slug: string }
 	| { page: "settings"; section?: string }
 	| { page: "user" }
+	/* 无效路径：不在后台内渲染任何页面，直接交给项目原有的 /404 */
 	| { page: "404" };
 
 let {
@@ -190,15 +191,13 @@ function toggleCollapseSidebar() {
 }
 
 const activePage = $derived<Page>(
-	route.page === "404"
-		? "404"
-		: route.page === "dashboard"
-			? "dashboard"
-			: route.page === "settings"
-				? "settings"
-				: route.page === "user"
-					? "user"
-					: "posts",
+	route.page === "dashboard"
+		? "dashboard"
+		: route.page === "settings"
+			? "settings"
+			: route.page === "user"
+				? "user"
+				: "posts",
 );
 
 const viewMode = $derived<ViewMode>(
@@ -296,25 +295,22 @@ function parseRoute(pathname: string): Route {
 			if (segments[1] === "new") return { page: "create" };
 			if (segments[1] === "edit" && segments[2])
 				return { page: "edit", slug: segments[2] };
-			// 仅 /admin/articles/ 是列表页；其余子路径一律 404
+			// 仅 /admin/articles/ 是列表页，其余子路径无效
 			return segments.length === 1 ? { page: "posts" } : { page: "404" };
 		case "settings": {
 			// /admin/settings/ 无子段时落到第一个配置项（概览层已移除）；
-			// 但显式给了未知 section 就是无效地址，返回 404 而不是悄悄回退
+			// 显式给了未知 section 视为无效地址
 			if (!segments[1]) return { page: "settings", section: CONFIG_ITEMS[0]?.key };
-			const section = CONFIG_ITEMS.some((item) => item.key === segments[1])
-				? segments[1]
-				: undefined;
-			return section ? { page: "settings", section } : { page: "404" };
+			return CONFIG_ITEMS.some((item) => item.key === segments[1])
+				? { page: "settings", section: segments[1] }
+				: { page: "404" };
 		}
 		case "secrets":
 			// 兼容旧链接：密钥配置已并入用户中心
 			return { page: "user" };
 		case "user":
-			// 仅 /admin/user/；多余子段为无效地址
 			return segments.length === 1 ? { page: "user" } : { page: "404" };
 		default:
-			// 未知路由：交给 404 页面，不再静默回退到首页
 			return { page: "404" };
 	}
 }
@@ -327,8 +323,13 @@ function applyRoute() {
 		return;
 	}
 	const next = parseRoute(window.location.pathname);
-	// 无效路径渲染后台 404，保留原地址，不再静默回退到首页
-	route = next;
+	// 无效路径：交给项目原有的 404 页（src/pages/404.astro），
+	// 后台内不另写 404 界面
+	if (next.page === "404") {
+		window.location.replace("/404/");
+		return;
+	}
+	route = next.page === "login" ? { page: "dashboard" } : next;
 	// 设置页已无概览层：/admin/settings/ 归一化到第一个配置项的真实地址，
 	// 避免地址栏与渲染内容不一致
 	if (
@@ -387,7 +388,6 @@ onMount(async () => {
 
 // 移动端 TopBar 标题随页面联动（桌面端已无全局 header）
 const headerTitle = $derived.by(() => {
-	if (activePage === "404") return i18n(I18nKey.notFound);
 	if (activePage === "dashboard") return i18n(I18nKey.adminDashboard);
 	if (activePage === "settings") {
 		const item = settingsSection ? getConfigItem(settingsSection) : undefined;
@@ -908,30 +908,6 @@ function formatDate(dateStr: string | null): string {
 		<h2>{title}</h2>
 		<p>{desc}</p>
 		<span class="placeholder-badge">{i18n(I18nKey.placeholderBadge)}</span>
-	</div>
-{/snippet}
-
-<!-- 后台 404：借鉴参考项目 StatusPage 的结构思路——
-     外层承担滚动与留白，内层一张居中卡片，内容为
-     状态码 + 标题 + 描述 + 两个动作（主/次）。
-     类名与配色沿用本项目既有约定（placeholder-page / settings-action-btn）。 -->
-{#snippet adminNotFound()}
-	<div class="notfound-frame">
-		<section class="card-base notfound-card">
-			<p class="notfound-code">{i18n(I18nKey.notFound)}</p>
-			<h2 class="notfound-title">{i18n(I18nKey.notFoundTitle)}</h2>
-			<p class="notfound-desc">{i18n(I18nKey.adminNotFoundDescription)}</p>
-			<div class="notfound-actions">
-				<button class="settings-action-btn primary" type="button" onclick={goDashboard}>
-					<Icon icon="material-symbols:home-rounded" />
-					<span>{i18n(I18nKey.errorBackDashboard)}</span>
-				</button>
-				<button class="settings-action-btn" type="button" onclick={goPostList}>
-					<Icon icon="material-symbols:article-outline" />
-					<span>{i18n(I18nKey.adminPosts)}</span>
-				</button>
-			</div>
-		</section>
 	</div>
 {/snippet}
 
@@ -1524,8 +1500,6 @@ function formatDate(dateStr: string | null): string {
 					{:else}
 						{@render placeholder(i18n(I18nKey.adminSettings), i18n(I18nKey.configSectionUnknown), "material-symbols:settings")}
 					{/if}
-				{:else if activePage === "404"}
-					{@render adminNotFound()}
 {:else if activePage === "user"}
 				<div class="user-page">
 					<section class="card-base user-profile-card">
@@ -3070,89 +3044,6 @@ function formatDate(dateStr: string | null): string {
 	@keyframes spin {
 		to {
 			transform: rotate(360deg);
-		}
-	}
-
-	/* ── 后台 404 ──
-	   结构借鉴参考项目：外层滚动容器 + 居中卡片 + 状态码/标题/描述/双动作。
-	   具体数值按本项目既有节奏取：卡片 16px 圆角（--radius-large）、
-	   内容区 24px 留白、按钮复用 .settings-action-btn。 */
-	.notfound-frame {
-		display: flex;
-		flex-direction: column;
-		flex: 1;
-		min-width: 0;
-		min-height: 0;
-		overflow-y: auto;
-		padding: 1.5rem;
-	}
-
-	.notfound-card {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		width: 100%;
-		max-width: 40rem;
-		margin-block: auto;
-		margin-inline: auto;
-		padding: 3rem 2rem;
-		text-align: center;
-		flex-shrink: 0;
-	}
-
-	/* 状态码：主色实色，字号随视口自适应，作为视觉锚点 */
-	.notfound-code {
-		margin: 0 0 1.25rem;
-		color: var(--primary);
-		font-size: clamp(3rem, 5vw, 4rem);
-		line-height: 1;
-		font-weight: 700;
-		letter-spacing: 0.02em;
-	}
-
-	.notfound-title {
-		margin: 0;
-		font-size: 1.5rem;
-		font-weight: 600;
-		line-height: 1.4;
-		color: var(--deep-text);
-		text-wrap: balance;
-	}
-
-	.notfound-desc {
-		max-width: 26rem;
-		margin: 0.75rem 0 0;
-		font-size: 0.875rem;
-		line-height: 1.8;
-		color: var(--content-meta);
-		overflow-wrap: anywhere;
-	}
-
-	.notfound-actions {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		justify-content: center;
-		gap: 0.75rem;
-		margin-top: 1.75rem;
-	}
-
-	@media (max-width: 639px) {
-		.notfound-frame {
-			padding: 0.5rem 0;
-		}
-
-		.notfound-card {
-			padding: 2.25rem 1.5rem;
-		}
-
-		.notfound-code {
-			font-size: 2.75rem;
-			margin-bottom: 1rem;
-		}
-
-		.notfound-title {
-			font-size: 1.25rem;
 		}
 	}
 

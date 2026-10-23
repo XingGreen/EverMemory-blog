@@ -237,8 +237,6 @@ export const zh_CN: Translation = {
 	[Key.notFoundTitle]: "页面未找到",
 	[Key.notFoundDescription]: "抱歉，您访问的页面不存在或已被移动。",
 	[Key.backToHome]: "返回首页",
-	[Key.adminNotFoundDescription]: "后台没有这个页面，请检查地址是否输入正确。",
-	[Key.errorBackDashboard]: "返回控制面板",
 
 	// RSS页面
 	[Key.rss]: "RSS 订阅",
