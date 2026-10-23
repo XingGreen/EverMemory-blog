@@ -1548,9 +1548,9 @@ function formatDate(dateStr: string | null): string {
 				{:else if activePage === "404"}
 					{@render adminNotFound()}
 {:else if activePage === "env"}
-				<div class="env-page">
+				<div class="env-page card-base">
 				{#if import.meta.env.PROD}
-					<section class="card-base secrets-guide">
+					<section class="secrets-guide">
 						<div class="guide-head">
 							<Icon icon="material-symbols:shield-lock" class="guide-icon" />
 							<div>
@@ -1905,7 +1905,7 @@ function formatDate(dateStr: string | null): string {
 		margin-bottom: 0.25rem;
 	}
 
-	/* ── 用户中心 ── */
+	/* ── 环境变量页：与其他后台页同构的卡片外壳 ── */
 	.env-page {
 		display: flex;
 		flex-direction: column;
@@ -3299,8 +3299,11 @@ function formatDate(dateStr: string | null): string {
 			align-items: flex-start;
 		} */
 	}
-.secrets-guide {
-		padding: 1.75rem;
+	/* 生产环境提示：外壳内的分区，不另套卡片 */
+	.secrets-guide {
+		padding: 0 0 1.25rem;
+		border-bottom: 1px solid var(--line-divider);
+		margin-bottom: 1.25rem;
 	}
 
 	.settings-remote-banner {

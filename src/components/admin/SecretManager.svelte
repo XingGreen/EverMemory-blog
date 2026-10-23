@@ -389,7 +389,7 @@ onMount(load);
 		</div>
 	{/if}
 
-	<!-- 操作栏：左侧两行说明 + 右侧按钮组（对照设计稿 .action-bar） -->
+	<!-- 操作栏：左说明右按钮，作为工作区顶部的工具栏（与设置页 savebar 同源） -->
 	<div class="action-bar">
 		<div class="action-info">
 			<strong>
@@ -475,7 +475,7 @@ onMount(load);
 			{#if group.items.length > 0}
 				<!-- 每个分组是一块独立大板块：标题区 + 说明 + 纵向字段列表。
 				     字段直接排布在板块内，不再各自套卡片容器（禁止卡片嵌套）。 -->
-				<section class="secrets-group card-base">
+				<section class="secrets-group">
 					<header class="group-head">
 						<div class="group-head-text">
 							<h2 class="group-title">
@@ -702,7 +702,7 @@ onMount(load);
 		{/each}
 
 		{#if writable}
-			<section class="card-base generator-card">
+			<section class="generator-card">
 				<div class="generator-head">
 					<Icon icon="material-symbols:auto-awesome" class="gen-icon" />
 					<div>
@@ -809,11 +809,13 @@ onMount(load);
 </div>
 
 <style>
+	/* ── 页面内容：外壳（.env-page.card-base）由上层提供，
+	   这里只负责纵向分段与内边距，不再自带卡片外观。 */
 	.secrets-page {
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
-		padding: 0.25rem;
+		padding: 1.5rem;
 	}
 
 	/* ── 底部保存条（参考 flare settings-savebar） ──
@@ -887,44 +889,42 @@ onMount(load);
 		}
 	}
 
-	/* ── 顶部提示条（新设计稿） ──
-	   成功态：一行说清「已完成 + 写入位置」，绿色半透明底 + 同色微边框；
-	   未完成态：琥珀色，附带缺失项列表。 */
+	/* ── 顶部提示条 ──
+	   作为外壳内的分区，不再自带圆角卡片外观：
+	   成功态用右侧色点 + 次要文字，未完成态保留琥珀语义色；
+	   两种状态都靠文字与图标表达，不做整块底色。 */
 	.success-bar,
 	.pending-bar {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		flex-wrap: wrap;
-		padding: 0.75rem 1rem;
-		border-radius: var(--radius-xl);
-		font-size: 0.875rem;
-		line-height: 1.5;
+		padding: 0;
+		font-size: 0.8125rem;
+		line-height: 1.6;
 	}
 
 	.success-bar {
-		background: color-mix(in oklab, var(--success) 10%, transparent);
-		border: 1px solid color-mix(in oklab, var(--success) 20%, transparent);
+		color: var(--content-meta);
+	}
+
+	.success-bar :global(.inline-icon),
+	.pending-bar :global(.status-icon) {
+		flex-shrink: 0;
 		color: var(--success);
 	}
 
-	.success-bar :global(.inline-icon) {
-		flex-shrink: 0;
-	}
-
 	.pending-bar {
-		background: color-mix(in oklab, var(--warning) 10%, transparent);
-		border: 1px solid color-mix(in oklab, var(--warning) 20%, transparent);
-		color: var(--warning);
+		color: var(--content-meta);
 	}
 
 	.pending-bar :global(.status-icon) {
 		color: var(--warning);
-		flex-shrink: 0;
 	}
 
 	.status-text {
-		font-weight: 600;
+		/* 中文正文不用加粗制造层级，靠颜色与字号区分 */
+		color: var(--deep-text);
 		white-space: nowrap;
 	}
 
@@ -956,20 +956,16 @@ onMount(load);
 	}
 
 	/* ── 操作栏 ──
-	   遵循项目规范：不用实线边框，层级靠卡片底 + 毛玻璃表达；
-	   容器圆角 16px、内边距 24px，与其余板块卡片一致。 */
+	   作为外壳内的顶部分区：无独立卡片底、无毛玻璃，只用一条底部分隔线
+	   与下方内容区分，风格与设置页 settings-savebar 同源。 */
 	.action-bar {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 1rem;
 		flex-wrap: wrap;
-		padding: 1.5rem;
-		border: 1px solid transparent;
-		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
-		-webkit-backdrop-filter: blur(12px);
-		backdrop-filter: blur(12px);
+		padding: 0 0 1.25rem;
+		border-bottom: 1px solid var(--line-divider);
 	}
 
 	.action-info {
@@ -1110,19 +1106,18 @@ onMount(load);
 		transform: translateY(-1px);
 	}
 
-	/* ── 分组大板块 ──
-	   每个分组是一块独立面板（外层 .card-base 提供底与圆角），
-	   内部字段卡片用更浅的层级，形成「板块 > 卡片」两级结构。 */
-	/* 板块卡片：与参考项目一致，直接用不透明的 --card-bg。
-	   此前用 70% 透明叠加，实际颜色会比 --card-bg 深一档，与参考项目不一致；
-	   板块与字段的层级改由间距和内部分隔承担，不再靠透明混合。 */
+	/* ── 分组板块 ──
+	   外壳已是卡片，分组不再套卡片（禁止卡片嵌套）；
+	   分组之间用一条低对比度分隔线区分，块内靠标题字号与间距分层。 */
 	.secrets-group {
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
-		padding: 1.5rem;
-		border: 1px solid transparent;
-		background: var(--card-bg);
+	}
+
+	.secrets-group + .secrets-group {
+		padding-top: 1.5rem;
+		border-top: 1px solid var(--line-divider);
 	}
 
 	/* 板块标题区：标题 + 说明（无图标） */
@@ -1803,17 +1798,13 @@ onMount(load);
 		word-break: break-all;
 	}
 
-	/* ── 生成工具 ── */
+	/* ── 生成工具：外壳内的末段分区，用顶部分隔线与上方分组区分 ── */
 	.generator-card {
-		padding: 1.5rem;
+		padding-top: 1.5rem;
+		border-top: 1px solid var(--line-divider);
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-		border: 1px solid transparent;
-		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
-		-webkit-backdrop-filter: blur(12px);
-		backdrop-filter: blur(12px);
 	}
 
 	.generator-head {
