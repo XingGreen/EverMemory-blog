@@ -714,6 +714,7 @@ export const zaku: Translation = {
 	[Key.secretsLayoutSwitchToFold]: "换回旧设计（列表样子）",
 	[Key.secretsDiscard]: "算了不改了",
 	[Key.secretsUploadRemove]: "把这个文件丢掉",
+	[Key.secretsCredentialActions]: "凭证相关的操作",
 	[Key.secretsUploadReadFailed]: "读不出来，再试一次吧",
 	[Key.secretsFieldHelp]: "看看这玩意儿是啥",
 	[Key.secretsGroupTurnstileDesc]: "登录页的机器人检测，不配就完全不拦",

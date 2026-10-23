@@ -720,6 +720,7 @@ export const zh_TW: Translation = {
 	[Key.secretsLayoutSwitchToFold]: "切換為舊設計（清單樣式）",
 	[Key.secretsDiscard]: "放棄修改",
 	[Key.secretsUploadRemove]: "移除該檔案",
+	[Key.secretsCredentialActions]: "憑證操作",
 	[Key.secretsUploadReadFailed]: "讀取檔案失敗，請重試",
 	[Key.secretsFieldHelp]: "檢視此項說明",
 	[Key.secretsGroupTurnstileDesc]: "登入頁的人機驗證，未設定則完全略過",

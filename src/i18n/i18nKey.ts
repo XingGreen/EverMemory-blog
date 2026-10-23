@@ -718,6 +718,7 @@ enum I18nKey {
 	secretsUploadedNote = "secretsUploadedNote",
 	secretsUploadedDefaultName = "secretsUploadedDefaultName",
 	secretsUploadRemove = "secretsUploadRemove",
+	secretsCredentialActions = "secretsCredentialActions",
 	secretsEdit = "secretsEdit",
 	secretsCollapse = "secretsCollapse",
 	secretsUnsavedCount = "secretsUnsavedCount",

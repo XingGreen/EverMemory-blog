@@ -718,6 +718,7 @@ export const zh_CN: Translation = {
 	[Key.secretsLayoutSwitchToFold]: "切换为旧设计（列表样式）",
 	[Key.secretsDiscard]: "放弃修改",
 	[Key.secretsUploadRemove]: "移除该文件",
+	[Key.secretsCredentialActions]: "凭据操作",
 	[Key.secretsUploadReadFailed]: "读取文件失败，请重试",
 	[Key.secretsFieldHelp]: "查看该项说明",
 	[Key.secretsGroupTurnstileDesc]: "登录页的人机验证，未配置则完全跳过",

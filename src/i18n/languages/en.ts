@@ -746,6 +746,7 @@ export const en: Translation = {
 	[Key.secretsLayoutSwitchToFold]: "Switch to the old design (list)",
 	[Key.secretsDiscard]: "Discard changes",
 	[Key.secretsUploadRemove]: "Remove this file",
+	[Key.secretsCredentialActions]: "Credential actions",
 	[Key.secretsUploadReadFailed]: "Could not read the file, please try again",
 	[Key.secretsFieldHelp]: "Show field description",
 	[Key.secretsGroupTurnstileDesc]: "Bot check on the login page; skipped entirely when unconfigured",

@@ -752,6 +752,7 @@ export const ru: Translation = {
 	[Key.secretsLayoutSwitchToFold]: "Переключить на старый дизайн (список)",
 	[Key.secretsDiscard]: "Отменить изменения",
 	[Key.secretsUploadRemove]: "Удалить этот файл",
+	[Key.secretsCredentialActions]: "Действия с учётными данными",
 	[Key.secretsUploadReadFailed]: "Не удалось прочитать файл, попробуйте ещё раз",
 	[Key.secretsFieldHelp]: "Показать описание поля",
 	[Key.secretsGroupTurnstileDesc]: "Проверка на странице входа; без настройки полностью пропускается",

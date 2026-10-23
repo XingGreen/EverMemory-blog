@@ -38,44 +38,11 @@ let exportOpen = $state(false);
 let exportBusy = $state(false);
 // 正在轮换的托管密钥 key（用于按钮 loading 态）
 let rotating = $state("");
-// 已展开的配置项（折叠交互）：默认全部收起，点击摘要行展开编辑区
-let expanded = $state<Record<string, boolean>>({});
+// 「凭据操作」折叠区的展开状态（按配置项 key 记录，默认收起）
+let disclosureOpen = $state<Record<string, boolean>>({});
 
-/**
- * 布局模式：
- * - fold：摘要行可折叠，默认全部收起（信息密度高）
- * - two-col：所有字段常驻展开，左标签右输入（一眼看全）
- * 持久化到 localStorage，与 admin-sidebar-collapsed 同一套做法。
- */
-type SecretsLayout = "fold" | "two-col";
-const LAYOUT_KEY = "admin-secrets-layout";
-
-function readStoredLayout(): SecretsLayout {
-	try {
-		return localStorage.getItem(LAYOUT_KEY) === "two-col" ? "two-col" : "fold";
-	} catch {
-		return "fold";
-	}
-}
-
-let layout = $state<SecretsLayout>("fold");
-onMount(() => {
-	layout = readStoredLayout();
-});
-
-function toggleLayout() {
-	layout = layout === "fold" ? "two-col" : "fold";
-	try {
-		localStorage.setItem(LAYOUT_KEY, layout);
-	} catch {
-		// localStorage 不可用时仅本次会话生效
-	}
-}
-
-/** 摘要行：展开/收起某一项（两栏模式下无折叠概念，直接忽略） */
-function toggleExpanded(key: string) {
-	if (layout === "two-col") return;
-	expanded[key] = !expanded[key];
+function toggleDisclosure(key: string) {
+	disclosureOpen[key] = disclosureOpen[key] !== true;
 }
 
 /**
@@ -377,7 +344,7 @@ onMount(load);
 
 <svelte:window onbeforeunload={onBeforeUnload} />
 
-<div class="secrets-page" data-layout={layout}>
+<div class="secrets-page">
 	{#if loadError}
 		<div class="status-banner error">
 			<Icon icon="material-symbols:error-outline" />
@@ -405,24 +372,6 @@ onMount(load);
 			<button class="btn" type="button" onclick={load} disabled={loading}>
 				<Icon icon="material-symbols:refresh" />
 				<span>{i18n(I18nKey.secretsReload)}</span>
-			</button>
-			<!-- 布局切换：旧设计（列表）⇄ 新设计（栅格表单） -->
-			<button
-				class="btn layout-toggle"
-				type="button"
-				title={layout === "fold"
-					? i18n(I18nKey.secretsLayoutSwitchToTwoCol)
-					: i18n(I18nKey.secretsLayoutSwitchToFold)}
-				aria-label={layout === "fold"
-					? i18n(I18nKey.secretsLayoutSwitchToTwoCol)
-					: i18n(I18nKey.secretsLayoutSwitchToFold)}
-				onclick={toggleLayout}
-			>
-				<Icon
-					icon={layout === "fold"
-						? "material-symbols:view-quilt-outline"
-						: "material-symbols:view-list-outline"}
-				/>
 			</button>
 			{#if writable}
 				<button
@@ -473,89 +422,30 @@ onMount(load);
 	{:else}
 		{#each groups as group}
 			{#if group.items.length > 0}
-				<!-- 每个分组是一块独立大板块：标题区 + 说明 + 纵向字段列表。
-				     字段直接排布在板块内，不再各自套卡片容器（禁止卡片嵌套）。 -->
+				<!-- 分组：参考项目 settings-group-title（17px/600）+ 两列字段网格 -->
 				<section class="secrets-group">
-					<header class="group-head">
-						<div class="group-head-text">
-							<h2 class="group-title">
-								<span>{i18n(I18nKey[group.labelKey])}</span>
-								<span class="group-count">{group.items.length}</span>
-							</h2>
-							<p class="group-desc">{i18n(I18nKey[group.descKey])}</p>
-						</div>
-					</header>
-					<div class="secret-list">
+					<h2 class="settings-group-title">
+						<span>{i18n(I18nKey[group.labelKey])}</span>
+						<span class="group-hint">{i18n(I18nKey[group.descKey])}</span>
+					</h2>
+
+					<div class="settings-field-grid">
 						{#each group.items as item (item.key)}
-							{@const isOpen = expanded[item.key] === true}
-							{@const twoCol = layout === "two-col"}
-							<div
-								class="secret-field"
-								class:dirty={isDirty(item)}
-								class:open={isOpen || twoCol}
-								data-span={item.span ?? 6}
-							>
-								<!-- 摘要行：折叠模式下点击整行展开/收起编辑区。
-								     两栏模式无折叠概念，改用 div 承载，避免给读屏一个按不动的按钮。 -->
-								{#if twoCol}
-									<div class="field-summary" role="group" aria-label={item.label}>
-										<span class="summary-text">
-											<span class="summary-title">
-												{#if item.sensitive}
-													<Icon icon="material-symbols:lock-outline" class="lock-icon" />
-												{/if}
-												<span class="field-label">{item.label}</span>
-												{#if item.required}<span class="req-star">*</span>{/if}
-												{#if !item.configured && !item.managed}
-													<span class="summary-warn">{i18n(I18nKey.secretsNotConfigured)}</span>
-												{/if}
-											</span>
-											<span class="summary-desc">{item.description}</span>
-										</span>
-									</div>
-								{:else}
-									<button
-										type="button"
-										class="field-summary"
-										aria-expanded={isOpen}
-										aria-controls={`panel-${item.key}`}
-										onclick={() => toggleExpanded(item.key)}
-									>
-										<span class="summary-text">
-											<span class="summary-title">
-												{#if item.sensitive}
-													<Icon icon="material-symbols:lock-outline" class="lock-icon" />
-												{/if}
-												<span class="field-label">{item.label}</span>
-												{#if item.required}<span class="req-star">*</span>{/if}
-												{#if !item.configured && !item.managed}
-													<span class="summary-warn">{i18n(I18nKey.secretsNotConfigured)}</span>
-												{/if}
-											</span>
-											<span class="summary-desc">{item.description}</span>
-										</span>
-										<span class="summary-action">
-											<Icon
-												icon={isOpen
-													? "material-symbols:keyboard-arrow-up-rounded"
-													: "material-symbols:keyboard-arrow-down-rounded"}
-											/>
-										</span>
-									</button>
-								{/if}
+							<div class="settings-field" class:dirty={isDirty(item)}>
+								<span class="field-label">
+									{#if item.sensitive}
+										<Icon icon="material-symbols:lock-outline" class="lock-icon" />
+									{/if}
+									<span>{item.label}</span>
+									{#if item.required}<span class="req-star">*</span>{/if}
+									{#if !item.configured && !item.managed}
+										<span class="summary-warn">{i18n(I18nKey.secretsNotConfigured)}</span>
+									{/if}
+								</span>
 
-								<!-- 编辑区：用 grid 行高动画展开，不用 {#if} 卸载，
-								     避免折叠时输入框卸载丢失草稿 -->
-								<div class="field-panel" id={`panel-${item.key}`}>
-									<div class="field-panel-inner">
-										<div class="field-meta">
-											<code class="field-key">{item.key}</code>
-										</div>
+								<p class="field-note">{item.description}</p>
 
-										<!-- 右栏：输入控件 -->
-										<div class="field-control">
-											{#if item.managed}
-									<!-- 托管密钥：不提供输入框，只展示状态与轮换入口 -->
+								{#if item.managed}
 									<div class="managed-row">
 										<span class="managed-state">
 											<Icon
@@ -587,120 +477,129 @@ onMount(load);
 											</span>
 										</button>
 									</div>
-								{:else}
-									<!-- 本地开发环境：明文已回填，可直接查看与局部修改；
-									     敏感项默认掩码，点眼镜切换显示/隐藏。
-									     multiline（App 私钥）改为文件上传，避免手工粘贴丢失换行。 -->
-									{#if item.kind === "multiline"}
-											{#if drafts[item.key]}
-												<!-- 状态二：已上传 —— 文件名与状态并列一行，无图标 -->
-												<div class="uploaded-card">
-													<span class="uploaded-name"
-														>{uploadNames[item.key] ?? i18n(I18nKey.secretsUploadedDefaultName)}</span
-													>
-													<span class="uploaded-note">{i18n(I18nKey.secretsUploadedNote)}</span>
-													<button
-														type="button"
-														class="uploaded-clear"
-														title={i18n(I18nKey.secretsUploadRemove)}
-														aria-label={i18n(I18nKey.secretsUploadRemove)}
-														onclick={() => clearPem(item)}
-													>
-														<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M6 18L18 6M6 6l12 12"
-															></path>
-														</svg>
-													</button>
-												</div>
-											{:else}
-												<!-- 状态一：未上传 —— 虚线拖拽框 -->
-												<div class="upload-zone">
-													<input
-														type="file"
-														class="upload-input"
-														accept=".pem,.key"
-														disabled={!writable || loading}
-														aria-label={i18n(I18nKey.secretsUploadLabel)}
-														onchange={(e) => readPemFile(e, item)}
-													/>
-													<div class="upload-inner">
-														<!-- 内联上传图标：避免依赖构建期 icons.ts 是否收录该图标 -->
-														<svg
-															class="upload-icon"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-															aria-hidden="true"
+								{:else if item.kind === "multiline"}
+									{#if drafts[item.key]}
+										<div class="uploaded-card">
+											<span class="uploaded-name"
+												>{uploadNames[item.key] ?? i18n(I18nKey.secretsUploadedDefaultName)}</span
+											>
+											<span class="uploaded-note">{i18n(I18nKey.secretsUploadedNote)}</span>
+										</div>
+									{:else}
+										<div class="upload-zone">
+											<input
+												type="file"
+												class="upload-input"
+												accept=".pem,.key"
+												disabled={!writable || loading}
+												aria-label={i18n(I18nKey.secretsUploadLabel)}
+												onchange={(e) => readPemFile(e, item)}
+											/>
+											<div class="upload-inner">
+												<!-- 内联上传图标：避免依赖构建期 icons.ts 是否收录该图标 -->
+												<svg
+													class="upload-icon"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+													aria-hidden="true"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="1.5"
+														d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+													></path>
+												</svg>
+												<span class="upload-title">{i18n(I18nKey.secretsUploadHint)}</span>
+												<span class="upload-sub">{i18n(I18nKey.secretsUploadFormats)}</span>
+											</div>
+										</div>
+									{/if}
+									{#if uploadError[item.key]}
+										<span class="upload-error">{uploadError[item.key]}</span>
+									{/if}
+
+									{#if drafts[item.key]}
+										<div class="settings-disclosure">
+											<button
+												type="button"
+												class="settings-disclosure-trigger"
+												aria-expanded={disclosureOpen[item.key] === true}
+												aria-controls={"cred-" + item.key}
+												onclick={() => toggleDisclosure(item.key)}
+											>
+												<span>{i18n(I18nKey.secretsCredentialActions)}</span>
+												<Icon
+													icon={disclosureOpen[item.key]
+														? "material-symbols:keyboard-arrow-up-rounded"
+														: "material-symbols:keyboard-arrow-down-rounded"}
+												/>
+											</button>
+											<div
+												id={"cred-" + item.key}
+												class="settings-disclosure-content"
+												data-open={disclosureOpen[item.key] === true}
+											>
+												<div>
+													<div class="disclosure-inner">
+														<button
+															type="button"
+															class="text-action"
+															onclick={() => clearPem(item)}
 														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="1.5"
-																d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-															></path>
-														</svg>
-														<span class="upload-title">{i18n(I18nKey.secretsUploadHint)}</span>
-														<span class="upload-sub">{i18n(I18nKey.secretsUploadFormats)}</span>
+															{i18n(I18nKey.secretsUploadRemove)}
+														</button>
 													</div>
 												</div>
-											{/if}
-											{#if uploadError[item.key]}
-												<span class="upload-error">{uploadError[item.key]}</span>
-											{/if}
-										{:else}
-											<div class="input-wrap">
-												<input
-													class="secret-input"
-													type={!item.sensitive || showInput[item.key] ? "text" : "password"}
-													value={drafts[item.key] ?? ""}
-													spellcheck="false"
-													name="secret-draft"
-													autocomplete="new-password"
-													placeholder={item.configured
-														? i18n(I18nKey.secretsPlaceholderConfigured)
-														: i18n(I18nKey.secretsPlaceholderEmpty)}
-													disabled={!writable || loading}
-													oninput={(e) => {
-														drafts[item.key] = e.currentTarget.value;
-													}}
-												/>
-												{#if item.sensitive}
-													<button
-														type="button"
-														class="input-toggle"
-														title={showInput[item.key]
-															? i18n(I18nKey.secretsHide)
-															: i18n(I18nKey.secretsShow)}
-														aria-label={showInput[item.key]
-															? i18n(I18nKey.secretsHide)
-															: i18n(I18nKey.secretsShow)}
-														onclick={() => toggleReveal(item)}
-														disabled={!writable}
-													>
-														<Icon
-															icon={showInput[item.key]
-																? "material-symbols:visibility-off-outline-rounded"
-																: "material-symbols:visibility-outline-rounded"}
-														/>
-													</button>
-												{/if}
 											</div>
-										{/if}
-										{/if}
 										</div>
+									{/if}
+								{:else}
+									<div class="input-wrap">
+										<input
+											class="secret-input"
+											type={!item.sensitive || showInput[item.key] ? "text" : "password"}
+											value={drafts[item.key] ?? ""}
+											spellcheck="false"
+											name="secret-draft"
+											autocomplete="new-password"
+											placeholder={item.configured
+												? i18n(I18nKey.secretsPlaceholderConfigured)
+												: i18n(I18nKey.secretsPlaceholderEmpty)}
+											disabled={!writable || loading}
+											oninput={(e) => {
+												drafts[item.key] = e.currentTarget.value;
+											}}
+										/>
+										{#if item.sensitive}
+											<button
+												type="button"
+												class="input-toggle"
+												title={showInput[item.key]
+													? i18n(I18nKey.secretsHide)
+													: i18n(I18nKey.secretsShow)}
+												aria-label={showInput[item.key]
+													? i18n(I18nKey.secretsHide)
+													: i18n(I18nKey.secretsShow)}
+												onclick={() => toggleReveal(item)}
+												disabled={!writable}
+											>
+												<Icon
+													icon={showInput[item.key]
+														? "material-symbols:visibility-off-outline-rounded"
+														: "material-symbols:visibility-outline-rounded"}
+												/>
+											</button>
+										{/if}
 									</div>
-								</div>
+								{/if}
 							</div>
 						{/each}
 					</div>
 				</section>
 			{/if}
 		{/each}
-
 		{#if writable}
 			<section class="generator-card">
 				<div class="generator-head">
@@ -1112,436 +1011,93 @@ onMount(load);
 	}
 
 	/* ── 分组板块 ──
-	   与参考项目一致，直接用不透明的 --card-bg；
-	   板块与字段的层级由间距和内部分隔承担。 */
+	   参考项目 settings-group-title：17px/600，下 18px。 */
 	.secrets-group {
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
-		padding: 1.5rem;
-		border: 1px solid transparent;
-		background: var(--card-bg);
 	}
 
-	/* 板块标题区：标题 + 说明（无图标） */
-	.group-head {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.875rem;
+	.secrets-group + .secrets-group {
+		border-top: 1px solid var(--line-divider);
+		padding-top: 1.5rem;
+		margin-top: 0.5rem;
 	}
 
-	.group-head-text {
+	.settings-group-title {
 		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		min-width: 0;
-	}
-
-	/* 板块标题：靠字号与字重区分大区块，不用竖线 */
-	/* 板块标题：对齐参考页 settings-group-title（17px / 600 / 上下 24、18） */
-	.group-title {
-		display: flex;
-		align-items: center;
+		align-items: baseline;
+		flex-wrap: wrap;
 		gap: 0.5rem;
-		margin: 0;
-		padding: 0;
+		margin: 0 0 1.125rem;
 		font-size: 1.0625rem;
 		font-weight: 600;
-		letter-spacing: -0.01em;
 		color: var(--deep-text);
 	}
 
-	/* 说明：参考页 settings-muted 为 13px，行高 1.7 */
-	.group-desc {
-		margin: 0;
+	.settings-group-title .group-hint {
 		font-size: 0.8125rem;
-		line-height: 1.6;
+		font-weight: 400;
 		color: var(--content-meta);
 	}
 
-	.group-count {
-		padding: 0;
-		font-size: 0.75rem;
-		font-weight: 400;
-		color: color-mix(in oklab, var(--content-meta) 60%, transparent);
-		background: transparent;
-		font-family: var(--font-mono, monospace);
+	/* ── 两列字段网格（参考 .settings-field-grid：2 列、20px 间距） ── */
+	.settings-field-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1.25rem;
+		align-items: start;
 	}
 
-	/* ── 字段列表 ──
-	   参考设计：每行做成「左标签 + 右输入」的两栏结构，桌面端左 5/12、
-	   右 7/12，窄屏折行成上下。字段本身不是卡片，只用极淡分隔线区分。 */
-	.secret-list {
-		display: flex;
-		flex-direction: column;
-	}
-
-	.secret-field {
-		display: flex;
-		flex-direction: column;
-		padding: 0;
-		border: 0;
-		background: transparent;
-	}
-
-	/* ── 摘要行：整行可点，悬停给出反馈 ── */
-	.field-summary {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		width: 100%;
-		padding: 0.875rem 0.5rem 0.875rem 0;
-		border: none;
-		border-radius: var(--radius-xl);
-		background: transparent;
-		color: inherit;
-		font-family: inherit;
-		text-align: left;
-		cursor: pointer;
-		transition: background 0.15s ease;
-	}
-
-	.field-summary:hover {
-		background: var(--btn-plain-bg-hover);
-	}
-
-	.field-summary:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: -2px;
-	}
-
-	.summary-text {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
+	/* ── 单个字段（参考 .settings-field：纵向、8px 间距） ── */
+	.settings-field {
+		display: grid;
+		align-content: start;
+		gap: 0.5rem;
 		min-width: 0;
-		flex: 1;
 	}
 
-	/* 字段标题：参考页字段标签为 13px/400 的 fg-75，
-	   但这里是每组配置的主标题（参考页对应 settings-group-title 的 17px），
-	   取 15px/600 作为两级之间的折中，保持层级可辨。 */
-	.summary-title {
+	/* 变更态：左侧主色细竖线，不改变字段宽度 */
+	.settings-field.dirty {
+		padding-left: 0.5rem;
+		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
+	}
+
+	/* 标签行（参考 settings-field > label：13px、与值同色） */
+	.field-label {
 		display: flex;
 		align-items: center;
+		flex-wrap: wrap;
 		gap: 0.375rem;
-		font-size: 0.9375rem;
-		font-weight: 600;
+		font-size: 0.8125rem;
+		font-weight: 500;
 		color: var(--deep-text);
+		min-width: 0;
 	}
 
-	/* 未配置标记：对齐参考项目 .settings-muted（fg-50 灰、13px、400 字重），
-	   不用警告橙色——「未配置」是常态而非异常，用警示色会让整页发红。 */
+	/* 说明：标签与输入框之间，12px 灰字 */
+	.field-note {
+		margin: 0;
+		font-size: 0.75rem;
+		line-height: 1.5;
+		color: color-mix(in oklab, var(--content-meta) 80%, transparent);
+	}
+
+	/* 未配置标记：灰字，不用警示色 */
 	.summary-warn {
-		font-size: 0.8125rem;
+		font-size: 0.75rem;
 		font-weight: 400;
 		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
 	}
 
-	/* 说明文字：强制单行 + 省略号。
-	   强制单行是为了让同一行内的两个字段高度一致——说明折行会让下方的
-	   变量名与输入框错位，这是栅格布局里最常见的对齐问题。 */
-	.summary-desc {
-		font-size: 0.8125rem;
-		line-height: 1.5;
-		color: var(--content-meta);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.summary-action {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		flex-shrink: 0;
-		font-size: 0.8125rem;
-		color: var(--content-meta);
-	}
-
-	.field-summary:hover .summary-action {
-		color: var(--primary);
-	}
-
-	/* ── 编辑区：grid 行高动画展开，不卸载 DOM，避免折叠丢失草稿 ── */
-	.field-panel {
-		display: grid;
-		grid-template-rows: 0fr;
-		transition: grid-template-rows 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-	}
-
-	.secret-field.open .field-panel {
-		grid-template-rows: 1fr;
-	}
-
-	.field-panel-inner {
-		overflow: hidden;
-		min-height: 0;
-	}
-
-	/* 编辑区的 overflow:hidden 是折叠动画必需的（grid 0fr→1fr 靠它裁切内容），
-	   但它会把输入框聚焦时向外扩张的光晕一起裁掉——表现为左右边缘被切平。
-	   光晕改用内阴影（inset），画在盒子内部，天然不会被祖先裁切，
-	   也不必给容器加左右内边距（那会让输入框比标签缩进、破坏对齐）。 */
-	.secret-field.open .field-panel-inner {
-		display: flex;
-		align-items: flex-start;
-		gap: 1rem;
-		/* 摘要行下内边距 14px 已提供呼吸感，这里只补底部留白 */
-		padding: 0.25rem 0 1rem;
-	}
-
-	/* 左栏：变量名 */
-	.field-meta {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		width: 41.6667%;
-		flex-shrink: 0;
-		min-width: 0;
-		padding-right: 1rem;
-		/* 与右侧输入框首行文字基线近似对齐 */
-		padding-top: 0.5rem;
-	}
-
-	/* 右栏：输入控件 */
-	.field-control {
-		display: flex;
-		flex-direction: column;
-		gap: 0.375rem;
-		flex: 1;
-		min-width: 0;
-	}
-
-	/* 窄屏：编辑区内两栏折成上下 */
-	@media (max-width: 768px) {
-		.secret-field.open .field-panel-inner {
-			flex-direction: column;
-			gap: 0.5rem;
-		}
-
-		.field-meta {
-			width: 100%;
-			padding-right: 0;
-		}
-	}
-
-	/* ── 栅格布局（参考 .examples/deepseek_html_20261021_d9c48f.html） ──
-	   12 栅格：字段按各自 span 占列，一行可并排多个。
-	   字段内部是「标签 → 说明 → 变量名 → 输入框」的直立单列，
-	   标签与输入框左边缘严格对齐。 */
-	.secrets-page[data-layout="two-col"] .secret-list {
-		display: grid;
-		grid-template-columns: repeat(12, minmax(0, 1fr));
-		gap: 1.5rem;
-		align-items: start;
-	}
-
-	.secrets-page[data-layout="two-col"] .secret-field {
-		grid-column: span 6;
-		padding: 0;
-		border: 0;
-	}
-
-	/* 修饰：栅格下字段之间靠间距分组，不画分隔线 */
-	.secrets-page[data-layout="two-col"] .secret-field + .secret-field {
-		border-top: none;
-	}
-
-	/* 按配置项 span 分配列宽 */
-	.secrets-page[data-layout="two-col"] .secret-field[data-span="4"] {
-		grid-column: span 4;
-	}
-	.secrets-page[data-layout="two-col"] .secret-field[data-span="5"] {
-		grid-column: span 5;
-	}
-	.secrets-page[data-layout="two-col"] .secret-field[data-span="6"] {
-		grid-column: span 6;
-	}
-	.secrets-page[data-layout="two-col"] .secret-field[data-span="7"] {
-		grid-column: span 7;
-	}
-	.secrets-page[data-layout="two-col"] .secret-field[data-span="8"] {
-		grid-column: span 8;
-	}
-	.secrets-page[data-layout="two-col"] .secret-field[data-span="12"] {
-		grid-column: span 12;
-	}
-
-	/* 字段内部：单列直立堆叠。关键是把 .field-panel-inner 变成纵向，
-	   同时让 .field-meta 不再占据独立一栏（否则输入框会被推到右侧）。
-	   间距对齐参考页 .settings-field 的 gap: 8px。 */
-	.secrets-page[data-layout="two-col"] .field-panel-inner {
-		display: flex;
-		flex-direction: column;
-		align-items: stretch;
-		gap: 0.5rem;
-		padding: 0;
-	}
-
-	.secrets-page[data-layout="two-col"] .field-meta {
-		width: 100%;
-		max-width: none;
-		flex: none;
-		padding: 0;
-	}
-
-	/* 变量名：与输入框同宽、同一左缘，字号统一 */
-	.secrets-page[data-layout="two-col"] .field-meta .field-key {
-		order: 0;
-		margin: 0;
-		align-self: stretch;
-	}
-
-	.secrets-page[data-layout="two-col"] .field-control {
-		width: 100%;
-		flex: none;
-		/* 输入控件统一高度，保证同一行两个字段的输入框底边齐平 */
-		min-height: 2.5rem;
-	}
-
-	/* 摘要行退化为纯展示区（标签 + 说明），不再可点。
-	   左右内边距归零，让文字块与下方变量名、输入框共用同一左缘。 */
-	.secrets-page[data-layout="two-col"] .field-summary {
-		cursor: default;
-		padding: 0;
-		align-items: flex-start;
-	}
-
-	.secrets-page[data-layout="two-col"] .field-summary:hover {
-		background: transparent;
-	}
-
-	.secrets-page[data-layout="two-col"] .summary-text {
-		gap: 0.25rem;
-	}
-
-	.secrets-page[data-layout="two-col"] .summary-action {
-		display: none;
-	}
-
-	.secrets-page[data-layout="two-col"] .field-panel {
-		grid-template-rows: 1fr;
-	}
-
-	/* 变更状态：左侧细竖线。缩进同时作用于摘要行与编辑区，
-	   两者始终共用同一条左缘，不会出现文字块错位。 */
-	.secrets-page[data-layout="two-col"] .secret-field.dirty .field-summary,
-	.secrets-page[data-layout="two-col"] .secret-field.dirty .field-panel-inner {
-		padding-left: 0.625rem;
-	}
-
-	.secrets-page[data-layout="two-col"] .secret-field.dirty .field-summary {
-		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
-	}
-
-	.secrets-page[data-layout="two-col"] .secret-field.dirty .field-panel-inner {
-		border-left: 2px solid transparent;
-		margin-left: -2px;
-	}
-
-	/* 窄屏：所有字段占满 12 列 */
-	@media (max-width: 1023px) {
-		.secrets-page[data-layout="two-col"] .secret-field,
-		.secrets-page[data-layout="two-col"] .secret-field[data-span] {
-			grid-column: span 12;
-		}
-	}
-
-	/* 字段间极淡分隔线；首尾不画线，避免与板块边缘重叠 */
-	.secret-field + .secret-field {
-		border-top: 1px solid var(--line-color);
-	}
-
-	/* 变更状态：摘要行左侧一道细指示线 */
-	.secret-field.dirty .field-summary {
-		padding-left: 0.875rem;
-		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
-	}
-
-	.field-meta .field-key {
-		margin-top: 0;
-	}
-
-	.head-right {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-shrink: 0;
-	}
-
-	.field-label {
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	:global(.lock-icon) {
-		color: var(--content-meta);
-		flex-shrink: 0;
-	}
-
-	/* 栅格布局下隐藏锁图标：它会推开标题文字导致这一项与其他项左缘不齐，
-	   而锁只表示「敏感」，同类字段全都有，信息量低、对齐代价高。 */
-	.secrets-page[data-layout="two-col"] .summary-title :global(.lock-icon) {
-		display: none;
-	}
-
 	.req-star {
-		color: var(--destructive);
-		font-size: 0.875rem;
-		flex-shrink: 0;
+		color: color-mix(in oklab, var(--warning) 85%, var(--deep-text));
 	}
 
-	.field-desc {
-		margin: 0;
-		font-size: 0.8125rem;
-		color: var(--content-meta);
-		line-height: 1.55;
-	}
-
-	/* 托管密钥状态条：遵循项目规范——
-	   不用实线边框，层级由半透明同色底表达；圆角 12px、内边距 12/16px。 */
-	.managed-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-		padding: 0.75rem 1rem;
-		border: 1px solid transparent;
-		border-radius: var(--radius-xl);
-		background: color-mix(in oklab, var(--success) 10%, transparent);
-		font-size: 0.8125rem;
-		color: color-mix(in oklab, var(--success) 55%, var(--deep-text));
-	}
-
-	.managed-state {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.8125rem;
-		min-width: 0;
-	}
-
-	:global(.managed-ok) {
-		color: var(--success);
-		flex-shrink: 0;
-	}
-
-	:global(.managed-warn) {
-		color: var(--warning);
-		flex-shrink: 0;
-	}
-
-	.input-wrap {
-		position: relative;
-		flex: 1;
-		min-width: 0;
-		display: flex;
-		align-items: center;
+	/* 窄屏：单列 */
+	@media (max-width: 900px) {
+		.settings-field-grid {
+			grid-template-columns: minmax(0, 1fr);
+		}
 	}
 
 	/* ── 私钥上传区 ──
@@ -1650,38 +1206,57 @@ onMount(load);
 		flex-shrink: 0;
 	}
 
-	/* 极简清除按钮：靠右、默认低透明度，悬停转危险色 */
-	.uploaded-clear {
+	/* ── 凭据操作折叠区（对齐参考项目 .settings-disclosure）──
+	   低频、破坏性的操作收在此处，避免与常规编辑动作混在一起。
+	   展开动画走 grid-template-rows 0fr→1fr，不需要 JS 计算高度。 */
+	.settings-disclosure {
+		border-top: 1px solid var(--line-divider);
+		margin-top: 0.5rem;
+	}
+
+	.settings-disclosure-trigger {
 		display: flex;
 		align-items: center;
-		justify-content: center;
-		width: 2rem;
-		height: 2rem;
-		flex-shrink: 0;
-		margin-left: auto;
-		padding: 0;
+		justify-content: space-between;
+		gap: 0.625rem;
+		width: 100%;
+		padding: 0.75rem 0;
 		border: none;
-		border-radius: var(--radius-lg);
-		background: transparent;
-		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
+		background: none;
+		color: var(--content-meta);
+		font-size: 0.8125rem;
+		font-family: inherit;
 		cursor: pointer;
-		transition: color 0.15s ease, background 0.15s ease;
+		text-align: left;
+		transition: color 0.2s ease;
 	}
 
-	.uploaded-clear :global(svg) {
-		width: 1rem;
-		height: 1rem;
+	.settings-disclosure-trigger:hover {
+		color: var(--deep-text);
 	}
 
-	.uploaded-clear:hover {
-		color: var(--destructive);
-		background: color-mix(in oklab, var(--destructive) 10%, transparent);
+	.settings-disclosure-trigger :global(.inline-icon) {
+		font-size: 1rem;
+		flex-shrink: 0;
 	}
 
-	/* 负偏移让轮廓画在元素内侧，避免被祖先 overflow:hidden 裁掉 */
-	.uploaded-clear:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: -2px;
+	.settings-disclosure-content {
+		display: grid;
+		grid-template-rows: 0fr;
+		transition: grid-template-rows 0.24s ease;
+	}
+
+	.settings-disclosure-content[data-open="true"] {
+		grid-template-rows: 1fr;
+	}
+
+	.settings-disclosure-content > div {
+		overflow: hidden;
+		min-height: 0;
+	}
+
+	.disclosure-inner {
+		padding-bottom: 0.25rem;
 	}
 
 	/* 输入框：可见边框（WCAG 1.4.11 要求界面组件边界对相邻背景 ≥ 3:1）。

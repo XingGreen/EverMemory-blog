@@ -740,6 +740,7 @@ export const ja: Translation = {
 	[Key.secretsLayoutSwitchToFold]: "従来のデザイン（リスト）に切り替え",
 	[Key.secretsDiscard]: "変更を破棄",
 	[Key.secretsUploadRemove]: "このファイルを削除",
+	[Key.secretsCredentialActions]: "認証情報の操作",
 	[Key.secretsUploadReadFailed]: "ファイルの読み込みに失敗しました。再試行してください",
 	[Key.secretsFieldHelp]: "項目の説明を表示",
 	[Key.secretsGroupTurnstileDesc]: "ログインページのボット対策。未設定なら完全にスキップされます",
