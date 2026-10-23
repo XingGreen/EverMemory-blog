@@ -1725,8 +1725,8 @@ function formatDate(dateStr: string | null): string {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		/* 后台品牌字号 0.875rem（与参考项目 admin-sidebar-brand 一致）：
-		   全局 Maple Mono 是等宽字体，16px 下 "EverMemory's Blog" 需要 163px，
-		   而品牌区可用宽度只有 162px，会差 1px 被截断 */
+		   品牌区可用宽度 162px，0.875rem 下 "EverMemory's Blog" 约 140px，
+		   留有余量不会截断 */
 		font-family: var(--font-navbar-title, inherit);
 		font-size: 0.875rem;
 		font-weight: 700;

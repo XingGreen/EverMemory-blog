@@ -14,22 +14,18 @@
 /* 暗色模式选择器配置 */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* 全局字体：Maple Mono NF CN（前台与后台控制面板统一使用）。
-   原始文件 19.6MB，构建时由 scripts/subset-fonts.ts 子集化并替换此引用；
+/* 全局字体：系统字体栈（前台与后台控制面板统一使用）。
+   此前使用本地 Maple Mono NF CN，需 19.6MB 字体文件 + 构建期子集化；
+   改用系统字体后无需加载任何字体资源，首屏无字体请求。
    代码块 / 横幅标题等特殊位置在各自字体配置中单独指定，不受影响。 */
-@font-face {
-  font-family: 'Maple Mono NF CN';
-  src: url('/assets/fonts/MapleMono-NF-CN-Regular.ttf') format('truetype');
-  font-display: swap;
-  font-weight: 400;
-  font-style: normal;
-}
 
 /* Tailwind v4 配置 - 从 tailwind.config.cjs 迁移 */
 @theme {
   --font-sans:
-    'Maple Mono NF CN', 'Roboto', ui-sans-serif, system-ui, sans-serif,
-    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Noto Sans SC", sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
 /* 自定义工具类 - Tailwind v4 使用 @utility 定义 */
