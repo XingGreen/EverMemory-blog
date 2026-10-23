@@ -911,27 +911,19 @@ function formatDate(dateStr: string | null): string {
 	</div>
 {/snippet}
 
-<!-- 后台 404：借鉴参考项目 StatusPage 的结构思路——
-     外层承担滚动与留白，内层一张居中卡片，内容为
-     状态码 + 标题 + 描述 + 两个动作（主/次）。
-     类名与配色沿用本项目既有约定（placeholder-page / settings-action-btn）。 -->
+<!-- 后台 404：直接复用本项目既有空态设计（.placeholder-page 的图标+标题+说明，
+     按钮复用 .settings-action-btn），不新增任何样式 -->
 {#snippet adminNotFound()}
-	<div class="notfound-frame">
-		<section class="card-base notfound-card">
-			<p class="notfound-code">{i18n(I18nKey.notFound)}</p>
-			<h2 class="notfound-title">{i18n(I18nKey.notFoundTitle)}</h2>
-			<p class="notfound-desc">{i18n(I18nKey.adminNotFoundDescription)}</p>
-			<div class="notfound-actions">
-				<button class="settings-action-btn primary" type="button" onclick={goDashboard}>
-					<Icon icon="material-symbols:home-rounded" />
-					<span>{i18n(I18nKey.errorBackDashboard)}</span>
-				</button>
-				<button class="settings-action-btn" type="button" onclick={goPostList}>
-					<Icon icon="material-symbols:article-outline" />
-					<span>{i18n(I18nKey.adminPosts)}</span>
-				</button>
-			</div>
-		</section>
+	<div class="card-base placeholder-page">
+		<div class="placeholder-icon">
+			<Icon icon="material-symbols:search-off" />
+		</div>
+		<h2>{i18n(I18nKey.notFoundTitle)}</h2>
+		<p>{i18n(I18nKey.adminNotFoundDescription)}</p>
+		<button class="settings-action-btn primary" type="button" onclick={goDashboard}>
+			<Icon icon="material-symbols:home-rounded" />
+			<span>{i18n(I18nKey.errorBackDashboard)}</span>
+		</button>
 	</div>
 {/snippet}
 
@@ -3073,90 +3065,7 @@ function formatDate(dateStr: string | null): string {
 		}
 	}
 
-	/* ── 后台 404 ──
-	   结构借鉴参考项目：外层滚动容器 + 居中卡片 + 状态码/标题/描述/双动作。
-	   具体数值按本项目既有节奏取：卡片 16px 圆角（--radius-large）、
-	   内容区 24px 留白、按钮复用 .settings-action-btn。 */
-	.notfound-frame {
-		display: flex;
-		flex-direction: column;
-		flex: 1;
-		min-width: 0;
-		min-height: 0;
-		overflow-y: auto;
-		padding: 1.5rem;
-	}
-
-	.notfound-card {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		width: 100%;
-		max-width: 40rem;
-		margin-block: auto;
-		margin-inline: auto;
-		padding: 3rem 2rem;
-		text-align: center;
-		flex-shrink: 0;
-	}
-
-	/* 状态码：主色实色，字号随视口自适应，作为视觉锚点 */
-	.notfound-code {
-		margin: 0 0 1.25rem;
-		color: var(--primary);
-		font-size: clamp(3rem, 5vw, 4rem);
-		line-height: 1;
-		font-weight: 700;
-		letter-spacing: 0.02em;
-	}
-
-	.notfound-title {
-		margin: 0;
-		font-size: 1.5rem;
-		font-weight: 600;
-		line-height: 1.4;
-		color: var(--deep-text);
-		text-wrap: balance;
-	}
-
-	.notfound-desc {
-		max-width: 26rem;
-		margin: 0.75rem 0 0;
-		font-size: 0.875rem;
-		line-height: 1.8;
-		color: var(--content-meta);
-		overflow-wrap: anywhere;
-	}
-
-	.notfound-actions {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		justify-content: center;
-		gap: 0.75rem;
-		margin-top: 1.75rem;
-	}
-
-	@media (max-width: 639px) {
-		.notfound-frame {
-			padding: 0.5rem 0;
-		}
-
-		.notfound-card {
-			padding: 2.25rem 1.5rem;
-		}
-
-		.notfound-code {
-			font-size: 2.75rem;
-			margin-bottom: 1rem;
-		}
-
-		.notfound-title {
-			font-size: 1.25rem;
-		}
-	}
-
-	/* ── 占位页（首页 / 网站配置，待后续实现） ── */
+	/* ── 占位页 / 后台 404（同一套空态样式） ── */
 	.placeholder-page {
 		padding: 3.5rem 2rem;
 		text-align: center;
