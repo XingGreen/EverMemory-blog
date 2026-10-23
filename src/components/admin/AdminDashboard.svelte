@@ -918,7 +918,7 @@ function formatDate(dateStr: string | null): string {
 				{i18n(I18nKey.notFound)}
 			</div>
 			<div class="mb-6">
-				<Icon icon="material-symbols:error-outline" class="text-6xl text-(--primary)" />
+				<Icon icon="material-symbols:error-outline" class="notfound-404-icon" />
 			</div>
 			<div class="mb-4 text-3xl font-bold text-90 md:text-4xl">
 				{i18n(I18nKey.notFoundTitle)}
@@ -935,10 +935,10 @@ function formatDate(dateStr: string | null): string {
 				{i18n(I18nKey.backToHome)}
 			</button>
 			<div class="absolute top-4 left-4 opacity-10">
-				<Icon icon="material-symbols:sentiment-sad" class="text-4xl text-(--primary)" />
+				<Icon icon="material-symbols:sentiment-sad" class="notfound-404-deco" />
 			</div>
 			<div class="absolute right-4 bottom-4 opacity-10">
-				<Icon icon="material-symbols:search-off" class="text-4xl text-(--primary)" />
+				<Icon icon="material-symbols:search-off" class="notfound-404-deco" />
 			</div>
 		</div>
 	</div>
@@ -3085,6 +3085,19 @@ function formatDate(dateStr: string | null): string {
 	/* ── 后台 404：沿用前台 404.astro 的入场动画与按钮悬停 ──
 	   前台按钮阴影写的是 rgba(var(--primary-rgb), .3)，而项目未定义
 	   --primary-rgb（该声明实际无效），此处改用现成的 --shadow-md。 */
+	/* 404 图标尺寸：前台用 text-6xl / text-4xl，但本项目 Icon 组件内部
+	   固定带 text-base，会盖掉传入的 text-*，故按既有做法用 :global()
+	   显式声明字号（3.75rem = 60px / 2.25rem = 36px，与前台一致）。 */
+	:global(.notfound-404-icon) {
+		font-size: 3.75rem;
+		color: var(--primary);
+	}
+
+	:global(.notfound-404-deco) {
+		font-size: 2.25rem;
+		color: var(--primary);
+	}
+
 	.notfound-card {
 		animation: fadeInUp 0.6s ease-out;
 	}
