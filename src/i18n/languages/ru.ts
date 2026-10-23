@@ -739,7 +739,7 @@ export const ru: Translation = {
 	[Key.secretsUploadHint]: "Нажмите или перетащите файл закрытого ключа",
 	[Key.secretsUploadReplace]: "Ключ загружен — нажмите, чтобы заменить файл",
 	[Key.secretsMenuClearValue]: "Очистить это значение",
-	[Key.secretsMenuRemoveKeyFile]: "Удалить загруженный файл закрытого ключа",
+	[Key.secretsMenuUndoUpload]: "Отменить эту загрузку",
 	[Key.secretsMenuCopied]: "Имя переменной скопировано",
 	[Key.secretsMenuCopyKey]: "Скопировать имя переменной",
 	[Key.secretsFieldMenu]: "Другие действия",

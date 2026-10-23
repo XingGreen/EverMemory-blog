@@ -701,7 +701,7 @@ export const zaku: Translation = {
 	[Key.secretsUploadHint]: "点一下或拖进来传私钥啦",
 	[Key.secretsUploadReplace]: "私钥已经装好了，点一下换一个",
 	[Key.secretsMenuClearValue]: "清空这一项",
-	[Key.secretsMenuRemoveKeyFile]: "删掉上传的那个私钥文件",
+	[Key.secretsMenuUndoUpload]: "撤销这次上传",
 	[Key.secretsMenuCopied]: "变量名复制好了",
 	[Key.secretsMenuCopyKey]: "复制变量名",
 	[Key.secretsFieldMenu]: "还有点别的",

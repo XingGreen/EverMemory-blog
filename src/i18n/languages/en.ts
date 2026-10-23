@@ -733,7 +733,7 @@ export const en: Translation = {
 	[Key.secretsUploadHint]: "Click or drop a private key file",
 	[Key.secretsUploadReplace]: "Key loaded — click to upload a different file",
 	[Key.secretsMenuClearValue]: "Clear this value",
-	[Key.secretsMenuRemoveKeyFile]: "Remove the uploaded private key file",
+	[Key.secretsMenuUndoUpload]: "Undo this upload",
 	[Key.secretsMenuCopied]: "Variable name copied",
 	[Key.secretsMenuCopyKey]: "Copy variable name",
 	[Key.secretsFieldMenu]: "More actions",

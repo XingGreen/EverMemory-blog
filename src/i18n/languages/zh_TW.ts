@@ -707,7 +707,7 @@ export const zh_TW: Translation = {
 	[Key.secretsUploadHint]: "點擊或拖曳上傳私鑰檔案",
 	[Key.secretsUploadReplace]: "已載入私鑰，點擊可重新上傳",
 	[Key.secretsMenuClearValue]: "清空此項的值",
-	[Key.secretsMenuRemoveKeyFile]: "移除已上傳的私鑰檔案",
+	[Key.secretsMenuUndoUpload]: "撤銷本次上傳",
 	[Key.secretsMenuCopied]: "變數名稱已複製",
 	[Key.secretsMenuCopyKey]: "複製變數名稱",
 	[Key.secretsFieldMenu]: "更多操作",

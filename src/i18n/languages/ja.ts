@@ -727,7 +727,7 @@ export const ja: Translation = {
 	[Key.secretsUploadHint]: "秘密鍵ファイルをクリックまたはドロップ",
 	[Key.secretsUploadReplace]: "読み込み済み — クリックで再アップロード",
 	[Key.secretsMenuClearValue]: "この値をクリア",
-	[Key.secretsMenuRemoveKeyFile]: "アップロード済みの秘密鍵ファイルを削除",
+	[Key.secretsMenuUndoUpload]: "今回のアップロードを取り消す",
 	[Key.secretsMenuCopied]: "変数名をコピーしました",
 	[Key.secretsMenuCopyKey]: "変数名をコピー",
 	[Key.secretsFieldMenu]: "その他の操作",

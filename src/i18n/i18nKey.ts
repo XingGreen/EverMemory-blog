@@ -712,7 +712,7 @@ enum I18nKey {
 	secretsFieldMenu = "secretsFieldMenu",
 	secretsMenuCopyKey = "secretsMenuCopyKey",
 	secretsMenuCopied = "secretsMenuCopied",
-	secretsMenuRemoveKeyFile = "secretsMenuRemoveKeyFile",
+	secretsMenuUndoUpload = "secretsMenuUndoUpload",
 	secretsMenuClearValue = "secretsMenuClearValue",
 	secretsUploadFormats = "secretsUploadFormats",
 	secretsUploadLoaded = "secretsUploadLoaded",

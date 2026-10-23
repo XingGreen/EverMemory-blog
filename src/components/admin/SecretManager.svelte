@@ -510,19 +510,23 @@ onMount(load);
 																: i18n(I18nKey.secretsShow)}
 														</button>
 													{/if}
-													{#if item.kind === "multiline" && drafts[item.key]}
+													<!-- 撤销本次上传：仅当本次会话确实上传过文件时出现。
+													     clearPem 的语义是恢复进入页面时的值，
+													     不是删除已有配置。 -->
+													{#if item.kind === "multiline" && uploadNames[item.key]}
 														<button
 															type="button"
 															role="menuitem"
-															class="field-menu-item danger"
+															class="field-menu-item"
 															onclick={() => {
 																clearPem(item);
 																menuOpen = "";
 															}}
 														>
-															{i18n(I18nKey.secretsMenuRemoveKeyFile)}
+															{i18n(I18nKey.secretsMenuUndoUpload)}
 														</button>
-													{:else if drafts[item.key]}
+													{/if}
+													{#if drafts[item.key]}
 														<button
 															type="button"
 															role="menuitem"
@@ -576,57 +580,55 @@ onMount(load);
 										</button>
 									</div>
 								{:else if item.kind === "multiline"}
-									{#if drafts[item.key]}
-										<!-- 已上传：展示当前文件名，并保留「替换」入口，
-										     避免上传后无法再换文件 -->
-										<div class="uploaded-card">
-											<span class="uploaded-name"
-												>{uploadNames[item.key] ?? i18n(I18nKey.secretsUploadedDefaultName)}</span
+									<!-- 私钥：始终是同一个虚线框，只切换文案。
+									     空态提示可上传，已有值时提示可替换；
+									     本次上传过的显示源文件名，便于确认选的是哪个。 -->
+									<div class="upload-zone">
+										<input
+											type="file"
+											class="upload-input"
+											accept=".pem,.key"
+											disabled={!writable || loading}
+											aria-label={drafts[item.key]
+												? i18n(I18nKey.secretsUploadReplace)
+												: i18n(I18nKey.secretsUploadLabel)}
+											onchange={(e) => readPemFile(e, item)}
+										/>
+										<div class="upload-inner">
+											<!-- 内联上传图标：避免依赖构建期 icons.ts 是否收录该图标 -->
+											<svg
+												class="upload-icon"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+												aria-hidden="true"
 											>
-											<span class="uploaded-note">{i18n(I18nKey.secretsUploadedNote)}</span>
-											<label class="uploaded-replace">
-												<input
-													type="file"
-													class="upload-input"
-													accept=".pem,.key"
-													disabled={!writable || loading}
-													aria-label={i18n(I18nKey.secretsUploadReplace)}
-													onchange={(e) => readPemFile(e, item)}
-												/>
-												<span>{i18n(I18nKey.secretsUploadReplace)}</span>
-											</label>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="1.5"
+													d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+												></path>
+											</svg>
+											<span class="upload-title">
+												{drafts[item.key]
+													? i18n(I18nKey.secretsUploadReplace)
+													: i18n(I18nKey.secretsUploadHint)}
+											</span>
+											<span class="upload-sub">
+												{#if uploadNames[item.key]}
+													{i18n(I18nKey.secretsUploadLoaded).replace(
+														"{name}",
+														uploadNames[item.key],
+													)}
+												{:else if drafts[item.key]}
+													{i18n(I18nKey.secretsUploadedNote)}
+												{:else}
+													{i18n(I18nKey.secretsUploadFormats)}
+												{/if}
+											</span>
 										</div>
-									{:else}
-										<div class="upload-zone">
-											<input
-												type="file"
-												class="upload-input"
-												accept=".pem,.key"
-												disabled={!writable || loading}
-												aria-label={i18n(I18nKey.secretsUploadLabel)}
-												onchange={(e) => readPemFile(e, item)}
-											/>
-											<div class="upload-inner">
-												<!-- 内联上传图标：避免依赖构建期 icons.ts 是否收录该图标 -->
-												<svg
-													class="upload-icon"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-													aria-hidden="true"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="1.5"
-														d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-													></path>
-												</svg>
-												<span class="upload-title">{i18n(I18nKey.secretsUploadHint)}</span>
-												<span class="upload-sub">{i18n(I18nKey.secretsUploadFormats)}</span>
-											</div>
-										</div>
-									{/if}
+									</div>
 									{#if uploadError[item.key]}
 										<span class="upload-error">{uploadError[item.key]}</span>
 									{/if}
@@ -675,30 +677,6 @@ onMount(load);
 				</section>
 			{/if}
 		{/each}
-		{#if writable}
-			<section class="generator-card">
-				<div class="generator-head">
-					<Icon icon="material-symbols:auto-awesome" class="gen-icon" />
-					<div>
-						<h3>{i18n(I18nKey.secretsGenerator)}</h3>
-						<p>{i18n(I18nKey.secretsGeneratorDesc)}</p>
-					</div>
-				</div>
-				<div class="generator-row">
-					<button
-						class="sec-btn"
-						onclick={() => {
-							const jwt = items.find((i) => i.managed);
-							if (jwt) rotate(jwt);
-						}}
-						disabled={saving || rotating !== ""}
-					>
-						<Icon icon="material-symbols:update-rounded" />
-						<span>{i18n(I18nKey.secretsRotateJwt)}</span>
-					</button>
-				</div>
-			</section>
-		{/if}
 	{/if}
 
 	{#if exportOpen}
@@ -1290,69 +1268,8 @@ onMount(load);
 		align-self: flex-start;
 	}
 
-	/* ── 状态二：已上传的文件信息 ──
-	   遵循项目规范：无实线边框，层级靠底色表达；
-	   16px 容器圆角 + 12/16px 内边距。
-	   文件名与「已安全读取」并列一行、无图标，右侧保留 × 按钮。 */
-	.uploaded-card {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		flex: 1;
-		min-width: 0;
-		padding: 0.75rem 1rem;
-		border: 1px solid transparent;
-		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--content-meta) 8%, var(--card-bg));
-	}
-
-	/* 替换按钮：已上传状态下重新选文件。
-	   必须自带 position:relative —— 内部的 file input 是绝对定位，
-	   若没有定位祖先，它会相对整个页面铺开，导致全屏都成了点击区。 */
-	.uploaded-replace {
-		position: relative;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		flex-shrink: 0;
-		margin-left: auto;
-		padding: 0.25rem 0.75rem;
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-xl);
-		color: var(--primary);
-		font-size: 0.75rem;
-		cursor: pointer;
-		transition: background 0.2s ease, border-color 0.2s ease;
-	}
-
-	.uploaded-replace:hover {
-		background: color-mix(in oklab, var(--primary) 10%, transparent);
-		border-color: color-mix(in oklab, var(--primary) 35%, transparent);
-	}
-
-	/* 替换按钮内的 input 只覆盖按钮自身区域 */
-	.uploaded-replace .upload-input {
-		inset: 0;
-	}
-
-	.uploaded-name {
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--deep-text);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.uploaded-note {
-		font-size: 0.75rem;
-		color: color-mix(in oklab, var(--content-meta) 60%, transparent);
-		flex-shrink: 0;
-	}
-
 	/* ── 字段标签行 + 三点菜单 ──
-	   菜单承载低频操作（复制变量名、显隐、清空/移除文件），
-	   替代原先分组末尾的「凭据操作」折叠区。 */
+	   菜单承载低频操作（复制变量名、显示/隐藏、撤销上传、清空值）。 */
 	.field-label-row {
 		display: flex;
 		align-items: center;
@@ -1570,63 +1487,6 @@ onMount(load);
 		background: transparent;
 		align-self: flex-start;
 		word-break: break-all;
-	}
-
-	/* ── 生成工具 ── */
-	.generator-card {
-		padding: 1.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		border: 1px solid transparent;
-		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
-		-webkit-backdrop-filter: blur(12px);
-		backdrop-filter: blur(12px);
-	}
-
-	.generator-head {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.75rem;
-	}
-
-	:global(.gen-icon) {
-		color: var(--primary);
-		flex-shrink: 0;
-		margin-top: 0.125rem;
-	}
-
-	.generator-head h3 {
-		margin: 0 0 0.25rem;
-		font-size: 1rem;
-		font-weight: 600;
-		color: var(--deep-text);
-	}
-
-	.generator-head p {
-		margin: 0;
-		font-size: 0.8125rem;
-		color: var(--content-meta);
-		line-height: 1.55;
-	}
-
-	.generator-row {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-	}
-
-	.gen-label {
-		font-size: 0.8125rem;
-		font-weight: 500;
-		color: var(--deep-text);
-		flex-shrink: 0;
-	}
-
-	.gen-password {
-		max-width: 320px;
 	}
 
 	/* ── 弹窗（导出 / 当前密码确认） ── */
