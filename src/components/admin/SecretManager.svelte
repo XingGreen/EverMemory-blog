@@ -809,13 +809,12 @@ onMount(load);
 </div>
 
 <style>
-	/* ── 页面内容：外壳（.env-page.card-base）由上层提供，
-	   这里只负责纵向分段与内边距，不再自带卡片外观。 */
+	/* ── 页面内容：外壳（AdminPage 的 .admin-page）负责卡片与内边距，
+	   这里只负责纵向分段，不再自带卡片外观与 padding。 */
 	.secrets-page {
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
-		padding: 1.5rem;
 	}
 
 	/* ── 底部保存条（参考 flare settings-savebar） ──
