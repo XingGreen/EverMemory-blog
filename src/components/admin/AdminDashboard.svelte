@@ -36,7 +36,7 @@ type Post = {
 };
 
 type ViewMode = "list" | "edit" | "create";
-type Page = "dashboard" | "posts" | "settings" | "user" | "404";
+type Page = "dashboard" | "posts" | "settings" | "env" | "404";
 
 // 基于 URL 路径的真实路由（History API）：
 //   /admin/                      → 首页
@@ -54,7 +54,7 @@ type Route =
 	| { page: "create" }
 	| { page: "edit"; slug: string }
 	| { page: "settings"; section?: string }
-	| { page: "user" }
+	| { page: "env" }
 	/* 无效路径：不在后台内渲染任何页面，直接交给项目原有的 /404 */
 	| { page: "404" };
 
@@ -198,8 +198,8 @@ const activePage = $derived<Page>(
 			? "dashboard"
 			: route.page === "settings"
 				? "settings"
-			: route.page === "user"
-				? "user"
+			: route.page === "env"
+				? "env"
 				: "posts",
 );
 
@@ -310,11 +310,11 @@ function parseRoute(pathname: string): Route {
 		}
 		case "env":
 			// 环境变量页（原 /admin/user/）
-			return segments.length === 1 ? { page: "user" } : { page: "404" };
+			return segments.length === 1 ? { page: "env" } : { page: "404" };
 		case "secrets":
 		case "user":
 			// 兼容旧链接：/admin/user/、/admin/secrets/ 归一化到 /admin/env/
-			return segments.length === 1 ? { page: "user" } : { page: "404" };
+			return segments.length === 1 ? { page: "env" } : { page: "404" };
 		default:
 			return { page: "404" };
 	}
@@ -331,7 +331,7 @@ function applyRoute() {
 	// 无效路径在后台内渲染 404（保留地址，不跳走）
 	route = next.page === "login" ? { page: "dashboard" } : next;
 	// 环境变量页：旧地址 /admin/user/、/admin/secrets/ 归一化到 /admin/env/
-	if (next.page === "user") {
+	if (next.page === "env") {
 		const path = window.location.pathname.replace(/\/$/, "");
 		if (!path.endsWith("/env")) {
 			window.history.replaceState({}, "", `${DASHBOARD_PATH}env/`);
@@ -403,7 +403,7 @@ const headerTitle = $derived.by(() => {
 			? i18n(getConfigLabelKey(item.key))
 			: i18n(I18nKey.adminSettings);
 	}
-	if (activePage === "user") return i18n(I18nKey.adminEnvVars);
+	if (activePage === "env") return i18n(I18nKey.adminEnvVars);
 	if (viewMode === "edit" && editingPost) return i18n(I18nKey.adminEditPost);
 	if (viewMode === "create") return i18n(I18nKey.adminNewPost);
 	return i18n(I18nKey.adminPosts);
@@ -780,7 +780,7 @@ function goSettings(section?: string) {
 	);
 }
 
-function goUser() {
+function goEnv() {
 	navigate(`${DASHBOARD_PATH}env/`);
 }
 
@@ -1362,10 +1362,10 @@ function formatDate(dateStr: string | null): string {
 				<!-- 环境变量（原用户中心）：从侧栏导航进入，不再由底部用户卡片进入 -->
 				<button
 					class="nav-item"
-					class:active={activePage === "user"}
-					onclick={goUser}
+					class:active={activePage === "env"}
+					onclick={goEnv}
 				>
-					{#if activePage === "user"}
+					{#if activePage === "env"}
 						<Icon icon="material-symbols:shield-lock" />
 					{:else}
 						<Icon icon="material-symbols:shield-lock-outline" />
@@ -1547,8 +1547,8 @@ function formatDate(dateStr: string | null): string {
 					{/if}
 				{:else if activePage === "404"}
 					{@render adminNotFound()}
-{:else if activePage === "user"}
-				<div class="user-page">
+{:else if activePage === "env"}
+				<div class="env-page">
 				{#if import.meta.env.PROD}
 					<section class="card-base secrets-guide">
 						<div class="guide-head">
@@ -1619,7 +1619,7 @@ function formatDate(dateStr: string | null): string {
 		open={tourOpen}
 		onClose={() => (tourOpen = false)}
 		onNavigate={(page) => {
-			if (page === "secrets") goUser();
+			if (page === "secrets") goEnv();
 			else if (page === "posts") goPostList();
 			else goSettings();
 		}}
@@ -1906,7 +1906,7 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	/* ── 用户中心 ── */
-	.user-page {
+	.env-page {
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
