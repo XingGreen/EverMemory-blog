@@ -45,7 +45,8 @@ type Page = "dashboard" | "posts" | "settings" | "user" | "404";
 //   /admin/articles/edit/:slug/  → 编辑文章
 //   /admin/settings/             → 网站配置（概览）
 //   /admin/settings/:key/        → 网站配置（具体配置文件子页）
-//   /admin/user/                 → 用户中心（密钥配置等账户相关功能）
+//   /admin/env/                  → 环境变量（密钥配置等）
+//   /admin/user/、/admin/secrets/ → 旧地址，归一化到 /admin/env/
 type Route =
 	| { page: "login" }
 	| { page: "dashboard" }
@@ -307,10 +308,12 @@ function parseRoute(pathname: string): Route {
 				? { page: "settings", section: segments[1] }
 				: { page: "404" };
 		}
+		case "env":
+			// 环境变量页（原 /admin/user/）
+			return segments.length === 1 ? { page: "user" } : { page: "404" };
 		case "secrets":
-			// 兼容旧链接：密钥配置已并入用户中心
-			return { page: "user" };
 		case "user":
+			// 兼容旧链接：/admin/user/、/admin/secrets/ 归一化到 /admin/env/
 			return segments.length === 1 ? { page: "user" } : { page: "404" };
 		default:
 			return { page: "404" };
@@ -327,6 +330,13 @@ function applyRoute() {
 	const next = parseRoute(window.location.pathname);
 	// 无效路径在后台内渲染 404（保留地址，不跳走）
 	route = next.page === "login" ? { page: "dashboard" } : next;
+	// 环境变量页：旧地址 /admin/user/、/admin/secrets/ 归一化到 /admin/env/
+	if (next.page === "user") {
+		const path = window.location.pathname.replace(/\/$/, "");
+		if (!path.endsWith("/env")) {
+			window.history.replaceState({}, "", `${DASHBOARD_PATH}env/`);
+		}
+	}
 	// 设置页已无概览层：/admin/settings/ 归一化到第一个配置项的真实地址，
 	// 避免地址栏与渲染内容不一致
 	if (
@@ -771,7 +781,7 @@ function goSettings(section?: string) {
 }
 
 function goUser() {
-	navigate(`${DASHBOARD_PATH}user/`);
+	navigate(`${DASHBOARD_PATH}env/`);
 }
 
 function goPostList() {
@@ -1539,19 +1549,6 @@ function formatDate(dateStr: string | null): string {
 					{@render adminNotFound()}
 {:else if activePage === "user"}
 				<div class="user-page">
-					<section class="card-base user-profile-card">
-						<span class="user-profile-avatar">
-							{#if avatarUrl}
-								<img src={avatarUrl} alt="" class="user-profile-avatar-img" />
-							{:else}
-								<Icon icon="material-symbols:person-rounded" class="user-profile-avatar-icon" />
-							{/if}
-						</span>
-						<div class="user-profile-info">
-							<h2>{adminUsername || "admin"}</h2>
-							<p>{i18n(I18nKey.adminSidebarRole)}</p>
-						</div>
-					</section>
 				{#if import.meta.env.PROD}
 					<section class="card-base secrets-guide">
 						<div class="guide-head">
@@ -1913,48 +1910,6 @@ function formatDate(dateStr: string | null): string {
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
-	}
-
-	.user-profile-card {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		padding: 1.5rem;
-	}
-
-	.user-profile-avatar {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 3.5rem;
-		height: 3.5rem;
-		flex-shrink: 0;
-		overflow: hidden;
-		border-radius: 50%;
-		background: var(--btn-regular-bg);
-	}
-
-	.user-profile-avatar-img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-	}
-
-	.user-profile-avatar-icon {
-		font-size: 1.75rem;
-		color: var(--content-meta);
-	}
-
-	.user-profile-info h2 {
-		font-size: 1.125rem;
-		font-weight: 600;
-		color: var(--deep-text);
-	}
-
-	.user-profile-info p {
-		margin-top: 0.25rem;
-		font-size: 0.8125rem;
-		color: var(--content-meta);
 	}
 
 	.user-avatar {

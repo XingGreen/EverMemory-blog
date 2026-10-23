@@ -389,32 +389,6 @@ onMount(load);
 		</div>
 	{/if}
 
-	{#if !loading && !loadError}
-		<!-- 成功提示：一行说完「已完成配置 + 写入位置」（新设计稿） -->
-		{#if allRequiredConfigured}
-			<div class="success-bar">
-				<Icon icon="material-symbols:check-circle-outline" />
-				<span>{i18n(I18nKey.secretsStatusAllDone).replace("{file}", envFile)}</span>
-			</div>
-		{:else}
-			<div class="pending-bar">
-				<Icon icon="material-symbols:info-outline" class="status-icon" />
-				<span class="status-text">
-					{i18n(I18nKey.secretsStatusPartial)
-						.replace("{done}", String(requiredConfiguredCount))
-						.replace("{total}", String(requiredItems.length))}
-				</span>
-				<span class="status-missing">
-					{i18n(I18nKey.secretsStatusMissing)}
-					{#each missingRequired as item, i (item.key)}
-						<span class="status-key" title={item.key}>{item.label}</span>
-						{#if i < missingRequired.length - 1}、{/if}
-					{/each}
-				</span>
-			</div>
-		{/if}
-	{/if}
-
 	<!-- 操作栏：左侧两行说明 + 右侧按钮组（对照设计稿 .action-bar） -->
 	<div class="action-bar">
 		<div class="action-info">
@@ -464,6 +438,32 @@ onMount(load);
 			{/if}
 		</div>
 	</div>
+
+	<!-- 状态提示：一行说完「已完成配置 + 写入位置」 -->
+	{#if !loading && !loadError}
+		{#if allRequiredConfigured}
+			<div class="success-bar">
+				<Icon icon="material-symbols:check-circle-outline" />
+				<span>{i18n(I18nKey.secretsStatusAllDone).replace("{file}", envFile)}</span>
+			</div>
+		{:else}
+			<div class="pending-bar">
+				<Icon icon="material-symbols:info-outline" class="status-icon" />
+				<span class="status-text">
+					{i18n(I18nKey.secretsStatusPartial)
+						.replace("{done}", String(requiredConfiguredCount))
+						.replace("{total}", String(requiredItems.length))}
+				</span>
+				<span class="status-missing">
+					{i18n(I18nKey.secretsStatusMissing)}
+					{#each missingRequired as item, i (item.key)}
+						<span class="status-key" title={item.key}>{item.label}</span>
+						{#if i < missingRequired.length - 1}、{/if}
+					{/each}
+				</span>
+			</div>
+		{/if}
+	{/if}
 
 	{#if loading}
 		<div class="status-banner">
