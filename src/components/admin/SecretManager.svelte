@@ -431,7 +431,11 @@ onMount(load);
 
 					<div class="settings-field-grid">
 						{#each group.items as item (item.key)}
-							<div class="settings-field" class:dirty={isDirty(item)}>
+							<div
+								class="settings-field"
+								class:dirty={isDirty(item)}
+								class:span-full={item.span === 12}
+							>
 								<span class="field-label">
 									{#if item.sensitive}
 										<Icon icon="material-symbols:lock-outline" class="lock-icon" />
@@ -519,42 +523,6 @@ onMount(load);
 									{#if uploadError[item.key]}
 										<span class="upload-error">{uploadError[item.key]}</span>
 									{/if}
-
-									{#if drafts[item.key]}
-										<div class="settings-disclosure">
-											<button
-												type="button"
-												class="settings-disclosure-trigger"
-												aria-expanded={disclosureOpen[item.key] === true}
-												aria-controls={"cred-" + item.key}
-												onclick={() => toggleDisclosure(item.key)}
-											>
-												<span>{i18n(I18nKey.secretsCredentialActions)}</span>
-												<Icon
-													icon={disclosureOpen[item.key]
-														? "material-symbols:keyboard-arrow-up-rounded"
-														: "material-symbols:keyboard-arrow-down-rounded"}
-												/>
-											</button>
-											<div
-												id={"cred-" + item.key}
-												class="settings-disclosure-content"
-												data-open={disclosureOpen[item.key] === true}
-											>
-												<div>
-													<div class="disclosure-inner">
-														<button
-															type="button"
-															class="text-action"
-															onclick={() => clearPem(item)}
-														>
-															{i18n(I18nKey.secretsUploadRemove)}
-														</button>
-													</div>
-												</div>
-											</div>
-										</div>
-									{/if}
 								{:else}
 									<div class="input-wrap">
 										<input
@@ -597,6 +565,48 @@ onMount(load);
 							</div>
 						{/each}
 					</div>
+
+					<!-- 凭据操作：位于网格之外、分组末尾（与演示稿一致），
+					     收集该组内所有已上传私钥的移除入口 -->
+					{#if group.items.some((it) => it.kind === "multiline" && drafts[it.key])}
+						<div class="settings-disclosure">
+							<button
+								type="button"
+								class="settings-disclosure-trigger"
+								aria-expanded={disclosureOpen[group.id] === true}
+								aria-controls={"cred-" + group.id}
+								onclick={() => toggleDisclosure(group.id)}
+							>
+								<span>{i18n(I18nKey.secretsCredentialActions)}</span>
+								<Icon
+									icon={disclosureOpen[group.id]
+										? "material-symbols:keyboard-arrow-up-rounded"
+										: "material-symbols:keyboard-arrow-down-rounded"}
+								/>
+							</button>
+							<div
+								id={"cred-" + group.id}
+								class="settings-disclosure-content"
+								data-open={disclosureOpen[group.id] === true}
+							>
+								<div>
+									<div class="disclosure-inner">
+										{#each group.items as it (it.key)}
+											{#if it.kind === "multiline" && drafts[it.key]}
+												<button
+													type="button"
+													class="text-action"
+													onclick={() => clearPem(it)}
+												>
+													{i18n(I18nKey.secretsUploadRemove)}
+												</button>
+											{/if}
+										{/each}
+									</div>
+								</div>
+							</div>
+						</div>
+					{/if}
 				</section>
 			{/if}
 		{/each}
@@ -1048,6 +1058,11 @@ onMount(load);
 		align-items: start;
 	}
 
+	/* 长字段跨满两列（与演示稿的 grid-column: 1 / -1 等价） */
+	.settings-field.span-full {
+		grid-column: 1 / -1;
+	}
+
 	/* ── 单个字段（参考 .settings-field：纵向、8px 间距） ── */
 	.settings-field {
 		display: grid;
@@ -1207,11 +1222,11 @@ onMount(load);
 	}
 
 	/* ── 凭据操作折叠区（对齐参考项目 .settings-disclosure）──
-	   低频、破坏性的操作收在此处，避免与常规编辑动作混在一起。
+	   位于字段网格之外、分组末尾，低频且破坏性的操作收在此处。
 	   展开动画走 grid-template-rows 0fr→1fr，不需要 JS 计算高度。 */
 	.settings-disclosure {
 		border-top: 1px solid var(--line-divider);
-		margin-top: 0.5rem;
+		margin-top: 1.25rem;
 	}
 
 	.settings-disclosure-trigger {
