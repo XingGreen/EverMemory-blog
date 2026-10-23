@@ -466,6 +466,7 @@ export const ru: Translation = {
 	[Key.adminSettingsOverview]: "Обзор конфигурации",
 	[Key.adminBackHome]: "На главную",
 	[Key.adminEnvVars]: "Переменные среды",
+	[Key.adminEnvVarsIntro]: "Здесь управляются секреты и переменные среды сайта; изменения записываются в файл конфигурации в корне проекта",
 	[Key.adminUserCenter]: "Аккаунт",
 	[Key.adminToggleTheme]: "Переключить тему",
 	[Key.adminCollapseSidebar]: "Свернуть боковую панель",

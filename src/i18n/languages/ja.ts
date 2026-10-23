@@ -463,6 +463,7 @@ export const ja: Translation = {
 	[Key.adminSettingsOverview]: "設定の概要",
 	[Key.adminBackHome]: "ホームに戻る",
 	[Key.adminEnvVars]: "環境変数",
+	[Key.adminEnvVarsIntro]: "サイトの実行に必要なシークレットと環境変数を管理します。変更はプロジェクト直下の設定ファイルに書き込まれます",
 	[Key.adminUserCenter]: "アカウント",
 	[Key.adminToggleTheme]: "テーマ切り替え",
 	[Key.adminCollapseSidebar]: "サイドバーを折りたたむ",

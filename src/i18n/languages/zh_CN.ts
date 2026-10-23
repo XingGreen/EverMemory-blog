@@ -451,6 +451,7 @@ export const zh_CN: Translation = {
 	[Key.adminSettingsOverview]: "配置概览",
 	[Key.adminBackHome]: "返回首页",
 	[Key.adminEnvVars]: "环境变量",
+	[Key.adminEnvVarsIntro]: "此处管理站点运行所需的密钥与环境变量，修改会写入项目根目录的配置文件",
 	[Key.adminUserCenter]: "用户中心",
 	[Key.adminToggleTheme]: "切换深浅模式",
 	[Key.adminCollapseSidebar]: "收起侧边栏",

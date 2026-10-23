@@ -453,6 +453,7 @@ export const zh_TW: Translation = {
 	[Key.adminSettingsOverview]: "設定總覽",
 	[Key.adminBackHome]: "返回首頁",
 	[Key.adminEnvVars]: "環境變數",
+	[Key.adminEnvVarsIntro]: "此處管理站點運行所需的密鑰與環境變數，修改會寫入專案根目錄的設定檔",
 	[Key.adminUserCenter]: "使用者中心",
 	[Key.adminToggleTheme]: "切換深淺模式",
 	[Key.adminCollapseSidebar]: "收起側邊欄",

@@ -1549,6 +1549,11 @@ function formatDate(dateStr: string | null): string {
 					{@render adminNotFound()}
 {:else if activePage === "env"}
 				<div class="env-page card-base">
+				<!-- 页面标题区：与设置页共用 .settings-heading（28px 标题 + 灰字简介） -->
+				<header class="settings-heading">
+					<h1>{i18n(I18nKey.adminEnvVars)}</h1>
+					<p>{i18n(I18nKey.adminEnvVarsIntro)}</p>
+				</header>
 				{#if import.meta.env.PROD}
 					<section class="card-base secrets-guide">
 						<div class="guide-head">
@@ -1905,11 +1910,12 @@ function formatDate(dateStr: string | null): string {
 		margin-bottom: 0.25rem;
 	}
 
-	/* ── 环境变量页：与其他后台页同构的卡片外壳 ── */
+	/* ── 环境变量页：与其他后台页同构的卡片外壳 ──
+	   标题区自带上下左右内边距，内容由 SecretManager 提供（自带 1.5rem），
+	   这里不再叠加 padding，避免双重留白。 */
 	.env-page {
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
 	}
 
 	.user-avatar {

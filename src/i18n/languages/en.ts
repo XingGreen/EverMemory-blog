@@ -466,6 +466,7 @@ export const en: Translation = {
 	[Key.adminSettingsOverview]: "Configuration Overview",
 	[Key.adminBackHome]: "Back to home",
 	[Key.adminEnvVars]: "Env Vars",
+	[Key.adminEnvVarsIntro]: "Manage the secrets and environment variables this site needs; changes are written to the config file in the project root",
 	[Key.adminUserCenter]: "Account",
 	[Key.adminToggleTheme]: "Toggle theme",
 	[Key.adminCollapseSidebar]: "Collapse sidebar",

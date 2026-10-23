@@ -448,6 +448,7 @@ export const zaku: Translation = {
 	[Key.adminSettingsOverview]: "配置概览",
 	[Key.adminBackHome]: "返回首页",
 	[Key.adminEnvVars]: "环境变量",
+	[Key.adminEnvVarsIntro]: "这里管站点要用的密钥和环境变量，改了会写进项目根目录的配置文件",
 	[Key.adminUserCenter]: "用户中心",
 	[Key.adminToggleTheme]: "切换深浅模式",
 	[Key.adminCollapseSidebar]: "收起侧边栏",
