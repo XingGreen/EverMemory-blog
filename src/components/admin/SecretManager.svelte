@@ -40,6 +40,46 @@ let exportBusy = $state(false);
 let rotating = $state("");
 // 当前展开三点菜单的配置项 key（同一时刻只允许一个）
 let menuOpen = $state("");
+// 「重新上传」触发后记录目标 key（用于聚焦对应文件框，当前仅作语义标记）
+let reuploadTarget = $state("");
+// 私钥查看弹窗：目标 key 与展示模式（原文 / base64）
+let viewTarget = $state("");
+let viewMode = $state<"text" | "base64">("text");
+
+/** 弹窗中当前展示的私钥内容。
+ *
+ * 注意：草稿里的私钥来自 .env.local，那里存的是 Base64（保存时由
+ * quoteEnvValue 自动转换）。所以「原文」视图需要先解码，否则展示的
+ * 会是一串 Base64；「Base64」视图则直接展示草稿本身（已是 Base64），
+ * 若草稿本就是 PEM 明文（本次刚上传）则现场编码。
+ */
+const viewContent = $derived.by(() => {
+	if (!viewTarget) return "";
+	const raw = drafts[viewTarget] ?? "";
+	const isPlainPem = raw.includes("-----BEGIN");
+
+	if (viewMode === "text") {
+		if (isPlainPem) return raw;
+		try {
+			const decoded = atob(raw.trim());
+			// 解码结果必须是 PEM，否则按原文展示（可能是别的编码）
+			return decoded.includes("-----BEGIN") ? decoded : raw;
+		} catch {
+			return raw;
+		}
+	}
+
+	// Base64 视图
+	if (!isPlainPem) return raw;
+	try {
+		const bytes = new TextEncoder().encode(raw);
+		let bin = "";
+		for (const b of bytes) bin += String.fromCharCode(b);
+		return btoa(bin);
+	} catch {
+		return "";
+	}
+});
 
 /** 点击页面其他位置时收起三点菜单 */
 function closeMenuOnOutside(e: MouseEvent) {
@@ -180,19 +220,6 @@ async function readPemFile(
 
 	drafts[item.key] = text;
 	uploadNames[item.key] = file.name;
-}
-
-/**
- * 丢弃本次上传的私钥，恢复到进入页面时的状态。
- *
- * 语义是「撤销这次上传」而非「删除已有配置」：磁盘上原本有值就恢复原值
- * （界面回到已上传态、显示「已保存的私钥」）；原本没有就回到拖拽框。
- * 要真正移除配置项，把输入框清空后保存即可（清空 = 删除）。
- */
-function clearPem(item: SecretItemDTO) {
-	drafts[item.key] = draftsOrigin[item.key] ?? "";
-	uploadNames[item.key] = "";
-	uploadError[item.key] = "";
 }
 
 function buildEntries(): { key: string; value?: string; delete?: boolean }[] {
@@ -495,49 +522,82 @@ onMount(load);
 													>
 														{i18n(I18nKey.secretsMenuCopyKey)}
 													</button>
-													{#if item.sensitive && drafts[item.key]}
-														<button
-															type="button"
-															role="menuitem"
-															class="field-menu-item"
-															onclick={() => {
-																toggleReveal(item);
-																menuOpen = "";
-															}}
-														>
-															{showInput[item.key]
-																? i18n(I18nKey.secretsHide)
-																: i18n(I18nKey.secretsShow)}
-														</button>
-													{/if}
-													<!-- 撤销本次上传：仅当本次会话确实上传过文件时出现。
-													     clearPem 的语义是恢复进入页面时的值，
-													     不是删除已有配置。 -->
-													{#if item.kind === "multiline" && uploadNames[item.key]}
-														<button
-															type="button"
-															role="menuitem"
-															class="field-menu-item"
-															onclick={() => {
-																clearPem(item);
-																menuOpen = "";
-															}}
-														>
-															{i18n(I18nKey.secretsMenuUndoUpload)}
-														</button>
-													{/if}
-													{#if drafts[item.key]}
+
+													{#if item.kind === "multiline"}
+														<!-- 私钥专属菜单：清空 / 重新上传 / 查看 -->
 														<button
 															type="button"
 															role="menuitem"
 															class="field-menu-item danger"
 															onclick={() => {
 																drafts[item.key] = "";
+																uploadNames[item.key] = "";
+																uploadError[item.key] = "";
 																menuOpen = "";
 															}}
 														>
-															{i18n(I18nKey.secretsMenuClearValue)}
+															{i18n(I18nKey.secretsMenuClearKey)}
 														</button>
+														<button
+															type="button"
+															role="menuitem"
+															class="field-menu-item"
+															onclick={() => {
+																menuOpen = "";
+																reuploadTarget = item.key;
+																// 触发该字段的文件选择框
+																queueMicrotask(() => {
+																	const el = document.getElementById(
+																		`pem-input-${item.key}`,
+																	);
+																	el?.click();
+																});
+															}}
+														>
+															{i18n(I18nKey.secretsMenuReupload)}
+														</button>
+														<button
+															type="button"
+															role="menuitem"
+															class="field-menu-item"
+															disabled={!drafts[item.key]}
+															onclick={() => {
+																menuOpen = "";
+																viewTarget = item.key;
+																viewMode = "text";
+															}}
+														>
+															{i18n(I18nKey.secretsMenuViewKey)}
+														</button>
+													{:else}
+														{#if item.sensitive && drafts[item.key]}
+															<button
+																type="button"
+																role="menuitem"
+																class="field-menu-item"
+																onclick={() => {
+																	toggleReveal(item);
+																	menuOpen = "";
+																}}
+															>
+																{showInput[item.key]
+																	? i18n(I18nKey.secretsHide)
+																	: i18n(I18nKey.secretsShow)}
+															</button>
+														{/if}
+														{#if drafts[item.key]}
+															<button
+																type="button"
+																role="menuitem"
+																class="field-menu-item danger"
+																onclick={() => {
+																	drafts[item.key] = "";
+																	menuOpen = "";
+																}}
+															>
+																{i18n(I18nKey.secretsMenuClearValue)}
+															</button>
+														{/if}
 													{/if}
 												</div>
 											{/if}
@@ -580,11 +640,11 @@ onMount(load);
 										</button>
 									</div>
 								{:else if item.kind === "multiline"}
-									<!-- 私钥：始终是同一个虚线框，只切换文案。
-									     空态提示可上传，已有值时提示可替换；
-									     本次上传过的显示源文件名，便于确认选的是哪个。 -->
-									<div class="upload-zone">
+									<!-- 私钥上传框：与输入框同尺寸的虚线框，整块可点。
+									     文案只有两态：已配置 / 暂未配置。 -->
+									<div class="upload-zone" class:configured={drafts[item.key]}>
 										<input
+											id={`pem-input-${item.key}`}
 											type="file"
 											class="upload-input"
 											accept=".pem,.key"
@@ -594,40 +654,11 @@ onMount(load);
 												: i18n(I18nKey.secretsUploadLabel)}
 											onchange={(e) => readPemFile(e, item)}
 										/>
-										<div class="upload-inner">
-											<!-- 内联上传图标：避免依赖构建期 icons.ts 是否收录该图标 -->
-											<svg
-												class="upload-icon"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-												aria-hidden="true"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="1.5"
-													d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-												></path>
-											</svg>
-											<span class="upload-title">
-												{drafts[item.key]
-													? i18n(I18nKey.secretsUploadReplace)
-													: i18n(I18nKey.secretsUploadHint)}
-											</span>
-											<span class="upload-sub">
-												{#if uploadNames[item.key]}
-													{i18n(I18nKey.secretsUploadLoaded).replace(
-														"{name}",
-														uploadNames[item.key],
-													)}
-												{:else if drafts[item.key]}
-													{i18n(I18nKey.secretsUploadedConfigured)}
-												{:else}
-													{i18n(I18nKey.secretsUploadFormats)}
-												{/if}
-											</span>
-										</div>
+										<span class="upload-text">
+											{drafts[item.key]
+												? i18n(I18nKey.secretsUploadedConfigured)
+												: i18n(I18nKey.secretsPemUploadPrompt)}
+										</span>
 									</div>
 									{#if uploadError[item.key]}
 										<span class="upload-error">{uploadError[item.key]}</span>
@@ -729,6 +760,78 @@ onMount(load);
 					>
 						<Icon icon="material-symbols:terminal-rounded" />
 						<span>{i18n(I18nKey.secretsExportCopyVercel)}</span>
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- 私钥查看弹窗：原文 / Base64 两种视图 -->
+	{#if viewTarget}
+		<div
+			class="modal-overlay"
+			role="dialog"
+			aria-modal="true"
+			aria-label={i18n(I18nKey.secretsMenuViewKey)}
+			tabindex="-1"
+			onclick={(e) => {
+				if (e.target === e.currentTarget) viewTarget = "";
+			}}
+			onkeydown={(e) => {
+				if (e.key === "Escape") viewTarget = "";
+			}}
+		>
+			<div class="modal-card card-base view-modal">
+				<div class="modal-head">
+					<h3>
+						<Icon icon="material-symbols:key-outline" class="modal-head-icon" />
+						<span>{i18n(I18nKey.secretsViewTitle)}</span>
+					</h3>
+					<button
+						class="modal-close"
+						type="button"
+						aria-label={i18n(I18nKey.secretsClose)}
+						onclick={() => (viewTarget = "")}
+					>
+						<Icon icon="material-symbols:close" />
+					</button>
+				</div>
+
+				<!-- 视图切换：原文 / Base64 -->
+				<div class="view-tabs" role="tablist">
+					<button
+						type="button"
+						role="tab"
+						class="view-tab"
+						aria-selected={viewMode === "text"}
+						onclick={() => (viewMode = "text")}
+					>
+						{i18n(I18nKey.secretsViewPlain)}
+					</button>
+					<button
+						type="button"
+						role="tab"
+						class="view-tab"
+						aria-selected={viewMode === "base64"}
+						onclick={() => (viewMode = "base64")}
+					>
+						{i18n(I18nKey.secretsViewBase64)}
+					</button>
+				</div>
+
+				<pre class="view-content">{viewContent}</pre>
+
+				<div class="modal-actions">
+					<button
+						class="sec-btn primary"
+						type="button"
+						onclick={() => {
+							navigator.clipboard?.writeText(viewContent);
+							onNotify?.(i18n(I18nKey.secretsViewCopied), "success", 2500);
+						}}
+					>
+						<Icon icon="material-symbols:content-copy" />
+						<span>{i18n(I18nKey.secretsViewCopy)}</span>
 					</button>
 				</div>
 			</div>
@@ -1193,22 +1296,33 @@ onMount(load);
 		}
 	}
 
-	/* ── 私钥上传区 ──
-	   虚线框是上传语义的必要表达（规范允许结构性虚线），
-	   但圆角与底色回归项目变量：16px 容器圆角 + 前景色 8% 混卡片底。 */
+	/* ── 私钥上传框 ──
+	   与普通输入框同尺寸（42px 高、12px 圆角），整块可点。
+	   虚线是上传语义的必要表达，底色/边框沿用项目变量。 */
 	.upload-zone {
 		position: relative;
-		flex: 1;
-		min-width: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		min-height: 2.625rem;
+		padding: 0.5rem 0.75rem;
 		border: 1px dashed color-mix(in oklab, var(--content-meta) 35%, transparent);
-		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--content-meta) 8%, var(--card-bg));
+		border-radius: var(--radius-xl);
+		background: color-mix(in srgb, var(--content-meta) 8%, var(--card-bg));
 		transition: border-color 0.2s ease, background 0.2s ease;
 	}
 
 	.upload-zone:hover {
 		border-color: var(--primary);
 		background: color-mix(in oklab, var(--content-meta) 12%, var(--card-bg));
+	}
+
+	/* 已配置态：文字用正文色，与「未配置」的提示语气区分 */
+	.upload-zone.configured {
+		border-style: solid;
+		border-color: color-mix(in oklab, var(--success) 30%, transparent);
+		background: color-mix(in oklab, var(--success) 10%, transparent);
 	}
 
 	.upload-input {
@@ -1225,40 +1339,21 @@ onMount(load);
 		cursor: not-allowed;
 	}
 
-	.upload-inner {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 1.75rem 1.5rem;
-		text-align: center;
-		pointer-events: none;
-	}
-
-	.upload-zone :global(svg.upload-icon) {
-		width: 2rem;
-		height: 2rem;
-		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
-		transition: color 0.2s ease;
-	}
-
-	.upload-zone:hover :global(svg.upload-icon) {
-		color: var(--primary);
-	}
-
-	.upload-title {
+	.upload-text {
 		font-size: 0.875rem;
 		color: var(--content-meta);
+		text-align: center;
+		pointer-events: none;
 		transition: color 0.2s ease;
 	}
 
-	.upload-zone:hover .upload-title {
+	.upload-zone:hover .upload-text {
 		color: var(--deep-text);
 	}
 
-	.upload-sub {
-		font-size: 0.75rem;
-		color: color-mix(in oklab, var(--content-meta) 60%, transparent);
+	.upload-zone.configured .upload-text {
+		color: color-mix(in oklab, var(--success) 55%, var(--deep-text));
+		font-weight: 500;
 	}
 
 	.upload-error {
@@ -1531,6 +1626,55 @@ onMount(load);
 
 	:global(.modal-head-icon) {
 		color: var(--primary);
+	}
+
+	/* ── 私钥查看弹窗 ── */
+	.view-modal {
+		max-width: 720px;
+	}
+
+	.view-tabs {
+		display: flex;
+		gap: 0.5rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.view-tab {
+		padding: 0.375rem 0.875rem;
+		border: 1px solid var(--input-border);
+		border-radius: var(--radius-xl);
+		background: var(--input-bg);
+		color: var(--content-meta);
+		font-size: 0.8125rem;
+		font-family: inherit;
+		cursor: pointer;
+		transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+	}
+
+	.view-tab:hover {
+		color: var(--deep-text);
+	}
+
+	.view-tab[aria-selected="true"] {
+		background: color-mix(in oklab, var(--primary) 15%, transparent);
+		border-color: color-mix(in oklab, var(--primary) 35%, transparent);
+		color: var(--primary);
+	}
+
+	.view-content {
+		margin: 0;
+		padding: 0.75rem;
+		max-height: 46vh;
+		overflow: auto;
+		border: 1px solid var(--input-border);
+		border-radius: var(--radius-xl);
+		background: var(--input-bg);
+		color: var(--deep-text);
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+		line-height: 1.6;
+		white-space: pre-wrap;
+		word-break: break-all;
 	}
 
 	.modal-close {
