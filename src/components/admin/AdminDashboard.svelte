@@ -36,7 +36,7 @@ type Post = {
 };
 
 type ViewMode = "list" | "edit" | "create";
-type Page = "dashboard" | "posts" | "settings" | "user";
+type Page = "dashboard" | "posts" | "settings" | "user" | "404";
 
 // 基于 URL 路径的真实路由（History API）：
 //   /admin/                      → 首页
@@ -191,10 +191,12 @@ function toggleCollapseSidebar() {
 }
 
 const activePage = $derived<Page>(
-	route.page === "dashboard"
-		? "dashboard"
-		: route.page === "settings"
-			? "settings"
+	route.page === "404"
+		? "404"
+		: route.page === "dashboard"
+			? "dashboard"
+			: route.page === "settings"
+				? "settings"
 			: route.page === "user"
 				? "user"
 				: "posts",
@@ -323,12 +325,7 @@ function applyRoute() {
 		return;
 	}
 	const next = parseRoute(window.location.pathname);
-	// 无效路径：交给项目原有的 404 页（src/pages/404.astro），
-	// 后台内不另写 404 界面
-	if (next.page === "404") {
-		window.location.replace("/404/");
-		return;
-	}
+	// 无效路径在后台内渲染 404（保留地址，不跳走）
 	route = next.page === "login" ? { page: "dashboard" } : next;
 	// 设置页已无概览层：/admin/settings/ 归一化到第一个配置项的真实地址，
 	// 避免地址栏与渲染内容不一致
@@ -388,6 +385,7 @@ onMount(async () => {
 
 // 移动端 TopBar 标题随页面联动（桌面端已无全局 header）
 const headerTitle = $derived.by(() => {
+	if (activePage === "404") return i18n(I18nKey.notFoundTitle);
 	if (activePage === "dashboard") return i18n(I18nKey.adminDashboard);
 	if (activePage === "settings") {
 		const item = settingsSection ? getConfigItem(settingsSection) : undefined;
@@ -908,6 +906,41 @@ function formatDate(dateStr: string | null): string {
 		<h2>{title}</h2>
 		<p>{desc}</p>
 		<span class="placeholder-badge">{i18n(I18nKey.placeholderBadge)}</span>
+	</div>
+{/snippet}
+
+<!-- 后台 404：结构与 src/pages/404.astro 一致（大号 404 + 图标 + 标题 +
+     描述 + 返回按钮 + 两枚角落装饰），改用后台路由（返回控制面板） -->
+{#snippet adminNotFound()}
+	<div class="relative flex w-full min-h-96 overflow-hidden rounded-(--radius-large)">
+		<div class="card-base notfound-card relative z-10 flex w-full flex-col items-center justify-center px-9 py-12 text-center">
+			<div class="mb-4 text-8xl font-bold text-(--primary) opacity-20 md:text-9xl">
+				{i18n(I18nKey.notFound)}
+			</div>
+			<div class="mb-6">
+				<Icon icon="material-symbols:error-outline" class="text-6xl text-(--primary)" />
+			</div>
+			<div class="mb-4 text-3xl font-bold text-90 md:text-4xl">
+				{i18n(I18nKey.notFoundTitle)}
+			</div>
+			<p class="mb-8 max-w-md text-lg text-75">
+				{i18n(I18nKey.notFoundDescription)}
+			</p>
+			<button
+				type="button"
+				class="notfound-back inline-flex items-center gap-2 rounded-(--radius-large) bg-(--primary) px-6 py-3 font-medium text-white transition-colors duration-200 hover:bg-(--btn-content)"
+				onclick={goDashboard}
+			>
+				<Icon icon="material-symbols:home" class="text-xl" />
+				{i18n(I18nKey.backToHome)}
+			</button>
+			<div class="absolute top-4 left-4 opacity-10">
+				<Icon icon="material-symbols:sentiment-sad" class="text-4xl text-(--primary)" />
+			</div>
+			<div class="absolute right-4 bottom-4 opacity-10">
+				<Icon icon="material-symbols:search-off" class="text-4xl text-(--primary)" />
+			</div>
+		</div>
 	</div>
 {/snippet}
 
@@ -1500,6 +1533,8 @@ function formatDate(dateStr: string | null): string {
 					{:else}
 						{@render placeholder(i18n(I18nKey.adminSettings), i18n(I18nKey.configSectionUnknown), "material-symbols:settings")}
 					{/if}
+				{:else if activePage === "404"}
+					{@render adminNotFound()}
 {:else if activePage === "user"}
 				<div class="user-page">
 					<section class="card-base user-profile-card">
@@ -3045,6 +3080,34 @@ function formatDate(dateStr: string | null): string {
 		to {
 			transform: rotate(360deg);
 		}
+	}
+
+	/* ── 后台 404：沿用前台 404.astro 的入场动画与按钮悬停 ──
+	   前台按钮阴影写的是 rgba(var(--primary-rgb), .3)，而项目未定义
+	   --primary-rgb（该声明实际无效），此处改用现成的 --shadow-md。 */
+	.notfound-card {
+		animation: fadeInUp 0.6s ease-out;
+	}
+
+	@keyframes fadeInUp {
+		from {
+			opacity: 0;
+			transform: translateY(30px);
+		}
+
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.notfound-back {
+		transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.notfound-back:hover {
+		transform: translateY(-2px);
+		box-shadow: var(--shadow-md);
 	}
 
 	/* ── 占位页（首页 / 网站配置，待后续实现） ── */
