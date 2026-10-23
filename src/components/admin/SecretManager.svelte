@@ -890,41 +890,43 @@ onMount(load);
 	}
 
 	/* ── 顶部提示条 ──
-	   作为外壳内的分区，不再自带圆角卡片外观：
-	   成功态用右侧色点 + 次要文字，未完成态保留琥珀语义色；
-	   两种状态都靠文字与图标表达，不做整块底色。 */
+	   成功态：绿色半透明底 + 同色微边框，说清「已完成 + 写入位置」；
+	   未完成态：琥珀色，附缺失项列表。 */
 	.success-bar,
 	.pending-bar {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		flex-wrap: wrap;
-		padding: 0;
-		font-size: 0.8125rem;
-		line-height: 1.6;
+		padding: 0.75rem 1rem;
+		border-radius: var(--radius-xl);
+		font-size: 0.875rem;
+		line-height: 1.5;
 	}
 
 	.success-bar {
-		color: var(--content-meta);
-	}
-
-	.success-bar :global(.inline-icon),
-	.pending-bar :global(.status-icon) {
-		flex-shrink: 0;
+		background: color-mix(in oklab, var(--success) 10%, transparent);
+		border: 1px solid color-mix(in oklab, var(--success) 20%, transparent);
 		color: var(--success);
 	}
 
+	.success-bar :global(.inline-icon) {
+		flex-shrink: 0;
+	}
+
 	.pending-bar {
-		color: var(--content-meta);
+		background: color-mix(in oklab, var(--warning) 10%, transparent);
+		border: 1px solid color-mix(in oklab, var(--warning) 20%, transparent);
+		color: var(--warning);
 	}
 
 	.pending-bar :global(.status-icon) {
 		color: var(--warning);
+		flex-shrink: 0;
 	}
 
 	.status-text {
-		/* 中文正文不用加粗制造层级，靠颜色与字号区分 */
-		color: var(--deep-text);
+		font-weight: 600;
 		white-space: nowrap;
 	}
 
@@ -956,16 +958,20 @@ onMount(load);
 	}
 
 	/* ── 操作栏 ──
-	   作为外壳内的顶部分区：无独立卡片底、无毛玻璃，只用一条底部分隔线
-	   与下方内容区分，风格与设置页 settings-savebar 同源。 */
+	   遵循项目规范：不用实线边框，层级靠卡片底 + 毛玻璃表达；
+	   容器圆角 16px、内边距 24px，与其余板块卡片一致。 */
 	.action-bar {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 1rem;
 		flex-wrap: wrap;
-		padding: 0 0 1.25rem;
-		border-bottom: 1px solid var(--line-divider);
+		padding: 1.5rem;
+		border: 1px solid transparent;
+		border-radius: var(--radius-large);
+		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
+		-webkit-backdrop-filter: blur(12px);
+		backdrop-filter: blur(12px);
 	}
 
 	.action-info {
@@ -1107,17 +1113,15 @@ onMount(load);
 	}
 
 	/* ── 分组板块 ──
-	   外壳已是卡片，分组不再套卡片（禁止卡片嵌套）；
-	   分组之间用一条低对比度分隔线区分，块内靠标题字号与间距分层。 */
+	   与参考项目一致，直接用不透明的 --card-bg；
+	   板块与字段的层级由间距和内部分隔承担。 */
 	.secrets-group {
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
-	}
-
-	.secrets-group + .secrets-group {
-		padding-top: 1.5rem;
-		border-top: 1px solid var(--line-divider);
+		padding: 1.5rem;
+		border: 1px solid transparent;
+		background: var(--card-bg);
 	}
 
 	/* 板块标题区：标题 + 说明（无图标） */
@@ -1798,13 +1802,17 @@ onMount(load);
 		word-break: break-all;
 	}
 
-	/* ── 生成工具：外壳内的末段分区，用顶部分隔线与上方分组区分 ── */
+	/* ── 生成工具 ── */
 	.generator-card {
-		padding-top: 1.5rem;
-		border-top: 1px solid var(--line-divider);
+		padding: 1.5rem;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+		border: 1px solid transparent;
+		border-radius: var(--radius-large);
+		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
+		-webkit-backdrop-filter: blur(12px);
+		backdrop-filter: blur(12px);
 	}
 
 	.generator-head {

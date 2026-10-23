@@ -1550,7 +1550,7 @@ function formatDate(dateStr: string | null): string {
 {:else if activePage === "env"}
 				<div class="env-page card-base">
 				{#if import.meta.env.PROD}
-					<section class="secrets-guide">
+					<section class="card-base secrets-guide">
 						<div class="guide-head">
 							<Icon icon="material-symbols:shield-lock" class="guide-icon" />
 							<div>
@@ -3299,11 +3299,9 @@ function formatDate(dateStr: string | null): string {
 			align-items: flex-start;
 		} */
 	}
-	/* 生产环境提示：外壳内的分区，不另套卡片 */
+	/* 生产环境提示卡片 */
 	.secrets-guide {
-		padding: 0 0 1.25rem;
-		border-bottom: 1px solid var(--line-divider);
-		margin-bottom: 1.25rem;
+		padding: 1.75rem;
 	}
 
 	.settings-remote-banner {
