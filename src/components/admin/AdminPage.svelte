@@ -38,9 +38,16 @@ let {
 </div>
 
 <style>
+	/* 外壳撑满 .admin-content 的可视高度：标题固定、内容区自己滚动。
+	   父级 .admin-content 带 zoom，百分比高度会按未缩放基准计算而溢出，
+	   因此改用绝对定位铺满父级（父级已是 position: relative 的滚动容器）。 */
 	.admin-page {
+		position: absolute;
+		inset: 0;
 		display: flex;
 		flex-direction: column;
+		min-height: 0;
+		overflow: hidden;
 	}
 
 	/* 与 AdminDashboard 的 .settings-heading 取同一组数值，
@@ -68,12 +75,22 @@ let {
 		color: var(--content-meta);
 	}
 
+	/* 内容区是页面内的唯一滚动容器；
+	   子项必须 flex-shrink:0，否则长内容会被压缩到容器高度、
+	   内容被自身 overflow 裁掉，看起来「滚不动」。 */
 	.admin-page-body {
 		flex: 1;
 		min-height: 0;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		scrollbar-gutter: stable;
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
 		padding: 0 1.5rem 1.5rem;
+	}
+
+	.admin-page-body > :global(*) {
+		flex-shrink: 0;
 	}
 </style>

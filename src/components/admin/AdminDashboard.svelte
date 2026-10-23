@@ -1438,7 +1438,7 @@ function formatDate(dateStr: string | null): string {
 			<div
 			class="admin-content"
 			class:content-wide={activePage === "posts" && viewMode !== "list"}
-			class:content-fixed={activePage === "settings"}
+			class:content-fixed={activePage === "settings" || activePage === "env"}
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
 		>
 				{#if activePage === "dashboard"}
@@ -2287,6 +2287,8 @@ function formatDate(dateStr: string | null): string {
 		overflow-y: auto;
 		/* 内容区铺满可用宽度，不再设置 max-width 限制 */
 		width: 100%;
+		/* 绝对定位子级（AdminPage 的外壳）的定位基准 */
+		position: relative;
 		/* 与参考项目 --dashboard-unit / --settings-unit 同源的视口自适应：
 		   0.07vw 在 ~1428px 视口为 1px，随视口线性放大，封顶 1.5
 		   （50% 缩放下视口约 3840px，正好取到 1.5，内容视觉密度与参考一致） */
