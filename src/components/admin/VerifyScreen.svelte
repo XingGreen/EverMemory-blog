@@ -520,9 +520,9 @@ function goBack() {
 		box-shadow: var(--shadow-button);
 	}
 
+	/* hover 只改亮度，不做位移：后台固定布局里按钮位置须稳定 */
 	.submit-btn:hover:not(:disabled) {
 		filter: brightness(1.05);
-		transform: translateY(-1px);
 	}
 
 	.submit-btn:disabled {

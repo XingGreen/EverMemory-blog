@@ -293,9 +293,9 @@ function goAction(action: TourAction) {
 		color: var(--primary-foreground);
 	}
 
+	/* hover 只改亮度，不做位移：后台固定布局里按钮位置须稳定 */
 	.tour-btn.primary:hover {
 		filter: brightness(1.05);
-		transform: translateY(-1px);
 	}
 
 	.tour-btn.ghost {

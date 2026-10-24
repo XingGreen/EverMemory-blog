@@ -3068,11 +3068,11 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.notfound-back {
-		transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+		transition: background-color 0.2s ease, box-shadow 0.2s ease;
 	}
 
+	/* hover 只提亮阴影，不做位移：后台固定布局里按钮位置须稳定 */
 	.notfound-back:hover {
-		transform: translateY(-2px);
 		box-shadow: var(--shadow-md);
 	}
 

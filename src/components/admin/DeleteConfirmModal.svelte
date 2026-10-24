@@ -293,9 +293,9 @@ function handleKeydown(e: KeyboardEvent) {
 		box-shadow: 0 4px 12px color-mix(in srgb, var(--destructive) 40%, transparent);
 	}
 
+	/* hover 只改亮度，不做位移：后台固定布局里按钮位置须稳定 */
 	.btn-delete.enabled:hover:not(:disabled) {
 		filter: brightness(1.05);
-		transform: translateY(-1px);
 	}
 
 	.btn-delete:disabled {

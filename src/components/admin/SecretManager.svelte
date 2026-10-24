@@ -1202,10 +1202,11 @@ onMount(load);
 	   配 --primary-foreground 白字几乎不可见，看起来就是「背景消失」。
 	   取值对齐项目规范 ui-base.css 的 .ui-btn-primary:hover：
 	   主色压暗 12%，保持实心感。
-	   不用 filter: brightness() —— 它会把刚压暗的底色又提亮，互相抵消。 */
+	   不用 filter: brightness() —— 它会把刚压暗的底色又提亮，互相抵消。
+	   也不做位移：后台是固定布局的工作台，按钮 hover 时位置必须稳定，
+	   否则密集点击场景下按钮会从光标下滑走。 */
 	.sec-btn.primary:hover:not(:disabled) {
 		background: color-mix(in srgb, var(--primary) 88%, #000);
-		transform: translateY(-1px);
 	}
 
 	/* ── 分组板块 ──
