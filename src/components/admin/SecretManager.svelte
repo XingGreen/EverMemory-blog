@@ -761,8 +761,7 @@ onMount(load);
 						<Icon icon="material-symbols:terminal-rounded" />
 						<span>{i18n(I18nKey.secretsExportCopyVercel)}</span>
 					</button>
-				</div>
-			</div>
+				</div>			</div>
 		</div>
 	{/if}
 
@@ -846,9 +845,6 @@ onMount(load);
 				<span>{i18n(I18nKey.secretsUnsavedCount).replace("{count}", String(changedCount))}</span>
 			</div>
 			<div class="savebar-actions">
-				<button class="sec-btn" type="button" disabled={saving} onclick={discardAll}>
-					{i18n(I18nKey.secretsDiscard)}
-				</button>
 				<button
 					class="sec-btn primary"
 					type="button"
@@ -857,6 +853,9 @@ onMount(load);
 				>
 					<Icon icon="material-symbols:save-outline" />
 					<span>{saving ? i18n(I18nKey.secretsSaving) : i18n(I18nKey.secretsSave)}</span>
+				</button>
+				<button class="sec-btn" type="button" disabled={saving} onclick={discardAll}>
+					{i18n(I18nKey.secretsDiscard)}
 				</button>
 			</div>
 		</div>
@@ -1138,7 +1137,9 @@ onMount(load);
 		gap: 0.375rem;
 		padding: 0.5rem 1rem;
 		border: 1px solid transparent;
-		border-radius: var(--radius-xl);
+		/* 后台按钮用 8px 小圆角（rounded-md），与工作台密度相称；
+		   卡片的 16px 大圆角留给容器层级 */
+		border-radius: 8px;
 		background: var(--btn-regular-bg);
 		color: var(--deep-text);
 		font-size: 0.875rem;
@@ -1192,7 +1193,7 @@ onMount(load);
 		background: var(--primary);
 		border-color: transparent;
 		color: var(--primary-foreground);
-		border-radius: var(--radius-large);
+		border-radius: 8px;
 		box-shadow: var(--shadow-button);
 	}
 
