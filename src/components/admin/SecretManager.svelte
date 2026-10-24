@@ -1123,17 +1123,18 @@ onMount(load);
 		align-items: center;
 		gap: 0.375rem;
 		padding: 0.5rem 1rem;
-		border: 1px solid transparent;
-		/* 后台按钮用 8px 小圆角（rounded-md），与工作台密度相称；
-		   卡片的 16px 大圆角留给容器层级 */
+		/* 次按钮：1px 可见边框 + 近透明底，与容器分层靠边框而不是底色。
+		   此前底色 --btn-regular-bg 与暗色卡片亮度差仅 ~0.1，
+		   主次按钮形状完全相同，权重拉不开 */
+		border: 1px solid var(--line-divider);
 		border-radius: 8px;
-		background: var(--btn-regular-bg);
+		background: transparent;
 		color: var(--deep-text);
 		font-size: 0.875rem;
 		font-weight: 500;
 		font-family: inherit;
 		cursor: pointer;
-		transition: background 0.2s, color 0.2s;
+		transition: background 0.2s, color 0.2s, border-color 0.2s;
 	}
 
 	.sec-btn:hover:not(:disabled) {
@@ -1179,7 +1180,10 @@ onMount(load);
 	.sec-btn.primary {
 		background: var(--primary);
 		border-color: transparent;
+		/* 主按钮文字加重一档（600），次按钮保持 500——
+		   权重差 = 实心彩底 + 更重字重 + 阴影，三项叠加才够分明 */
 		color: var(--primary-foreground);
+		font-weight: 600;
 		border-radius: 8px;
 		box-shadow: var(--shadow-button);
 	}
