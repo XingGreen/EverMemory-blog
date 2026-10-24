@@ -30,6 +30,8 @@ let {
 		loading: boolean;
 		saving: boolean;
 		changedCount: number;
+		dirtyItems: { key: string; label: string }[];
+		scrollToField: (key: string) => void;
 		save: () => void;
 		discard: () => void;
 	}) => void;
@@ -156,6 +158,34 @@ function isDirty(item: SecretItemDTO): boolean {
 
 const changedCount = $derived(items.filter(isDirty).length);
 
+/** 未保存改动的字段清单（供保存栏展开显示，label 用可读字段名） */
+const dirtyItems = $derived(
+	items.filter(isDirty).map((it) => ({ key: it.key, label: it.label })),
+);
+
+/**
+ * 滚动到指定字段并短暂高亮。
+ * 字段容器通过 data-secret-key 定位（见模板），滚动容器是
+ * .admin-page-body（AdminPage 内唯一可滚区域）。
+ */
+function scrollToField(key: string) {
+	const field = document.querySelector(`[data-secret-key="${key}"]`);
+	if (!field) return;
+	const body = document.querySelector(".admin-page-body");
+	field.scrollIntoView({ behavior: "smooth", block: "center" });
+	// 高亮：加类后 1.6s 移除，与 CSS 过渡时长对应
+	field.classList.add("field-flash");
+	setTimeout(() => field.classList.remove("field-flash"), 1600);
+	// 兜底：scrollIntoView 在 zoom 容器里偶有偏差，显式校正
+	if (body) {
+		const fieldRect = field.getBoundingClientRect();
+		const bodyRect = body.getBoundingClientRect();
+		if (fieldRect.top < bodyRect.top || fieldRect.bottom > bodyRect.bottom) {
+			body.scrollTop += fieldRect.top - bodyRect.top - 80;
+		}
+	}
+}
+
 // 把保存栏状态上报给父级（保存栏渲染在 AdminPage footer，位于滚动容器外）
 $effect(() => {
 	onStateChange?.({
@@ -163,6 +193,8 @@ $effect(() => {
 		loading,
 		saving,
 		changedCount,
+		dirtyItems,
+		scrollToField,
 		save,
 		discard: discardAll,
 	});
@@ -501,6 +533,7 @@ onMount(load);
 								class="settings-field"
 								class:dirty={isDirty(item)}
 								class:span-full={item.span === 12}
+								data-secret-key={item.key}
 							>
 								<div class="field-label-row">
 									<span class="field-label">
@@ -1226,6 +1259,24 @@ onMount(load);
 	.settings-field.dirty {
 		padding-left: 0.5rem;
 		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
+	}
+
+	/* 从保存栏清单跳转时的定位高亮：主色描边淡出。
+	   用 outline 而非 border，避免改变布局尺寸造成跳动。 */
+	.settings-field.field-flash {
+		outline: 2px solid color-mix(in oklab, var(--primary) 70%, transparent);
+		outline-offset: 6px;
+		border-radius: 6px;
+		animation: field-flash 1.6s ease-out;
+	}
+
+	@keyframes field-flash {
+		0% {
+			outline-color: color-mix(in oklab, var(--primary) 85%, transparent);
+		}
+		100% {
+			outline-color: transparent;
+		}
 	}
 
 	/* 标签行（参考 settings-field > label：13px、与值同色） */

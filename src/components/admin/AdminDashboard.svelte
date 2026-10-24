@@ -103,9 +103,18 @@ let secretSaveState = $state<{
 	loading: boolean;
 	saving: boolean;
 	changedCount: number;
+	dirtyItems: { key: string; label: string }[];
+	scrollToField: (key: string) => void;
 	save: () => void;
 	discard: () => void;
 } | null>(null);
+// 保存栏改动清单是否展开
+let dirtyListOpen = $state(false);
+// 站内切换页面时的未保存拦截：leaveConfirmOpen 为真即弹出确认框，
+// pendingPath 记录确认后要跳转的目标路径。
+// 注意不要用「函数作 $state」——Svelte 对函数值不会触发重渲染。
+let leaveConfirmOpen = $state(false);
+let pendingPath = $state("");
 let tourOpen = $state(false);
 let isSyncing = $state(false);
 // GitHub 连通性状态：idle=默认（未测试） / checking=测试中 / ok=连接正常 / fail=无法连接
@@ -775,8 +784,29 @@ function navigate(path: string) {
 		applyRoute();
 		return;
 	}
+	// 站内切换页面时若存在未保存改动，先弹确认框（对应参考项目 useBlocker）。
+	// 留在环境变量页内（同 path）不拦，与参考项目 shouldBlockFn 一致。
+	const hasDirty = (secretSaveState?.changedCount ?? 0) > 0;
+	const leavingEnv =
+		activePage === "env" && !path.startsWith(`${DASHBOARD_PATH}env`);
+	if (hasDirty && leavingEnv) {
+		pendingPath = path;
+		leaveConfirmOpen = true;
+		return;
+	}
 	history.pushState({}, "", path);
 	applyRoute();
+}
+
+/** 确认离开：执行挂起的跳转 */
+function confirmLeave() {
+	const path = pendingPath;
+	leaveConfirmOpen = false;
+	pendingPath = "";
+	if (path) {
+		history.pushState({}, "", path);
+		applyRoute();
+	}
 }
 
 function goDashboard() {
@@ -1600,7 +1630,13 @@ function formatDate(dateStr: string | null): string {
 					{#if secretSaveState?.writable}
 						<div class="savebar" role="status">
 							{#if secretSaveState.changedCount > 0}
-								<p class="savebar-notice">
+								<button
+									class="savebar-notice"
+									type="button"
+									aria-expanded={dirtyListOpen}
+									aria-controls="dirty-list"
+									onclick={() => (dirtyListOpen = !dirtyListOpen)}
+								>
 									<Icon icon="material-symbols:error-outline" />
 									<span
 										>{i18n(I18nKey.secretsUnsavedCount).replace(
@@ -1608,7 +1644,13 @@ function formatDate(dateStr: string | null): string {
 											String(secretSaveState.changedCount),
 										)}</span
 									>
-								</p>
+									<Icon
+										icon={dirtyListOpen
+											? "material-symbols:keyboard-arrow-up-rounded"
+											: "material-symbols:keyboard-arrow-down-rounded"}
+										class="notice-chevron"
+									/>
+								</button>
 							{/if}
 							<div class="savebar-actions">
 								{#if secretSaveState.changedCount > 0}
@@ -1638,6 +1680,22 @@ function formatDate(dateStr: string | null): string {
 								</button>
 							</div>
 						</div>
+						{#if dirtyListOpen && secretSaveState.changedCount > 0}
+							<div class="dirty-list" id="dirty-list">
+								{#each secretSaveState.dirtyItems as item (item.key)}
+									<button
+										class="dirty-item"
+										type="button"
+										onclick={() => secretSaveState?.scrollToField(item.key)}
+									>
+										<span class="dirty-item-label">{item.label}</span>
+										<span class="dirty-item-hint">
+											{i18n(I18nKey.secretsDirtyGoto)}
+										</span>
+									</button>
+								{/each}
+							</div>
+						{/if}
 					{/if}
 				{/snippet}
 				</AdminPage>
@@ -1680,6 +1738,58 @@ function formatDate(dateStr: string | null): string {
 			else goSettings();
 		}}
 	/>
+{/if}
+
+<!-- 站内切换页面时的未保存确认（对应参考项目 useBlocker 的 resolver 弹窗） -->
+{#if leaveConfirmOpen}
+	<div
+		class="modal-overlay"
+		role="dialog"
+		aria-modal="true"
+		aria-label={i18n(I18nKey.secretsLeaveTitle)}
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) leaveConfirmOpen = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === "Escape") leaveConfirmOpen = false;
+		}}
+	>
+		<div class="modal-card card-base">
+			<div class="modal-head">
+				<h3>
+					<Icon icon="material-symbols:error-outline" class="modal-head-icon" />
+					<span>{i18n(I18nKey.secretsLeaveTitle)}</span>
+				</h3>
+				<button
+					class="modal-close"
+					type="button"
+					aria-label={i18n(I18nKey.secretsClose)}
+					onclick={() => (leaveConfirmOpen = false)}
+				>
+					<Icon icon="material-symbols:close" />
+				</button>
+			</div>
+			<p class="modal-desc">
+				{i18n(I18nKey.secretsLeaveDesc).replace(
+					"{count}",
+					String(secretSaveState?.changedCount ?? 0),
+				)}
+			</p>
+			<div class="modal-actions">
+				<button
+					class="savebar-btn primary"
+					type="button"
+					onclick={() => (leaveConfirmOpen = false)}
+				>
+					{i18n(I18nKey.secretsLeaveStay)}
+				</button>
+				<button class="savebar-btn" type="button" onclick={confirmLeave}>
+					{i18n(I18nKey.secretsLeaveConfirm)}
+				</button>
+			</div>
+		</div>
+	</div>
 {/if}
 
 <style>
@@ -2348,22 +2458,84 @@ function formatDate(dateStr: string | null): string {
 		background: var(--card-bg);
 	}
 
-	/* 提示条：参考项目 .settings-save-notice —— warning 底块 + 圆角 + 中等字重 */
-	p.savebar-notice {
+	/* 提示条：参考项目 .settings-save-notice —— warning 底块 + 圆角 + 中等字重。
+	   做成按钮：点击展开未保存改动清单。 */
+	.savebar-notice {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.5625rem;
 		margin: 0;
 		padding: 0.5625rem 0.75rem;
+		border: none;
 		border-radius: 10px;
 		background: color-mix(in oklab, var(--warning) 12%, transparent);
 		color: var(--warning);
 		font-size: 0.8125rem;
+		font-family: inherit;
 		font-weight: 500;
+		cursor: pointer;
+		transition: background 0.15s ease;
 	}
 
-	p.savebar-notice :global(.inline-icon) {
+	.savebar-notice:hover {
+		background: color-mix(in oklab, var(--warning) 20%, transparent);
+	}
+
+	.savebar-notice :global(.inline-icon) {
 		flex-shrink: 0;
+	}
+
+	.notice-chevron {
+		margin-left: 0.125rem;
+	}
+
+	/* 未保存改动清单：从 savebar 下方展开，逐项可点击跳转 */
+	.dirty-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		padding: 0.375rem 1.5rem 0.75rem;
+		border-top: 1px solid var(--line-divider);
+		background: var(--card-bg);
+	}
+
+	.dirty-item {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 0.4375rem 0.625rem;
+		border: none;
+		border-radius: 6px;
+		background: transparent;
+		color: var(--deep-text);
+		font-size: 0.8125rem;
+		font-family: inherit;
+		text-align: left;
+		cursor: pointer;
+		transition: background 0.15s ease, color 0.15s ease;
+	}
+
+	.dirty-item:hover {
+		background: color-mix(in oklab, var(--primary) 10%, transparent);
+		color: var(--primary);
+	}
+
+	.dirty-item-label {
+		font-weight: 500;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.dirty-item-hint {
+		flex-shrink: 0;
+		font-size: 0.75rem;
+		color: var(--content-meta);
+	}
+
+	.dirty-item:hover .dirty-item-hint {
+		color: var(--primary);
 	}
 
 	.savebar-actions {
@@ -2372,6 +2544,82 @@ function formatDate(dateStr: string | null): string {
 		gap: 0.625rem;
 		flex-shrink: 0;
 		margin-left: auto;
+	}
+
+	/* ── 未保存确认弹窗 ── */
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		background: color-mix(in oklab, var(--deep-text) 45%, transparent);
+		-webkit-backdrop-filter: blur(2px);
+		backdrop-filter: blur(2px);
+	}
+
+	.modal-card {
+		width: 100%;
+		max-width: 440px;
+		padding: 1.5rem;
+		background: var(--float-panel-bg);
+		box-shadow: var(--shadow-card);
+		border-radius: var(--radius-large);
+	}
+
+	.modal-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 0.75rem;
+	}
+
+	.modal-head h3 {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 1.0625rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	:global(.modal-head-icon) {
+		color: var(--warning);
+	}
+
+	.modal-close {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		padding: 0;
+		border: none;
+		border-radius: 6px;
+		background: transparent;
+		color: var(--content-meta);
+		cursor: pointer;
+	}
+
+	.modal-close:hover {
+		background: var(--btn-plain-bg-hover);
+		color: var(--deep-text);
+	}
+
+	.modal-desc {
+		margin: 0 0 1.25rem;
+		font-size: 0.875rem;
+		line-height: 1.7;
+		color: var(--content-meta);
+	}
+
+	.modal-actions {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.625rem;
 	}
 
 	/* 保存栏按钮：与 SecretManager 的 sec-btn 同规格。
