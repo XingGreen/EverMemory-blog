@@ -39,13 +39,13 @@ let {
 
 <style>
 	/* 外壳撑满 .admin-content 的可视高度：标题固定、内容区自己滚动。
-	   父级 .admin-content 带 zoom，百分比高度会按未缩放基准计算而溢出，
-	   因此改用绝对定位铺满父级（父级已是 position: relative 的滚动容器）。 */
+	   父级 .admin-content 是 flex 列容器，这里用 flex:1 + min-height:0
+	   定高——比绝对定位可靠：父级带 zoom 时 inset:0 会按缩放后尺寸
+	   计算，实测溢出 48px，导致滚到底后内容下方留大块空白。 */
 	.admin-page {
-		position: absolute;
-		inset: 0;
 		display: flex;
 		flex-direction: column;
+		flex: 1;
 		min-height: 0;
 		overflow: hidden;
 	}

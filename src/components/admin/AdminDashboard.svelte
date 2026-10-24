@@ -2287,8 +2287,13 @@ function formatDate(dateStr: string | null): string {
 		overflow-y: auto;
 		/* 内容区铺满可用宽度，不再设置 max-width 限制 */
 		width: 100%;
-		/* 绝对定位子级（AdminPage 的外壳）的定位基准 */
-		position: relative;
+		/* flex 列容器：让 AdminPage / settings-workspace 这类
+		   需要撑满高度的子页用 flex:1 定高。
+		   此前靠 position:absolute + inset:0 铺满，但在带 zoom 的
+		   父级里 inset:0 参照的是缩放后尺寸，实测 .admin-page 比
+		   父容器高 48px，导致滚动到底后内容下方留出大块空白。 */
+		display: flex;
+		flex-direction: column;
 		/* 与参考项目 --dashboard-unit / --settings-unit 同源的视口自适应：
 		   0.07vw 在 ~1428px 视口为 1px，随视口线性放大，封顶 1.5
 		   （50% 缩放下视口约 3840px，正好取到 1.5，内容视觉密度与参考一致） */
@@ -2306,6 +2311,9 @@ function formatDate(dateStr: string | null): string {
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
+		/* .admin-content 是 flex 列容器，不设 flex-shrink 时
+		   内容会被压缩到容器高度，长页面滚不动 */
+		flex-shrink: 0;
 	}
 
 	/* 欢迎横幅：MD3 primaryContainer 底 + onPrimaryContainer 文字。
@@ -3084,6 +3092,7 @@ function formatDate(dateStr: string | null): string {
 		flex-direction: column;
 		align-items: center;
 		gap: 0.75rem;
+		flex-shrink: 0;
 	}
 
 	.placeholder-icon {
