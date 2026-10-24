@@ -1196,8 +1196,14 @@ onMount(load);
 		box-shadow: var(--shadow-button);
 	}
 
+	/* 主按钮 hover 必须显式声明 background。
+	   否则 .sec-btn:hover 的 --btn-regular-bg-hover（浅灰紫）会生效，
+	   配 --primary-foreground 白字几乎不可见，看起来就是「背景消失」。
+	   取值对齐项目规范 ui-base.css 的 .ui-btn-primary:hover：
+	   主色压暗 12%，保持实心感。
+	   不用 filter: brightness() —— 它会把刚压暗的底色又提亮，互相抵消。 */
 	.sec-btn.primary:hover:not(:disabled) {
-		filter: brightness(1.05);
+		background: color-mix(in srgb, var(--primary) 88%, #000);
 		transform: translateY(-1px);
 	}
 
