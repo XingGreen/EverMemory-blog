@@ -2,7 +2,7 @@
 import type { Snippet } from "svelte";
 
 /**
- * 后台页面外壳（两段式）
+ * 后台页面外壳（两段式 + 可选页脚）
  *
  * 统一「卡片外壳 + 标题区 + 内容区」的结构，对应参考项目
  * settings-shell 的 settings-workspace + settings-heading 组合。
@@ -11,17 +11,22 @@ import type { Snippet } from "svelte";
  * 28px/650 标题 + 13px 灰字简介、padding 28px 24px 20px。
  * 内容区自带 24px 左右留白，页面只负责内容本身。
  *
- * 暂不含 tabs 与 footer 槽位：设置页的 settings-workspace 是四段结构
- * 且自带内部滚动，仍保持独立；等第二个页面需要 tabs 时再升级。
+ * footer 槽位（可选）：放在内容区**之外**、外壳内部，
+ * 不参与滚动，始终可见——对应参考项目 settings-shell 里
+ * <footer class="settings-savebar"> 位于 settings-body 之外的结构。
+ * 暂不含 tabs 槽位：设置页 settings-workspace 是四段结构且自带内部滚动，
+ * 仍保持独立；等第二个页面需要 tabs 时再升级。
  */
 let {
 	title,
 	intro,
 	children,
+	footer,
 }: {
 	title: string;
 	intro?: string;
 	children: Snippet;
+	footer?: Snippet;
 } = $props();
 </script>
 
@@ -35,6 +40,11 @@ let {
 	<div class="admin-page-body">
 		{@render children()}
 	</div>
+	{#if footer}
+		<div class="admin-page-footer">
+			{@render footer()}
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -91,6 +101,13 @@ let {
 	}
 
 	.admin-page-body > :global(*) {
+		flex-shrink: 0;
+	}
+
+	/* 页脚槽位：内容区之外的独立区块，不参与滚动。
+	   flex-shrink:0 保证它不会被内容挤压缩小，
+	   内容再长也只在 .admin-page-body 内滚。 */
+	.admin-page-footer {
 		flex-shrink: 0;
 	}
 </style>

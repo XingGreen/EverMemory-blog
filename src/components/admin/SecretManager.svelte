@@ -13,12 +13,26 @@ type SecretItemDTO = AdminSecretItem & {
 
 let {
 	onNotify,
+	onStateChange,
 }: {
 	onNotify: (
 		message: string,
 		type: "success" | "error",
 		duration?: number,
 	) => void;
+	/**
+	 * 把保存栏所需的状态与操作上报给父级。
+	 * 保存栏渲染在 AdminPage 的 footer 槽位（滚动容器之外、始终可见），
+	 * 而状态在本组件内部，因此需要这一层上报。
+	 */
+	onStateChange?: (state: {
+		writable: boolean;
+		loading: boolean;
+		saving: boolean;
+		changedCount: number;
+		save: () => void;
+		discard: () => void;
+	}) => void;
 } = $props();
 
 let items = $state<SecretItemDTO[]>([]);
@@ -141,6 +155,18 @@ function isDirty(item: SecretItemDTO): boolean {
 }
 
 const changedCount = $derived(items.filter(isDirty).length);
+
+// 把保存栏状态上报给父级（保存栏渲染在 AdminPage footer，位于滚动容器外）
+$effect(() => {
+	onStateChange?.({
+		writable,
+		loading,
+		saving,
+		changedCount,
+		save,
+		discard: discardAll,
+	});
+});
 
 async function load() {
 	loading = true;
@@ -823,105 +849,17 @@ onMount(load);
 			</div>
 		</div>
 	{/if}
-
-	<!-- 底部保存条（对齐参考项目 settings-savebar）：
-	     作为容器的固定页脚常驻，不随有无改动显隐——
-	     参考项目里 footer 无条件渲染，只有提示与「放弃修改」按钮
-	     受 save.dirty 控制，保存按钮始终存在（仅 disabled 态变化）。 -->
-	{#if writable}
-		<div class="savebar" role="status">
-			{#if changedCount > 0}
-				<p class="savebar-notice">
-					<Icon icon="material-symbols:error-outline" />
-					<span>{i18n(I18nKey.secretsUnsavedCount).replace("{count}", String(changedCount))}</span>
-				</p>
-			{/if}
-			<div class="savebar-actions">
-				{#if changedCount > 0}
-					<button class="sec-btn" type="button" disabled={saving} onclick={discardAll}>
-						{i18n(I18nKey.secretsDiscard)}
-					</button>
-				{/if}
-				<button
-					class="sec-btn primary"
-					type="button"
-					onclick={save}
-					disabled={saving || loading || changedCount === 0}
-				>
-					<Icon icon="material-symbols:save-outline" />
-					<span>{saving ? i18n(I18nKey.secretsSaving) : i18n(I18nKey.secretsSave)}</span>
-				</button>
-			</div>
-		</div>
-	{/if}
 </div>
 
 <style>
 	/* ── 页面内容：外壳（AdminPage 的 .admin-page）负责卡片与内边距，
 	   这里只负责纵向分段，不再自带卡片外观与 padding。
-	   min-height:100% 让内容不足一屏时也能撑满，配合 savebar 的
-	   margin-top:auto 把页脚压到容器底部。 */
+	   保存栏已移到 AdminPage 的 footer 槽位（滚动容器之外），
+	   因此这里不需要 min-height 撑高或 padding 补偿。 */
 	.secrets-page {
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
-		min-height: 100%;
-	}
-
-	/* 保存栏要贴住容器底边，需去掉 .admin-page-body 的底部内边距，
-	   否则 sticky bottom:0 只能贴到内容盒底、留下 24px 空隙。
-	   用 :has 只在存在 savebar 时生效，不影响其它后台页。 */
-	:global(.admin-page-body:has(.savebar)) {
-		padding-bottom: 0;
-	}
-
-	/* ── 底部保存条 ──
-	   对齐参考项目 .settings-savebar：容器页脚，靠 border-top 与内容分隔。
-	   两种情形都要贴底：
-	   - 内容超一屏：sticky bottom:0 吸在滚动区底
-	   - 内容不足一屏：margin-top:auto 在 flex 列里推到容器底部
-	   水平负边距抵消 body 的左右 padding，让页脚通栏。 */
-	.savebar {
-		position: sticky;
-		bottom: 0;
-		z-index: 30;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1.25rem;
-		flex-wrap: wrap;
-		flex-shrink: 0;
-		margin: auto -1.5rem 0;
-		padding: 0.875rem 1.5rem;
-		border-top: 1px solid var(--line-divider);
-		background: var(--card-bg);
-	}
-
-	/* 提示条：参考项目 .settings-save-notice —— warning 底块 + 圆角 + 中等字重，
-	   不是裸文字。无底色时在暗色下几乎注意不到。 */
-	p.savebar-notice {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5625rem;
-		margin: 0;
-		padding: 0.5625rem 0.75rem;
-		border-radius: 10px;
-		background: color-mix(in oklab, var(--warning) 12%, transparent);
-		color: var(--warning);
-		font-size: 0.8125rem;
-		font-weight: 500;
-	}
-
-	p.savebar-notice :global(.inline-icon) {
-		flex-shrink: 0;
-	}
-
-	.savebar-actions {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.625rem;
-		flex-shrink: 0;
-		margin-left: auto;
 	}
 
 	/* ── 状态横幅 ── */

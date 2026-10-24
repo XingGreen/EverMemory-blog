@@ -96,6 +96,16 @@ let deletingPost = $state<Post | null>(null);
 let deleteTrigger: HTMLElement | null = null;
 let toast = $state<{ message: string; type: "success" | "error" } | null>(null);
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
+// 环境变量页保存栏状态：由 SecretManager 上报，保存栏渲染在
+// AdminPage 的 footer 槽位（滚动容器之外，始终可见）
+let secretSaveState = $state<{
+	writable: boolean;
+	loading: boolean;
+	saving: boolean;
+	changedCount: number;
+	save: () => void;
+	discard: () => void;
+} | null>(null);
 let tourOpen = $state(false);
 let isSyncing = $state(false);
 // GitHub 连通性状态：idle=默认（未测试） / checking=测试中 / ok=连接正常 / fail=无法连接
@@ -1583,8 +1593,53 @@ function formatDate(dateStr: string | null): string {
 					<SecretManager
 						onNotify={(message, type, duration) =>
 							showToast(message, type, duration)}
+						onStateChange={(s) => (secretSaveState = s)}
 					/>
 				{/if}
+				{#snippet footer()}
+					{#if secretSaveState?.writable}
+						<div class="savebar" role="status">
+							{#if secretSaveState.changedCount > 0}
+								<p class="savebar-notice">
+									<Icon icon="material-symbols:error-outline" />
+									<span
+										>{i18n(I18nKey.secretsUnsavedCount).replace(
+											"{count}",
+											String(secretSaveState.changedCount),
+										)}</span
+									>
+								</p>
+							{/if}
+							<div class="savebar-actions">
+								{#if secretSaveState.changedCount > 0}
+									<button
+										class="savebar-btn"
+										type="button"
+										disabled={secretSaveState.saving}
+										onclick={() => secretSaveState?.discard()}
+									>
+										{i18n(I18nKey.secretsDiscard)}
+									</button>
+								{/if}
+								<button
+									class="savebar-btn primary"
+									type="button"
+									onclick={() => secretSaveState?.save()}
+									disabled={secretSaveState.saving ||
+										secretSaveState.loading ||
+										secretSaveState.changedCount === 0}
+								>
+									<Icon icon="material-symbols:save-outline" />
+									<span
+										>{secretSaveState.saving
+											? i18n(I18nKey.secretsSaving)
+											: i18n(I18nKey.secretsSave)}</span
+									>
+								</button>
+							</div>
+						</div>
+					{/if}
+				{/snippet}
 				</AdminPage>
 			{/if}
 			</div>
@@ -2277,6 +2332,95 @@ function formatDate(dateStr: string | null): string {
 		color: var(--warning);
 		font-size: 0.8125rem;
 		line-height: 1.5;
+	}
+
+	/* ── 环境变量页保存栏（渲染在 AdminPage footer，位于滚动容器之外）──
+	   对齐参考项目 .settings-savebar：容器页脚，靠 border-top 与内容分隔。
+	   因为不在滚动容器内，无需 sticky —— 它天然不参与内容滚动。 */
+	.savebar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1.25rem;
+		flex-wrap: wrap;
+		padding: 0.875rem 1.5rem;
+		border-top: 1px solid var(--line-divider);
+		background: var(--card-bg);
+	}
+
+	/* 提示条：参考项目 .settings-save-notice —— warning 底块 + 圆角 + 中等字重 */
+	p.savebar-notice {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5625rem;
+		margin: 0;
+		padding: 0.5625rem 0.75rem;
+		border-radius: 10px;
+		background: color-mix(in oklab, var(--warning) 12%, transparent);
+		color: var(--warning);
+		font-size: 0.8125rem;
+		font-weight: 500;
+	}
+
+	p.savebar-notice :global(.inline-icon) {
+		flex-shrink: 0;
+	}
+
+	.savebar-actions {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.625rem;
+		flex-shrink: 0;
+		margin-left: auto;
+	}
+
+	/* 保存栏按钮：与 SecretManager 的 sec-btn 同规格。
+	   因 scoped 样式不跨组件，这里需要独立定义一份。 */
+	.savebar-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.5rem 1rem;
+		border: 1px solid transparent;
+		border-radius: 8px;
+		background: var(--btn-regular-bg);
+		color: var(--btn-content);
+		font-size: 0.875rem;
+		font-weight: 500;
+		font-family: inherit;
+		cursor: pointer;
+		transition: background 0.2s, color 0.2s;
+	}
+
+	.savebar-btn:hover:not(:disabled) {
+		background: var(--btn-regular-bg-hover);
+	}
+
+	.savebar-btn:active:not(:disabled) {
+		background: var(--btn-regular-bg-active);
+	}
+
+	.savebar-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.savebar-btn.primary {
+		background: var(--primary);
+		border-color: transparent;
+		color: var(--primary-foreground);
+		font-weight: 600;
+		box-shadow: var(--shadow-button);
+	}
+
+	/* 主按钮 hover 显式声明 background，否则会被 .savebar-btn:hover
+	   的 --btn-regular-bg-hover 覆盖成浅灰紫（白字几乎不可见） */
+	.savebar-btn.primary:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--primary) 88%, #000);
+	}
+
+	.savebar-btn :global(.inline-icon) {
+		font-size: 0.875rem;
 	}
 
 	.admin-content {
