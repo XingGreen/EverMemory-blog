@@ -52,8 +52,30 @@ let showInput = $state<Record<string, boolean>>({});
 // 导出弹窗
 let exportOpen = $state(false);
 let exportBusy = $state(false);
-// 「配置全部完成」提示是否已被用户关闭（点「知道了」后隐藏）
+
+// 「配置全部完成」提示是否已被用户关闭。
+// 持久化到 localStorage：点「知道了」后刷新页面不再出现。
+// 与 admin-sidebar-collapsed 同一套做法（try/catch 兜底隐私模式）。
+const SUCCESS_DISMISSED_KEY = "admin-secrets-success-dismissed";
+
+function readSuccessDismissed(): boolean {
+	try {
+		return localStorage.getItem(SUCCESS_DISMISSED_KEY) === "1";
+	} catch {
+		return false;
+	}
+}
+
 let successDismissed = $state(false);
+
+function dismissSuccess() {
+	successDismissed = true;
+	try {
+		localStorage.setItem(SUCCESS_DISMISSED_KEY, "1");
+	} catch {
+		// localStorage 不可用时仅本次会话生效
+	}
+}
 // 正在轮换的托管密钥 key（用于按钮 loading 态）
 let rotating = $state("");
 // 当前展开三点菜单的配置项 key（同一时刻只允许一个）
@@ -435,7 +457,10 @@ async function rotate(item: SecretItemDTO) {
 	}
 }
 
-onMount(load);
+onMount(() => {
+	successDismissed = readSuccessDismissed();
+	load();
+});
 </script>
 
 <svelte:window
@@ -467,7 +492,7 @@ onMount(load);
 					<button
 						class="status-dismiss"
 						type="button"
-						onclick={() => (successDismissed = true)}
+						onclick={dismissSuccess}
 					>
 						{i18n(I18nKey.secretsStatusGotIt)}
 					</button>
