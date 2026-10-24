@@ -3,7 +3,7 @@
   "type": "module",
   "version": "6.13.5",
   "scripts": {
-    "dev": "node --max-old-space-size=4096 ./node_modules/astro/bin/astro.mjs dev",
+    "dev": "node scripts/dev.mjs",
     "start": "node --max-old-space-size=4096 ./node_modules/astro/bin/astro.mjs dev",
     "check": "astro check",
     "test": "vitest",
@@ -22,6 +22,7 @@
     "lint": "biome check --write ./src",
     "preinstall": "npx only-allow pnpm",
     "icons": "node scripts/generate-icons.js",
+    "icons:watch": "node scripts/generate-icons.js --watch",
     "lqips": "npx tsx scripts/generate-lqips.ts"
   },
   "dependencies": {

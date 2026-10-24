@@ -6,7 +6,7 @@
  */
 
 import { getIconData, iconToHTML, iconToSVG, replaceIDs } from "@iconify/utils";
-import { readdirSync, readFileSync, statSync, writeFileSync } from "fs";
+import { readdirSync, readFileSync, statSync, watch, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 
@@ -215,12 +215,15 @@ export default iconSvgData;
 /**
  * 主函数
  */
-async function main() {
-	console.log("🔍 扫描源文件中的图标使用...\n");
+async function main(options = {}) {
+	const { quiet = false } = options;
+	const log = quiet ? () => {} : console.log.bind(console);
+
+	log("🔍 扫描源文件中的图标使用...\n");
 
 	// 获取所有源文件
 	const files = getAllFiles(SRC_DIR);
-	console.log(`📁 找到 ${files.length} 个源文件\n`);
+	log(`📁 找到 ${files.length} 个源文件\n`);
 
 	// 收集所有使用的图标
 	const allIcons = new Set();
@@ -237,7 +240,7 @@ async function main() {
 		}
 	}
 
-	console.log(`🎨 发现 ${allIcons.size} 个不同的图标:\n`);
+	log(`🎨 发现 ${allIcons.size} 个不同的图标:\n`);
 
 	// 按图标集分组显示
 	const iconsBySet = {};
@@ -250,14 +253,15 @@ async function main() {
 	}
 
 	for (const [prefix, icons] of Object.entries(iconsBySet)) {
-		console.log(`   ${prefix}: ${icons.length} 个图标`);
+		log(`   ${prefix}: ${icons.length} 个图标`);
 	}
-	console.log("");
+	log("");
 
 	// 获取所有图标的 SVG
 	const iconsMap = new Map();
 	let successCount = 0;
 	let failCount = 0;
+	const missing = [];
 
 	for (const iconName of allIcons) {
 		const svg = await getIconSvg(iconName);
@@ -266,22 +270,100 @@ async function main() {
 			successCount++;
 		} else {
 			failCount++;
+			missing.push(iconName);
 		}
 	}
 
-	console.log(`✅ 成功加载 ${successCount} 个图标`);
+	log(`✅ 成功加载 ${successCount} 个图标`);
 	if (failCount > 0) {
-		console.log(`❌ 失败 ${failCount} 个图标`);
+		log(`❌ 失败 ${failCount} 个图标: ${missing.join(", ")}`);
 	}
 
 	// 生成输出文件
 	const output = generateIconsFile(iconsMap);
 	writeFileSync(OUTPUT_FILE, output, "utf-8");
 
-	console.log(`\n📝 已生成: ${OUTPUT_FILE}`);
-	console.log(
-		`📦 文件大小: ${(Buffer.byteLength(output, "utf-8") / 1024).toFixed(2)} KB\n`,
-	);
+	log(`\n📝 已生成: ${OUTPUT_FILE}`);
+	log(`📦 文件大小: ${(Buffer.byteLength(output, "utf-8") / 1024).toFixed(2)} KB\n`);
+
+	return { successCount, failCount, missing, output };
 }
 
-main().catch(console.error);
+/**
+ * watch 模式：监听 src/ 下源码变化，自动重新生成图标表。
+ *
+ * 背景：图标表是构建产物，新增图标引用后若忘记跑 `pnpm icons`，
+ * 运行时会报「Icon not found」。此前已踩过两次（轮换按钮、私钥弹窗）。
+ * dev 时由 `pnpm dev` 并行启动本脚本，保存文件即自动补全。
+ *
+ * 防抖 400ms：编辑器保存常触发多次事件（写入 + 元数据）。
+ */
+function startWatch() {
+	let timer = null;
+	let lastOutput = null;
+
+	const rebuild = async () => {
+		try {
+			const result = await main({ quiet: true });
+			// 仅在产物内容变化时提示，避免无意义的刷屏
+			if (result.output !== lastOutput) {
+				lastOutput = result.output;
+				const time = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+				console.log(
+					`[icons] ${time} 已更新图标表（${result.successCount} 个图标）`,
+				);
+				if (result.failCount > 0) {
+					console.warn(
+						`[icons] ⚠️  以下图标未找到，请检查名称拼写: ${result.missing.join(", ")}`,
+					);
+				}
+			}
+		} catch (err) {
+			console.error("[icons] 生成失败:", err);
+		}
+	};
+
+	const schedule = () => {
+		if (timer) clearTimeout(timer);
+		timer = setTimeout(rebuild, 400);
+	};
+
+	// 先跑一次，确保启动时产物是最新的
+	main({ quiet: true })
+		.then((r) => {
+			lastOutput = r.output;
+			console.log(
+				`[icons] watch 已启动（当前 ${r.successCount} 个图标），监听 src/ 变化…`,
+			);
+			if (r.failCount > 0) {
+				console.warn(
+					`[icons] ⚠️  以下图标未找到: ${r.missing.join(", ")}`,
+				);
+			}
+		})
+		.catch((err) => console.error("[icons] 初次生成失败:", err));
+
+	// 监听 src/ 递归变化；icons.ts 自身写入需忽略，否则会自触发死循环
+	watch(
+		SRC_DIR,
+		{ recursive: true },
+		(eventType, filename) => {
+			if (!filename) return;
+			if (filename.endsWith("icons.ts")) return;
+			if (!/\.(svelte|astro|ts|js|mjs)$/.test(filename)) return;
+			schedule();
+		},
+	);
+
+	// 保持进程存活
+	process.stdin.resume();
+}
+
+if (process.argv.includes("--watch")) {
+	startWatch();
+} else {
+	main().catch((err) => {
+		console.error(err);
+		process.exit(1);
+	});
+}
