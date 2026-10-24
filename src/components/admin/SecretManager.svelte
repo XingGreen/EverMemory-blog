@@ -858,16 +858,29 @@ onMount(load);
 
 <style>
 	/* ── 页面内容：外壳（AdminPage 的 .admin-page）负责卡片与内边距，
-	   这里只负责纵向分段，不再自带卡片外观与 padding。 */
+	   这里只负责纵向分段，不再自带卡片外观与 padding。
+	   min-height:100% 让内容不足一屏时也能撑满，配合 savebar 的
+	   margin-top:auto 把页脚压到容器底部。 */
 	.secrets-page {
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
+		min-height: 100%;
+	}
+
+	/* 保存栏要贴住容器底边，需去掉 .admin-page-body 的底部内边距，
+	   否则 sticky bottom:0 只能贴到内容盒底、留下 24px 空隙。
+	   用 :has 只在存在 savebar 时生效，不影响其它后台页。 */
+	:global(.admin-page-body:has(.savebar)) {
+		padding-bottom: 0;
 	}
 
 	/* ── 底部保存条 ──
-	   对齐参考项目 .settings-savebar：文档流内通栏，靠 border-top 与内容分隔，
-	   不做悬浮卡片（参考项目是 flex-shrink:0 的页脚，不是浮层）。 */
+	   对齐参考项目 .settings-savebar：容器页脚，靠 border-top 与内容分隔。
+	   两种情形都要贴底：
+	   - 内容超一屏：sticky bottom:0 吸在滚动区底
+	   - 内容不足一屏：margin-top:auto 在 flex 列里推到容器底部
+	   水平负边距抵消 body 的左右 padding，让页脚通栏。 */
 	.savebar {
 		position: sticky;
 		bottom: 0;
@@ -878,7 +891,7 @@ onMount(load);
 		gap: 1.25rem;
 		flex-wrap: wrap;
 		flex-shrink: 0;
-		margin: 0 -1.5rem -1.5rem;
+		margin: auto -1.5rem 0;
 		padding: 0.875rem 1.5rem;
 		border-top: 1px solid var(--line-divider);
 		background: var(--card-bg);
