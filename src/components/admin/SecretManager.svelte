@@ -52,6 +52,8 @@ let showInput = $state<Record<string, boolean>>({});
 // 导出弹窗
 let exportOpen = $state(false);
 let exportBusy = $state(false);
+// 「配置全部完成」提示是否已被用户关闭（点「知道了」后隐藏）
+let successDismissed = $state(false);
 // 正在轮换的托管密钥 key（用于按钮 loading 态）
 let rotating = $state("");
 // 当前展开三点菜单的配置项 key（同一时刻只允许一个）
@@ -454,6 +456,42 @@ onMount(load);
 		</div>
 	{/if}
 
+	<!-- 状态提示：一行说完「已完成配置 + 写入位置」。
+	     放在操作栏之前——先给结论，再给工具。 -->
+	{#if !loading && !loadError}
+		{#if allRequiredConfigured}
+			{#if !successDismissed}
+				<div class="success-bar">
+					<Icon icon="material-symbols:check-circle-outline" />
+					<span>{i18n(I18nKey.secretsStatusAllDone).replace("{file}", envFile)}</span>
+					<button
+						class="status-dismiss"
+						type="button"
+						onclick={() => (successDismissed = true)}
+					>
+						{i18n(I18nKey.secretsStatusGotIt)}
+					</button>
+				</div>
+			{/if}
+		{:else}
+			<div class="pending-bar">
+				<Icon icon="material-symbols:info-outline" class="status-icon" />
+				<span class="status-text">
+					{i18n(I18nKey.secretsStatusPartial)
+						.replace("{done}", String(requiredConfiguredCount))
+						.replace("{total}", String(requiredItems.length))}
+				</span>
+				<span class="status-missing">
+					{i18n(I18nKey.secretsStatusMissing)}
+					{#each missingRequired as item, i (item.key)}
+						<span class="status-key" title={item.key}>{item.label}</span>
+						{#if i < missingRequired.length - 1}、{/if}
+					{/each}
+				</span>
+			</div>
+		{/if}
+	{/if}
+
 	<!-- 操作栏：左说明右按钮，作为工作区顶部的工具栏（与设置页 savebar 同源） -->
 	<div class="action-bar">
 		<div class="action-info">
@@ -485,32 +523,6 @@ onMount(load);
 			{/if}
 		</div>
 	</div>
-
-	<!-- 状态提示：一行说完「已完成配置 + 写入位置」 -->
-	{#if !loading && !loadError}
-		{#if allRequiredConfigured}
-			<div class="success-bar">
-				<Icon icon="material-symbols:check-circle-outline" />
-				<span>{i18n(I18nKey.secretsStatusAllDone).replace("{file}", envFile)}</span>
-			</div>
-		{:else}
-			<div class="pending-bar">
-				<Icon icon="material-symbols:info-outline" class="status-icon" />
-				<span class="status-text">
-					{i18n(I18nKey.secretsStatusPartial)
-						.replace("{done}", String(requiredConfiguredCount))
-						.replace("{total}", String(requiredItems.length))}
-				</span>
-				<span class="status-missing">
-					{i18n(I18nKey.secretsStatusMissing)}
-					{#each missingRequired as item, i (item.key)}
-						<span class="status-key" title={item.key}>{item.label}</span>
-						{#if i < missingRequired.length - 1}、{/if}
-					{/each}
-				</span>
-			</div>
-		{/if}
-	{/if}
 
 	{#if loading}
 		<div class="status-banner">
@@ -950,6 +962,31 @@ onMount(load);
 
 	.success-bar :global(.inline-icon) {
 		flex-shrink: 0;
+	}
+
+	/* 「知道了」：右侧文字按钮，继承 success 色系，不与主操作抢权重 */
+	.status-dismiss {
+		margin-left: auto;
+		flex-shrink: 0;
+		padding: 0.25rem 0.625rem;
+		border: 1px solid color-mix(in oklab, var(--success) 35%, transparent);
+		border-radius: 6px;
+		background: transparent;
+		color: var(--success);
+		font-size: 0.8125rem;
+		font-family: inherit;
+		font-weight: 500;
+		cursor: pointer;
+		transition: background 0.15s ease;
+	}
+
+	.status-dismiss:hover {
+		background: color-mix(in oklab, var(--success) 15%, transparent);
+	}
+
+	.status-dismiss:focus-visible {
+		outline: 2px solid var(--success);
+		outline-offset: 2px;
 	}
 
 	.pending-bar {

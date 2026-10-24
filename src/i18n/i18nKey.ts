@@ -748,6 +748,7 @@ enum I18nKey {
 	secretsWritableHint = "secretsWritableHint",
 	secretsReadonlyHint = "secretsReadonlyHint",
 	secretsStatusAllDone = "secretsStatusAllDone",
+	secretsStatusGotIt = "secretsStatusGotIt",
 	secretsStatusPartial = "secretsStatusPartial",
 	secretsStatusMissing = "secretsStatusMissing",
 	secretsExportInlineHint = "secretsExportInlineHint",

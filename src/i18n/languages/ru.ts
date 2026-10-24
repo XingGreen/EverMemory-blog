@@ -783,6 +783,7 @@ export const ru: Translation = {
 	[Key.secretsReadonlyHint]:
 		"В продакшене файловая система доступна только для чтения. Настройте переменные окружения на платформе развёртывания (например, Vercel).",
 	[Key.secretsStatusAllDone]: "Все обязательные настройки выполнены! Изменения записываются в {file} в корне проекта",
+	[Key.secretsStatusGotIt]: "Понятно",
 	[Key.secretsStatusPartial]: "Выполнено {done}/{total} обязательных",
 	[Key.secretsStatusMissing]: "Отсутствуют: ",
 	[Key.secretsExportInlineHint]:

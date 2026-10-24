@@ -771,6 +771,7 @@ export const ja: Translation = {
 	[Key.secretsReadonlyHint]:
 		"本番ビルドではファイルシステムは読み取り専用です。デプロイプラットフォーム（Vercel など）の環境変数で設定してください",
 	[Key.secretsStatusAllDone]: "必要な設定はすべて完了しています！変更はプロジェクト直下の {file} に書き込まれます",
+	[Key.secretsStatusGotIt]: "了解しました",
 	[Key.secretsStatusPartial]: "必須設定 {done}/{total} 件完了",
 	[Key.secretsStatusMissing]: "未設定：",
 	[Key.secretsExportInlineHint]:
