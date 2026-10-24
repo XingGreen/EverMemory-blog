@@ -824,25 +824,32 @@ onMount(load);
 		</div>
 	{/if}
 
-	<!-- 底部保存条（参考 flare settings-savebar）：仅在可写环境且存在改动时出现 -->
-	{#if writable && changedCount > 0}
+	<!-- 底部保存条（对齐参考项目 settings-savebar）：
+	     作为容器的固定页脚常驻，不随有无改动显隐——
+	     参考项目里 footer 无条件渲染，只有提示与「放弃修改」按钮
+	     受 save.dirty 控制，保存按钮始终存在（仅 disabled 态变化）。 -->
+	{#if writable}
 		<div class="savebar" role="status">
-			<div class="savebar-notice">
-				<Icon icon="material-symbols:error-outline" />
-				<span>{i18n(I18nKey.secretsUnsavedCount).replace("{count}", String(changedCount))}</span>
-			</div>
+			{#if changedCount > 0}
+				<p class="savebar-notice">
+					<Icon icon="material-symbols:error-outline" />
+					<span>{i18n(I18nKey.secretsUnsavedCount).replace("{count}", String(changedCount))}</span>
+				</p>
+			{/if}
 			<div class="savebar-actions">
+				{#if changedCount > 0}
+					<button class="sec-btn" type="button" disabled={saving} onclick={discardAll}>
+						{i18n(I18nKey.secretsDiscard)}
+					</button>
+				{/if}
 				<button
 					class="sec-btn primary"
 					type="button"
 					onclick={save}
-					disabled={saving || loading}
+					disabled={saving || loading || changedCount === 0}
 				>
 					<Icon icon="material-symbols:save-outline" />
 					<span>{saving ? i18n(I18nKey.secretsSaving) : i18n(I18nKey.secretsSave)}</span>
-				</button>
-				<button class="sec-btn" type="button" disabled={saving} onclick={discardAll}>
-					{i18n(I18nKey.secretsDiscard)}
 				</button>
 			</div>
 		</div>
@@ -858,43 +865,50 @@ onMount(load);
 		gap: 1.25rem;
 	}
 
-	/* ── 底部保存条（参考 flare settings-savebar） ──
-	   只在有未保存改动时出现，悬浮在内容之上，避免用户找不到保存入口。 */
+	/* ── 底部保存条 ──
+	   对齐参考项目 .settings-savebar：文档流内通栏，靠 border-top 与内容分隔，
+	   不做悬浮卡片（参考项目是 flex-shrink:0 的页脚，不是浮层）。 */
 	.savebar {
 		position: sticky;
-		bottom: 0.5rem;
+		bottom: 0;
 		z-index: 30;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 1rem;
+		gap: 1.25rem;
 		flex-wrap: wrap;
-		padding: 0.875rem 1.25rem;
-		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--float-panel-bg) 94%, transparent);
-		-webkit-backdrop-filter: blur(12px);
-		backdrop-filter: blur(12px);
-		border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent);
-		box-shadow: var(--shadow-card-hover);
+		flex-shrink: 0;
+		margin: 0 -1.5rem -1.5rem;
+		padding: 0.875rem 1.5rem;
+		border-top: 1px solid var(--line-divider);
+		background: var(--card-bg);
 	}
 
-	.savebar-notice {
+	/* 提示条：参考项目 .settings-save-notice —— warning 底块 + 圆角 + 中等字重，
+	   不是裸文字。无底色时在暗色下几乎注意不到。 */
+	p.savebar-notice {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.8125rem;
+		gap: 0.5625rem;
+		margin: 0;
+		padding: 0.5625rem 0.75rem;
+		border-radius: 10px;
+		background: color-mix(in oklab, var(--warning) 12%, transparent);
 		color: var(--warning);
+		font-size: 0.8125rem;
+		font-weight: 500;
 	}
 
-	.savebar-notice :global(.inline-icon) {
+	p.savebar-notice :global(.inline-icon) {
 		flex-shrink: 0;
 	}
 
 	.savebar-actions {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.625rem;
 		flex-shrink: 0;
+		margin-left: auto;
 	}
 
 	/* ── 状态横幅 ── */
