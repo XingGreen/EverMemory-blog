@@ -1118,18 +1118,20 @@ onMount(load);
 		font-size: 0.75rem;
 	}
 
+	/* 次按钮：对齐参考项目 .fuwari-btn-regular + .settings-button
+	   —— 实底色 --btn-regular-bg（暗色 oklch(0.33 0.035)）、无边框、
+	   文字用 --btn-content（暗色 oklch(0.75 0.1)）。
+	   上一版改成 transparent + 描边，偏离了参考项目也导致存在感过弱：
+	   次级不等于「几乎看不见」，它只是权重低于主按钮。 */
 	.sec-btn {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.375rem;
 		padding: 0.5rem 1rem;
-		/* 次按钮：1px 可见边框 + 近透明底，与容器分层靠边框而不是底色。
-		   此前底色 --btn-regular-bg 与暗色卡片亮度差仅 ~0.1，
-		   主次按钮形状完全相同，权重拉不开 */
-		border: 1px solid var(--line-divider);
+		border: 1px solid transparent;
 		border-radius: 8px;
-		background: transparent;
-		color: var(--deep-text);
+		background: var(--btn-regular-bg);
+		color: var(--btn-content);
 		font-size: 0.875rem;
 		font-weight: 500;
 		font-family: inherit;
@@ -1139,6 +1141,10 @@ onMount(load);
 
 	.sec-btn:hover:not(:disabled) {
 		background: var(--btn-regular-bg-hover);
+	}
+
+	.sec-btn:active:not(:disabled) {
+		background: var(--btn-regular-bg-active);
 	}
 
 	/* 文本动作按钮：对齐参考页 .settings-text-action（主色文字、13px、无边框背景） */
