@@ -2547,10 +2547,11 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	/* ── 未保存确认弹窗 ── */
-	/* 纯毛玻璃蒙层：只用 backdrop-filter，不叠加任何底色。
-	   此前用 color-mix(--deep-text 45%, transparent)——暗色下
-	   --deep-text 是白色，叠出来就是白蒙层；亮色下才是黑蒙层，
-	   语义随主题翻转，不可控。 */
+	/* 蒙层：对齐参考项目 .fuwari-modal::backdrop ——
+	   rgb(0 0 0 / 0.25) 黑底 + blur(4px)。
+	   此前用 color-mix(--deep-text 45%) 是错的：--deep-text 随主题翻转，
+	   暗色下是白色，叠出来成了白蒙层。
+	   底色固定用黑（蒙层语义就是压暗），不随主题变。 */
 	.modal-overlay {
 		position: fixed;
 		inset: 0;
@@ -2559,9 +2560,9 @@ function formatDate(dateStr: string | null): string {
 		align-items: center;
 		justify-content: center;
 		padding: 1rem;
-		background: transparent;
-		-webkit-backdrop-filter: blur(8px) saturate(0.9);
-		backdrop-filter: blur(8px) saturate(0.9);
+		background: rgb(0 0 0 / 0.25);
+		-webkit-backdrop-filter: blur(4px);
+		backdrop-filter: blur(4px);
 	}
 
 	.modal-card {

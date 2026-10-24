@@ -120,16 +120,17 @@ function handleKeydown(e: KeyboardEvent) {
 </div>
 
 <style>
-	/* 纯毛玻璃蒙层：与后台其他弹窗统一，只用 backdrop-filter 不叠底色 */
+	/* 蒙层：对齐参考项目 .fuwari-modal::backdrop ——
+	   rgb(0 0 0 / 0.25) 黑底 + blur(4px) */
 	.modal-overlay {
 		position: fixed;
 		top: 0;
 		left: 0;
 		right: 0;
 		bottom: 0;
-		background: transparent;
-		-webkit-backdrop-filter: blur(8px) saturate(0.9);
-		backdrop-filter: blur(8px) saturate(0.9);
+		background: rgb(0 0 0 / 0.25);
+		-webkit-backdrop-filter: blur(4px);
+		backdrop-filter: blur(4px);
 		display: flex;
 		align-items: center;
 		justify-content: center;
