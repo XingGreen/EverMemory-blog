@@ -55,6 +55,8 @@ let exportBusy = $state(false);
 
 // 「配置全部完成」提示是否已被用户关闭。
 // 持久化到 localStorage：点「知道了」后刷新页面不再出现。
+// 但配置状态发生变化（从未完成 → 全部完成）时自动重置，
+// 让这条提示在「重新配齐」后再次出现，而不是永久静音。
 // 与 admin-sidebar-collapsed 同一套做法（try/catch 兜底隐私模式）。
 const SUCCESS_DISMISSED_KEY = "admin-secrets-success-dismissed";
 
@@ -63,6 +65,14 @@ function readSuccessDismissed(): boolean {
 		return localStorage.getItem(SUCCESS_DISMISSED_KEY) === "1";
 	} catch {
 		return false;
+	}
+}
+
+function clearSuccessDismissed() {
+	try {
+		localStorage.removeItem(SUCCESS_DISMISSED_KEY);
+	} catch {
+		// localStorage 不可用：内存状态重置即可
 	}
 }
 
@@ -170,6 +180,34 @@ const missingRequired = $derived(
 const allRequiredConfigured = $derived(
 	requiredItems.length > 0 && requiredConfiguredCount === requiredItems.length,
 );
+
+/**
+ * 配置状态从「未完成」变为「全部完成」时，重置关闭标记，
+ * 让成功提示重新出现——否则用户点过一次「知道了」后，
+ * 即使后来清空再重新配齐，也永远不会再看到这条提示。
+ *
+ * 必须跳过数据加载阶段：items 异步载入，期间 allRequiredConfigured
+ * 会经历 false（空数据）→ true（载入后），若直接比较就会把
+ * 用户的关闭意图冲掉（实测刷新后提示又出现）。
+ * 因此以 loading 结束后的首个稳定值作为基线，之后再变化才算真实转变。
+ */
+let prevAllConfigured: boolean | null = null;
+$effect(() => {
+	// 数据未就绪时不参与判定，也不更新基线
+	if (loading || loadError) return;
+	const current = allRequiredConfigured;
+	if (prevAllConfigured === null) {
+		// 首次拿到稳定值：只记录基线，不重置
+		prevAllConfigured = current;
+		return;
+	}
+	// 仅在「从未完成变成完成」时重置
+	if (prevAllConfigured === false && current === true) {
+		successDismissed = false;
+		clearSuccessDismissed();
+	}
+	prevAllConfigured = current;
+});
 
 function isDirty(item: SecretItemDTO): boolean {
 	const draft = (drafts[item.key] ?? "").trim();
