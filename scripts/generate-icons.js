@@ -83,6 +83,12 @@ function extractIconNames(content) {
 		/getIconSvg\(["']([a-z0-9_-]+:[a-z0-9_-]+)["']\)/gi,
 		// hasIcon("xxx:yyy")
 		/hasIcon\(["']([a-z0-9_-]+:[a-z0-9_-]+)["']\)/gi,
+		// 兜底：任意字符串字面量里的图标名。
+		// 覆盖上面都漏掉的形态，典型是三元表达式：
+		//   icon={cond ? "material-symbols:a" : "material-symbols:b"}
+		// 这里只要求 "前缀:名称" 的字符串且前缀属于已知图标集，
+		// 避免把 twitter:card 之类的非图标值误收。
+		/["'`]((?:material-symbols|fa7-solid|fa7-brands|fa7-regular|mdi|simple-icons|mingcute|svg-spinners):[a-z0-9_-]+)["'`]/gi,
 	];
 
 	for (const pattern of patterns) {

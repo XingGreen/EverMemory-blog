@@ -570,21 +570,8 @@ onMount(load);
 															{i18n(I18nKey.secretsMenuViewKey)}
 														</button>
 													{:else}
-														{#if item.sensitive && drafts[item.key]}
-															<button
-																type="button"
-																role="menuitem"
-																class="field-menu-item"
-																onclick={() => {
-																	toggleReveal(item);
-																	menuOpen = "";
-																}}
-															>
-																{showInput[item.key]
-																	? i18n(I18nKey.secretsHide)
-																	: i18n(I18nKey.secretsShow)}
-															</button>
-														{/if}
+														<!-- 不提供「显示/隐藏」菜单项：输入框右侧的眼睛按钮
+														     已经承担该功能，重复入口只会增加噪音 -->
 														{#if drafts[item.key]}
 															<button
 																type="button"
