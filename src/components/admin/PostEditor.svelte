@@ -1059,21 +1059,25 @@ $effect(() => {
 </div>
 
 <style>
-	/* 工作区：单张卡片，header 与书写区同处其内，用一条分隔线区分 */
+	/* 工作区：单张卡片，header 与书写区同处其内，用一条分隔线区分。
+	   高度由内容撑开，不锁高、不裁剪——整页只用文档层滚动条，
+	   避免长内容被 overflow:hidden 裁掉后无法滚动到底。 */
 	.editor-shell {
 		position: relative;
 		display: flex;
 		flex-direction: column;
-		min-height: 0;
 		background: var(--card-bg);
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-large);
 		box-shadow: var(--shadow-card);
-		overflow: hidden;
 	}
 
+	/* 编辑页顶栏：整页由文档层滚动后，header 吸顶常驻，
+	   保证取消/保存/基本信息等操作始终可达。 */
 	.editor-header {
-		position: relative;
+		position: sticky;
+		top: 0;
+		z-index: 20;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -1081,6 +1085,8 @@ $effect(() => {
 		gap: 1rem;
 		padding: 1rem 1.5rem;
 		border-bottom: 1px solid var(--line-divider);
+		background: var(--card-bg);
+		border-radius: var(--radius-large) var(--radius-large) 0 0;
 	}
 
 	/* 左侧返回 + 右侧文字按钮：共用无底色样式，hover 才浮现浅底（对齐参考 header 的层级） */
@@ -1221,7 +1227,6 @@ $effect(() => {
 		position: relative;
 		flex: 1;
 		min-width: 0;
-		min-height: 0;
 	}
 
 	.editor-layout {

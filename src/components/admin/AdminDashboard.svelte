@@ -1921,22 +1921,24 @@ function formatDate(dateStr: string | null): string {
 		display: flex;
 		align-items: stretch;
 		gap: 1.25rem;
-		/* 让后台内容区始终限制在人眼可视范围（扣除 .admin-container 上下内边距），
-		   侧边栏与右侧内容区各自内部滚动，不再让整页滚动 */
-		height: calc(100vh - 3rem);
-		min-height: 0;
+		/* 高度不再锁死为 calc(100vh - 3rem)：整页改为自然文档流，
+		   由文档层统一滚动。此前锁高 + 内部容器再 overflow:hidden，
+		   导致编辑器等长内容被裁掉且无法滚动。 */
+		min-height: calc(100vh - 3rem);
 	}
 
 	/* ── 左侧导航栏 ──
 	   卡片层级由「背景 + 毛玻璃」表达，不再用实线边框勾勒轮廓；
 	   透明边框仅用于占位，保证盒模型与图标列坐标和此前逐像素一致。 */
 	.admin-sidebar {
-		/* position/overflow：折叠按钮悬垂在右上角外侧，滚动裁切必须放开，
-		   滚动需求交给内部 .sidebar-nav */
-		position: relative;
+		/* 整页改为文档层滚动后，侧栏用 sticky 常驻视口，
+		   高度取视口高（内容超出时自身内部滚动）。 */
+		position: sticky;
+		top: 1.5rem;
+		align-self: flex-start;
 		width: 16rem;
 		flex-shrink: 0;
-		height: 100%;
+		height: calc(100vh - 3rem);
 		overflow: visible;
 		display: flex;
 		flex-direction: column;
@@ -2303,8 +2305,6 @@ function formatDate(dateStr: string | null): string {
 	.admin-main {
 		flex: 1;
 		min-width: 0;
-		min-height: 0;
-		height: 100%;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
@@ -2357,26 +2357,17 @@ function formatDate(dateStr: string | null): string {
 	   关键：必须有确定高度（height:100% + min-height:0），
 	   否则高度被内容撑开，.settings-body 的 flex:1 拿不到可分配空间，
 	   overflow-y:auto 失效，滚动会落到外层 .admin-content 上。 */
+	/* 设置页工作区：高度由内容撑开，不再内部滚动。
+	   整页只用文档层滚动条（去掉滚动限制后统一为这一条）。 */
 	.settings-workspace {
 		display: flex;
 		flex-direction: column;
 		flex: 1;
-		height: 100%;
-		min-height: 0;
-		overflow: hidden;
 		padding: 0;
 	}
 
-	/* 内容区：设置页自己的滚动区域，上下留白 24px、左右 24px。
-	   子项必须 flex-shrink: 0 —— 否则长表单会被压缩到容器高度，
-	   内容被自身 overflow 裁掉，scrollHeight 与 clientHeight 相等，
-	   结果就是「看起来不能滚」（外层已 hidden，内层又没溢出）。 */
+	/* 内容区：不再自己滚动，随页面自然伸长 */
 	.settings-body {
-		flex: 1;
-		min-height: 0;
-		overflow-y: auto;
-		overscroll-behavior: contain;
-		scrollbar-gutter: stable;
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
@@ -2799,16 +2790,11 @@ function formatDate(dateStr: string | null): string {
 	.admin-content {
 		flex: 1;
 		min-width: 0;
-		min-height: 0;
-		/* 右侧内容区在可视范围内内部滚动 */
-		overflow-y: auto;
+		/* 高度改由内容撑开，不再内部滚动——整页只用文档层滚动条。
+		   此前是「外层锁高 + 内容区内部滚动」，嵌套滚动容器会让
+		   编辑器等长内容被裁切且滚不到底部。 */
 		/* 内容区铺满可用宽度，不再设置 max-width 限制 */
 		width: 100%;
-		/* flex 列容器：让 AdminPage / settings-workspace 这类
-		   需要撑满高度的子页用 flex:1 定高。
-		   此前靠 position:absolute + inset:0 铺满，但在带 zoom 的
-		   父级里 inset:0 参照的是缩放后尺寸，实测 .admin-page 比
-		   父容器高 48px，导致滚动到底后内容下方留出大块空白。 */
 		display: flex;
 		flex-direction: column;
 		/* 与参考项目 --dashboard-unit / --settings-unit 同源的视口自适应：
@@ -2817,10 +2803,9 @@ function formatDate(dateStr: string | null): string {
 		zoom: clamp(1, 0.07vw / 1px, 1.5);
 	}
 
-	/* 设置详情页：外层不再滚动，滚动交给内部 .settings-body，
-	   保存栏因此能常驻底部而不随内容滚走。 */
+	/* 设置详情页：页面本身不滚动，滚动交给内部 .settings-body */
 	.admin-content.content-fixed {
-		overflow-y: hidden;
+		overflow-y: visible;
 	}
 
 	/* ── 仪表板首页 ── */

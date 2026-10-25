@@ -60,16 +60,13 @@ let {
 </div>
 
 <style>
-	/* 外壳撑满 .admin-content 的可视高度：标题固定、内容区自己滚动。
-	   父级 .admin-content 是 flex 列容器，这里用 flex:1 + min-height:0
-	   定高——比绝对定位可靠：父级带 zoom 时 inset:0 会按缩放后尺寸
-	   计算，实测溢出 48px，导致滚到底后内容下方留大块空白。 */
+	/* 外壳高度由内容撑开：整页只用文档层滚动条，不再内部嵌套滚动。
+	   此前 flex:1 + min-height:0 + overflow:hidden 依赖父级锁高，
+	   内容超出容器时会被裁掉且滚不到底。 */
 	.admin-page {
 		display: flex;
 		flex-direction: column;
 		flex: 1;
-		min-height: 0;
-		overflow: hidden;
 	}
 
 	/* 与 AdminDashboard 的 .settings-heading 取同一组数值，
@@ -113,15 +110,10 @@ let {
 		color: var(--content-meta);
 	}
 
-	/* 内容区是页面内的唯一滚动容器；
-	   子项必须 flex-shrink:0，否则长内容会被压缩到容器高度、
-	   内容被自身 overflow 裁掉，看起来「滚不动」。 */
+	/* 内容区不再自己滚动：整页由文档层统一滚动，
+	   避免「外层 + 内层」双重滚动导致底部内容被裁切。 */
 	.admin-page-body {
 		flex: 1;
-		min-height: 0;
-		overflow-y: auto;
-		overscroll-behavior: contain;
-		scrollbar-gutter: stable;
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
