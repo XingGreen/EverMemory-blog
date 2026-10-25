@@ -38,6 +38,7 @@ type PostRow = {
 	published: string;
 	updated: string | null;
 	draft: boolean;
+	pinned?: boolean;
 };
 
 type Scope = "all" | "published";
@@ -525,59 +526,107 @@ $effect(() => {
 			</div>
 
 			<div class="taxonomy-post-scroll">
-				{#if postsLoading}
+				{#if !selectedName}
+					<div class="taxonomy-empty">
+						<Icon icon="material-symbols:tag" class="empty-icon" />
+						<p>{i18n(I18nKey.taxonomyEmptyHint)}</p>
+					</div>
+				{:else if postsLoading}
 					<div class="taxonomy-empty">
 						<Icon icon="material-symbols:progress-activity" class="spin" />
 					</div>
-				{:else if visiblePosts.length === 0}
-					<div class="taxonomy-empty">
-						<Icon icon="material-symbols:inbox-outline" />
-						<span>
-							{postSearch.trim()
-								? i18n(I18nKey.taxonomyNoMatch)
-								: i18n(I18nKey.taxonomyNoPosts)}
-						</span>
-					</div>
 				{:else}
 					<table class="post-list-table">
+						<colgroup>
+							<col class="post-list-title-col" />
+							<col class="post-list-status-col" />
+							<col class="post-list-date-col" />
+							<col class="post-list-actions-col" />
+						</colgroup>
 						<thead>
 							<tr>
-								<th class="post-list-title-col">{i18n(I18nKey.taxonomyPostTitle)}</th>
-								<th class="post-list-status-col">{i18n(I18nKey.taxonomyPostStatus)}</th>
-								<th class="post-list-date-col">{i18n(I18nKey.taxonomyPostDate)}</th>
+								<th>{i18n(I18nKey.taxonomyPostTitle)}</th>
+								<th>{i18n(I18nKey.taxonomyPostStatus)}</th>
+								<th>
+									{sortBy === "updated"
+										? i18n(I18nKey.postSortUpdated)
+										: i18n(I18nKey.postSortNewest)}
+								</th>
+								<th>{i18n(I18nKey.taxonomyPostActions)}</th>
 							</tr>
 						</thead>
 						<tbody>
 							{#each pagedPosts as post (post.slug)}
 								<tr>
-									<td class="post-list-title-col">
-										<span class="post-title" title={post.title}>{post.title}</span>
+									<td>
+										<div class="post-list-title-cell">
+											<span class="post-list-pin">
+												{#if post.pinned}
+													<Icon icon="material-symbols:keep" />
+												{/if}
+											</span>
+											<a
+												class="post-list-title-link"
+												href={`/admin/posts/edit/${post.slug}/`}
+											>
+												<strong>{post.title || i18n(I18nKey.taxonomyUntitled)}</strong>
+												<span>{post.slug}</span>
+											</a>
+										</div>
 									</td>
-									<td class="post-list-status-col">
-										<span class="status-pill" class:draft={post.draft}>
+									<td>
+										<span
+											class="post-list-status"
+											class:published={!post.draft}
+											class:draft={post.draft}
+										>
 											{post.draft
 												? i18n(I18nKey.taxonomyDraftBadge)
 												: i18n(I18nKey.postPublished)}
 										</span>
 									</td>
-									<td class="post-list-date-col"
-										>{formatDate(post.updated ?? post.published)}</td
-									>
+									<td class="post-list-date">
+										{#if post.updated ?? post.published}
+											<time dateTime={post.updated ?? post.published}
+												>{formatDate(post.updated ?? post.published)}</time
+											>
+										{:else}
+											—
+										{/if}
+									</td>
+									<td>
+										<div class="post-list-row-actions">
+											<a href={`/admin/posts/edit/${post.slug}/`}>
+												{i18n(I18nKey.taxonomyEditPost)}
+											</a>
+										</div>
+									</td>
 								</tr>
 							{/each}
 						</tbody>
 					</table>
+					{#if visiblePosts.length === 0}
+						<div class="taxonomy-empty">
+							<Icon icon="material-symbols:book-open" class="empty-icon" />
+							<p>
+								{postSearch.trim()
+									? i18n(I18nKey.taxonomyNoMatch)
+									: i18n(I18nKey.taxonomyNoPosts)}
+							</p>
+							{#if postSearch.trim()}
+								<button type="button" onclick={clearPostSearch}>
+									{i18n(I18nKey.taxonomyClearFilters)}
+								</button>
+							{:else}
+								<a href="/admin/posts/">{i18n(I18nKey.adminPosts)}</a>
+							{/if}
+						</div>
+					{/if}
 				{/if}
 			</div>
 
-			{#if visiblePosts.length > 0}
+			{#if selectedName && visiblePosts.length > 0}
 				<footer class="taxonomy-post-footer">
-					<span>
-						{i18n(I18nKey.taxonomyPostCount).replace(
-							"{count}",
-							String(visiblePosts.length),
-						)}
-					</span>
 					{#if totalPages > 1}
 						<div class="taxonomy-pager">
 							<button
@@ -600,14 +649,16 @@ $effect(() => {
 								<Icon icon="material-symbols:chevron-right" />
 							</button>
 						</div>
+					{:else}
+						<span>
+							{i18n(I18nKey.taxonomyPostCount).replace(
+								"{count}",
+								String(visiblePosts.length),
+							)}
+						</span>
 					{/if}
 				</footer>
 			{/if}
-		{:else}
-			<div class="taxonomy-empty">
-				<Icon icon="material-symbols:inbox-outline" />
-				<span>{i18n(I18nKey.taxonomyEmptyHint)}</span>
-			</div>
 		{/if}
 	</section>
 </div>
@@ -1051,67 +1102,149 @@ $effect(() => {
 		margin-inline: -3px;
 	}
 
+	/* ── 文章表格：数值对齐参考项目 post-manager.css ── */
 	.post-list-table {
 		width: 100%;
+		table-layout: fixed;
 		border-collapse: collapse;
-		font-size: calc(13 * var(--tx-unit));
+	}
+
+	.post-list-title-col {
+		width: 57%;
+	}
+
+	.post-list-status-col {
+		width: 13%;
+	}
+
+	.post-list-date-col {
+		width: 17%;
+	}
+
+	.post-list-actions-col {
+		width: 13%;
 	}
 
 	.post-list-table th {
 		position: sticky;
 		top: 0;
 		z-index: 1;
-		padding: calc(10 * var(--tx-unit)) calc(12 * var(--tx-unit));
+		height: calc(44 * var(--tx-unit));
+		padding: 0 calc(12 * var(--tx-unit));
 		border-bottom: 1px solid var(--tx-rule);
 		background: var(--card-bg);
 		color: var(--content-meta);
-		font-size: calc(12 * var(--tx-unit));
+		font-size: calc(13 * var(--tx-unit));
 		font-weight: 500;
 		text-align: left;
-		white-space: nowrap;
 	}
 
 	.post-list-table td {
-		padding: calc(12 * var(--tx-unit));
+		height: calc(76 * var(--tx-unit));
+		padding: calc(13 * var(--tx-unit)) calc(12 * var(--tx-unit));
 		border-bottom: 1px solid var(--tx-rule);
-		color: var(--deep-text);
+		vertical-align: middle;
 	}
 
-	.post-list-table tr:hover td {
-		background: color-mix(in srgb, var(--btn-regular-bg) 40%, transparent);
+	.post-list-table tr {
+		transition: background-color 150ms;
 	}
 
-	.post-list-title-col {
-		width: 53%;
+	.post-list-table tbody tr:hover,
+	.post-list-table tbody tr:focus-within {
+		background: color-mix(in srgb, var(--btn-regular-bg) 60%, transparent);
 	}
 
-	.post-list-status-col {
-		width: 14%;
+	.post-list-title-cell {
+		display: flex;
+		align-items: flex-start;
+		gap: calc(12 * var(--tx-unit));
+		min-width: 0;
 	}
 
-	.post-list-date-col {
-		width: 19%;
+	.post-list-pin {
+		width: calc(20 * var(--tx-unit));
+		flex-shrink: 0;
+		padding-top: 2px;
+		color: var(--primary);
 	}
 
-	.post-title {
+	.post-list-title-link {
 		display: block;
+		min-width: 0;
+		text-decoration: none;
+	}
+
+	.post-list-title-link strong {
+		display: block;
+		font-size: calc(14 * var(--tx-unit));
+		font-weight: 600;
+		line-height: 1.5;
+		color: var(--deep-text);
+		overflow-wrap: anywhere;
+	}
+
+	.post-list-title-link:hover strong {
+		color: var(--primary);
+	}
+
+	.post-list-title-link > span {
+		display: block;
+		margin-top: 4px;
+		color: var(--content-meta);
+		font-size: calc(12 * var(--tx-unit));
+		line-height: 1.5;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
-	.status-pill {
-		display: inline-block;
-		padding: 2px 8px;
-		border-radius: 999px;
-		background: color-mix(in oklab, var(--success) 15%, transparent);
-		color: color-mix(in oklab, var(--success) 65%, var(--deep-text));
+	.post-list-status {
+		display: inline-flex;
+		min-height: calc(24 * var(--tx-unit));
+		align-items: center;
+		justify-content: center;
+		padding: 1px calc(10 * var(--tx-unit));
 		font-size: calc(12 * var(--tx-unit));
+		font-weight: 500;
+		border-radius: calc(20 * var(--tx-unit));
+		white-space: nowrap;
 	}
 
-	.status-pill.draft {
-		background: color-mix(in oklab, var(--warning) 15%, transparent);
-		color: color-mix(in oklab, var(--warning) 65%, var(--deep-text));
+	.post-list-status.published {
+		background: color-mix(in oklab, var(--success) 15%, transparent);
+		color: color-mix(in oklab, var(--success) 65%, var(--deep-text));
+	}
+
+	.post-list-status.draft {
+		background: var(--btn-regular-bg);
+		color: var(--btn-content);
+	}
+
+	.post-list-date {
+		font-size: calc(12 * var(--tx-unit));
+		font-variant-numeric: tabular-nums;
+		color: var(--content-meta);
+		white-space: nowrap;
+	}
+
+	.post-list-row-actions {
+		display: flex;
+		align-items: center;
+		gap: calc(17 * var(--tx-unit));
+		font-size: calc(13 * var(--tx-unit));
+		color: var(--primary);
+	}
+
+	.post-list-row-actions > a {
+		padding: calc(8 * var(--tx-unit)) 0;
+		white-space: nowrap;
+		color: var(--primary);
+		text-decoration: none;
+	}
+
+	.post-list-row-actions > a:hover {
+		text-decoration: underline;
 	}
 
 	.taxonomy-post-footer {
@@ -1119,12 +1252,12 @@ $effect(() => {
 		align-items: center;
 		justify-content: space-between;
 		gap: calc(16 * var(--tx-unit));
-		padding-top: calc(12 * var(--tx-unit));
-		margin-top: calc(12 * var(--tx-unit));
-		border-top: 1px solid var(--tx-rule);
-		font-size: calc(12 * var(--tx-unit));
-		color: var(--content-meta);
 		flex-shrink: 0;
+		min-height: calc(48 * var(--tx-unit));
+		border-top: 1px solid var(--tx-rule);
+		padding-top: 12px;
+		font-size: calc(13 * var(--tx-unit));
+		color: var(--content-meta);
 	}
 
 	.taxonomy-pager {
@@ -1134,15 +1267,26 @@ $effect(() => {
 	}
 
 	.taxonomy-empty {
+		min-height: 220px;
+		padding: 30px 16px;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 0.5rem;
-		padding: 3rem 1rem;
+		gap: 14px;
+		font-size: 14px;
 		color: var(--content-meta);
-		font-size: 0.875rem;
+		line-height: 1.7;
 		text-align: center;
+	}
+
+	.taxonomy-empty :is(button, a) {
+		color: var(--primary);
+	}
+
+	.empty-icon {
+		font-size: 1.75rem;
+		opacity: 0.6;
 	}
 
 	.spin {
