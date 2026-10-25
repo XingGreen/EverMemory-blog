@@ -2,7 +2,7 @@
 import type { Snippet } from "svelte";
 
 /**
- * 后台页面外壳（两段式 + 可选页脚）
+ * 后台页面外壳（标题区 + 内容区 + 可选页脚）
  *
  * 统一「卡片外壳 + 标题区 + 内容区」的结构，对应参考项目
  * settings-shell 的 settings-workspace + settings-heading 组合。
@@ -10,6 +10,9 @@ import type { Snippet } from "svelte";
  * 标题区规格与设置页 settings-heading 一致：
  * 28px/650 标题 + 13px 灰字简介、padding 28px 24px 20px。
  * 内容区自带 24px 左右留白，页面只负责内容本身。
+ *
+ * actions 槽位（可选）：标题区右侧的操作按钮组，
+ * 用于文章列表这类「标题 + 计数 + 主操作」的页头。
  *
  * footer 槽位（可选）：放在内容区**之外**、外壳内部，
  * 不参与滚动，始终可见——对应参考项目 settings-shell 里
@@ -22,19 +25,28 @@ let {
 	intro,
 	children,
 	footer,
+	actions,
 }: {
 	title: string;
 	intro?: string;
 	children: Snippet;
 	footer?: Snippet;
+	actions?: Snippet;
 } = $props();
 </script>
 
 <div class="card-base admin-page">
 	<header class="admin-page-heading">
-		<h1>{title}</h1>
-		{#if intro}
-			<p>{intro}</p>
+		<div class="heading-text">
+			<h1>{title}</h1>
+			{#if intro}
+				<p>{intro}</p>
+			{/if}
+		</div>
+		{#if actions}
+			<div class="heading-actions">
+				{@render actions()}
+			</div>
 		{/if}
 	</header>
 	<div class="admin-page-body">
@@ -61,12 +73,28 @@ let {
 	}
 
 	/* 与 AdminDashboard 的 .settings-heading 取同一组数值，
-	     两处改动需同步 */
+	     两处改动需同步。
+	     横向布局：左侧标题/简介，右侧操作按钮组（有 actions 时）。 */
 	.admin-page-heading {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 1.75rem 1.5rem 1.25rem;
+		flex-shrink: 0;
+	}
+
+	.heading-text {
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
-		padding: 1.75rem 1.5rem 1.25rem;
+		min-width: 0;
+	}
+
+	.heading-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
 		flex-shrink: 0;
 	}
 

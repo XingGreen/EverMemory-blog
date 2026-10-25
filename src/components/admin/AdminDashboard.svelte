@@ -41,13 +41,14 @@ type Page = "dashboard" | "posts" | "settings" | "env" | "404";
 
 // 基于 URL 路径的真实路由（History API）：
 //   /admin/                      → 首页
-//   /admin/articles/             → 文章列表
-//   /admin/articles/new/         → 新建文章
-//   /admin/articles/edit/:slug/  → 编辑文章
+//   /admin/posts/                → 文章列表
+//   /admin/posts/new/            → 新建文章
+//   /admin/posts/edit/:slug/     → 编辑文章
 //   /admin/settings/             → 网站配置（概览）
 //   /admin/settings/:key/        → 网站配置（具体配置文件子页）
 //   /admin/env/                  → 环境变量（密钥配置等）
 //   /admin/user/、/admin/secrets/ → 旧地址，归一化到 /admin/env/
+//   /admin/articles/*            → 旧地址，归一化到 /admin/posts/*
 type Route =
 	| { page: "login" }
 	| { page: "dashboard" }
@@ -314,11 +315,17 @@ function parseRoute(pathname: string): Route {
 	switch (segments[0]) {
 		case undefined:
 			return { page: "dashboard" };
-		case "articles":
+		case "posts":
 			if (segments[1] === "new") return { page: "create" };
 			if (segments[1] === "edit" && segments[2])
 				return { page: "edit", slug: segments[2] };
-			// 仅 /admin/articles/ 是列表页，其余子路径无效
+			// 仅 /admin/posts/ 是列表页，其余子路径无效
+			return segments.length === 1 ? { page: "posts" } : { page: "404" };
+		case "articles":
+			// 兼容旧链接：/admin/articles/* 归一化到 /admin/posts/*
+			if (segments[1] === "new") return { page: "create" };
+			if (segments[1] === "edit" && segments[2])
+				return { page: "edit", slug: segments[2] };
 			return segments.length === 1 ? { page: "posts" } : { page: "404" };
 		case "settings": {
 			// /admin/settings/ 无子段时落到第一个配置项（概览层已移除）；
@@ -355,6 +362,19 @@ function applyRoute() {
 		const path = window.location.pathname.replace(/\/$/, "");
 		if (!path.endsWith("/env")) {
 			window.history.replaceState({}, "", `${DASHBOARD_PATH}env/`);
+		}
+	}
+	// 文章管理：旧地址 /admin/articles/* 归一化到 /admin/posts/*
+	if (next.page === "posts" || next.page === "create" || next.page === "edit") {
+		if (/^\/admin\/articles(?:\/|$)/.test(window.location.pathname)) {
+			window.history.replaceState(
+				{},
+				"",
+				window.location.pathname.replace(
+					/^\/admin\/articles(?=\/|$)/,
+					"/admin/posts",
+				),
+			);
 		}
 	}
 	// 设置页已无概览层：/admin/settings/ 归一化到第一个配置项的真实地址，
@@ -826,15 +846,15 @@ function goEnv() {
 }
 
 function goPostList() {
-	navigate(`${DASHBOARD_PATH}articles/`);
+	navigate(`${DASHBOARD_PATH}posts/`);
 }
 
 function goCreatePost() {
-	navigate(`${DASHBOARD_PATH}articles/new/`);
+	navigate(`${DASHBOARD_PATH}posts/new/`);
 }
 
 function goEditPost(post: Post) {
-	navigate(`${DASHBOARD_PATH}articles/edit/${post.slug}/`);
+	navigate(`${DASHBOARD_PATH}posts/edit/${post.slug}/`);
 }
 
 function handleEditPost(post: Post) {
@@ -1485,17 +1505,41 @@ function formatDate(dateStr: string | null): string {
 					{@render dashboardHome()}
 				{:else if activePage === "posts"}
 					{#if viewMode === "list"}
-						<PostList
-							posts={posts}
-							isLoading={isLoading}
-							error={error}
-							onEdit={handleEditPost}
-							onDelete={handleDeleteClick}
-							onRefresh={loadPosts}
-							onCreate={goCreatePost}
-							onSync={handleSync}
-							{isSyncing}
-						/>
+						<AdminPage
+							title={i18n(I18nKey.adminPosts)}
+							intro={i18n(I18nKey.postListCount).replace(
+								"{count}",
+								String(posts.length),
+							)}
+						>
+							{#snippet actions()}
+								<button
+									class="ui-btn ui-btn-soft"
+									onclick={handleSync}
+									disabled={isLoading || isSyncing}
+									aria-label={i18n(I18nKey.postSyncNow)}
+								>
+									<Icon icon="material-symbols:cloud" class="btn-icon" />
+									{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}
+								</button>
+								<button class="ui-btn ui-btn-primary" onclick={goCreatePost}>
+									<Icon icon="material-symbols:add" class="btn-icon" />
+									{i18n(I18nKey.adminNewPost)}
+								</button>
+							{/snippet}
+							<PostList
+								posts={posts}
+								isLoading={isLoading}
+								error={error}
+								onEdit={handleEditPost}
+								onDelete={handleDeleteClick}
+								onRefresh={loadPosts}
+								onCreate={goCreatePost}
+								onSync={handleSync}
+								{isSyncing}
+								heading={false}
+							/>
+						</AdminPage>
 					{:else if viewMode === "edit" && editingPost}
 						<PostEditor
 							post={editingPost}

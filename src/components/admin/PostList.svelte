@@ -15,6 +15,7 @@ let {
 	onCreate,
 	onSync,
 	isSyncing = false,
+	heading,
 }: {
 	posts: any[];
 	isLoading: boolean;
@@ -25,7 +26,12 @@ let {
 	onCreate: () => void;
 	onSync?: () => void;
 	isSyncing?: boolean;
+	/** 是否渲染自带页头。默认 true（独立使用）；
+	 *  套进 AdminPage 时传 false，页头由外壳的 title/actions 承担。 */
+	heading?: boolean;
 } = $props();
+
+const showHeading = $derived(heading !== false);
 
 type SortKey = "updated" | "newest" | "oldest" | "titleAsc" | "titleDesc";
 
@@ -335,9 +341,11 @@ function actionLabel(action: string, title: string): string {
 }
 </script>
 
-<div class="md3-list-container card-base">
+<div class="md3-list-container">
+	{#if showHeading}
 	<!-- 页头：标题(28px/700) + 副标题(总数) + 主操作（对齐参考项目 post-list-heading，
-	      桌面端不再有全局 header；按钮规格取自 flare fuwari-btn-primary/regular） -->
+	      桌面端不再有全局 header；按钮规格取自 flare fuwari-btn-primary/regular）。
+	      套进 AdminPage 时不渲染——标题与操作由外壳承担。 -->
 	<div class="post-list-heading">
 		<div class="heading-text">
 			<h1 class="heading-title">{i18n(I18nKey.adminPosts)}</h1>
@@ -370,6 +378,7 @@ function actionLabel(action: string, title: string): string {
 			</button>
 		</div>
 	</div>
+	{/if}
 
 	<!-- 状态筛选（第一行，对齐参考项目 post-list-tabs） -->
 	<div class="filter-chips" role="group" aria-label={i18n(I18nKey.postStatusFilterGroup)}>
@@ -666,11 +675,6 @@ function actionLabel(action: string, title: string): string {
 		--md-info-text: color-mix(in srgb, var(--info) 72%, var(--deep-text));
 		--md-destructive-text: color-mix(in srgb, var(--destructive) 88%, var(--deep-text));
 
-		/* 容器内边距对齐参考项目（flare-stack-blog）post-manager 的
-		   30px 上下 / 34px 左右，比原先 1.25rem 更从容。 */
-		padding: 1.875rem 2.125rem;
-		border-radius: var(--radius-large);
-
 		/* 统一控件规格：工具栏内所有控件共用高度、圆角、间距。
 		   此前搜索框 48px / 按钮 44px / chip 40px 三种高度、28/22/20/8px 四种圆角
 		   混排，视觉上参差不齐，这里收敛为一套 token。
@@ -680,12 +684,13 @@ function actionLabel(action: string, title: string): string {
 		--md-control-r: 10px;
 		--md-control-gap: 0.5rem;
 
-		/* 固定高度 flex 容器（对齐参考项目 post-manager）：
-		   页头/筛选/工具栏与页脚固定，仅列表区（.md3-table）独立滚动，
-		   条数固定在卡片左下角。 */
+		/* flex 列容器：筛选/工具栏固定，仅列表区（.md3-table）独立滚动。
+		   高度由外层 AdminPage 的 .admin-page-body 决定（flex:1 + min-height:0），
+		   这里不再自带 card-base 外壳与 padding——内外边距统一由外壳提供。 */
 		display: flex;
 		flex-direction: column;
 		height: 100%;
+		min-height: 0;
 		overflow: hidden;
 	}
 
