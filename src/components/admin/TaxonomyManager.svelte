@@ -7,9 +7,14 @@ import type { TaxonomyKind } from "@/utils/taxonomy";
 /**
  * 分类 / 标签管理面板（两个路由共用，靠 kind 区分）
  *
- * 形态对齐参考项目 taxonomy-workspace：左侧列表 + 右侧选中项的文章列表。
- * 技术栈按本项目重写（手写状态、fetch、本项目 i18n），不照搬其
- * React Query / TanStack Router / Paraglide 结构。
+ * 功能对齐参考项目 taxonomy-workspace：
+ * - 左栏列表（搜索、计数、未分类固定项、选中态）
+ * - 右栏选中项文章（范围筛选、搜索、排序、分页、草稿徽章）
+ * - 新建 / 重命名 / 删除（编辑弹窗内含删除入口，Enter 提交）
+ * - URL 状态同步（?name=&page=&q=&sort=），可分享可后退
+ * - 焦点管理、选中项失效自动回退、名称长度限制
+ *
+ * 技术栈按本项目重写，不照搬参考项目的 React Query / TanStack Router。
  */
 let {
 	kind,
@@ -19,11 +24,16 @@ let {
 	onNotify: (message: string, type: "success" | "error") => void;
 } = $props();
 
+const NAME_MAX = 40;
+const PAGE_SIZE = 12;
+const UNCATEGORIZED = "__uncategorized__";
+
 type Entry = {
 	name: string;
 	kind: TaxonomyKind;
 	count: number;
 	draftCount: number;
+	uncategorized?: boolean;
 };
 
 type PostRow = {
@@ -36,47 +46,79 @@ type PostRow = {
 	draft: boolean;
 };
 
+type Scope = "all" | "published";
+type SortKey = "updated" | "newest" | "oldest" | "title";
+
 let entries = $state<Entry[]>([]);
 let uncategorizedCount = $state(0);
+let uncategorizedDraftCount = $state(0);
 let loading = $state(true);
 let loadError = $state("");
 
-// 左栏：选中项与搜索
+// 左栏
 let selectedName = $state("");
 let navSearch = $state("");
 
-// 右栏：文章列表与筛选
+// 右栏
 let posts = $state<PostRow[]>([]);
 let postsLoading = $state(false);
 let postSearch = $state("");
-let sortBy = $state<"updated" | "newest" | "oldest" | "title">("updated");
+let sortBy = $state<SortKey>("updated");
+let scope = $state<Scope>("all");
 let page = $state(1);
-const PAGE_SIZE = 10;
 
 // 弹窗
-let dialogMode = $state<"" | "create" | "rename" | "delete">("");
+let dialogMode = $state<"" | "create" | "edit" | "delete">("");
 let dialogName = $state("");
 let dialogOriginal = $state("");
 let dialogBusy = $state(false);
 let dialogError = $state("");
+let dialogInput: HTMLInputElement | null = $state(null);
+let dialogInputEl: HTMLInputElement | null = null;
 
-const visibleEntries = $derived(
-	entries
+/** 左栏条目：分类/标签 + 分类模式下的「未分类」固定项 */
+const navEntries = $derived.by(() => {
+	const base = entries
 		.filter((e) => e.kind === kind)
 		.filter((e) =>
 			navSearch.trim()
 				? e.name.toLowerCase().includes(navSearch.trim().toLowerCase())
 				: true,
-		),
-);
+		);
+	if (kind !== "category") return base;
+	return [
+		...base,
+		{
+			name: UNCATEGORIZED,
+			kind: "category" as const,
+			count: uncategorizedCount,
+			draftCount: uncategorizedDraftCount,
+			uncategorized: true,
+		},
+	];
+});
 
 const selectedEntry = $derived(
-	entries.find((e) => e.kind === kind && e.name === selectedName),
+	navEntries.find((e) => e.name === selectedName),
 );
 
-/** 右栏：按选中项过滤 + 搜索 + 排序 */
-const filteredPosts = $derived.by(() => {
-	let list = posts;
+const isUncategorized = $derived(selectedName === UNCATEGORIZED);
+
+/** 选中项下的文章（按 kind / 未分类过滤） */
+const scopedPosts = $derived.by(() => {
+	if (!selectedName) return [];
+	return posts.filter((p) => {
+		if (isUncategorized) return !p.category;
+		return kind === "category"
+			? p.category === selectedName
+			: p.tags.includes(selectedName);
+	});
+});
+
+/** 再按范围 + 搜索过滤 + 排序 */
+const visiblePosts = $derived.by(() => {
+	let list = scopedPosts;
+	if (scope === "published") list = list.filter((p) => !p.draft);
 	if (postSearch.trim()) {
 		const q = postSearch.trim().toLowerCase();
 		list = list.filter(
@@ -111,10 +153,46 @@ const filteredPosts = $derived.by(() => {
 	return sorted;
 });
 
-const totalPages = $derived(Math.max(1, Math.ceil(filteredPosts.length / PAGE_SIZE)));
-const pagedPosts = $derived(
-	filteredPosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+const totalPages = $derived(
+	Math.max(1, Math.ceil(visiblePosts.length / PAGE_SIZE)),
 );
+const pagedPosts = $derived(
+	visiblePosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+);
+
+/** URL 状态同步：可分享、可后退 */
+function syncUrl(replace = true) {
+	const params = new URLSearchParams();
+	if (selectedName && !isUncategorized) params.set("name", selectedName);
+	if (isUncategorized) params.set("name", UNCATEGORIZED);
+	if (page > 1) params.set("page", String(page));
+	if (postSearch.trim()) params.set("q", postSearch.trim());
+	if (sortBy !== "updated") params.set("sort", sortBy);
+	if (scope !== "all") params.set("scope", scope);
+	const qs = params.toString();
+	const next = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
+	const cur = `${window.location.pathname}${window.location.search}`;
+	if (next === cur) return;
+	if (replace) window.history.replaceState({}, "", next);
+	else window.history.pushState({}, "", next);
+}
+
+/** 从 URL 恢复状态 */
+function readUrl() {
+	const params = new URLSearchParams(window.location.search);
+	const name = params.get("name");
+	if (name) selectedName = name;
+	const p = Number(params.get("page"));
+	if (Number.isInteger(p) && p > 0) page = p;
+	const q = params.get("q");
+	if (q) postSearch = q;
+	const s = params.get("sort");
+	if (s === "newest" || s === "oldest" || s === "title" || s === "updated") {
+		sortBy = s;
+	}
+	const sc = params.get("scope");
+	if (sc === "published" || sc === "all") scope = sc;
+}
 
 async function load() {
 	loading = true;
@@ -125,13 +203,13 @@ async function load() {
 		if (!data.success) throw new Error(data.message || "load failed");
 		entries = data.entries ?? [];
 		uncategorizedCount = data.uncategorizedCount ?? 0;
-		// 默认选中第一项
-		const first = (data.entries ?? []).find(
-			(e: Entry) => e.kind === kind,
-		);
-		if (first && !selectedName) selectedName = first.name;
-		if (first && !(data.entries ?? []).some((e: Entry) => e.kind === kind && e.name === selectedName)) {
-			selectedName = first.name;
+		uncategorizedDraftCount = data.uncategorizedDraftCount ?? 0;
+
+		// 选中项失效自动回退：URL 指定的名字不存在时，落到第一项
+		const list = navEntries;
+		if (!selectedName || !list.some((e) => e.name === selectedName)) {
+			selectedName = list[0]?.name ?? "";
+			page = 1;
 		}
 	} catch {
 		loadError = i18n(I18nKey.taxonomyLoadFailed);
@@ -154,26 +232,29 @@ async function loadPosts() {
 	}
 }
 
-/** 选中项下的文章（按 kind 过滤） */
-const selectedPosts = $derived.by(() => {
-	if (!selectedName) return [];
-	return filteredPosts.filter((p) =>
-		kind === "category" ? p.category === selectedName : p.tags.includes(selectedName),
-	);
-});
-
-const selectedPaged = $derived(
-	selectedPosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-);
-
-const selectedTotalPages = $derived(
-	Math.max(1, Math.ceil(selectedPosts.length / PAGE_SIZE)),
-);
-
 function selectEntry(name: string) {
 	selectedName = name;
 	page = 1;
 	postSearch = "";
+	syncUrl(false);
+}
+
+function changeScope(next: Scope) {
+	scope = next;
+	page = 1;
+	syncUrl();
+}
+
+function changeSort(next: SortKey) {
+	sortBy = next;
+	page = 1;
+	syncUrl();
+}
+
+function changePage(next: number) {
+	if (next < 1 || next > totalPages) return;
+	page = next;
+	syncUrl();
 }
 
 function openCreate() {
@@ -181,20 +262,31 @@ function openCreate() {
 	dialogName = "";
 	dialogOriginal = "";
 	dialogError = "";
+	void focusDialogInput();
 }
 
-function openRename(name: string) {
-	dialogMode = "rename";
+function openEdit(name: string) {
+	if (name === UNCATEGORIZED) return;
+	dialogMode = "edit";
 	dialogName = name;
 	dialogOriginal = name;
 	dialogError = "";
+	void focusDialogInput();
 }
 
 function openDelete(name: string) {
+	if (name === UNCATEGORIZED) return;
 	dialogMode = "delete";
 	dialogName = name;
 	dialogOriginal = name;
 	dialogError = "";
+}
+
+/** 弹窗打开后聚焦输入框（对齐参考项目 initialFocus） */
+async function focusDialogInput() {
+	await Promise.resolve();
+	dialogInputEl?.focus();
+	dialogInputEl?.select();
 }
 
 function closeDialog() {
@@ -206,9 +298,30 @@ function closeDialog() {
 async function submitDialog() {
 	dialogError = "";
 	const name = dialogName.trim();
-	if (dialogMode !== "delete" && !name) {
-		dialogError = i18n(I18nKey.taxonomyNameRequired);
-		return;
+
+	if (dialogMode !== "delete") {
+		if (!name) {
+			dialogError = i18n(I18nKey.taxonomyNameRequired);
+			return;
+		}
+		if (name.length > NAME_MAX) {
+			dialogError = i18n(I18nKey.taxonomyNameTooLong).replace(
+				"{max}",
+				String(NAME_MAX),
+			);
+			return;
+		}
+		// 前端预检重名，省一次往返（后端仍会校验）
+		const dup = entries.some(
+			(e) =>
+				e.kind === kind &&
+				e.name === name &&
+				!(dialogMode === "edit" && e.name === dialogOriginal),
+		);
+		if (dup) {
+			dialogError = i18n(I18nKey.taxonomyNameExists);
+			return;
+		}
 	}
 
 	dialogBusy = true;
@@ -216,7 +329,7 @@ async function submitDialog() {
 		const payload =
 			dialogMode === "create"
 				? { action: "create", kind, name }
-				: dialogMode === "rename"
+				: dialogMode === "edit"
 					? { action: "rename", kind, name: dialogOriginal, newName: name }
 					: { action: "delete", kind, name: dialogOriginal };
 
@@ -233,17 +346,17 @@ async function submitDialog() {
 		onNotify(
 			dialogMode === "create"
 				? i18n(I18nKey.taxonomyCreated)
-				: dialogMode === "rename"
+				: dialogMode === "edit"
 					? i18n(I18nKey.taxonomyRenamed)
 					: i18n(I18nKey.taxonomyDeleted),
 			"success",
 		);
-		// 重命名后选中项跟随新名；删除后清空选中
-		if (dialogMode === "rename") selectedName = name;
+		if (dialogMode === "edit") selectedName = name;
 		if (dialogMode === "delete") selectedName = "";
 		dialogMode = "";
 		await load();
 		await loadPosts();
+		syncUrl();
 	} catch {
 		dialogError = i18n(I18nKey.taxonomyLoadFailed);
 	} finally {
@@ -262,11 +375,12 @@ function formatDate(iso: string): string {
 $effect(() => {
 	void load();
 	void loadPosts();
+	readUrl();
 });
 </script>
 
 <div class="taxonomy-browser">
-	<!-- 左栏：分类/标签列表 -->
+	<!-- 左栏 -->
 	<aside class="taxonomy-explorer">
 		<div class="explorer-head">
 			<div class="taxonomy-search nav-search">
@@ -301,35 +415,48 @@ $effect(() => {
 						{i18n(I18nKey.secretsReload)}
 					</button>
 				</div>
-			{:else if visibleEntries.length === 0}
+			{:else if navEntries.length === 0}
 				<p class="nav-empty">
 					{navSearch.trim()
 						? i18n(I18nKey.taxonomyNoMatch)
 						: i18n(I18nKey.taxonomyEmpty)}
 				</p>
 			{:else}
-				{#each visibleEntries as entry (entry.name)}
+				{#each navEntries as entry (entry.name)}
 					<button
 						class="nav-item"
 						class:active={selectedName === entry.name}
+						class:uncategorized={entry.uncategorized}
 						type="button"
 						aria-pressed={selectedName === entry.name}
 						onclick={() => selectEntry(entry.name)}
 					>
-						<span class="nav-name">{entry.name}</span>
-						<span class="nav-count">{entry.count}</span>
+						<span class="nav-name">
+							{entry.uncategorized ? i18n(I18nKey.taxonomyUncategorized) : entry.name}
+						</span>
+						<span class="nav-count">
+							{entry.count}
+							{#if entry.draftCount > 0}
+								<small>+{entry.draftCount}</small>
+							{/if}
+						</span>
 					</button>
 				{/each}
 			{/if}
 		</div>
 	</aside>
 
-	<!-- 右栏：选中项的文章 -->
+	<!-- 右栏 -->
 	<section class="taxonomy-results">
 		<header class="results-head">
 			<div class="results-title">
 				<h2>
-					{selectedName || i18n(kind === "category" ? I18nKey.adminCategories : I18nKey.adminTags)}
+					{isUncategorized
+						? i18n(I18nKey.taxonomyUncategorized)
+						: selectedName ||
+							i18n(
+								kind === "category" ? I18nKey.adminCategories : I18nKey.adminTags,
+							)}
 				</h2>
 				{#if selectedEntry}
 					<span class="results-count">
@@ -340,14 +467,14 @@ $effect(() => {
 					</span>
 				{/if}
 			</div>
-			{#if selectedName}
+			{#if selectedName && !isUncategorized}
 				<div class="results-actions">
 					<button
 						class="icon-btn"
 						type="button"
 						title={i18n(I18nKey.taxonomyRename)}
 						aria-label={i18n(I18nKey.taxonomyRename)}
-						onclick={() => openRename(selectedName)}
+						onclick={() => openEdit(selectedName)}
 					>
 						<Icon icon="material-symbols:edit-outline" />
 					</button>
@@ -365,22 +492,51 @@ $effect(() => {
 		</header>
 
 		{#if selectedName}
+			<div class="scope-tabs" role="group" aria-label={i18n(I18nKey.taxonomyScopeAll)}>
+				<button
+					type="button"
+					aria-pressed={scope === "all"}
+					onclick={() => changeScope("all")}
+				>
+					{i18n(I18nKey.taxonomyScopeAll)} <span>{scopedPosts.length}</span>
+				</button>
+				<button
+					type="button"
+					aria-pressed={scope === "published"}
+					onclick={() => changeScope("published")}
+				>
+					{i18n(I18nKey.taxonomyScopePublished)}{" "}
+					<span>{scopedPosts.filter((p) => !p.draft).length}</span>
+				</button>
+			</div>
+
 			<div class="post-controls">
 				<div class="taxonomy-search post-search">
 					<Icon icon="material-symbols:search" class="search-icon" />
 					<input
 						type="search"
 						bind:value={postSearch}
+						oninput={() => {
+							page = 1;
+							syncUrl();
+						}}
 						placeholder={i18n(I18nKey.taxonomySearch)}
 						aria-label={i18n(I18nKey.taxonomySearch)}
 					/>
 				</div>
-				<select class="sort-select" bind:value={sortBy} aria-label={i18n(I18nKey.postSortUpdated)}>
-					<option value="updated">{i18n(I18nKey.postSortUpdated)}</option>
-					<option value="newest">{i18n(I18nKey.postSortNewest)}</option>
-					<option value="oldest">{i18n(I18nKey.postSortOldest)}</option>
-					<option value="title">{i18n(I18nKey.postSortTitleAsc)}</option>
-				</select>
+				<label class="sort-wrap">
+					<span class="sort-label">{i18n(I18nKey.taxonomySortLabel)}</span>
+					<select
+						class="sort-select"
+						value={sortBy}
+						onchange={(e) => changeSort(e.currentTarget.value as SortKey)}
+					>
+						<option value="updated">{i18n(I18nKey.postSortUpdated)}</option>
+						<option value="newest">{i18n(I18nKey.postSortNewest)}</option>
+						<option value="oldest">{i18n(I18nKey.postSortOldest)}</option>
+						<option value="title">{i18n(I18nKey.postSortTitleAsc)}</option>
+					</select>
+				</label>
 			</div>
 
 			<div class="post-scroll">
@@ -388,26 +544,26 @@ $effect(() => {
 					<div class="post-state">
 						<Icon icon="material-symbols:progress-activity" class="spin" />
 					</div>
-				{:else if selectedPosts.length === 0}
+				{:else if visiblePosts.length === 0}
 					<div class="post-state">
 						<Icon icon="material-symbols:inbox-outline" />
 						<span>
 							{postSearch.trim()
 								? i18n(I18nKey.taxonomyNoMatch)
-								: i18n(I18nKey.taxonomyEmpty)}
+								: i18n(I18nKey.taxonomyNoPosts)}
 						</span>
 					</div>
 				{:else}
 					<table class="post-table">
 						<thead>
 							<tr>
-								<th>{i18n(I18nKey.adminPosts)}</th>
-								<th class="col-status">{i18n(I18nKey.postPublished)}</th>
-								<th class="col-date">{i18n(I18nKey.postSortUpdated)}</th>
+								<th>{i18n(I18nKey.taxonomyPostTitle)}</th>
+								<th class="col-status">{i18n(I18nKey.taxonomyPostStatus)}</th>
+								<th class="col-date">{i18n(I18nKey.taxonomyPostDate)}</th>
 							</tr>
 						</thead>
 						<tbody>
-							{#each selectedPaged as post (post.slug)}
+							{#each pagedPosts as post (post.slug)}
 								<tr>
 									<td class="col-title">
 										<span class="post-title" title={post.title}>{post.title}</span>
@@ -415,7 +571,7 @@ $effect(() => {
 									<td class="col-status">
 										<span class="status-pill" class:draft={post.draft}>
 											{post.draft
-												? i18n(I18nKey.postDraft)
+												? i18n(I18nKey.taxonomyDraftBadge)
 												: i18n(I18nKey.postPublished)}
 										</span>
 									</td>
@@ -427,32 +583,32 @@ $effect(() => {
 				{/if}
 			</div>
 
-			{#if selectedPosts.length > 0}
+			{#if visiblePosts.length > 0}
 				<footer class="post-footer">
 					<span>
 						{i18n(I18nKey.taxonomyPostCount).replace(
 							"{count}",
-							String(selectedPosts.length),
+							String(visiblePosts.length),
 						)}
 					</span>
-					{#if selectedTotalPages > 1}
+					{#if totalPages > 1}
 						<div class="pager">
 							<button
 								class="icon-btn"
 								type="button"
 								disabled={page <= 1}
 								aria-label={i18n(I18nKey.paginationPrev)}
-								onclick={() => (page -= 1)}
+								onclick={() => changePage(page - 1)}
 							>
 								<Icon icon="material-symbols:chevron-left" />
 							</button>
-							<span>{page} / {selectedTotalPages}</span>
+							<span>{page} / {totalPages}</span>
 							<button
 								class="icon-btn"
 								type="button"
-								disabled={page >= selectedTotalPages}
+								disabled={page >= totalPages}
 								aria-label={i18n(I18nKey.paginationNext)}
-								onclick={() => (page += 1)}
+								onclick={() => changePage(page + 1)}
 							>
 								<Icon icon="material-symbols:chevron-right" />
 							</button>
@@ -485,19 +641,11 @@ $effect(() => {
 		<div class="modal-card card-base">
 			<div class="modal-head">
 				<h3>
-					<Icon
-						icon={dialogMode === "delete"
-							? "material-symbols:warning-rounded"
-							: "material-symbols:edit-outline"}
-						class="modal-head-icon"
-					/>
-					<span>
-						{dialogMode === "create"
-							? i18n(I18nKey.taxonomyCreateTitle)
-							: dialogMode === "rename"
-								? i18n(I18nKey.taxonomyRenameTitle)
-								: i18n(I18nKey.taxonomyDeleteTitle)}
-					</span>
+					{dialogMode === "create"
+						? i18n(I18nKey.taxonomyCreateTitle)
+						: dialogMode === "edit"
+							? i18n(I18nKey.taxonomyRenameTitle)
+							: i18n(I18nKey.taxonomyDeleteTitle)}
 				</h3>
 				<button
 					class="modal-close"
@@ -516,52 +664,100 @@ $effect(() => {
 						.replace(
 							"{count}",
 							String(
-								entries.find((e) => e.name === dialogOriginal)?.count ?? 0,
+								entries.find(
+									(e) => e.kind === kind && e.name === dialogOriginal,
+								)?.count ?? 0,
 							),
 						)}
 				</p>
+				{#if kind === "category"}
+					<p class="modal-hint">
+						{i18n(I18nKey.taxonomyDeleteToUncategorized)}
+					</p>
+				{/if}
 			{:else}
-				<label class="modal-field">
-					<span>{i18n(I18nKey.taxonomyNameLabel)}</span>
-					<input
-						type="text"
-						bind:value={dialogName}
-						placeholder={i18n(I18nKey.taxonomyNamePlaceholder)}
+				<form
+					onsubmit={(e) => {
+						e.preventDefault();
+						void submitDialog();
+					}}
+				>
+					<label class="modal-field">
+						<span>{i18n(I18nKey.taxonomyNameLabel)}</span>
+						<input
+							bind:this={dialogInputEl}
+							type="text"
+							bind:value={dialogName}
+							maxlength={NAME_MAX}
+							placeholder={i18n(I18nKey.taxonomyNamePlaceholder)}
+							disabled={dialogBusy}
+						/>
+					</label>
+					{#if dialogError}
+						<p class="modal-error">{dialogError}</p>
+					{/if}
+					<div class="modal-actions">
+						{#if dialogMode === "edit"}
+							<button
+								class="modal-delete"
+								type="button"
+								disabled={dialogBusy}
+								onclick={() => openDelete(dialogOriginal)}
+							>
+								{i18n(I18nKey.taxonomyDelete)}
+							</button>
+						{/if}
+						<button
+							class="ui-btn ui-btn-primary"
+							type="submit"
+							disabled={dialogBusy}
+						>
+							{dialogBusy
+								? i18n(I18nKey.taxonomySaving)
+								: i18n(I18nKey.taxonomyConfirm)}
+						</button>
+						<button
+							class="ui-btn ui-btn-soft"
+							type="button"
+							onclick={closeDialog}
+							disabled={dialogBusy}
+						>
+							{i18n(I18nKey.taxonomyCancel)}
+						</button>
+					</div>
+				</form>
+			{/if}
+
+			{#if dialogMode === "delete"}
+				{#if dialogError}
+					<p class="modal-error">{dialogError}</p>
+				{/if}
+				<div class="modal-actions">
+					<button
+						class="ui-btn ui-btn-primary danger"
+						type="button"
+						onclick={submitDialog}
 						disabled={dialogBusy}
-					/>
-				</label>
+					>
+						{dialogBusy
+							? i18n(I18nKey.taxonomySaving)
+							: i18n(I18nKey.taxonomyDelete)}
+					</button>
+					<button
+						class="ui-btn ui-btn-soft"
+						type="button"
+						onclick={closeDialog}
+						disabled={dialogBusy}
+					>
+						{i18n(I18nKey.taxonomyCancel)}
+					</button>
+				</div>
 			{/if}
-
-			{#if dialogError}
-				<p class="modal-error">{dialogError}</p>
-			{/if}
-
-			<div class="modal-actions">
-				<button
-					class={dialogMode === "delete"
-						? "ui-btn ui-btn-soft"
-						: "ui-btn ui-btn-primary"}
-					type="button"
-					onclick={submitDialog}
-					disabled={dialogBusy}
-				>
-					{dialogBusy ? i18n(I18nKey.taxonomySaving) : i18n(I18nKey.taxonomyConfirm)}
-				</button>
-				<button
-					class="ui-btn ui-btn-soft"
-					type="button"
-					onclick={closeDialog}
-					disabled={dialogBusy}
-				>
-					{i18n(I18nKey.taxonomyCancel)}
-				</button>
-			</div>
 		</div>
 	</div>
 {/if}
 
 <style>
-	/* ── 左右分栏（对齐参考项目 .taxonomy-browser）── */
 	.taxonomy-browser {
 		display: flex;
 		gap: 1.25rem;
@@ -658,6 +854,15 @@ $effect(() => {
 		font-weight: 500;
 	}
 
+	/* 未分类项：与普通项用分隔线区隔，提示它不是真实分类 */
+	.nav-item.uncategorized {
+		margin-top: 0.375rem;
+		border-top: 1px solid var(--line-divider);
+		border-radius: 0 0 6px 6px;
+		padding-top: 0.625rem;
+		font-style: italic;
+	}
+
 	.nav-name {
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -668,6 +873,12 @@ $effect(() => {
 		flex-shrink: 0;
 		font-size: 0.75rem;
 		opacity: 0.75;
+	}
+
+	.nav-count small {
+		margin-left: 0.25rem;
+		font-size: 0.6875rem;
+		opacity: 0.7;
 	}
 
 	/* ── 右栏 ── */
@@ -717,6 +928,43 @@ $effect(() => {
 		flex-shrink: 0;
 	}
 
+	/* 范围切换（对齐参考项目 .taxonomy-scope-tabs） */
+	.scope-tabs {
+		display: flex;
+		gap: 0.375rem;
+		flex-shrink: 0;
+	}
+
+	.scope-tabs button {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.3125rem 0.625rem;
+		border: 1px solid transparent;
+		border-radius: 999px;
+		background: transparent;
+		color: var(--content-meta);
+		font-size: 0.75rem;
+		font-family: inherit;
+		cursor: pointer;
+		transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.scope-tabs button:hover {
+		color: var(--deep-text);
+	}
+
+	.scope-tabs button[aria-pressed="true"] {
+		background: color-mix(in oklab, var(--primary) 12%, transparent);
+		border-color: color-mix(in oklab, var(--primary) 30%, transparent);
+		color: var(--primary);
+	}
+
+	.scope-tabs span {
+		font-size: 0.6875rem;
+		opacity: 0.8;
+	}
+
 	.post-controls {
 		display: flex;
 		gap: 0.625rem;
@@ -728,8 +976,19 @@ $effect(() => {
 		min-width: 0;
 	}
 
-	.sort-select {
+	.sort-wrap {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
 		flex-shrink: 0;
+	}
+
+	.sort-label {
+		font-size: 0.75rem;
+		color: var(--content-meta);
+	}
+
+	.sort-select {
 		min-height: 2.375rem;
 		padding: 0 0.625rem;
 		border: 1px solid var(--input-border);
@@ -943,16 +1202,9 @@ $effect(() => {
 	}
 
 	.modal-head h3 {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
 		font-size: 1.0625rem;
 		font-weight: 600;
 		color: var(--deep-text);
-	}
-
-	:global(.modal-head-icon) {
-		color: var(--primary);
 	}
 
 	.modal-close {
@@ -979,6 +1231,13 @@ $effect(() => {
 		font-size: 0.875rem;
 		line-height: 1.7;
 		color: var(--content-meta);
+	}
+
+	.modal-hint {
+		margin: -0.75rem 0 1.25rem;
+		font-size: 0.75rem;
+		color: var(--content-meta);
+		opacity: 0.8;
 	}
 
 	.modal-field {
@@ -1020,7 +1279,35 @@ $effect(() => {
 		justify-content: flex-end;
 	}
 
-	/* 窄屏：左栏折叠为顶部横条 */
+	/* 编辑弹窗内的删除入口：靠左，与主操作分离 */
+	.modal-delete {
+		margin-right: auto;
+		padding: 0.5rem 0;
+		border: none;
+		background: transparent;
+		color: var(--destructive);
+		font-size: 0.8125rem;
+		font-family: inherit;
+		cursor: pointer;
+		opacity: 0.85;
+		transition: opacity 0.15s ease;
+	}
+
+	.modal-delete:hover:not(:disabled) {
+		opacity: 1;
+		text-decoration: underline;
+	}
+
+	.modal-delete:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.ui-btn.danger {
+		background: var(--destructive);
+		color: #fff;
+	}
+
 	@media (max-width: 900px) {
 		.taxonomy-browser {
 			flex-direction: column;

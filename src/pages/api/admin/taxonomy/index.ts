@@ -113,14 +113,24 @@ export async function GET({ request }) {
 
 	try {
 		const { entries, uncategorizedCount } = await collect();
-		return json({ success: true, entries, uncategorizedCount });
+		// 未分类的草稿数：左栏「未分类」项需要与其它项一致地展示总数/草稿数
+		const posts = await getCollection("posts");
+		const uncategorizedDraftCount = posts.filter(
+			(p) =>
+				p.data.draft === true &&
+				!(typeof p.data.category === "string" && p.data.category.trim()),
+		).length;
+		return json({
+			success: true,
+			entries,
+			uncategorizedCount,
+			uncategorizedDraftCount,
+		});
 	} catch (error) {
 		console.error("[Admin Taxonomy] GET failed:", error);
 		return json({ success: false, message: "获取分类/标签失败" }, 500);
 	}
-}
-
-/**
+}/**
  * 批量改写引用某分类/标签的所有文章。
  *
  * 两阶段提交：先把所有受影响文章读入内存并算好新内容，

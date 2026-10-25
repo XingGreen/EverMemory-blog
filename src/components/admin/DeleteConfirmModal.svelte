@@ -66,7 +66,6 @@ function handleKeydown(e: KeyboardEvent) {
 		onkeydown={(e) => e.stopPropagation()}
 	>
 		<div class="modal-header">
-			<Icon icon="material-symbols:warning-rounded" class="modal-icon" />
 			<h2 id="confirm-title">{i18n(I18nKey.deleteTitle)}</h2>
 		</div>
 
@@ -179,12 +178,6 @@ function handleKeydown(e: KeyboardEvent) {
 		padding: 1.5rem;
 		border-bottom: 1px solid var(--line-color);
 		background: color-mix(in srgb, var(--destructive) 10%, transparent);
-	}
-
-	/* Icon 为子组件，其根元素需 :global 才能命中本组件 scoped 样式 */
-	:global(.modal-icon) {
-		font-size: 1.5rem;
-		color: var(--destructive);
 	}
 
 	.modal-header h2 {

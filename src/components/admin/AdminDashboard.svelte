@@ -1883,7 +1883,6 @@ function formatDate(dateStr: string | null): string {
 		<div class="modal-card card-base">
 			<div class="modal-head">
 				<h3>
-					<Icon icon="material-symbols:error-outline" class="modal-head-icon" />
 					<span>{i18n(I18nKey.secretsLeaveTitle)}</span>
 				</h3>
 				<button
@@ -2713,10 +2712,6 @@ function formatDate(dateStr: string | null): string {
 		font-size: 1.0625rem;
 		font-weight: 600;
 		color: var(--deep-text);
-	}
-
-	:global(.modal-head-icon) {
-		color: var(--warning);
 	}
 
 	.modal-close {
