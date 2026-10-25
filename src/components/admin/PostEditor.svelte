@@ -1060,24 +1060,25 @@ $effect(() => {
 
 <style>
 	/* 工作区：单张卡片，header 与书写区同处其内，用一条分隔线区分。
-	   高度由内容撑开，不锁高、不裁剪——整页只用文档层滚动条，
-	   避免长内容被 overflow:hidden 裁掉后无法滚动到底。 */
+	   高度与左侧边栏同步：侧栏在 zoom 外（100vh - 3rem），本卡片在
+	   .admin-content 的 zoom 内，因此要用 (100vh - 3rem)/zoom 反算，
+	   否则会被放大成 (100vh×zoom - 3rem×zoom)，实测高出 43px。
+	   overflow 不设在 shell 上——底部内容会被裁掉且无法滚动，
+	   滚动交给内部 .content-editor。 */
 	.editor-shell {
 		position: relative;
 		display: flex;
 		flex-direction: column;
+		height: calc((100vh - 3rem) / clamp(1, 0.07vw / 1px, 1.5));
 		background: var(--card-bg);
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-large);
 		box-shadow: var(--shadow-card);
 	}
 
-	/* 编辑页顶栏：整页由文档层滚动后，header 吸顶常驻，
-	   保证取消/保存/基本信息等操作始终可达。 */
+	/* 编辑页顶栏：shell 已限高，header 作为 flex 固定项不再需要 sticky */
 	.editor-header {
-		position: sticky;
-		top: 0;
-		z-index: 20;
+		position: relative;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -1222,19 +1223,25 @@ $effect(() => {
 		color: var(--content-meta);
 	}
 
-	/* 单栏工作区：元数据与目录收进右侧抽屉（原三栏改为写作区独占） */
+	/* 单栏工作区：元数据与目录收进右侧抽屉（原三栏改为写作区独占）。
+	   flex:1 + min-height:0 让它在 shell 限高内分配剩余空间；
+	   overflow:hidden 只裁这一层的溢出，真正的滚动在 .content-editor。 */
 	.editor-body {
 		position: relative;
 		flex: 1;
 		min-width: 0;
+		min-height: 0;
+		overflow: hidden;
 	}
 
 	.editor-layout {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: minmax(0, 1fr);
 		max-width: var(--editor-max-page-width, 96rem);
 		margin-inline: auto;
 		width: 100%;
+		height: 100%;
 	}
 
 	/* ── 右侧抽屉：基本信息 / 目录 共用外壳，内容按 drawer 切换 ── */

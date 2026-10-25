@@ -179,6 +179,8 @@ const TOOLS: {
 		flex-direction: column;
 		gap: 0.875rem;
 		min-width: 0;
+		min-height: 0;
+		height: 100%;
 		padding: 1.25rem 1.5rem;
 		isolation: isolate;
 	}
@@ -186,6 +188,7 @@ const TOOLS: {
 	.tabs {
 		display: flex;
 		gap: 0.25rem;
+		flex-shrink: 0;
 		margin-inline: -1.5rem;
 		padding-inline: 1.5rem;
 		border-bottom: 1px solid var(--line-color);
@@ -217,6 +220,7 @@ const TOOLS: {
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
+		flex-shrink: 0;
 		gap: 0.25rem;
 		margin-inline: -1.5rem;
 		padding: 0.5rem 1.5rem;
@@ -276,10 +280,16 @@ const TOOLS: {
 		color: var(--content-meta);
 	}
 
+	/* 书写区：高度由 shell 限高后的剩余空间决定（flex:1），
+	   自身保留 overflow-y:auto 承担滚动。
+	   不再用 --editor-default-content-height 这类固定 calc：
+	   那是按视口估算的，与实际 header/tabs/toolbar 高度对不上，
+	   会让整个卡片比侧栏高出几十像素。
+	   min-height 用 0：否则 26rem 会撑破 shell 限高，把 header/tabs
+	   挤出可视区。保证可见的最低靠 shell 的限高本身兜底。 */
 	.content-editor {
-		min-height: var(--editor-min-content-height, 26rem);
-		height: var(--editor-default-content-height, calc(100vh - 18rem));
-		max-height: var(--editor-max-content-height, calc(100vh - 10rem));
+		flex: 1;
+		min-height: 0;
 		padding: 0.625rem 0.875rem;
 		border: none;
 		border-radius: var(--radius-md);
@@ -287,7 +297,8 @@ const TOOLS: {
 		font-size: 0.875rem;
 		line-height: 1.6;
 		color: var(--deep-text);
-		resize: vertical;
+		resize: none;
+		overflow-y: auto;
 	}
 
 	.content-editor:focus {
@@ -295,9 +306,8 @@ const TOOLS: {
 	}
 
 	.content-preview {
-		min-height: var(--editor-min-content-height, 26rem);
-		height: var(--editor-default-content-height, calc(100vh - 18rem));
-		max-height: var(--editor-max-content-height, calc(100vh - 10rem));
+		flex: 1;
+		min-height: 0;
 		padding: 1.25rem;
 		overflow-y: auto;
 		border: none;

@@ -13,10 +13,10 @@ import type { EditorConfig } from "../types/editorConfig";
 export const editorConfig: EditorConfig = {
 	/** 编辑器页面最大宽度，默认铺满可用宽度 */
 	maxPageWidth: "100%",
-	/** 编辑区最小高度 */
+	/** 编辑区最小高度（写作区不会再被压到比这更矮） */
 	minContentHeight: "26rem",
-	/** 编辑区默认高度：填满视口剩余空间 */
+	/** 编辑区默认高度：由外层 flex 分配，此值仅在样式回退时使用 */
 	defaultContentHeight: "calc(100vh - 18rem)",
-	/** 编辑区最大高度：手动拖拽时的上限 */
+	/** 编辑区最大高度：由容器限高（100vh - 3rem）约束，此值仅在样式回退时使用 */
 	maxContentHeight: "calc(100vh - 10rem)",
 };
