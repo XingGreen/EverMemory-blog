@@ -486,6 +486,7 @@ enum I18nKey {
 	taxonomyScopePublishedHint = "taxonomyScopePublishedHint",
 	taxonomyScopePublished = "taxonomyScopePublished",
 	taxonomyDraftBadge = "taxonomyDraftBadge",
+	taxonomyPublishedShort = "taxonomyPublishedShort",
 	taxonomyNoPosts = "taxonomyNoPosts",
 	taxonomySortLabel = "taxonomySortLabel",
 	taxonomyPostTitle = "taxonomyPostTitle",

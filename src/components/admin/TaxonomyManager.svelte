@@ -26,7 +26,7 @@ type Entry = {
 	name: string;
 	kind: TaxonomyKind;
 	count: number;
-	draftCount: number;
+	publishedCount: number;
 	uncategorized?: boolean;
 };
 
@@ -46,7 +46,7 @@ type SortKey = "updated" | "newest" | "oldest" | "title";
 
 let entries = $state<Entry[]>([]);
 let uncategorizedCount = $state(0);
-let uncategorizedDraftCount = $state(0);
+let uncategorizedPublishedCount = $state(0);
 let loading = $state(true);
 let loadError = $state("");
 
@@ -82,7 +82,7 @@ const navEntries = $derived.by(() => {
 			name: UNCATEGORIZED,
 			kind: "category" as const,
 			count: uncategorizedCount,
-			draftCount: uncategorizedDraftCount,
+			publishedCount: uncategorizedPublishedCount,
 			uncategorized: true,
 		},
 	];
@@ -189,7 +189,7 @@ async function load() {
 		if (!data.success) throw new Error(data.message || "load failed");
 		entries = data.entries ?? [];
 		uncategorizedCount = data.uncategorizedCount ?? 0;
-		uncategorizedDraftCount = data.uncategorizedDraftCount ?? 0;
+		uncategorizedPublishedCount = data.uncategorizedPublishedCount ?? 0;
 		const list = navEntries;
 		if (!selectedName || !list.some((e) => e.name === selectedName)) {
 			selectedName = list[0]?.name ?? "";
@@ -412,8 +412,13 @@ $effect(() => {
 								>
 								<span class="taxonomy-nav-count">
 									{entry.count}
-									{#if entry.draftCount > 0}
-										<small>+{entry.draftCount}</small>
+									{#if entry.publishedCount > 0 && entry.count === 0}
+										<small>
+											{i18n(I18nKey.taxonomyPublishedShort).replace(
+												"{count}",
+												String(entry.publishedCount),
+											)}
+										</small>
 									{/if}
 								</span>
 							</button>
@@ -428,8 +433,13 @@ $effect(() => {
 							<span class="taxonomy-nav-name">{entry.name}</span>
 							<span class="taxonomy-nav-count">
 								{entry.count}
-								{#if entry.draftCount > 0}
-									<small>+{entry.draftCount}</small>
+								{#if entry.publishedCount > 0 && entry.count === 0}
+									<small>
+										{i18n(I18nKey.taxonomyPublishedShort).replace(
+											"{count}",
+											String(entry.publishedCount),
+										)}
+									</small>
 								{/if}
 							</span>
 						</button>

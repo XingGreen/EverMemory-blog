@@ -487,6 +487,7 @@ export const zh_CN: Translation = {
 	[Key.taxonomyScopePublishedHint]: "仅显示已发布文章，草稿不参与统计",
 	[Key.taxonomyScopePublished]: "已发布",
 	[Key.taxonomyDraftBadge]: "草稿",
+	[Key.taxonomyPublishedShort]: "已发布 {count}",
 	[Key.taxonomyNoPosts]: "该分类下暂无文章",
 	[Key.taxonomySortLabel]: "排序",
 	[Key.taxonomyPostTitle]: "标题",

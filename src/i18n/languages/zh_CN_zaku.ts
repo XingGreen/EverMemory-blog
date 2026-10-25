@@ -484,6 +484,7 @@ export const zaku: Translation = {
 	[Key.taxonomyScopePublishedHint]: "只看发出去的，草稿不算",
 	[Key.taxonomyScopePublished]: "发过的",
 	[Key.taxonomyDraftBadge]: "草稿",
+	[Key.taxonomyPublishedShort]: "发出去 {count}",
 	[Key.taxonomyNoPosts]: "这里还空空的呢",
 	[Key.taxonomySortLabel]: "排一排",
 	[Key.taxonomyPostTitle]: "标题",

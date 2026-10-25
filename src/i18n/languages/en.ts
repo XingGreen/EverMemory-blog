@@ -502,6 +502,7 @@ export const en: Translation = {
 	[Key.taxonomyScopePublishedHint]: "Published posts only; drafts are excluded",
 	[Key.taxonomyScopePublished]: "Published",
 	[Key.taxonomyDraftBadge]: "Draft",
+	[Key.taxonomyPublishedShort]: "Published {count}",
 	[Key.taxonomyNoPosts]: "No posts in this category yet",
 	[Key.taxonomySortLabel]: "Sort",
 	[Key.taxonomyPostTitle]: "Title",

@@ -502,6 +502,7 @@ export const ru: Translation = {
 	[Key.taxonomyScopePublishedHint]: "Только опубликованные статьи",
 	[Key.taxonomyScopePublished]: "Опубликованные",
 	[Key.taxonomyDraftBadge]: "Черновик",
+	[Key.taxonomyPublishedShort]: "Опубликовано {count}",
 	[Key.taxonomyNoPosts]: "В этой категории пока нет статей",
 	[Key.taxonomySortLabel]: "Сортировка",
 	[Key.taxonomyPostTitle]: "Заголовок",

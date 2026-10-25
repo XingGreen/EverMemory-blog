@@ -17,10 +17,10 @@ export const prerender = false;
 export type TaxonomyEntry = {
 	name: string;
 	kind: TaxonomyKind;
-	/** 引用该分类/标签的文章总数 */
+	/** 引用该分类/标签的文章总数（对齐参考项目 postCount） */
 	count: number;
-	/** 其中的草稿数（用于列表里区分） */
-	draftCount: number;
+	/** 其中已发布的数量（对齐参考项目 publicPostCount；草稿不计入） */
+	publishedCount: number;
 	/** 是否为「未分类」占位项 */
 	uncategorized?: boolean;
 };
@@ -36,40 +36,45 @@ function json(data: unknown, status = 200): Response {
 async function collect(): Promise<{
 	entries: TaxonomyEntry[];
 	uncategorizedCount: number;
+	uncategorizedPublishedCount: number;
 	slugsByCategory: Map<string, string[]>;
 	slugsByTag: Map<string, string[]>;
 }> {
 	const posts = await getCollection("posts");
 	const registry = await readRegistry();
 
-	const catMap = new Map<string, { total: number; drafts: number }>();
-	const tagMap = new Map<string, { total: number; drafts: number }>();
+	const catMap = new Map<string, { total: number; published: number }>();
+	const tagMap = new Map<string, { total: number; published: number }>();
 	const slugsByCategory = new Map<string, string[]>();
 	const slugsByTag = new Map<string, string[]>();
 	let uncategorizedCount = 0;
+	let uncategorizedPublishedCount = 0;
 
 	for (const post of posts) {
-		const isDraft = post.data.draft === true;
+		// 对齐参考项目 postCount / publicPostCount：
+		// total = 全部文章数；published = 其中的已发布数（草稿不算）
+		const isPublished = post.data.draft !== true;
 		const rawCat =
 			typeof post.data.category === "string" ? post.data.category.trim() : "";
 		if (rawCat) {
-			const cur = catMap.get(rawCat) ?? { total: 0, drafts: 0 };
+			const cur = catMap.get(rawCat) ?? { total: 0, published: 0 };
 			cur.total += 1;
-			if (isDraft) cur.drafts += 1;
+			if (isPublished) cur.published += 1;
 			catMap.set(rawCat, cur);
 			const list = slugsByCategory.get(rawCat) ?? [];
 			list.push(post.id);
 			slugsByCategory.set(rawCat, list);
 		} else {
 			uncategorizedCount += 1;
+			if (isPublished) uncategorizedPublishedCount += 1;
 		}
 
 		for (const rawTag of post.data.tags ?? []) {
 			const tag = String(rawTag).trim();
 			if (!tag) continue;
-			const cur = tagMap.get(tag) ?? { total: 0, drafts: 0 };
+			const cur = tagMap.get(tag) ?? { total: 0, published: 0 };
 			cur.total += 1;
-			if (isDraft) cur.drafts += 1;
+			if (isPublished) cur.published += 1;
 			tagMap.set(tag, cur);
 			const list = slugsByTag.get(tag) ?? [];
 			list.push(post.id);
@@ -79,10 +84,10 @@ async function collect(): Promise<{
 
 	// 登记表里的空项补 0 计数
 	for (const name of registry.categories) {
-		if (!catMap.has(name)) catMap.set(name, { total: 0, drafts: 0 });
+		if (!catMap.has(name)) catMap.set(name, { total: 0, published: 0 });
 	}
 	for (const name of registry.tags) {
-		if (!tagMap.has(name)) tagMap.set(name, { total: 0, drafts: 0 });
+		if (!tagMap.has(name)) tagMap.set(name, { total: 0, published: 0 });
 	}
 
 	const sortFn = (a: TaxonomyEntry, b: TaxonomyEntry) =>
@@ -93,17 +98,23 @@ async function collect(): Promise<{
 			name,
 			kind: "category" as const,
 			count: v.total,
-			draftCount: v.drafts,
+			publishedCount: v.published,
 		})),
 		...[...tagMap.entries()].map(([name, v]) => ({
 			name,
 			kind: "tag" as const,
 			count: v.total,
-			draftCount: v.drafts,
+			publishedCount: v.published,
 		})),
 	].sort(sortFn);
 
-	return { entries, uncategorizedCount, slugsByCategory, slugsByTag };
+	return {
+		entries,
+		uncategorizedCount,
+		uncategorizedPublishedCount,
+		slugsByCategory,
+		slugsByTag,
+	};
 }
 
 /** GET /api/admin/taxonomy/ —— 返回分类与标签聚合结果 */
@@ -112,19 +123,13 @@ export async function GET({ request }) {
 	if (!auth.authenticated && auth.response) return auth.response;
 
 	try {
-		const { entries, uncategorizedCount } = await collect();
-		// 未分类的草稿数：左栏「未分类」项需要与其它项一致地展示总数/草稿数
-		const posts = await getCollection("posts");
-		const uncategorizedDraftCount = posts.filter(
-			(p) =>
-				p.data.draft === true &&
-				!(typeof p.data.category === "string" && p.data.category.trim()),
-		).length;
+		const { entries, uncategorizedCount, uncategorizedPublishedCount } =
+			await collect();
 		return json({
 			success: true,
 			entries,
 			uncategorizedCount,
-			uncategorizedDraftCount,
+			uncategorizedPublishedCount,
 		});
 	} catch (error) {
 		console.error("[Admin Taxonomy] GET failed:", error);

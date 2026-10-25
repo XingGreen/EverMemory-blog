@@ -499,6 +499,7 @@ export const ja: Translation = {
 	[Key.taxonomyScopePublishedHint]: "公開済みの記事のみ表示します",
 	[Key.taxonomyScopePublished]: "公開済み",
 	[Key.taxonomyDraftBadge]: "下書き",
+	[Key.taxonomyPublishedShort]: "公開 {count}",
 	[Key.taxonomyNoPosts]: "このカテゴリにはまだ記事がありません",
 	[Key.taxonomySortLabel]: "並び替え",
 	[Key.taxonomyPostTitle]: "タイトル",
