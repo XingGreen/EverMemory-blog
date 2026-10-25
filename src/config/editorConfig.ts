@@ -1,22 +1,15 @@
-import type { EditorConfig } from "../types/editorConfig";
-
 /**
- * 文章编辑器页面尺寸限制
+ * 文章编辑器页面尺寸（固定值，不开放用户配置）
  *
- * 后台控制面板已铺满窗口宽度，编辑器默认同样不再限宽（100%）；
- * 如需限宽，把 maxPageWidth 改为 px / rem / calc(...) 等合法 CSS 长度即可。
+ * 参考项目 E:\flare-stack-blog 的编辑器布局：页面宽度铺满可用空间
+ * （其 editor 工作区用 flex-1 且无 max-width），内容区高度由外层容器
+ * 限高（100vh - 3rem）后 flex 分配。
  *
- * 若后续需要在后台「网站配置」中在线调整，可将本文件加入
- * src/utils/admin-settings.ts 的 CONFIG_ITEMS（先走「改源码 + 重建」链路，
- * 再按需升级为 runtime 配置）。
+ * 因此这里不再暴露到「网站配置」页：宽高由布局与视口决定，
+ * 手工配置只会与 shell 的限高冲突——例如把 maxPageWidth 改成 25%
+ * 会让正文被压成极窄一列（2026-10 实测正文仅 243px 宽，大量换行）。
  */
-export const editorConfig: EditorConfig = {
-	/** 编辑器页面最大宽度，默认铺满可用宽度 */
+export const editorConfig = {
+	/** 页面宽度：铺满可用宽度，不做额外限制 */
 	maxPageWidth: "100%",
-	/** 编辑区最小高度（写作区不会再被压到比这更矮） */
-	minContentHeight: "26rem",
-	/** 编辑区默认高度：由外层 flex 分配，此值仅在样式回退时使用 */
-	defaultContentHeight: "calc(100vh - 18rem)",
-	/** 编辑区最大高度：由容器限高（100vh - 3rem）约束，此值仅在样式回退时使用 */
-	maxContentHeight: "calc(100vh - 10rem)",
-};
+} as const;
