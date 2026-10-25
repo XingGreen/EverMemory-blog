@@ -999,7 +999,7 @@ $effect(() => {
 	{:else}
 		<div
 			class="editor-body"
-			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}; --editor-min-content-height: ${editorConfig.minContentHeight}; --editor-default-content-height: ${editorConfig.defaultContentHeight}; --editor-max-content-height: ${editorConfig.maxContentHeight}`}
+			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
 		>
 			<div class="editor-layout">
 				<PostEditorWritePanel />
@@ -1060,16 +1060,14 @@ $effect(() => {
 
 <style>
 	/* 工作区：单张卡片，header 与书写区同处其内，用一条分隔线区分。
-	   高度与左侧边栏同步：侧栏在 zoom 外（100vh - 3rem），本卡片在
-	   .admin-content 的 zoom 内，因此要用 (100vh - 3rem)/zoom 反算，
-	   否则会被放大成 (100vh×zoom - 3rem×zoom)，实测高出 43px。
-	   overflow 不设在 shell 上——底部内容会被裁掉且无法滚动，
-	   滚动交给内部 .content-editor。 */
+	   高度与左侧边栏同步：用 --admin-viewport-h（由 AdminDashboard 定义，
+	   已在 .admin-content 的 zoom 内做过反算），避免被放大 43px。
+	   overflow 不设在 shell 上——滚动交给内部 .content-editor。 */
 	.editor-shell {
 		position: relative;
 		display: flex;
 		flex-direction: column;
-		height: calc((100vh - 3rem) / clamp(1, 0.07vw / 1px, 1.5));
+		height: var(--admin-viewport-h, calc(100vh - 3rem));
 		background: var(--card-bg);
 		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-large);

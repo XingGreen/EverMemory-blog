@@ -60,13 +60,15 @@ let {
 </div>
 
 <style>
-	/* 外壳高度由内容撑开：整页只用文档层滚动条，不再内部嵌套滚动。
-	   此前 flex:1 + min-height:0 + overflow:hidden 依赖父级锁高，
-	   内容超出容器时会被裁掉且滚不到底。 */
+	/* 外壳撑满限高的 .admin-content：标题固定、内容区自己滚动。
+	   高度用 var(--admin-viewport-h)（由 AdminDashboard 定义并已按
+	   zoom 反算），保证与左侧边栏等高。 */
 	.admin-page {
 		display: flex;
 		flex-direction: column;
-		flex: 1;
+		height: var(--admin-viewport-h, calc(100vh - 3rem));
+		min-height: 0;
+		overflow: hidden;
 	}
 
 	/* 与 AdminDashboard 的 .settings-heading 取同一组数值，
@@ -110,10 +112,14 @@ let {
 		color: var(--content-meta);
 	}
 
-	/* 内容区不再自己滚动：整页由文档层统一滚动，
-	   避免「外层 + 内层」双重滚动导致底部内容被裁切。 */
+	/* 内容区是本页唯一的滚动容器；子项 flex-shrink:0 防被压缩后
+	   看起来「滚不动」。 */
 	.admin-page-body {
 		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		scrollbar-gutter: stable;
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;

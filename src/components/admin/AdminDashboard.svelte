@@ -1917,14 +1917,21 @@ function formatDate(dateStr: string | null): string {
 {/if}
 
 <style>
+	/* 后台统一视口高度：给 zoom 容器内部的卡片用。
+	   .admin-content 带 zoom，其子元素的高度会被放大，
+	   所以这里预先除以 zoom，让卡片渲染后正好等于 (100vh - 3rem)。 */
 	.admin-layout {
+		--admin-viewport-h: calc(
+			(100vh - 3rem) / clamp(1, 0.07vw / 1px, 1.5)
+		);
 		display: flex;
 		align-items: stretch;
 		gap: 1.25rem;
-		/* 高度不再锁死为 calc(100vh - 3rem)：整页改为自然文档流，
-		   由文档层统一滚动。此前锁高 + 内部容器再 overflow:hidden，
-		   导致编辑器等长内容被裁掉且无法滚动。 */
-		min-height: calc(100vh - 3rem);
+		/* 必须同时给 height 与 min-height：只给 min-height 时子项会把它
+		   继续撑高（仪表板实测比侧栏高 59px）。height 才是硬约束，
+		   子项超出的部分由各自的 overflow 处理。 */
+		height: calc(100vh - 3rem);
+		min-height: 0;
 	}
 
 	/* ── 左侧导航栏 ──
@@ -2305,6 +2312,7 @@ function formatDate(dateStr: string | null): string {
 	.admin-main {
 		flex: 1;
 		min-width: 0;
+		min-height: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
@@ -2357,17 +2365,24 @@ function formatDate(dateStr: string | null): string {
 	   关键：必须有确定高度（height:100% + min-height:0），
 	   否则高度被内容撑开，.settings-body 的 flex:1 拿不到可分配空间，
 	   overflow-y:auto 失效，滚动会落到外层 .admin-content 上。 */
-	/* 设置页工作区：高度由内容撑开，不再内部滚动。
-	   整页只用文档层滚动条（去掉滚动限制后统一为这一条）。 */
+	/* 设置页工作区：与侧栏等高，滚动交给内部 .settings-body。
+	   保存栏因此能常驻底部而不随内容滚走。 */
 	.settings-workspace {
 		display: flex;
 		flex-direction: column;
-		flex: 1;
+		height: var(--admin-viewport-h, calc(100vh - 3rem));
+		min-height: 0;
+		overflow: hidden;
 		padding: 0;
 	}
 
-	/* 内容区：不再自己滚动，随页面自然伸长 */
+	/* 内容区：设置页自己的滚动区域；子项 flex-shrink:0 防压缩。 */
 	.settings-body {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		scrollbar-gutter: stable;
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
@@ -2790,9 +2805,9 @@ function formatDate(dateStr: string | null): string {
 	.admin-content {
 		flex: 1;
 		min-width: 0;
-		/* 高度改由内容撑开，不再内部滚动——整页只用文档层滚动条。
-		   此前是「外层锁高 + 内容区内部滚动」，嵌套滚动容器会让
-		   编辑器等长内容被裁切且滚不到底部。 */
+		/* 高度由受限的 .admin-layout（height: 100vh-3rem）通过 flex 分配。
+		   这里不再写死 calc，避免 zoom 容器内基准不一致。 */
+		min-height: 0;
 		/* 内容区铺满可用宽度，不再设置 max-width 限制 */
 		width: 100%;
 		display: flex;
@@ -2808,14 +2823,16 @@ function formatDate(dateStr: string | null): string {
 		overflow-y: visible;
 	}
 
-	/* ── 仪表板首页 ── */
+	/* ── 仪表板首页 ──
+	   在限高的 .admin-content 内自己滚动（flex:1 + min-height:0 + auto），
+	   而非把外层撑高。 */
 	.dashboard-home {
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
-		/* .admin-content 是 flex 列容器，不设 flex-shrink 时
-		   内容会被压缩到容器高度，长页面滚不动 */
-		flex-shrink: 0;
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
 	}
 
 	/* 欢迎横幅：MD3 primaryContainer 底 + onPrimaryContainer 文字。
