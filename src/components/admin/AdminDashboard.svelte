@@ -19,6 +19,7 @@ import PostList from "./PostList.svelte";
 import AdminPage from "./AdminPage.svelte";
 import SecretManager from "./SecretManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
+import TaxonomyManager from "./TaxonomyManager.svelte";
 
 type Post = {
 	id: string;
@@ -37,13 +38,22 @@ type Post = {
 };
 
 type ViewMode = "list" | "edit" | "create";
-type Page = "dashboard" | "posts" | "settings" | "env" | "404";
+type Page =
+	| "dashboard"
+	| "posts"
+	| "categories"
+	| "tags"
+	| "settings"
+	| "env"
+	| "404";
 
 // 基于 URL 路径的真实路由（History API）：
 //   /admin/                      → 首页
 //   /admin/posts/                → 文章列表
 //   /admin/posts/new/            → 新建文章
 //   /admin/posts/edit/:slug/     → 编辑文章
+//   /admin/categories/           → 分类管理
+//   /admin/tags/                 → 标签管理
 //   /admin/settings/             → 网站配置（概览）
 //   /admin/settings/:key/        → 网站配置（具体配置文件子页）
 //   /admin/env/                  → 环境变量（密钥配置等）
@@ -55,6 +65,8 @@ type Route =
 	| { page: "posts" }
 	| { page: "create" }
 	| { page: "edit"; slug: string }
+	| { page: "categories" }
+	| { page: "tags" }
 	| { page: "settings"; section?: string }
 	| { page: "env" }
 	/* 无效路径：不在后台内渲染任何页面，直接交给项目原有的 /404 */
@@ -219,9 +231,13 @@ const activePage = $derived<Page>(
 			? "dashboard"
 			: route.page === "settings"
 				? "settings"
-			: route.page === "env"
-				? "env"
-				: "posts",
+				: route.page === "env"
+					? "env"
+					: route.page === "categories"
+						? "categories"
+						: route.page === "tags"
+							? "tags"
+							: "posts",
 );
 
 const viewMode = $derived<ViewMode>(
@@ -327,6 +343,10 @@ function parseRoute(pathname: string): Route {
 			if (segments[1] === "edit" && segments[2])
 				return { page: "edit", slug: segments[2] };
 			return segments.length === 1 ? { page: "posts" } : { page: "404" };
+		case "categories":
+			return segments.length === 1 ? { page: "categories" } : { page: "404" };
+		case "tags":
+			return segments.length === 1 ? { page: "tags" } : { page: "404" };
 		case "settings": {
 			// /admin/settings/ 无子段时落到第一个配置项（概览层已移除）；
 			// 显式给了未知 section 视为无效地址
@@ -444,6 +464,8 @@ const headerTitle = $derived.by(() => {
 			: i18n(I18nKey.adminSettings);
 	}
 	if (activePage === "env") return i18n(I18nKey.adminEnvVars);
+	if (activePage === "categories") return i18n(I18nKey.adminCategories);
+	if (activePage === "tags") return i18n(I18nKey.adminTags);
 	if (viewMode === "edit" && editingPost) return i18n(I18nKey.adminEditPost);
 	if (viewMode === "create") return i18n(I18nKey.adminNewPost);
 	return i18n(I18nKey.adminPosts);
@@ -843,6 +865,14 @@ function goSettings(section?: string) {
 
 function goEnv() {
 	navigate(`${DASHBOARD_PATH}env/`);
+}
+
+function goCategories() {
+	navigate(`${DASHBOARD_PATH}categories/`);
+}
+
+function goTags() {
+	navigate(`${DASHBOARD_PATH}tags/`);
 }
 
 function goPostList() {
@@ -1405,6 +1435,34 @@ function formatDate(dateStr: string | null): string {
 					<span>{i18n(I18nKey.adminPosts)}</span>
 				</button>
 
+				<!-- 分类管理 -->
+				<button
+					class="nav-item"
+					class:active={activePage === "categories"}
+					onclick={goCategories}
+				>
+					{#if activePage === "categories"}
+						<Icon icon="material-symbols:folder-rounded" />
+					{:else}
+						<Icon icon="material-symbols:folder-outline" />
+					{/if}
+					<span>{i18n(I18nKey.adminCategories)}</span>
+				</button>
+
+				<!-- 标签管理 -->
+				<button
+					class="nav-item"
+					class:active={activePage === "tags"}
+					onclick={goTags}
+				>
+					{#if activePage === "tags"}
+						<Icon icon="material-symbols:label" />
+					{:else}
+						<Icon icon="material-symbols:label-outline" />
+					{/if}
+					<span>{i18n(I18nKey.adminTags)}</span>
+				</button>
+
 				<!-- 网站配置：单一入口，不再展开子菜单——
 				     具体配置项改由设置页内的 tab + 概览卡片导航 -->
 				<button
@@ -1498,7 +1556,10 @@ function formatDate(dateStr: string | null): string {
 			<div
 			class="admin-content"
 			class:content-wide={activePage === "posts" && viewMode !== "list"}
-			class:content-fixed={activePage === "settings" || activePage === "env"}
+			class:content-fixed={activePage === "settings" ||
+				activePage === "env" ||
+				activePage === "categories" ||
+				activePage === "tags"}
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
 		>
 				{#if activePage === "dashboard"}
@@ -1632,6 +1693,30 @@ function formatDate(dateStr: string | null): string {
 					{/if}
 				{:else if activePage === "404"}
 					{@render adminNotFound()}
+				{:else if activePage === "categories"}
+					<AdminPage
+						title={i18n(I18nKey.adminCategories)}
+						intro={i18n(I18nKey.adminCategoriesIntro)}
+					>
+						<TaxonomyManager
+							kind="category"
+							title={i18n(I18nKey.adminCategories)}
+							intro={i18n(I18nKey.adminCategoriesIntro)}
+							onNotify={(msg, type) => showToast(msg, type)}
+						/>
+					</AdminPage>
+				{:else if activePage === "tags"}
+					<AdminPage
+						title={i18n(I18nKey.adminTags)}
+						intro={i18n(I18nKey.adminTagsIntro)}
+					>
+						<TaxonomyManager
+							kind="tag"
+							title={i18n(I18nKey.adminTags)}
+							intro={i18n(I18nKey.adminTagsIntro)}
+							onNotify={(msg, type) => showToast(msg, type)}
+						/>
+					</AdminPage>
 {:else if activePage === "env"}
 				<AdminPage title={i18n(I18nKey.adminEnvVars)} intro={i18n(I18nKey.adminEnvVarsIntro)}>
 				{#if import.meta.env.PROD}
