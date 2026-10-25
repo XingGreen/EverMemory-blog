@@ -1700,8 +1700,6 @@ function formatDate(dateStr: string | null): string {
 					>
 						<TaxonomyManager
 							kind="category"
-							title={i18n(I18nKey.adminCategories)}
-							intro={i18n(I18nKey.adminCategoriesIntro)}
 							onNotify={(msg, type) => showToast(msg, type)}
 						/>
 					</AdminPage>
@@ -1712,8 +1710,6 @@ function formatDate(dateStr: string | null): string {
 					>
 						<TaxonomyManager
 							kind="tag"
-							title={i18n(I18nKey.adminTags)}
-							intro={i18n(I18nKey.adminTagsIntro)}
 							onNotify={(msg, type) => showToast(msg, type)}
 						/>
 					</AdminPage>
