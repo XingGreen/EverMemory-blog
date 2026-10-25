@@ -498,6 +498,8 @@ export const en: Translation = {
 	[Key.taxonomyNameTooLong]: "Name cannot exceed {max} characters",
 	[Key.taxonomyDeleteToUncategorized]: "These posts will become Uncategorized after deletion",
 	[Key.taxonomyScopeAll]: "All",
+	[Key.taxonomyScopeAllHint]: "All posts including drafts",
+	[Key.taxonomyScopePublishedHint]: "Published posts only; drafts are excluded",
 	[Key.taxonomyScopePublished]: "Published",
 	[Key.taxonomyDraftBadge]: "Draft",
 	[Key.taxonomyNoPosts]: "No posts in this category yet",

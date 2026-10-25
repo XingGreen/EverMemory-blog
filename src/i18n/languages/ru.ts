@@ -498,6 +498,8 @@ export const ru: Translation = {
 	[Key.taxonomyNameTooLong]: "Название не должно превышать {max} символов",
 	[Key.taxonomyDeleteToUncategorized]: "После удаления эти статьи станут «Без категории»",
 	[Key.taxonomyScopeAll]: "Все",
+	[Key.taxonomyScopeAllHint]: "Все статьи, включая черновики",
+	[Key.taxonomyScopePublishedHint]: "Только опубликованные статьи",
 	[Key.taxonomyScopePublished]: "Опубликованные",
 	[Key.taxonomyDraftBadge]: "Черновик",
 	[Key.taxonomyNoPosts]: "В этой категории пока нет статей",

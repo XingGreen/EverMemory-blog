@@ -7,14 +7,8 @@ import type { TaxonomyKind } from "@/utils/taxonomy";
 /**
  * 分类 / 标签管理面板（两个路由共用，靠 kind 区分）
  *
- * 功能对齐参考项目 taxonomy-workspace：
- * - 左栏列表（搜索、计数、未分类固定项、选中态）
- * - 右栏选中项文章（范围筛选、搜索、排序、分页、草稿徽章）
- * - 新建 / 重命名 / 删除（编辑弹窗内含删除入口，Enter 提交）
- * - URL 状态同步（?name=&page=&q=&sort=），可分享可后退
- * - 焦点管理、选中项失效自动回退、名称长度限制
- *
- * 技术栈按本项目重写，不照搬参考项目的 React Query / TanStack Router。
+ * 布局与交互严格对照参考项目 taxonomy-workspace / taxonomy-explorer /
+ * taxonomy-posts 的 CSS 数值，技术栈按本项目重写。
  */
 let {
 	kind,
@@ -55,11 +49,9 @@ let uncategorizedDraftCount = $state(0);
 let loading = $state(true);
 let loadError = $state("");
 
-// 左栏
 let selectedName = $state("");
 let navSearch = $state("");
 
-// 右栏
 let posts = $state<PostRow[]>([]);
 let postsLoading = $state(false);
 let postSearch = $state("");
@@ -67,16 +59,13 @@ let sortBy = $state<SortKey>("updated");
 let scope = $state<Scope>("all");
 let page = $state(1);
 
-// 弹窗
 let dialogMode = $state<"" | "create" | "edit" | "delete">("");
 let dialogName = $state("");
 let dialogOriginal = $state("");
 let dialogBusy = $state(false);
 let dialogError = $state("");
-let dialogInput: HTMLInputElement | null = $state(null);
 let dialogInputEl: HTMLInputElement | null = null;
 
-/** 左栏条目：分类/标签 + 分类模式下的「未分类」固定项 */
 const navEntries = $derived.by(() => {
 	const base = entries
 		.filter((e) => e.kind === kind)
@@ -101,10 +90,8 @@ const navEntries = $derived.by(() => {
 const selectedEntry = $derived(
 	navEntries.find((e) => e.name === selectedName),
 );
-
 const isUncategorized = $derived(selectedName === UNCATEGORIZED);
 
-/** 选中项下的文章（按 kind / 未分类过滤） */
 const scopedPosts = $derived.by(() => {
 	if (!selectedName) return [];
 	return posts.filter((p) => {
@@ -115,7 +102,6 @@ const scopedPosts = $derived.by(() => {
 	});
 });
 
-/** 再按范围 + 搜索过滤 + 排序 */
 const visiblePosts = $derived.by(() => {
 	let list = scopedPosts;
 	if (scope === "published") list = list.filter((p) => !p.draft);
@@ -160,11 +146,11 @@ const pagedPosts = $derived(
 	visiblePosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
 );
 
-/** URL 状态同步：可分享、可后退 */
+const publishedCount = $derived(scopedPosts.filter((p) => !p.draft).length);
+
 function syncUrl(replace = true) {
 	const params = new URLSearchParams();
-	if (selectedName && !isUncategorized) params.set("name", selectedName);
-	if (isUncategorized) params.set("name", UNCATEGORIZED);
+	if (selectedName) params.set("name", selectedName);
 	if (page > 1) params.set("page", String(page));
 	if (postSearch.trim()) params.set("q", postSearch.trim());
 	if (sortBy !== "updated") params.set("sort", sortBy);
@@ -177,7 +163,6 @@ function syncUrl(replace = true) {
 	else window.history.pushState({}, "", next);
 }
 
-/** 从 URL 恢复状态 */
 function readUrl() {
 	const params = new URLSearchParams(window.location.search);
 	const name = params.get("name");
@@ -204,8 +189,6 @@ async function load() {
 		entries = data.entries ?? [];
 		uncategorizedCount = data.uncategorizedCount ?? 0;
 		uncategorizedDraftCount = data.uncategorizedDraftCount ?? 0;
-
-		// 选中项失效自动回退：URL 指定的名字不存在时，落到第一项
 		const list = navEntries;
 		if (!selectedName || !list.some((e) => e.name === selectedName)) {
 			selectedName = list[0]?.name ?? "";
@@ -257,6 +240,12 @@ function changePage(next: number) {
 	syncUrl();
 }
 
+function clearPostSearch() {
+	postSearch = "";
+	page = 1;
+	syncUrl();
+}
+
 function openCreate() {
 	dialogMode = "create";
 	dialogName = "";
@@ -282,7 +271,6 @@ function openDelete(name: string) {
 	dialogError = "";
 }
 
-/** 弹窗打开后聚焦输入框（对齐参考项目 initialFocus） */
 async function focusDialogInput() {
 	await Promise.resolve();
 	dialogInputEl?.focus();
@@ -311,7 +299,6 @@ async function submitDialog() {
 			);
 			return;
 		}
-		// 前端预检重名，省一次往返（后端仍会校验）
 		const dup = entries.some(
 			(e) =>
 				e.kind === kind &&
@@ -380,30 +367,18 @@ $effect(() => {
 </script>
 
 <div class="taxonomy-browser">
-	<!-- 左栏 -->
 	<aside class="taxonomy-explorer">
-		<div class="explorer-head">
-			<div class="taxonomy-search nav-search">
-				<Icon icon="material-symbols:search" class="search-icon" />
-				<input
-					type="search"
-					bind:value={navSearch}
-					placeholder={i18n(I18nKey.taxonomySearch)}
-					aria-label={i18n(I18nKey.taxonomySearch)}
-				/>
-			</div>
-			<button
-				class="ui-btn ui-btn-primary create-btn"
-				type="button"
-				onclick={openCreate}
-				title={i18n(I18nKey.taxonomyNew)}
-				aria-label={i18n(I18nKey.taxonomyNew)}
-			>
-				<Icon icon="material-symbols:add" class="btn-icon" />
-			</button>
+		<div class="taxonomy-nav-search taxonomy-search">
+			<Icon icon="material-symbols:search" class="search-icon" />
+			<input
+				type="search"
+				bind:value={navSearch}
+				placeholder={i18n(I18nKey.taxonomySearch)}
+				aria-label={i18n(I18nKey.taxonomySearch)}
+			/>
 		</div>
 
-		<div class="nav-scroll">
+		<div class="taxonomy-nav-scroll">
 			{#if loading}
 				<div class="nav-state">
 					<Icon icon="material-symbols:progress-activity" class="spin" />
@@ -416,83 +391,79 @@ $effect(() => {
 					</button>
 				</div>
 			{:else if navEntries.length === 0}
-				<p class="nav-empty">
+				<p class="taxonomy-nav-empty">
 					{navSearch.trim()
 						? i18n(I18nKey.taxonomyNoMatch)
 						: i18n(I18nKey.taxonomyEmpty)}
 				</p>
 			{:else}
 				{#each navEntries as entry (entry.name)}
-					<button
-						class="nav-item"
-						class:active={selectedName === entry.name}
-						class:uncategorized={entry.uncategorized}
-						type="button"
-						aria-pressed={selectedName === entry.name}
-						onclick={() => selectEntry(entry.name)}
-					>
-						<span class="nav-name">
-							{entry.uncategorized ? i18n(I18nKey.taxonomyUncategorized) : entry.name}
-						</span>
-						<span class="nav-count">
-							{entry.count}
-							{#if entry.draftCount > 0}
-								<small>+{entry.draftCount}</small>
-							{/if}
-						</span>
-					</button>
+					{#if entry.uncategorized}
+						<div class="taxonomy-uncategorized">
+							<button
+								class="taxonomy-nav-item"
+								type="button"
+								aria-pressed={selectedName === entry.name}
+								onclick={() => selectEntry(entry.name)}
+							>
+								<span class="taxonomy-nav-name"
+									>{i18n(I18nKey.taxonomyUncategorized)}</span
+								>
+								<span class="taxonomy-nav-count">
+									{entry.count}
+									{#if entry.draftCount > 0}
+										<small>+{entry.draftCount}</small>
+									{/if}
+								</span>
+							</button>
+						</div>
+					{:else}
+						<button
+							class="taxonomy-nav-item"
+							type="button"
+							aria-pressed={selectedName === entry.name}
+							onclick={() => selectEntry(entry.name)}
+						>
+							<span class="taxonomy-nav-name">{entry.name}</span>
+							<span class="taxonomy-nav-count">
+								{entry.count}
+								{#if entry.draftCount > 0}
+									<small>+{entry.draftCount}</small>
+								{/if}
+							</span>
+						</button>
+					{/if}
 				{/each}
 			{/if}
 		</div>
 	</aside>
 
-	<!-- 右栏 -->
 	<section class="taxonomy-results">
-		<header class="results-head">
-			<div class="results-title">
-				<h2>
-					{isUncategorized
-						? i18n(I18nKey.taxonomyUncategorized)
-						: selectedName ||
-							i18n(
-								kind === "category" ? I18nKey.adminCategories : I18nKey.adminTags,
-							)}
-				</h2>
-				{#if selectedEntry}
-					<span class="results-count">
-						{i18n(I18nKey.taxonomyPostCount).replace(
-							"{count}",
-							String(selectedEntry.count),
+		<header class="taxonomy-selection-heading">
+			<h2>
+				{isUncategorized
+					? i18n(I18nKey.taxonomyUncategorized)
+					: selectedName ||
+						i18n(
+							kind === "category" ? I18nKey.adminCategories : I18nKey.adminTags,
 						)}
-					</span>
-				{/if}
-			</div>
+			</h2>
 			{#if selectedName && !isUncategorized}
-				<div class="results-actions">
-					<button
-						class="icon-btn"
-						type="button"
-						title={i18n(I18nKey.taxonomyRename)}
-						aria-label={i18n(I18nKey.taxonomyRename)}
-						onclick={() => openEdit(selectedName)}
-					>
-						<Icon icon="material-symbols:edit-outline" />
-					</button>
-					<button
-						class="icon-btn danger"
-						type="button"
-						title={i18n(I18nKey.taxonomyDelete)}
-						aria-label={i18n(I18nKey.taxonomyDelete)}
-						onclick={() => openDelete(selectedName)}
-					>
-						<Icon icon="material-symbols:delete-outline" />
-					</button>
-				</div>
+				<button
+					class="taxonomy-context-action"
+					type="button"
+					title={i18n(I18nKey.taxonomyRename)}
+					aria-label={i18n(I18nKey.taxonomyRename)}
+					aria-haspopup="dialog"
+					onclick={() => openEdit(selectedName)}
+				>
+					<Icon icon="material-symbols:more-horiz" />
+				</button>
 			{/if}
 		</header>
 
 		{#if selectedName}
-			<div class="scope-tabs" role="group" aria-label={i18n(I18nKey.taxonomyScopeAll)}>
+			<div class="taxonomy-scope-tabs" role="group">
 				<button
 					type="button"
 					aria-pressed={scope === "all"}
@@ -505,13 +476,18 @@ $effect(() => {
 					aria-pressed={scope === "published"}
 					onclick={() => changeScope("published")}
 				>
-					{i18n(I18nKey.taxonomyScopePublished)}{" "}
-					<span>{scopedPosts.filter((p) => !p.draft).length}</span>
+					{i18n(I18nKey.taxonomyScopePublished)} <span>{publishedCount}</span>
 				</button>
 			</div>
 
-			<div class="post-controls">
-				<div class="taxonomy-search post-search">
+			<p class="taxonomy-scope-hint">
+				{scope === "all"
+					? i18n(I18nKey.taxonomyScopeAllHint)
+					: i18n(I18nKey.taxonomyScopePublishedHint)}
+			</p>
+
+			<div class="taxonomy-post-controls">
+				<div class="taxonomy-search">
 					<Icon icon="material-symbols:search" class="search-icon" />
 					<input
 						type="search"
@@ -523,11 +499,20 @@ $effect(() => {
 						placeholder={i18n(I18nKey.taxonomySearch)}
 						aria-label={i18n(I18nKey.taxonomySearch)}
 					/>
+					{#if postSearch}
+						<button
+							type="button"
+							aria-label={i18n(I18nKey.taxonomyCancel)}
+							onclick={clearPostSearch}
+						>
+							<Icon icon="material-symbols:close" />
+						</button>
+					{/if}
 				</div>
-				<label class="sort-wrap">
-					<span class="sort-label">{i18n(I18nKey.taxonomySortLabel)}</span>
+				<div class="taxonomy-sort">
+					<span>{i18n(I18nKey.taxonomySortLabel)}</span>
 					<select
-						class="sort-select"
+						class="taxonomy-sort-trigger"
 						value={sortBy}
 						onchange={(e) => changeSort(e.currentTarget.value as SortKey)}
 					>
@@ -536,16 +521,16 @@ $effect(() => {
 						<option value="oldest">{i18n(I18nKey.postSortOldest)}</option>
 						<option value="title">{i18n(I18nKey.postSortTitleAsc)}</option>
 					</select>
-				</label>
+				</div>
 			</div>
 
-			<div class="post-scroll">
+			<div class="taxonomy-post-scroll">
 				{#if postsLoading}
-					<div class="post-state">
+					<div class="taxonomy-empty">
 						<Icon icon="material-symbols:progress-activity" class="spin" />
 					</div>
 				{:else if visiblePosts.length === 0}
-					<div class="post-state">
+					<div class="taxonomy-empty">
 						<Icon icon="material-symbols:inbox-outline" />
 						<span>
 							{postSearch.trim()
@@ -554,28 +539,30 @@ $effect(() => {
 						</span>
 					</div>
 				{:else}
-					<table class="post-table">
+					<table class="post-list-table">
 						<thead>
 							<tr>
-								<th>{i18n(I18nKey.taxonomyPostTitle)}</th>
-								<th class="col-status">{i18n(I18nKey.taxonomyPostStatus)}</th>
-								<th class="col-date">{i18n(I18nKey.taxonomyPostDate)}</th>
+								<th class="post-list-title-col">{i18n(I18nKey.taxonomyPostTitle)}</th>
+								<th class="post-list-status-col">{i18n(I18nKey.taxonomyPostStatus)}</th>
+								<th class="post-list-date-col">{i18n(I18nKey.taxonomyPostDate)}</th>
 							</tr>
 						</thead>
 						<tbody>
 							{#each pagedPosts as post (post.slug)}
 								<tr>
-									<td class="col-title">
+									<td class="post-list-title-col">
 										<span class="post-title" title={post.title}>{post.title}</span>
 									</td>
-									<td class="col-status">
+									<td class="post-list-status-col">
 										<span class="status-pill" class:draft={post.draft}>
 											{post.draft
 												? i18n(I18nKey.taxonomyDraftBadge)
 												: i18n(I18nKey.postPublished)}
 										</span>
 									</td>
-									<td class="col-date">{formatDate(post.updated ?? post.published)}</td>
+									<td class="post-list-date-col"
+										>{formatDate(post.updated ?? post.published)}</td
+									>
 								</tr>
 							{/each}
 						</tbody>
@@ -584,7 +571,7 @@ $effect(() => {
 			</div>
 
 			{#if visiblePosts.length > 0}
-				<footer class="post-footer">
+				<footer class="taxonomy-post-footer">
 					<span>
 						{i18n(I18nKey.taxonomyPostCount).replace(
 							"{count}",
@@ -592,9 +579,9 @@ $effect(() => {
 						)}
 					</span>
 					{#if totalPages > 1}
-						<div class="pager">
+						<div class="taxonomy-pager">
 							<button
-								class="icon-btn"
+								class="taxonomy-context-action"
 								type="button"
 								disabled={page <= 1}
 								aria-label={i18n(I18nKey.paginationPrev)}
@@ -604,7 +591,7 @@ $effect(() => {
 							</button>
 							<span>{page} / {totalPages}</span>
 							<button
-								class="icon-btn"
+								class="taxonomy-context-action"
 								type="button"
 								disabled={page >= totalPages}
 								aria-label={i18n(I18nKey.paginationNext)}
@@ -617,7 +604,7 @@ $effect(() => {
 				</footer>
 			{/if}
 		{:else}
-			<div class="post-state">
+			<div class="taxonomy-empty">
 				<Icon icon="material-symbols:inbox-outline" />
 				<span>{i18n(I18nKey.taxonomyEmptyHint)}</span>
 			</div>
@@ -675,6 +662,29 @@ $effect(() => {
 						{i18n(I18nKey.taxonomyDeleteToUncategorized)}
 					</p>
 				{/if}
+				{#if dialogError}
+					<p class="modal-error">{dialogError}</p>
+				{/if}
+				<div class="modal-actions">
+					<button
+						class="ui-btn ui-btn-primary danger"
+						type="button"
+						onclick={submitDialog}
+						disabled={dialogBusy}
+					>
+						{dialogBusy
+							? i18n(I18nKey.taxonomySaving)
+							: i18n(I18nKey.taxonomyDelete)}
+					</button>
+					<button
+						class="ui-btn ui-btn-soft"
+						type="button"
+						onclick={closeDialog}
+						disabled={dialogBusy}
+					>
+						{i18n(I18nKey.taxonomyCancel)}
+					</button>
+				</div>
 			{:else}
 				<form
 					onsubmit={(e) => {
@@ -727,40 +737,19 @@ $effect(() => {
 					</div>
 				</form>
 			{/if}
-
-			{#if dialogMode === "delete"}
-				{#if dialogError}
-					<p class="modal-error">{dialogError}</p>
-				{/if}
-				<div class="modal-actions">
-					<button
-						class="ui-btn ui-btn-primary danger"
-						type="button"
-						onclick={submitDialog}
-						disabled={dialogBusy}
-					>
-						{dialogBusy
-							? i18n(I18nKey.taxonomySaving)
-							: i18n(I18nKey.taxonomyDelete)}
-					</button>
-					<button
-						class="ui-btn ui-btn-soft"
-						type="button"
-						onclick={closeDialog}
-						disabled={dialogBusy}
-					>
-						{i18n(I18nKey.taxonomyCancel)}
-					</button>
-				</div>
-			{/if}
 		</div>
 	</div>
 {/if}
 
 <style>
+	/* ── 尺寸单位：对齐参考项目 --taxonomy-unit（随视口缩放）── */
 	.taxonomy-browser {
-		display: flex;
-		gap: 1.25rem;
+		--tx-unit: clamp(1px, 0.07vw, 1.5px);
+		--tx-rule: color-mix(in srgb, var(--content-meta) 20%, transparent);
+
+		display: grid;
+		grid-template-columns: calc(225 * var(--tx-unit)) minmax(0, 1fr);
+		gap: calc(28 * var(--tx-unit));
 		flex: 1;
 		min-height: 0;
 	}
@@ -769,38 +758,87 @@ $effect(() => {
 	.taxonomy-explorer {
 		display: flex;
 		flex-direction: column;
-		gap: 0.625rem;
-		width: 260px;
-		flex-shrink: 0;
+		min-width: 0;
 		min-height: 0;
-		padding-right: 1.25rem;
-		border-right: 1px solid var(--line-divider);
+		border-right: 1px solid var(--tx-rule);
+		padding-right: calc(20 * var(--tx-unit));
 	}
 
-	.explorer-head {
+	.taxonomy-nav-scroll {
+		flex: 1;
+		min-height: 0;
+		overflow: auto;
+		overscroll-behavior: contain;
+		scrollbar-gutter: stable;
+		padding: 3px;
+		margin: -3px;
+	}
+
+	.taxonomy-nav-item {
 		display: flex;
-		gap: 0.5rem;
-		flex-shrink: 0;
+		align-items: center;
+		gap: calc(10 * var(--tx-unit));
+		width: 100%;
+		min-height: calc(48 * var(--tx-unit));
+		padding: calc(12 * var(--tx-unit));
+		text-align: left;
+		border: none;
+		background: transparent;
+		color: var(--content-meta);
+		border-radius: 10px;
+		font-size: calc(14 * var(--tx-unit));
+		font-family: inherit;
+		cursor: pointer;
+		transition:
+			background-color 150ms,
+			color 150ms;
 	}
 
-	.nav-search {
+	.taxonomy-nav-item:hover {
+		background: color-mix(in srgb, var(--btn-regular-bg) 50%, transparent);
+	}
+
+	.taxonomy-nav-item[aria-pressed="true"] {
+		background: var(--btn-regular-bg);
+		color: var(--primary);
+		font-weight: 500;
+	}
+
+	.taxonomy-nav-name {
 		flex: 1;
 		min-width: 0;
+		overflow-wrap: anywhere;
 	}
 
-	.create-btn {
-		width: 2.625rem;
-		min-width: 2.625rem;
-		padding: 0;
+	.taxonomy-nav-count {
+		text-align: right;
+		font-size: calc(12 * var(--tx-unit));
+		color: var(--content-meta);
+		font-variant-numeric: tabular-nums;
 		flex-shrink: 0;
 	}
 
-	.nav-scroll {
-		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
-		overflow-y: auto;
-		min-height: 0;
+	.taxonomy-nav-count small {
+		display: block;
+		margin-top: calc(4 * var(--tx-unit));
+		font-size: 0.95em;
+		white-space: nowrap;
+	}
+
+	.taxonomy-nav-item[aria-pressed="true"] .taxonomy-nav-count {
+		color: var(--primary);
+	}
+
+	.taxonomy-uncategorized {
+		margin-top: calc(16 * var(--tx-unit));
+		padding-top: calc(16 * var(--tx-unit));
+		border-top: 1px solid var(--tx-rule);
+	}
+
+	.taxonomy-nav-empty {
+		padding: 20px 10px;
+		font-size: 13px;
+		color: var(--content-meta);
 	}
 
 	.nav-state {
@@ -817,240 +855,242 @@ $effect(() => {
 		color: var(--destructive);
 	}
 
-	.nav-empty {
-		margin: 0;
-		padding: 2rem 0.5rem;
-		text-align: center;
-		font-size: 0.8125rem;
-		color: var(--content-meta);
-	}
-
-	.nav-item {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.625rem;
-		width: 100%;
-		padding: 0.5rem 0.625rem;
-		border: none;
-		border-radius: 6px;
-		background: transparent;
-		color: var(--content-meta);
-		font-size: 0.8125rem;
-		font-family: inherit;
-		text-align: left;
-		cursor: pointer;
-		transition: background 0.15s ease, color 0.15s ease;
-	}
-
-	.nav-item:hover {
-		background: var(--btn-plain-bg-hover);
-		color: var(--deep-text);
-	}
-
-	.nav-item.active {
-		background: color-mix(in oklab, var(--primary) 15%, transparent);
-		color: var(--primary);
-		font-weight: 500;
-	}
-
-	/* 未分类项：与普通项用分隔线区隔，提示它不是真实分类 */
-	.nav-item.uncategorized {
-		margin-top: 0.375rem;
-		border-top: 1px solid var(--line-divider);
-		border-radius: 0 0 6px 6px;
-		padding-top: 0.625rem;
-		font-style: italic;
-	}
-
-	.nav-name {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.nav-count {
-		flex-shrink: 0;
-		font-size: 0.75rem;
-		opacity: 0.75;
-	}
-
-	.nav-count small {
-		margin-left: 0.25rem;
-		font-size: 0.6875rem;
-		opacity: 0.7;
-	}
-
 	/* ── 右栏 ── */
 	.taxonomy-results {
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
-		flex: 1;
 		min-width: 0;
 		min-height: 0;
 	}
 
-	.results-head {
+	.taxonomy-selection-heading {
+		display: flex;
+		align-items: center;
+		gap: calc(12 * var(--tx-unit));
+		min-height: calc(36 * var(--tx-unit));
+		margin-bottom: calc(18 * var(--tx-unit));
+		flex-shrink: 0;
+	}
+
+	.taxonomy-selection-heading h2 {
+		margin: 0;
+		font-size: calc(24 * var(--tx-unit));
+		font-weight: 600;
+		color: var(--deep-text);
+		overflow-wrap: anywhere;
+	}
+
+	.taxonomy-context-action {
+		display: grid;
+		place-items: center;
+		width: calc(34 * var(--tx-unit));
+		height: calc(34 * var(--tx-unit));
+		border: none;
+		background: transparent;
+		border-radius: 8px;
+		color: var(--content-meta);
+		flex-shrink: 0;
+		cursor: pointer;
+		transition: background 150ms, color 150ms;
+	}
+
+	.taxonomy-context-action:hover:not(:disabled) {
+		color: var(--primary);
+		background: var(--btn-regular-bg);
+	}
+
+	.taxonomy-context-action:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
+
+	/* 范围切换：下划线 tab（对齐参考项目 .taxonomy-scope-tabs） */
+	.taxonomy-scope-tabs {
+		display: flex;
+		align-items: center;
+		gap: calc(28 * var(--tx-unit));
+		flex-shrink: 0;
+		border-bottom: 1px solid var(--tx-rule);
+	}
+
+	.taxonomy-scope-tabs button {
+		display: flex;
+		align-items: center;
+		gap: calc(10 * var(--tx-unit));
+		padding: 10px 4px 13px;
+		border: none;
+		border-bottom: 2px solid transparent;
+		margin-bottom: -1px;
+		background: transparent;
+		color: var(--content-meta);
+		font-size: calc(14 * var(--tx-unit));
+		font-family: inherit;
+		white-space: nowrap;
+		cursor: pointer;
+		transition: color 150ms, border-color 150ms;
+	}
+
+	.taxonomy-scope-tabs button[aria-pressed="true"] {
+		color: var(--primary);
+		border-bottom-color: var(--primary);
+		font-weight: 500;
+	}
+
+	.taxonomy-scope-tabs span {
+		font-size: 0.9em;
+	}
+
+	.taxonomy-scope-hint {
+		margin: 12px 0 18px;
+		font-size: calc(12 * var(--tx-unit));
+		line-height: 1.6;
+		color: var(--content-meta);
+		flex-shrink: 0;
+	}
+
+	.taxonomy-post-controls {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 1rem;
+		gap: calc(20 * var(--tx-unit));
+		margin-bottom: calc(22 * var(--tx-unit));
 		flex-shrink: 0;
 	}
 
-	.results-title {
+	/* 搜索框（对齐参考项目 .taxonomy-search） */
+	.taxonomy-search {
 		display: flex;
-		align-items: baseline;
-		gap: 0.625rem;
+		align-items: center;
+		gap: calc(10 * var(--tx-unit));
 		min-width: 0;
+		min-height: calc(42 * var(--tx-unit));
+		padding: 0 calc(12 * var(--tx-unit));
+		border: 1px solid var(--tx-rule);
+		border-radius: 9px;
+		background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
+		color: var(--content-meta);
+		transition: border-color 150ms, box-shadow 150ms;
 	}
 
-	.results-title h2 {
-		margin: 0;
-		font-size: 1.0625rem;
-		font-weight: 600;
+	.taxonomy-post-controls > .taxonomy-search {
+		width: min(100%, calc(340 * var(--tx-unit)));
+	}
+
+	.taxonomy-search input {
+		width: 100%;
+		min-width: 0;
+		border: none;
+		background: transparent;
+		outline: none;
+		font-size: calc(14 * var(--tx-unit));
+		font-family: inherit;
 		color: var(--deep-text);
-		overflow: hidden;
-		text-overflow: ellipsis;
+	}
+
+	.taxonomy-search input::-webkit-search-cancel-button {
+		appearance: none;
+	}
+
+	.taxonomy-search .search-icon {
+		flex-shrink: 0;
+	}
+
+	.taxonomy-search button {
+		display: grid;
+		place-items: center;
+		width: 26px;
+		height: 32px;
+		padding: 0;
+		border: none;
+		background: transparent;
+		color: var(--content-meta);
+		flex-shrink: 0;
+		cursor: pointer;
+	}
+
+	.taxonomy-search:focus-within {
+		border-color: var(--primary);
+		box-shadow: 0 0 0 2px var(--btn-regular-bg);
+	}
+
+	.taxonomy-nav-search {
+		flex-shrink: 0;
+		margin-bottom: calc(14 * var(--tx-unit));
+	}
+
+	.taxonomy-sort {
+		display: flex;
+		align-items: center;
+		gap: calc(10 * var(--tx-unit));
+		font-size: calc(13 * var(--tx-unit));
+		color: var(--content-meta);
 		white-space: nowrap;
 	}
 
-	.results-count {
-		flex-shrink: 0;
-		font-size: 0.8125rem;
-		color: var(--content-meta);
-	}
-
-	.results-actions {
-		display: flex;
-		gap: 0.25rem;
-		flex-shrink: 0;
-	}
-
-	/* 范围切换（对齐参考项目 .taxonomy-scope-tabs） */
-	.scope-tabs {
-		display: flex;
-		gap: 0.375rem;
-		flex-shrink: 0;
-	}
-
-	.scope-tabs button {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		padding: 0.3125rem 0.625rem;
-		border: 1px solid transparent;
-		border-radius: 999px;
-		background: transparent;
-		color: var(--content-meta);
-		font-size: 0.75rem;
-		font-family: inherit;
-		cursor: pointer;
-		transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-	}
-
-	.scope-tabs button:hover {
+	.taxonomy-sort-trigger {
+		min-height: calc(40 * var(--tx-unit));
+		padding: 0 12px;
+		border: 1px solid var(--tx-rule);
+		border-radius: 9px;
 		color: var(--deep-text);
-	}
-
-	.scope-tabs button[aria-pressed="true"] {
-		background: color-mix(in oklab, var(--primary) 12%, transparent);
-		border-color: color-mix(in oklab, var(--primary) 30%, transparent);
-		color: var(--primary);
-	}
-
-	.scope-tabs span {
-		font-size: 0.6875rem;
-		opacity: 0.8;
-	}
-
-	.post-controls {
-		display: flex;
-		gap: 0.625rem;
-		flex-shrink: 0;
-	}
-
-	.post-search {
-		flex: 1;
-		min-width: 0;
-	}
-
-	.sort-wrap {
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-		flex-shrink: 0;
-	}
-
-	.sort-label {
-		font-size: 0.75rem;
-		color: var(--content-meta);
-	}
-
-	.sort-select {
-		min-height: 2.375rem;
-		padding: 0 0.625rem;
-		border: 1px solid var(--input-border);
-		border-radius: 8px;
-		background: var(--input-bg);
-		color: var(--deep-text);
-		font-size: 0.8125rem;
+		background: var(--card-bg);
 		font-family: inherit;
+		font-size: calc(13 * var(--tx-unit));
 		cursor: pointer;
 	}
 
-	.post-scroll {
+	/* 列表滚动区 */
+	.taxonomy-post-scroll {
 		flex: 1;
 		min-height: 0;
-		overflow-y: auto;
+		overflow: auto;
+		overscroll-behavior: contain;
+		scrollbar-gutter: stable;
+		overflow-anchor: none;
+		padding-inline: 3px;
+		margin-inline: -3px;
 	}
 
-	.post-state {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		padding: 3rem 1rem;
-		color: var(--content-meta);
-		font-size: 0.875rem;
-		text-align: center;
-	}
-
-	.post-table {
+	.post-list-table {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: 0.8125rem;
+		font-size: calc(13 * var(--tx-unit));
 	}
 
-	.post-table th {
+	.post-list-table th {
 		position: sticky;
 		top: 0;
 		z-index: 1;
-		padding: 0.5rem 0.75rem;
-		border-bottom: 1px solid var(--line-divider);
+		padding: calc(10 * var(--tx-unit)) calc(12 * var(--tx-unit));
+		border-bottom: 1px solid var(--tx-rule);
 		background: var(--card-bg);
 		color: var(--content-meta);
-		font-size: 0.75rem;
+		font-size: calc(12 * var(--tx-unit));
 		font-weight: 500;
 		text-align: left;
 		white-space: nowrap;
 	}
 
-	.post-table td {
-		padding: 0.625rem 0.75rem;
-		border-bottom: 1px solid color-mix(in oklab, var(--line-divider) 60%, transparent);
+	.post-list-table td {
+		padding: calc(12 * var(--tx-unit));
+		border-bottom: 1px solid var(--tx-rule);
 		color: var(--deep-text);
 	}
 
-	.post-table tr:hover td {
-		background: color-mix(in oklab, var(--deep-text) 4%, transparent);
+	.post-list-table tr:hover td {
+		background: color-mix(in srgb, var(--btn-regular-bg) 40%, transparent);
 	}
 
-	.col-title {
-		width: 100%;
-		max-width: 0;
+	.post-list-title-col {
+		width: 53%;
+	}
+
+	.post-list-status-col {
+		width: 14%;
+	}
+
+	.post-list-date-col {
+		width: 19%;
 	}
 
 	.post-title {
@@ -1060,19 +1100,13 @@ $effect(() => {
 		white-space: nowrap;
 	}
 
-	.col-status,
-	.col-date {
-		white-space: nowrap;
-		color: var(--content-meta);
-	}
-
 	.status-pill {
 		display: inline-block;
-		padding: 0.125rem 0.5rem;
+		padding: 2px 8px;
 		border-radius: 999px;
 		background: color-mix(in oklab, var(--success) 15%, transparent);
 		color: color-mix(in oklab, var(--success) 65%, var(--deep-text));
-		font-size: 0.75rem;
+		font-size: calc(12 * var(--tx-unit));
 	}
 
 	.status-pill.draft {
@@ -1080,85 +1114,35 @@ $effect(() => {
 		color: color-mix(in oklab, var(--warning) 65%, var(--deep-text));
 	}
 
-	.post-footer {
+	.taxonomy-post-footer {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 1rem;
-		padding-top: 0.5rem;
-		border-top: 1px solid var(--line-divider);
-		font-size: 0.75rem;
+		gap: calc(16 * var(--tx-unit));
+		padding-top: calc(12 * var(--tx-unit));
+		margin-top: calc(12 * var(--tx-unit));
+		border-top: 1px solid var(--tx-rule);
+		font-size: calc(12 * var(--tx-unit));
 		color: var(--content-meta);
 		flex-shrink: 0;
 	}
 
-	.pager {
+	.taxonomy-pager {
 		display: flex;
 		align-items: center;
 		gap: 0.375rem;
 	}
 
-	/* ── 通用 ── */
-	.taxonomy-search {
+	.taxonomy-empty {
 		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		min-height: 2.375rem;
-		padding: 0 0.625rem;
-		border: 1px solid var(--input-border);
-		border-radius: 8px;
-		background: var(--input-bg);
-		transition: border-color 0.15s ease;
-	}
-
-	.taxonomy-search:focus-within {
-		border-color: color-mix(in oklab, var(--primary) 45%, transparent);
-	}
-
-	.taxonomy-search .search-icon {
-		flex-shrink: 0;
-		color: var(--content-meta);
-	}
-
-	.taxonomy-search input {
-		flex: 1;
-		min-width: 0;
-		border: none;
-		background: transparent;
-		color: var(--deep-text);
-		font-size: 0.8125rem;
-		font-family: inherit;
-		outline: none;
-	}
-
-	.icon-btn {
-		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		width: 1.75rem;
-		height: 1.75rem;
-		padding: 0;
-		border: none;
-		border-radius: 6px;
-		background: transparent;
+		gap: 0.5rem;
+		padding: 3rem 1rem;
 		color: var(--content-meta);
-		cursor: pointer;
-		transition: background 0.15s ease, color 0.15s ease;
-	}
-
-	.icon-btn:hover:not(:disabled) {
-		background: var(--btn-plain-bg-hover);
-		color: var(--deep-text);
-	}
-
-	.icon-btn:disabled {
-		opacity: 0.35;
-		cursor: not-allowed;
-	}
-
-	.icon-btn.danger:hover:not(:disabled) {
-		background: color-mix(in oklab, var(--destructive) 12%, transparent);
-		color: var(--destructive);
+		font-size: 0.875rem;
+		text-align: center;
 	}
 
 	.spin {
@@ -1279,7 +1263,6 @@ $effect(() => {
 		justify-content: flex-end;
 	}
 
-	/* 编辑弹窗内的删除入口：靠左，与主操作分离 */
 	.modal-delete {
 		margin-right: auto;
 		padding: 0.5rem 0;
@@ -1310,16 +1293,16 @@ $effect(() => {
 
 	@media (max-width: 900px) {
 		.taxonomy-browser {
-			flex-direction: column;
+			grid-template-columns: minmax(0, 1fr);
+			grid-template-rows: auto minmax(0, 1fr);
 		}
 
 		.taxonomy-explorer {
-			width: 100%;
-			max-height: 200px;
-			padding-right: 0;
-			padding-bottom: 0.75rem;
 			border-right: none;
-			border-bottom: 1px solid var(--line-divider);
+			border-bottom: 1px solid var(--tx-rule);
+			padding-right: 0;
+			padding-bottom: calc(12 * var(--tx-unit));
+			max-height: 200px;
 		}
 	}
 </style>

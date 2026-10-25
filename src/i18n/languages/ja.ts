@@ -495,6 +495,8 @@ export const ja: Translation = {
 	[Key.taxonomyNameTooLong]: "名前は {max} 文字以内にしてください",
 	[Key.taxonomyDeleteToUncategorized]: "削除後、これらの記事は「未分類」になります",
 	[Key.taxonomyScopeAll]: "すべて",
+	[Key.taxonomyScopeAllHint]: "下書きを含むすべての記事",
+	[Key.taxonomyScopePublishedHint]: "公開済みの記事のみ表示します",
 	[Key.taxonomyScopePublished]: "公開済み",
 	[Key.taxonomyDraftBadge]: "下書き",
 	[Key.taxonomyNoPosts]: "このカテゴリにはまだ記事がありません",

@@ -483,6 +483,8 @@ export const zh_CN: Translation = {
 	[Key.taxonomyNameTooLong]: "名称不能超过 {max} 个字符",
 	[Key.taxonomyDeleteToUncategorized]: "删除后，这些文章将变为「未分类」",
 	[Key.taxonomyScopeAll]: "全部",
+	[Key.taxonomyScopeAllHint]: "包含草稿在内的全部文章",
+	[Key.taxonomyScopePublishedHint]: "仅显示已发布文章，草稿不参与统计",
 	[Key.taxonomyScopePublished]: "已发布",
 	[Key.taxonomyDraftBadge]: "草稿",
 	[Key.taxonomyNoPosts]: "该分类下暂无文章",

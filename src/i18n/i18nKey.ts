@@ -482,6 +482,8 @@ enum I18nKey {
 	taxonomyNameTooLong = "taxonomyNameTooLong",
 	taxonomyDeleteToUncategorized = "taxonomyDeleteToUncategorized",
 	taxonomyScopeAll = "taxonomyScopeAll",
+	taxonomyScopeAllHint = "taxonomyScopeAllHint",
+	taxonomyScopePublishedHint = "taxonomyScopePublishedHint",
 	taxonomyScopePublished = "taxonomyScopePublished",
 	taxonomyDraftBadge = "taxonomyDraftBadge",
 	taxonomyNoPosts = "taxonomyNoPosts",

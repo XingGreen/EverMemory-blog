@@ -480,6 +480,8 @@ export const zaku: Translation = {
 	[Key.taxonomyNameTooLong]: "名字最多 {max} 个字哦",
 	[Key.taxonomyDeleteToUncategorized]: "删掉后这些文章会变成「没分类」",
 	[Key.taxonomyScopeAll]: "全部",
+	[Key.taxonomyScopeAllHint]: "连草稿一起都算上",
+	[Key.taxonomyScopePublishedHint]: "只看发出去的，草稿不算",
 	[Key.taxonomyScopePublished]: "发过的",
 	[Key.taxonomyDraftBadge]: "草稿",
 	[Key.taxonomyNoPosts]: "这里还空空的呢",

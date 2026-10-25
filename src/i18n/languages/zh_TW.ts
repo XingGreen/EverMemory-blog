@@ -485,6 +485,8 @@ export const zh_TW: Translation = {
 	[Key.taxonomyNameTooLong]: "名稱不能超過 {max} 個字元",
 	[Key.taxonomyDeleteToUncategorized]: "刪除後，這些文章將變成「未分類」",
 	[Key.taxonomyScopeAll]: "全部",
+	[Key.taxonomyScopeAllHint]: "包含草稿在內的全部文章",
+	[Key.taxonomyScopePublishedHint]: "僅顯示已發佈文章，草稿不列入統計",
 	[Key.taxonomyScopePublished]: "已發佈",
 	[Key.taxonomyDraftBadge]: "草稿",
 	[Key.taxonomyNoPosts]: "此分類下尚無文章",
