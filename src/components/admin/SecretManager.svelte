@@ -298,6 +298,32 @@ function toggleReveal(item: SecretItemDTO) {
 	showInput[item.key] = !showInput[item.key];
 }
 
+/**
+ * 切回本标签页时重新读取环境变量。
+ *
+ * .env.local 可能被本页面之外的操作修改（手动编辑文件、另一个标签页保存、
+ * 部署脚本写入），而组件只在挂载时读一次，页面会一直显示旧值。
+ * 这里在页面重新可见时重读一次，覆盖「改完文件切回浏览器」这个最常见的
+ * 场景，且不带来轮询开销。
+ *
+ * 有未保存改动时跳过：否则用户正在编辑的草稿会被服务端值覆盖。
+ * 用户仍可用页面上的「刷新」按钮显式重读。
+ */
+function handleVisibilityChange() {
+	if (document.visibilityState !== "visible") return;
+	if (loading || saving) return;
+	if (changedCount > 0) return;
+	void load();
+}
+
+$effect(() => {
+	if (typeof document === "undefined") return;
+	document.addEventListener("visibilitychange", handleVisibilityChange);
+	return () => {
+		document.removeEventListener("visibilitychange", handleVisibilityChange);
+	};
+});
+
 /** 上传文件名（仅用于回显，不参与保存） */
 let uploadNames = $state<Record<string, string>>({});
 /** 上传校验错误 */
