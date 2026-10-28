@@ -173,28 +173,23 @@ Icons/LQIP data are generated into `src/constants/` and committed. Regenerate wi
 - **Node standalone** (`astro.config.mjs` default branch) for self-hosting
 - Static output to `dist/`
 
-### Cloudflare Workers is wired up but NOT viable — do not "just try" it
+### Cloudflare Workers: two of the three original blockers no longer hold
 
-`astro.config.mjs` still selects `@astrojs/cloudflare` when `CF_WORKERS` is set, and `wrangler.jsonc` exists. Treat that as legacy, not as a working target. Three independent hard blockers, all measured/verified rather than assumed:
+`astro.config.mjs` selects `@astrojs/cloudflare` when `CF_WORKERS` is set. An earlier version of this section declared Workers "not viable" on scrypt memory/CPU grounds. **That code no longer exists** — re-measured 2026-10:
 
-**1. Password hashing exceeds the isolate memory limit.** `src/utils/secret-io.ts` uses `SCRYPT_N = 131072` (2^17), i.e. 128 MiB of scrypt working memory. Cloudflare caps memory at **128 MB per isolate on both Free and Paid — there is no knob to raise it.**
+**1–2. scrypt memory and CPU — not applicable.** The old argument measured `SCRYPT_N = 2^17` (128 MiB working set, ~484 ms/call) in `secret-io.ts`. But `grep -rn scrypt src/` now matches only an env-var *name* in `env.ts`. Auth was simplified to GitHub OAuth + break-glass, and JWT signing is HMAC-SHA256 via `node:crypto` (covered by `nodejs_compat`). Nothing on the login path needs 128 MiB or half a second of CPU.
 
-Measured peak process RSS (verified by differencing `maxRSS` across two N values, since `process.resourceUsage().maxRSS` is reported in KB):
+**3. Storage — still real, but it is a consistency problem, not an API problem.** `persist-store.ts` only speaks the Upstash/Vercel KV REST protocol, so Cloudflare KV needs a third backend. More importantly **Cloudflare KV is eventually consistent** (~60 s across POPs) while the session table and login-guard lockout need read-your-writes → those belong on Durable Objects (or D1 with its sessions API), not KV. `@astrojs/cloudflare` auto-wires `SESSION` (KV) and `IMAGES` bindings; see its startup log.
 
-| N | scrypt working set | peak RSS |
-|---|---|---|
-| 2^16 | 64 MiB | 124.9 MiB (131 MB) — still over |
-| **2^17 (current)** | 128 MiB | **189.0 MiB (198.6 MB)** — 55% over |
+Measured 2026-10 (`CF_WORKERS=1` build + `wrangler deploy --dry-run`):
 
-Peak RSS fits roughly `61 MiB + 128 MiB × (N / 2^17)`, which puts the ceiling at N ≈ 2^15.8. Staying under the limit would mean dropping to N = 2^15 — **1/16 the OWASP-recommended cost factor**. Weakening password storage to fit a runtime is backwards; the login path is the last place to trade security for platform fit.
+- `turbo.json` silently dropped `CF_WORKERS` (turbo 2 strict env mode), so `pnpm build` emitted a **Node** artifact. `env` for `astro-build` is now declared — do not assume bare env vars reach adapter selection.
+- Worker body (`entry.mjs` + `chunks`, excluding stale `.prerender` copies) is **3.49 MiB gzip** → over the 3 MiB Free limit, comfortable under 10 MiB Paid. **Paid is required.**
+- `wrangler.jsonc` had the pre-v14 output shape (`assets` → `./dist`). Now `main: ./dist/server/entry.mjs` + `assets: ./dist/client`, plus `no_bundle: true` and `rules: [ESModule]` — without those two, wrangler reads the ESM bundle as a Service Worker and rejects every `node:` import.
 
-**2. CPU budget.** A single scrypt call measures ~484 ms. Workers Free allows **10 ms** of CPU per request (48x over). Only the Paid plan's 30 s default survives, so Free is out even for static assets.
+**Remaining work, in order:** `node:fs` in six modules (`config-io`, `taxonomy`, `secret-io`, `persist-store`'s file backend, `audit-log`, `github-app` local writes — the three admin APIs `save`/`delete`/`post-content` are already environment-aware); a Durable-Object session backend; then a full build in CI to confirm bundle size.
 
-**3. Storage has no Cloudflare adapter.** `src/utils/persist-store.ts` selects its KV backend solely from `KV_REST_API_URL` + `KV_REST_API_TOKEN` (Upstash/Vercel KV REST protocol). Cloudflare's own KV is a different API (`env.BINDING.get/put`) with no binding in `wrangler.jsonc`. Supporting it means writing a third backend plus tests, and the admin session table and `login-guard` lockout state both depend on this layer.
+**Cheap alternative if you only want edge delivery:** static assets + Pagefind index on Cloudflare Pages/R2, admin backend stays on Vercel. Touches no auth code.
 
-Note that this is not "Workers can't host an Astro blog." The reference project `E:\flare-stack-blog` does run there because it uses better-auth, whose hashing parameters are the library's own and whose request path is built on Cloudflare primitives (Durable Objects rate limiting, `c.env` for data). Our auth path deliberately uses Node-native capabilities — `node:crypto` scrypt, large memory, `node:fs` — so moving hosts means redesigning that path, not changing config.
-
-**If you only want edge delivery**, put static assets (images, Pagefind index) on Cloudflare Pages/R2 and leave the SSR/admin backend where it is. That touches no authentication code.
-
-Revisit only if there is concrete pressure (Vercel pricing, regional latency, reachability) — and re-measure before assuming a fix landed.
+Re-measure before assuming any of this still holds — that is exactly how the scrypt argument above went stale.
 
