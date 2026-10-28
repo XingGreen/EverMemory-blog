@@ -1,4 +1,5 @@
 import { requireAuth } from "@/utils/auth";
+import { IS_PROD_BUILD } from "@/utils/env";
 import {
 	isValidPostSlug,
 	resolvePostPath,
@@ -85,7 +86,7 @@ export async function POST({ request }) {
 		      吞掉异常，功能上没错，但每次保存都白跑一次 mkdir + writeFile，
 		      而且「本地失败」会混进下面的成功判定里。语义与 secret-io 的
 		      isEnvFileWritable 保持一致：生产即只读。 */
-		const localSuccess = import.meta.env.PROD
+		const localSuccess = IS_PROD_BUILD
 			? false
 			: saveFileLocally(filePath, fullContent);
 

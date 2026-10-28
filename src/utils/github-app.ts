@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-import { getEnv } from "./env";
+import { getEnv, IS_PROD_BUILD } from "./env";
 
 const GITHUB_APP_ID = getEnv("GITHUB_APP_ID");
 const GITHUB_OWNER = getEnv("GITHUB_OWNER");
@@ -587,7 +587,7 @@ export async function resolvePostPath(slug: string): Promise<string | null> {
 		`src/content/posts/${slug}/index.mdx`,
 	];
 
-	if (!import.meta.env?.PROD) {
+	if (!IS_PROD_BUILD) {
 		for (const rel of candidates) {
 			if (fs.existsSync(path.resolve(process.cwd(), rel))) return rel;
 		}

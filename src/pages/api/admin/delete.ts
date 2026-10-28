@@ -1,4 +1,5 @@
 import { requireAuth } from "@/utils/auth";
+import { IS_PROD_BUILD } from "@/utils/env";
 import {
 	deleteFileFromGitHub,
 	deleteFileLocally,
@@ -41,7 +42,7 @@ export async function POST({ request }) {
 
 		/* 1. 本地文件只在开发构建下可删：生产（Vercel / Workers）目录只读，
 		      与 save.ts 同一假设。 */
-		const localSuccess = import.meta.env.PROD
+		const localSuccess = IS_PROD_BUILD
 			? false
 			: deleteFileLocally(filePath);
 

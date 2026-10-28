@@ -12,7 +12,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-import { ENV_KEYS, getEnv } from "./env";
+import { ENV_KEYS, getEnv, IS_PROD_BUILD } from "./env";
 
 const ENV_FILE_NAME = ".env.local";
 
@@ -22,7 +22,7 @@ function envFilePath(): string {
 
 /** 生产构建（Vercel 等）文件系统只读 */
 export function isEnvFileWritable(): boolean {
-	return !import.meta.env?.PROD;
+	return !IS_PROD_BUILD;
 }
 
 /** 解析 .env 文件内容为键值映射（自动处理引号与转义，忽略注释） */
