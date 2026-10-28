@@ -6,6 +6,7 @@ import Icon from "@/components/common/Icon.svelte";
 import { editorConfig } from "@/config/editorConfig";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import type { AdminWriteResponse } from "@/types/adminApi";
 import PostEditorFmPanel from "./PostEditorFmPanel.svelte";
 import PostEditorTocPanel from "./PostEditorTocPanel.svelte";
 import PostEditorWritePanel from "./PostEditorWritePanel.svelte";
@@ -810,7 +811,7 @@ async function handleSave() {
 			}),
 		});
 
-		const data = await response.json();
+		const data: AdminWriteResponse = await response.json();
 
 		if (response.ok && data.success) {
 			try {

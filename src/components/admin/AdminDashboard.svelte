@@ -4,6 +4,7 @@ import Icon from "@/components/common/Icon.svelte";
 import { editorConfig } from "@/config/editorConfig";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import type { AdminPostsResponse } from "@/types/adminApi";
 import { probeAdminService, runProbeWithStages } from "@/utils/admin-probe";
 import {
 	CONFIG_ITEMS,
@@ -476,7 +477,7 @@ async function loadPosts() {
 	error = "";
 	try {
 		const response = await fetch("/api/admin/posts/");
-		const data = await response.json();
+		const data: AdminPostsResponse = await response.json();
 		if (data.success) {
 			posts = data.posts;
 		} else {
