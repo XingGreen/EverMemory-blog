@@ -34,7 +34,8 @@
     },
     "astro-build": {
       "dependsOn": ["icons", "lqips", "snapshot"],
-      "cache": false
+      "cache": false,
+      "env": ["CF_WORKERS", "VERCEL", "BASE_PATH"]
     },
     "subset-fonts": {
       "dependsOn": ["astro-build"],
