@@ -591,6 +591,9 @@ export const en: Translation = {
 	[Key.postResultCount]: "{count} posts after filtering",
 	[Key.postSortAsc]: "sorted ascending",
 	[Key.postSortDesc]: "sorted descending",
+	[Key.postSyncPendingDeploy]: "pending deploy",
+	[Key.postSyncNotOnGithub]: "not pushed",
+	[Key.postSyncSummary]: "{count} not synced to GitHub",
 
 	[Key.postSave]: "Save Post",
 	[Key.postSaving]: "Saving...",

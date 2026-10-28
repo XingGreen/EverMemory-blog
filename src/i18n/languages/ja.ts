@@ -588,6 +588,9 @@ export const ja: Translation = {
 	[Key.postResultCount]: "絞り込み後 {count} 件の記事",
 	[Key.postSortAsc]: "昇順で並べ替え",
 	[Key.postSortDesc]: "降順で並べ替え",
+	[Key.postSyncPendingDeploy]: "デプロイ待ち",
+	[Key.postSyncNotOnGithub]: "未プッシュ",
+	[Key.postSyncSummary]: "{count} 件が GitHub に未同期",
 
 	[Key.postSave]: "記事を保存",
 	[Key.postSaving]: "保存中...",

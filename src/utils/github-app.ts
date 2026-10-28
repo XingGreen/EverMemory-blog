@@ -338,7 +338,12 @@ export async function listAllMarkdownFiles(
 	const mdFiles: string[] = [];
 
 	for (const item of items) {
-		if (item.type === "file" && item.name.endsWith(".md")) {
+		/* 内容集合同时支持 .md 与 .mdx（见 content.config.ts），列目录时一并纳入，
+		   否则 .mdx 文章永远进不了远端清单，会被误判成「未推送」。 */
+		if (
+			item.type === "file" &&
+			(item.name.endsWith(".md") || item.name.endsWith(".mdx"))
+		) {
 			mdFiles.push(item.path);
 		} else if (item.type === "dir") {
 			// 递归获取子目录

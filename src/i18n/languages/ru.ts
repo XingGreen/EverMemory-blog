@@ -592,6 +592,9 @@ export const ru: Translation = {
 	[Key.postResultCount]: "после фильтра {count} статей",
 	[Key.postSortAsc]: "сортировка по возрастанию",
 	[Key.postSortDesc]: "сортировка по убыванию",
+	[Key.postSyncPendingDeploy]: "ожидает деплоя",
+	[Key.postSyncNotOnGithub]: "не отправлено",
+	[Key.postSyncSummary]: "{count} не синхронизировано с GitHub",
 
 	[Key.postSave]: "Сохранить статью",
 	[Key.postSaving]: "Сохранение...",

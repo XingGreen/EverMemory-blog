@@ -32,7 +32,7 @@ export async function POST({ request }) {
 		const downloadedFiles: string[] = [];
 		for (const filePath of githubFiles) {
 			// 从路径提取 slug（如 src/content/posts/hello.md → hello）
-			const slug = path.basename(filePath, ".md");
+			const slug = path.basename(filePath).replace(/\.mdx?$/, "");
 
 			if (!localSlugs.has(slug)) {
 				console.log(`[Admin Sync] Downloading missing file: ${filePath}`);
@@ -52,7 +52,7 @@ export async function POST({ request }) {
 
 		// 4. 检测本地有但 GitHub 没有的文件（仅报告，不自动删除）
 		const githubSlugs = new Set(
-			githubFiles.map((f) => path.basename(f, ".md")),
+			githubFiles.map((f) => path.basename(f).replace(/\.mdx?$/, "")),
 		);
 		const orphanedFiles: string[] = [];
 		for (const localSlug of localSlugs) {

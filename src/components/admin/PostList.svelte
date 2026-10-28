@@ -99,6 +99,17 @@ const hasExtraFilter = $derived(
 		tagFilter !== "",
 );
 
+/* 同步状态统计：pending-deploy = 已提交 GitHub 但还没进这次构建；
+   not-on-github = 构建里有、GitHub 上找不到（未推送，或远端已删）。
+   API 拿不到远端清单时 syncState 为 null，两个计数都是 0，界面不显示。 */
+const pendingDeployCount = $derived(
+	posts.filter((post) => post.syncState === "pending-deploy").length,
+);
+const notOnGithubCount = $derived(
+	posts.filter((post) => post.syncState === "not-on-github").length,
+);
+const unsyncedCount = $derived(pendingDeployCount + notOnGithubCount);
+
 const filteredPosts = $derived.by(() => {
 	let result = [...posts];
 
@@ -590,6 +601,15 @@ function actionLabel(action: string, title: string): string {
 
 						<!-- 状态 -->
 						<div class="col col-status" role="cell" data-label={i18n(I18nKey.postColStatus)}>
+							{#if post.syncState === "pending-deploy"}
+								<span class="sync-chip" data-sync="pending">
+									{i18n(I18nKey.postSyncPendingDeploy)}
+								</span>
+							{:else if post.syncState === "not-on-github"}
+								<span class="sync-chip" data-sync="local">
+									{i18n(I18nKey.postSyncNotOnGithub)}
+								</span>
+							{/if}
 							<span class="status-chip" data-draft={post.draft}>
 								{post.draft ? i18n(I18nKey.postDraft) : i18n(I18nKey.postPublished)}
 							</span>
@@ -634,7 +654,14 @@ function actionLabel(action: string, title: string): string {
 			</p>
 		{:else}
 			<div class="list-footer">
-				<span>{i18n(I18nKey.postListCount).replace("{count}", String(filteredPosts.length))}</span>
+				<div class="footer-stats">
+					<span>{i18n(I18nKey.postListCount).replace("{count}", String(filteredPosts.length))}</span>
+					{#if unsyncedCount > 0}
+						<span class="sync-summary">
+							{i18n(I18nKey.postSyncSummary).replace("{count}", String(unsyncedCount))}
+						</span>
+					{/if}
+				</div>
 				{#if hasExtraFilter}
 					<button type="button" class="footer-reset" onclick={clearAllFilters}>
 						{i18n(I18nKey.postClearFilter)}
@@ -1092,6 +1119,15 @@ function actionLabel(action: string, title: string): string {
 		min-width: 0;
 	}
 
+	/* 状态列：内容状态与同步状态可能同时存在，纵向堆叠避免挤成一行 */
+	.col-status {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: flex-start;
+		gap: 0.25rem;
+	}
+
 	/* 操作列额外右内边距：仅靠 .list-item 的 1rem 容器留白时，
 	   图标组仍显得贴边，这里补一档并让按钮在该列内居中。 */
 	.col-actions {
@@ -1218,6 +1254,29 @@ function actionLabel(action: string, title: string): string {
 		color: var(--md-warning-text);
 	}
 
+	/* 同步状态徽章：比内容状态小一档，避免两枚徽章抢同等的注意力。
+	   info 色表示「已提交、等构建」，warning 色表示「GitHub 上还没有」。 */
+	.sync-chip {
+		display: inline-flex;
+		align-items: center;
+		min-height: 20px;
+		padding: 1px 0.5rem;
+		border-radius: 999px;
+		font-size: 0.6875rem;
+		font-weight: 500;
+		white-space: nowrap;
+	}
+
+	.sync-chip[data-sync="pending"] {
+		background: color-mix(in srgb, var(--info) 15%, transparent);
+		color: var(--md-info-text);
+	}
+
+	.sync-chip[data-sync="local"] {
+		background: color-mix(in srgb, var(--warning) 15%, transparent);
+		color: var(--md-warning-text);
+	}
+
 	/* 操作列 - 图标按钮
 	   文字按钮退到图标后，红色「删除」不再抢占整行视线，删除与编辑之间也有独立
 	   命中区（原先两个纯文本按钮相邻，容易误点）。视觉 34px + 伪元素外扩到 44dp，
@@ -1300,6 +1359,32 @@ function actionLabel(action: string, title: string): string {
 		border-top: 1px solid var(--md-outline);
 		color: var(--md-on-surface-variant);
 		font-size: 0.75rem;
+	}
+
+	/* 左侧统计成组：总数 + 未同步计数，避免挤成三段破坏 space-between */
+	.footer-stats {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+		min-width: 0;
+	}
+
+	.sync-summary {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		color: var(--md-warning-text);
+		white-space: nowrap;
+	}
+
+	/* 用小圆点代替图标：不引入新图标就不必重新跑图标生成 */
+	.sync-summary::before {
+		content: "";
+		width: 6px;
+		height: 6px;
+		border-radius: 999px;
+		background: currentColor;
 	}
 
 	.footer-reset {

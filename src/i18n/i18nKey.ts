@@ -576,6 +576,9 @@ enum I18nKey {
 	postResultCount = "postResultCount",
 	postSortAsc = "postSortAsc",
 	postSortDesc = "postSortDesc",
+	postSyncPendingDeploy = "postSyncPendingDeploy",
+	postSyncNotOnGithub = "postSyncNotOnGithub",
+	postSyncSummary = "postSyncSummary",
 
 	// 文章编辑器
 	postSave = "postSave",

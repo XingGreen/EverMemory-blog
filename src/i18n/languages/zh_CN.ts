@@ -576,6 +576,9 @@ export const zh_CN: Translation = {
 	[Key.postResultCount]: "筛选后共 {count} 篇文章",
 	[Key.postSortAsc]: "升序排列",
 	[Key.postSortDesc]: "降序排列",
+	[Key.postSyncPendingDeploy]: "待部署",
+	[Key.postSyncNotOnGithub]: "未推送",
+	[Key.postSyncSummary]: "有 {count} 篇未同步到 GitHub",
 
 	[Key.postSave]: "保存文章",
 	[Key.postSaving]: "保存中...",
