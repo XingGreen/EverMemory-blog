@@ -1,4 +1,5 @@
 import { getCollection } from "astro:content";
+import type { AdminPostSummary } from "@/types/adminApi";
 import { requireAuth } from "@/utils/auth";
 import { getFileFromGitHub, listAllMarkdownFiles } from "@/utils/github-app";
 
@@ -83,8 +84,8 @@ function readFrontmatterValue(raw: string, key: string): string {
 async function buildRemoteOnlyEntries(
 	localSlugs: Set<string>,
 	remoteSlugs: Map<string, string>,
-) {
-	const entries = [];
+): Promise<AdminPostSummary[]> {
+	const entries: AdminPostSummary[] = [];
 	for (const [slug, filePath] of remoteSlugs) {
 		if (localSlugs.has(slug)) continue;
 		const raw = await getFileFromGitHub(filePath).catch(() => null);
