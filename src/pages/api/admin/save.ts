@@ -1,6 +1,7 @@
 import { requireAuth } from "@/utils/auth";
 import {
 	isValidPostSlug,
+	resolvePostPath,
 	saveFileLocally,
 	saveFileToGitHub,
 } from "@/utils/github-app";
@@ -51,7 +52,9 @@ export async function POST({ request }) {
 			);
 		}
 
-		const filePath = `src/content/posts/${slug}.md`;
+		/* 沿用已有文件的扩展名（.md / .mdx）；新建文章没有既有文件，默认 .md */
+		const filePath =
+			(await resolvePostPath(slug)) ?? `src/content/posts/${slug}.md`;
 
 		const frontmatter = buildFrontmatter({
 			title,

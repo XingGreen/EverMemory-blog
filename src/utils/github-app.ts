@@ -570,6 +570,37 @@ export function isValidPostSlug(slug: unknown): boolean {
 	return typeof slug === "string" && /^[A-Za-z0-9_-]+$/.test(slug);
 }
 
+/**
+ * 解析文章 slug 对应的真实仓库路径。
+ *
+ * 不能直接拼 `${slug}.md`：内容集合同时收录 `.md` 与 `.mdx`（见 content.config.ts），
+ * 硬编码 `.md` 会让 mdx 文章「编辑时另存出一份同名 .md」「删除时删不到真实文件」。
+ * 按候选顺序探测，本地可读时查磁盘，只读部署（Vercel / Workers）下逐个问 GitHub。
+ * 都找不到返回 null —— 调用方自行决定是新建（保存）还是报 404（读取/删除）。
+ */
+export async function resolvePostPath(slug: string): Promise<string | null> {
+	const candidates = [
+		`src/content/posts/${slug}.md`,
+		`src/content/posts/${slug}.mdx`,
+		// slug 是目录名时的兜底形态（当前 isValidPostSlug 不允许 "/"，留着防止将来放宽）
+		`src/content/posts/${slug}/index.md`,
+		`src/content/posts/${slug}/index.mdx`,
+	];
+
+	if (!import.meta.env?.PROD) {
+		for (const rel of candidates) {
+			if (fs.existsSync(path.resolve(process.cwd(), rel))) return rel;
+		}
+		return null;
+	}
+
+	for (const rel of candidates) {
+		const raw = await getFileFromGitHub(rel);
+		if (raw !== null) return rel;
+	}
+	return null;
+}
+
 export function getConfig() {
 	return {
 		appId: GITHUB_APP_ID,

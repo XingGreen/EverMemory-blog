@@ -4,6 +4,7 @@ import PostRowMenu from "@/components/admin/PostRowMenu.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import type { AdminPostSummary } from "@/types/adminApi";
 
 let {
 	posts,
@@ -17,11 +18,11 @@ let {
 	isSyncing = false,
 	heading,
 }: {
-	posts: any[];
+	posts: AdminPostSummary[];
 	isLoading: boolean;
 	error: string;
-	onEdit: (post: any) => void;
-	onDelete: (post: any, trigger?: HTMLElement | null) => void;
+	onEdit: (post: AdminPostSummary) => void;
+	onDelete: (post: AdminPostSummary, trigger?: HTMLElement | null) => void;
 	onRefresh: () => void;
 	onCreate: () => void;
 	onSync?: () => void;
@@ -138,8 +139,9 @@ const filteredPosts = $derived.by(() => {
 		result = result.filter((post) => post.tags.includes(tagFilter));
 	}
 
-	const byTitle = (a: any, b: any) => a.title.localeCompare(b.title, "zh-CN");
-	const byDate = (a: any, b: any) =>
+	const byTitle = (a: AdminPostSummary, b: AdminPostSummary) =>
+		a.title.localeCompare(b.title, "zh-CN");
+	const byDate = (a: AdminPostSummary, b: AdminPostSummary) =>
 		(a.published ? Date.parse(a.published) : 0) -
 		(b.published ? Date.parse(b.published) : 0);
 	const byUpdated = (a: TimeFields, b: TimeFields) => timeOf(a) - timeOf(b);

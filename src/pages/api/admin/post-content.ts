@@ -2,7 +2,7 @@ import { getCollection } from "astro:content";
 import fs from "node:fs";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
-import { getFileFromGitHub, isValidPostSlug } from "@/utils/github-app";
+import { getFileFromGitHub, isValidPostSlug, resolvePostPath } from "@/utils/github-app";
 
 export const prerender = false;
 
@@ -39,20 +39,21 @@ export async function GET({ request, url }) {
 			);
 		}
 
-		const filePath = path.resolve(
-			process.cwd(),
-			`src/content/posts/${slug}.md`,
-		);
-
-		/* 生产环境（Vercel / Cloudflare Workers）项目目录只读，构建产物里也不带
-		   src/content 源码，fs 必然读不到。这时回源 GitHub 取正文——否则线上点
-		   「编辑」任何已有文章都会 404（元数据有 getCollection 兜着，源码没有）。 */
-		let raw: string | null = null;
-		if (fs.existsSync(filePath)) {
-			raw = fs.readFileSync(filePath, "utf-8");
-		} else {
-			raw = await getFileFromGitHub(`src/content/posts/${slug}.md`);
+		/* 先解析真实路径：可能是 .md，也可能是 .mdx（内容集合两种都收） */
+		const resolved = await resolvePostPath(slug);
+		if (!resolved) {
+			return new Response(
+				JSON.stringify({ success: false, message: "文章文件不存在" }),
+				{ status: 404, headers: { "Content-Type": "application/json" } },
+			);
 		}
+
+		/* 本地可读就读盘；只读部署（Vercel / Workers）下项目目录没有源码，回源 GitHub。
+		   否则线上点「编辑」任何已有文章都会 404（元数据有 getCollection 兜着，正文没有）。 */
+		const localPath = path.resolve(process.cwd(), resolved);
+		const raw = fs.existsSync(localPath)
+			? fs.readFileSync(localPath, "utf-8")
+			: await getFileFromGitHub(resolved);
 
 		if (raw !== null) {
 			const frontmatterEnd = raw.indexOf("---", 3);

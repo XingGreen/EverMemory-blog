@@ -3,6 +3,7 @@ import {
 	deleteFileFromGitHub,
 	deleteFileLocally,
 	isValidPostSlug,
+	resolvePostPath,
 } from "@/utils/github-app";
 
 export const prerender = false;
@@ -33,7 +34,9 @@ export async function POST({ request }) {
 
 		console.log(`[Admin Delete] Slug: ${slug}`);
 
-		const filePath = `src/content/posts/${slug}.md`;
+		/* 解析真实路径：mdx 文章若按 .md 去删会删不到（并误报） */
+		const filePath =
+			(await resolvePostPath(slug)) ?? `src/content/posts/${slug}.md`;
 		const commitMessage = `delete post: ${title || slug} via admin dashboard`;
 
 		/* 1. 本地文件只在开发构建下可删：生产（Vercel / Workers）目录只读，

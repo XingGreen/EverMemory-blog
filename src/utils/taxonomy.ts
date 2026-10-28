@@ -18,6 +18,7 @@ import path from "node:path";
 import {
 	deleteFileFromGitHub,
 	getFileFromGitHub,
+	resolvePostPath,
 	saveFileToGitHub,
 } from "./github-app";
 import { isEnvFileWritable } from "./secret-io";
@@ -160,36 +161,10 @@ export function rewriteFrontmatter(
 }
 
 /**
- * 由 content collection 的 id 推出文章文件的相对路径。
- *
- * id 形态不止一种：
- *   - 平铺文件：demo            → src/content/posts/demo.md
- *   - 目录形式：guide/index     → src/content/posts/guide/index.md
- *   - mdx 扩展：mdx-example     → src/content/posts/mdx-example.mdx
- * 因此不能简单拼 `${id}.md`，必须按候选顺序探测真实文件。
+ * 文章文件的相对路径解析已上移到 github-app 的 `resolvePostPath`：
+ * save / delete / post-content 也要按同样的候选顺序探测真实扩展名，
+ * 否则 .mdx 文章会被当成 .md 处理（编辑另存出重复文件、删除删不到）。
  */
-async function resolvePostPath(slug: string): Promise<string | null> {
-	const candidates = [
-		`src/content/posts/${slug}.md`,
-		`src/content/posts/${slug}.mdx`,
-		// id 是目录名时补 index 形式
-		`src/content/posts/${slug}/index.md`,
-		`src/content/posts/${slug}/index.mdx`,
-	];
-
-	if (isEnvFileWritable()) {
-		for (const rel of candidates) {
-			if (fs.existsSync(path.resolve(process.cwd(), rel))) return rel;
-		}
-		return null;
-	}
-	// 生产环境逐个问 GitHub，命中即返回
-	for (const rel of candidates) {
-		const raw = await getFileFromGitHub(rel);
-		if (raw !== null) return rel;
-	}
-	return null;
-}
 
 /** 读取一篇文章的原始文本（本地或 GitHub） */
 export async function readPostFile(slug: string): Promise<string | null> {
