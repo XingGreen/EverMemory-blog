@@ -36,13 +36,18 @@ export async function POST({ request }) {
 		const filePath = `src/content/posts/${slug}.md`;
 		const commitMessage = `delete post: ${title || slug} via admin dashboard`;
 
-		// 1. 先删除本地文件（优先本地，保证开发体验）
-		const localSuccess = deleteFileLocally(filePath);
+		/* 1. 本地文件只在开发构建下可删：生产（Vercel / Workers）目录只读，
+		      与 save.ts 同一假设。 */
+		const localSuccess = import.meta.env.PROD
+			? false
+			: deleteFileLocally(filePath);
 
 		// 2. 再删除 GitHub 上的文件（捕获异常，不因为 GitHub 失败而影响整体）
+		let githubSuccess = false;
 		let githubError: string | null = null;
 		try {
 			await deleteFileFromGitHub(filePath, commitMessage);
+			githubSuccess = true;
 		} catch (err) {
 			githubError = err instanceof Error ? err.message : String(err);
 			console.log(
@@ -50,14 +55,18 @@ export async function POST({ request }) {
 			);
 		}
 
-		// 只要本地删除成功就算成功（GitHub 失败时给出提示）
-		if (localSuccess) {
+		/* 任一条通道成功即算成功。此前只看 localSuccess：生产目录只读时它恒为
+		   false，于是「GitHub 已删掉、本地删不了」会被报成 500 删除失败——线上
+		   删除文章必然误报。 */
+		if (localSuccess || githubSuccess) {
 			return new Response(
 				JSON.stringify({
 					success: true,
-					message: githubError
-						? `删除成功（已删除本地文件，但 GitHub 同步失败：${githubError}）`
-						: "删除成功（已同步到 GitHub）",
+					local: localSuccess,
+					remote: githubSuccess,
+					message: githubSuccess
+						? "删除成功（已同步到 GitHub）"
+						: `删除成功（已删除本地文件，但 GitHub 同步失败：${githubError}）`,
 					filePath,
 				}),
 				{ status: 200, headers: { "Content-Type": "application/json" } },
@@ -67,6 +76,8 @@ export async function POST({ request }) {
 		return new Response(
 			JSON.stringify({
 				success: false,
+				local: false,
+				remote: false,
 				message: "删除失败（本地和 GitHub 均失败）",
 			}),
 			{ status: 500, headers: { "Content-Type": "application/json" } },

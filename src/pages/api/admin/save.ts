@@ -77,8 +77,14 @@ export async function POST({ request }) {
 
 		const commitMessage = `update post: ${title || slug} via admin dashboard`;
 
-		// 1. 先保存到本地文件系统（优先本地，保证开发体验）
-		const localSuccess = saveFileLocally(filePath, fullContent);
+		/* 1. 本地文件系统只在开发构建下可写：Vercel / Cloudflare Workers 的项目
+		      目录只读，写必然失败。旧代码靠 saveFileLocally 内部的 try/catch
+		      吞掉异常，功能上没错，但每次保存都白跑一次 mkdir + writeFile，
+		      而且「本地失败」会混进下面的成功判定里。语义与 secret-io 的
+		      isEnvFileWritable 保持一致：生产即只读。 */
+		const localSuccess = import.meta.env.PROD
+			? false
+			: saveFileLocally(filePath, fullContent);
 
 		// 2. 再保存到 GitHub
 		const githubSuccess = await saveFileToGitHub(
@@ -91,6 +97,10 @@ export async function POST({ request }) {
 			return new Response(
 				JSON.stringify({
 					success: true,
+					/* 两条通道分开回传：生产环境 local 恒为 false，调用方据此
+					   区分「已同步」与「仅本地」，不必去解析 message 文案 */
+					local: localSuccess,
+					remote: githubSuccess,
 					message: githubSuccess
 						? "保存成功（已同步到 GitHub）"
 						: "保存成功（仅本地保存）",
@@ -103,6 +113,8 @@ export async function POST({ request }) {
 		return new Response(
 			JSON.stringify({
 				success: false,
+				local: false,
+				remote: false,
 				message: "保存失败（本地和 GitHub 均失败）",
 			}),
 			{ status: 500, headers: { "Content-Type": "application/json" } },

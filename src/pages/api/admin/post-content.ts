@@ -2,7 +2,7 @@ import { getCollection } from "astro:content";
 import fs from "node:fs";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
-import { isValidPostSlug } from "@/utils/github-app";
+import { getFileFromGitHub, isValidPostSlug } from "@/utils/github-app";
 
 export const prerender = false;
 
@@ -44,14 +44,20 @@ export async function GET({ request, url }) {
 			`src/content/posts/${slug}.md`,
 		);
 
+		/* 生产环境（Vercel / Cloudflare Workers）项目目录只读，构建产物里也不带
+		   src/content 源码，fs 必然读不到。这时回源 GitHub 取正文——否则线上点
+		   「编辑」任何已有文章都会 404（元数据有 getCollection 兜着，源码没有）。 */
+		let raw: string | null = null;
 		if (fs.existsSync(filePath)) {
-			const content = fs.readFileSync(filePath, "utf-8");
+			raw = fs.readFileSync(filePath, "utf-8");
+		} else {
+			raw = await getFileFromGitHub(`src/content/posts/${slug}.md`);
+		}
 
-			const frontmatterEnd = content.indexOf("---", 3);
+		if (raw !== null) {
+			const frontmatterEnd = raw.indexOf("---", 3);
 			const bodyContent =
-				frontmatterEnd !== -1
-					? content.slice(frontmatterEnd + 3).trim()
-					: content;
+				frontmatterEnd !== -1 ? raw.slice(frontmatterEnd + 3).trim() : raw;
 
 			return new Response(
 				JSON.stringify({
