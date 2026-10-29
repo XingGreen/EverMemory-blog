@@ -1,7 +1,6 @@
 ---
 title: "zxcvbnm,,,,"
 published: 2026-10-22
-category: "zxcvbnm"
 draft: false
 pinned: false
 comment: true
