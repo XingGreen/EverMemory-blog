@@ -1,7 +1,7 @@
 ---
 title: "zxcvbnm,,,,"
 published: 2026-10-22
-category: "demo"
+category: "zxcvbnm"
 draft: false
 pinned: false
 comment: true
