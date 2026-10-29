@@ -65,7 +65,7 @@ let dialogName = $state("");
 let dialogOriginal = $state("");
 let dialogBusy = $state(false);
 let dialogError = $state("");
-let dialogInputEl: HTMLInputElement | null = null;
+let dialogInputEl = $state<HTMLInputElement | null>(null);
 
 const navEntries = $derived.by(() => {
 	const base = entries
@@ -617,7 +617,7 @@ $effect(() => {
 					</table>
 					{#if visiblePosts.length === 0}
 						<div class="taxonomy-empty">
-							<Icon icon="material-symbols:book-open" class="empty-icon" />
+							<Icon icon="material-symbols:menu-book" class="empty-icon" />
 							<p>
 								{postSearch.trim()
 									? i18n(I18nKey.taxonomyNoMatch)

@@ -6,7 +6,14 @@
  */
 
 import { getIconData, iconToHTML, iconToSVG, replaceIDs } from "@iconify/utils";
-import { readdirSync, readFileSync, statSync, watch, writeFileSync } from "fs";
+import {
+	existsSync,
+	readdirSync,
+	readFileSync,
+	statSync,
+	watch,
+	writeFileSync,
+} from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 
@@ -285,12 +292,25 @@ async function main(options = {}) {
 		log(`❌ 失败 ${failCount} 个图标: ${missing.join(", ")}`);
 	}
 
-	// 生成输出文件
+	// 生成输出文件：内容未变就不写盘。
+	// 本脚本以 --watch 常驻，任意 src 改动都会跑一遍；而 icons.ts 被 Icon.svelte 等
+	// SSR 模块静态引用，即便只有 mtime 变化也会让 Astro 判定需要 program reload。
+	// reload 期间 astro:server-app.js 虚拟模块尚未重建，并发请求就会报
+	// "Failed to load url astro:server-app.js"，dev server 随后处于半坏状态。
 	const output = generateIconsFile(iconsMap);
-	writeFileSync(OUTPUT_FILE, output, "utf-8");
+	const previous = existsSync(OUTPUT_FILE)
+		? readFileSync(OUTPUT_FILE, "utf-8")
+		: "";
 
-	log(`\n📝 已生成: ${OUTPUT_FILE}`);
-	log(`📦 文件大小: ${(Buffer.byteLength(output, "utf-8") / 1024).toFixed(2)} KB\n`);
+	if (previous !== output) {
+		writeFileSync(OUTPUT_FILE, output, "utf-8");
+		log(`\n📝 已生成: ${OUTPUT_FILE}`);
+		log(
+			`📦 文件大小: ${(Buffer.byteLength(output, "utf-8") / 1024).toFixed(2)} KB\n`,
+		);
+	} else {
+		log(`\n✅ 图标表无变化，跳过写入: ${OUTPUT_FILE}\n`);
+	}
 
 	return { successCount, failCount, missing, output };
 }

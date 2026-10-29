@@ -1113,12 +1113,6 @@ onMount(() => {
 		white-space: nowrap;
 	}
 
-	.status-key-code {
-		font-family: var(--font-mono, monospace);
-		font-size: 0.6875rem;
-		color: var(--warning);
-	}
-
 	/* ── 操作栏 ──
 	   遵循项目规范：不用实线边框，层级靠卡片底 + 毛玻璃表达；
 	   容器圆角 16px、内边距 24px，与其余板块卡片一致。 */
@@ -1267,37 +1261,6 @@ onMount(() => {
 
 	.sec-btn:active:not(:disabled) {
 		background: var(--btn-regular-bg-active);
-	}
-
-	/* 文本动作按钮：对齐参考页 .settings-text-action（主色文字、13px、无边框背景） */
-	.text-action {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		padding: 0.25rem 0;
-		border: none;
-		background: transparent;
-		color: var(--primary);
-		font-family: inherit;
-		font-size: 0.8125rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: color 0.15s ease, opacity 0.15s ease;
-	}
-
-	.text-action:hover:not(:disabled) {
-		color: var(--primary);
-		opacity: 0.8;
-	}
-
-	.text-action:disabled {
-		opacity: 0.4;
-		cursor: not-allowed;
-	}
-
-	.text-action:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 2px;
 	}
 
 	.sec-btn:disabled {
@@ -1658,13 +1621,6 @@ onMount(() => {
 		}
 	}
 
-	.secret-input.mono {
-		font-family: var(--font-mono, monospace);
-		font-size: 0.75rem;
-		resize: vertical;
-		line-height: 1.5;
-	}
-
 	/* 输入框容器：为眼睛按钮提供定位基准。
 	   缺少 position:relative 时，绝对定位的按钮会跑到最近的定位祖先
 	   （页面容器右上角），这是按钮错位的根因。 */
@@ -1714,19 +1670,6 @@ onMount(() => {
 	.input-toggle:disabled {
 		cursor: not-allowed;
 		opacity: 0.25;
-	}
-
-	/* 环境变量名：去掉背景色块，改成极低对比度的纯文本。
-	   紧随输入框之后（不再 margin-top:auto），间距由卡片 gap 统一分配。 */
-	.field-key {
-		padding: 0;
-		font-size: 0.75rem;
-		font-family: var(--font-mono, monospace);
-		letter-spacing: 0.05em;
-		color: color-mix(in oklab, var(--content-meta) 55%, transparent);
-		background: transparent;
-		align-self: flex-start;
-		word-break: break-all;
 	}
 
 	/* ── 弹窗（导出 / 当前密码确认） ── */
@@ -1878,32 +1821,5 @@ onMount(() => {
 	.export-btn {
 		flex: 1;
 		justify-content: center;
-	}
-
-	.modal-cancel {
-		background: transparent;
-		color: var(--content-meta);
-	}
-
-	.modal-cancel:hover {
-		color: var(--deep-text);
-	}
-
-	.modal-field {
-		margin-bottom: 1.25rem;
-	}
-
-	@media (max-width: 768px) {
-		.secret-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.toolbar {
-			align-items: stretch;
-		}
-
-		.toolbar-actions {
-			justify-content: flex-end;
-		}
 	}
 </style>
