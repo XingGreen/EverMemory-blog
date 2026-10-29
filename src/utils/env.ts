@@ -47,8 +47,6 @@ export function getEnv(key: string): string {
  * 是否为生产构建。
  *
  * 用 Vite 的构建期常量，而不是环境变量：`astro build` 恒为 production、`astro dev`
- * 恒为 development，与进程环境无关。集中定义一次，各处统一引用——否则散落的
- * `import.meta.env.PROD` 会被 lint 规则误判成「未在 turbo.json 声明的环境变量」。
+ * 恒为 development，与进程环境无关。集中定义一次，各处统一引用。
  */
-// biome-ignore lint/suspicious/noUndeclaredEnvVars: Vite 构建期常量，不是进程环境变量
 export const IS_PROD_BUILD = Boolean(import.meta.env.PROD);
