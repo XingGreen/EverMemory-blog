@@ -185,8 +185,13 @@ $effect(() => {
 let isLoadingContent = $state(false);
 // 标记用户是否手动编辑过 slug，防止自动生成覆盖用户输入
 let slugTouched = $state(false);
-// 新建草稿防丢失：本地持久备份（localStorage，跨会话/关浏览器仍保留）+ 刷新/关闭拦截（beforeunload）
-const DRAFT_KEY = "admin-post-draft-create";
+// 草稿防丢失：本地持久备份（localStorage，跨会话/关浏览器仍保留）+ 刷新/关闭拦截（beforeunload）
+// 编辑页也启用，键按 slug 区分——否则编辑 A 文章的草稿会覆盖 B 文章的。
+const DRAFT_KEY = $derived(
+	mode === "create"
+		? "admin-post-draft-create"
+		: `admin-post-draft-edit-${post?.slug ?? "unknown"}`,
+);
 let dirty = $state(false);
 let draftTimer: ReturnType<typeof setTimeout> | null = null;
 let beforeUnloadHandler: ((e: BeforeUnloadEvent) => void) | null = null;
@@ -596,7 +601,8 @@ $effect(() => {
 		enableComment: editorState.enableComment,
 		tags: editorState.tags,
 	};
-	if (mode !== "create") return;
+	// 草稿自动保存对新建与编辑都生效：编辑页同样会因误关标签页丢改动。
+	// 触发时机保持一致——内容变化后本地 400ms 去抖、云端 1200ms 去抖。
 	if (!hasDraftContent()) return;
 	if (draftTimer) clearTimeout(draftTimer);
 	draftTimer = setTimeout(() => {
@@ -629,7 +635,12 @@ async function saveCloudDraft(draft: DraftFields) {
 		const res = await fetch("/api/admin/draft/", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(draft),
+			body: JSON.stringify({
+				...draft,
+				// 新建模式固定落 create 槽：此时 slug 可能被自动生成或改动，
+				// 若按 slug 分槽，草稿会随 slug 变化而“失联”，GET 也查不到。
+				slug: mode === "create" ? "" : editorState.slug,
+			}),
 		});
 		const data = await res.json();
 		if (seq !== cloudSeq) return;
@@ -705,7 +716,7 @@ async function restoreCreateDraft() {
 	}
 	let cloud: DraftBlob | null = null;
 	try {
-		const res = await fetch("/api/admin/draft/");
+		const res = await fetch(`/api/admin/draft/?slug=${encodeURIComponent(post?.slug ?? "")}`);
 		const data = await res.json();
 		if (res.ok && data.success && data.draft) {
 			cloud = data.draft as DraftBlob;
@@ -820,7 +831,10 @@ async function handleSave() {
 				// 忽略清理失败
 			}
 			// 文章已保存，清除云端草稿
-			void fetch("/api/admin/draft/", { method: "DELETE" }).catch(() => {});
+			void fetch(
+				`/api/admin/draft/?slug=${encodeURIComponent(post?.slug ?? "")}`,
+				{ method: "DELETE" },
+			).catch(() => {});
 			lastCloudKey = "";
 			cloudSavedAt = null;
 			cloudSync = "idle";

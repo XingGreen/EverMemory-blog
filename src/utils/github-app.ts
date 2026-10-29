@@ -524,6 +524,18 @@ export function saveFileLocally(
 			console.log(`[Local Save] Created directory: ${dir}`);
 		}
 
+		/* 内容未变就不写盘。
+		   dev 下 Vite 监听整个 src/，而 src/content 是 content collection、无法热替换，
+		   哪怕只更新 mtime 也会触发整页 full reload —— 表现为「点保存后页面刷新、
+		   编辑器被重置、toast 一闪而过」，看起来像保存失败。 */
+		if (fs.existsSync(fullPath)) {
+			const existing = fs.readFileSync(fullPath, "utf-8");
+			if (existing === content) {
+				console.log(`[Local Save] 内容未变化，跳过写入: ${relativePath}`);
+				return true;
+			}
+		}
+
 		fs.writeFileSync(fullPath, content, "utf-8");
 		console.log(`[Local Save] Successfully saved: ${relativePath}`);
 		return true;

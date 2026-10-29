@@ -5,7 +5,15 @@ import { getStore } from "@/utils/persist-store";
 
 export const prerender = false;
 
-const DRAFT_KEY = "admin_draft";
+const DRAFT_KEY_PREFIX = "admin_draft";
+
+/**
+ * 云端草稿按 slug 分槽：新建占用 `create` 槽，编辑按文章各占一槽。
+ * 单槽会串号——编辑 A 文章时自动保存会把 B 文章的草稿覆盖掉。
+ */
+function draftKeyFor(slug: string | null | undefined): string {
+	return `${DRAFT_KEY_PREFIX}:${(slug || "create").trim()}`;
+}
 
 /** 可自动上传到云端的字段（敏感字段 password/passwordHint 不参与） */
 export interface CloudDraft {
@@ -48,7 +56,8 @@ export async function GET({
 
 	const store = getStore();
 	try {
-		const draft = await store.get<CloudDraft>(DRAFT_KEY);
+		const slug = new URL(request.url).searchParams.get("slug");
+		const draft = await store.get<CloudDraft>(draftKeyFor(slug));
 		return json({ success: true, draft });
 	} catch (err) {
 		console.error("[Draft] 读取云端草稿失败:", err);
@@ -102,7 +111,7 @@ export async function POST({
 
 	const store = getStore();
 	try {
-		await store.set(DRAFT_KEY, draft);
+		await store.set(draftKeyFor(draft.slug), draft);
 		writeAuditLog({
 			event: "draft_saved",
 			client: getClientIp(request),
@@ -127,7 +136,8 @@ export async function DELETE({
 
 	const store = getStore();
 	try {
-		await store.del(DRAFT_KEY);
+		const slug = new URL(request.url).searchParams.get("slug");
+		await store.del(draftKeyFor(slug));
 		return json({ success: true });
 	} catch (err) {
 		console.error("[Draft] 清除云端草稿失败:", err);

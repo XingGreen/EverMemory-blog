@@ -1,5 +1,5 @@
 <script lang="ts">
-import { getContext } from "svelte";
+import { getContext, onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -9,6 +9,45 @@ const { state: editorState, actions } = getContext<{
 	state: import("./postEditorContext").PostEditorContextValue["state"];
 	actions: import("./postEditorContext").PostEditorContextValue["actions"];
 }>(POST_EDITOR_CONTEXT);
+
+/**
+ * 分类 / 标签候选项：来自后台聚合接口（扫描所有文章 frontmatter + registry 登记）。
+ * 分类用原生 select 单选；标签用可展开的勾选面板多选，同时保留手输新建的能力。
+ */
+let taxonomy = $state<{ categories: string[]; tags: string[] }>({
+	categories: [],
+	tags: [],
+});
+let tagPickerOpen = $state(false);
+
+onMount(() => {
+	void (async () => {
+		try {
+			const res = await fetch("/api/admin/taxonomy/");
+			const data = await res.json();
+			if (!data?.success || !Array.isArray(data.entries)) return;
+			const categories: string[] = [];
+			const tags: string[] = [];
+			for (const e of data.entries as { kind: string; name: string }[]) {
+				if (e.kind === "category") categories.push(e.name);
+				else if (e.kind === "tag") tags.push(e.name);
+			}
+			categories.sort((a, b) => a.localeCompare(b, "zh"));
+			tags.sort((a, b) => a.localeCompare(b, "zh"));
+			taxonomy = { categories, tags };
+		} catch {
+			// 接口不可用时退化为空候选，仍可手输
+		}
+	})();
+});
+
+/** 勾选 / 取消勾选一个已有标签 */
+function toggleTag(name: string) {
+	const tags = editorState.tags;
+	editorState.tags = tags.includes(name)
+		? tags.filter((t) => t !== name)
+		: [...tags, name];
+}
 
 /** 参考 DatePicker 的 maxDate=serverToday 语义：发布日期/更新日期不允许选未来 */
 function localDateStr(d: Date): string {
@@ -108,12 +147,16 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 						<div class="form-group">
 							<label>
 								{i18n(I18nKey.postCategory)}
-								<input
-									type="text"
-									bind:value={editorState.category}
-									placeholder={i18n(I18nKey.postCategoryPlaceholder)}
-									class="ui-input"
-								/>
+								<select bind:value={editorState.category} class="ui-input">
+									<option value="">{i18n(I18nKey.postCategoryPlaceholder)}</option>
+									{#each taxonomy.categories as c (c)}
+										<option value={c}>{c}</option>
+									{/each}
+									{#if editorState.category && !taxonomy.categories.includes(editorState.category)}
+										<!-- 旧文章里的分类若不在聚合结果里，保留它，避免一打开就丢值 -->
+										<option value={editorState.category}>{editorState.category}</option>
+									{/if}
+								</select>
 							</label>
 						</div>
 {:else if group.key === "publish"}
@@ -258,14 +301,46 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 												</button>
 											</span>
 										{/each}
+										<button
+											type="button"
+											class="tag-picker-toggle"
+											aria-expanded={tagPickerOpen}
+											onclick={() => (tagPickerOpen = !tagPickerOpen)}
+										>
+											<Icon icon="material-symbols:add" class="text-sm" />
+											<span>{i18n(I18nKey.postTagPlaceholder)}</span>
+										</button>
 									</div>
-									<input
-										type="text"
-										bind:value={editorState.tagInput}
-										placeholder={i18n(I18nKey.postTagPlaceholder)}
-										class="ui-input tag-input"
-										onkeydown={actions.handleTagKeydown}
-									/>
+
+									<!-- 已有标签的勾选面板：点击展开，多选后同步回 editorState.tags -->
+									{#if tagPickerOpen}
+										<div class="tag-picker-panel">
+											{#if taxonomy.tags.length === 0}
+												<p class="tag-picker-empty">{i18n(I18nKey.noData)}</p>
+											{:else}
+												<div class="tag-picker-options">
+													{#each taxonomy.tags as t (t)}
+														<button
+															type="button"
+															class="tag-picker-item"
+															aria-pressed={editorState.tags.includes(t)}
+															onclick={() => toggleTag(t)}
+														>
+															<span class="tag-picker-box" aria-hidden="true"></span>
+															<span class="tag-picker-name">{t}</span>
+														</button>
+													{/each}
+												</div>
+											{/if}
+											<input
+												type="text"
+												bind:value={editorState.tagInput}
+												placeholder={i18n(I18nKey.postTagPlaceholder)}
+												class="ui-input tag-input"
+												onkeydown={actions.handleTagKeydown}
+											/>
+										</div>
+									{/if}
 								</div>
 							</label>
 						</div>
@@ -653,40 +728,159 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 		gap: 0.5rem;
 	}
 
+	/* 已选标签：对齐参考项目 fuwari-btn-regular 的形态——8px 圆角、中性底、
+	   高 2rem、横向 0.75rem 内边距。原先是「胶囊 + 主色 12% 淡染」，
+	   那是前台标签云的样式，放进表单里既抢眼又和输入框不协调。 */
 	.tags-list {
 		display: flex;
 		flex-wrap: wrap;
+		align-items: center;
 		gap: 0.375rem;
-		min-height: 32px;
+		min-height: 2rem;
 	}
 
 	.tag-item {
-		display: flex;
+		display: inline-flex;
 		align-items: center;
-		gap: 0.25rem;
-		padding: 0.25rem 0.625rem;
-		background: color-mix(in srgb, var(--primary) 12%, transparent);
-		border-radius: var(--radius-full);
-		font-size: 0.8rem;
-		color: var(--primary);
+		gap: 0.375rem;
+		height: 2rem;
+		padding: 0 0.75rem;
+		background: var(--btn-regular-bg);
+		color: var(--btn-content);
+		border-radius: 0.5rem;
+		font-size: 0.8125rem;
+		line-height: 1;
 	}
 
 	.tag-remove {
-		border: none;
-		background: none;
-		color: var(--content-meta);
-		cursor: pointer;
-		padding: 0;
-		display: flex;
+		display: inline-flex;
 		align-items: center;
 		justify-content: center;
+		width: 1rem;
+		height: 1rem;
+		padding: 0;
+		border: none;
+		border-radius: 0.25rem;
+		background: transparent;
+		color: inherit;
+		opacity: 0.55;
+		cursor: pointer;
+		transition: opacity 0.15s ease, color 0.15s ease;
 	}
 
 	.tag-remove:hover {
+		opacity: 1;
 		color: var(--destructive);
 	}
 
+	/* 展开候选面板的入口：虚线上边框，与实心 chip 区分开 */
+	.tag-picker-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		height: 2rem;
+		padding: 0 0.75rem;
+		border: 1px dashed
+			color-mix(in srgb, var(--content-meta) 40%, transparent);
+		border-radius: 0.5rem;
+		background: transparent;
+		color: var(--content-meta);
+		font-size: 0.8125rem;
+		font-family: inherit;
+		cursor: pointer;
+		transition: color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.tag-picker-toggle:hover {
+		color: var(--primary);
+		border-color: var(--primary);
+	}
+
+	.tag-picker-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding: 0.625rem;
+		border: 1px solid var(--input-border);
+		border-radius: 0.625rem;
+		background: var(--input-bg);
+	}
+
+	.tag-picker-options {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+		max-height: 12rem;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+	}
+
+	.tag-picker-item {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		height: 1.75rem;
+		padding: 0 0.625rem;
+		border: none;
+		border-radius: 0.5rem;
+		background: transparent;
+		color: var(--content-meta);
+		font-size: 0.8125rem;
+		font-family: inherit;
+		cursor: pointer;
+		transition: background 0.15s ease, color 0.15s ease;
+	}
+
+	.tag-picker-item:hover {
+		background: var(--btn-plain-bg-hover);
+		color: var(--deep-text);
+	}
+
+	.tag-picker-item[aria-pressed="true"] {
+		background: var(--btn-regular-bg);
+		color: var(--primary);
+	}
+
+	/* 勾选框用纯 CSS 画，不引新图标，避免图标表里没有对应项时渲染空白 */
+	.tag-picker-box {
+		position: relative;
+		flex-shrink: 0;
+		width: 0.875rem;
+		height: 0.875rem;
+		border: 1.5px solid
+			color-mix(in srgb, var(--content-meta) 45%, transparent);
+		border-radius: 0.25rem;
+	}
+
+	.tag-picker-item[aria-pressed="true"] .tag-picker-box {
+		border-color: var(--primary);
+		background: var(--primary);
+	}
+
+	.tag-picker-item[aria-pressed="true"] .tag-picker-box::after {
+		content: "";
+		position: absolute;
+		left: 3.5px;
+		top: 0.5px;
+		width: 3px;
+		height: 6px;
+		border: solid var(--card-bg);
+		border-width: 0 1.5px 1.5px 0;
+		transform: rotate(45deg);
+	}
+
+	.tag-picker-name {
+		white-space: nowrap;
+	}
+
+	.tag-picker-empty {
+		margin: 0;
+		padding: 0.25rem 0;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+	}
+
 	.tag-input {
-		flex: 1;
+		width: 100%;
 	}
 </style>
