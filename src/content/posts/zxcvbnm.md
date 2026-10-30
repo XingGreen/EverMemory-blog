@@ -7,7 +7,7 @@ comment: true
 ---
 
 # 群规定
-
+dwcvfbgthnyjkllkjuyhtgrfdfrgthyjkiujyhtgrffergthyjukilkujynhtbgrv
 ## 一、总则
 
 1. 本群规适用于本群全体成员，违者按本群规处理，轻则禁言，重则移出群聊并拉黑。
