@@ -841,6 +841,9 @@ function persistLocalDraft(draft: DraftFields): boolean {
 }
 
 $effect(() => {
+	/* 正文还在加载时一律不产生草稿：编辑页的 content 会从空被填满，
+	   否则会先把「空内容」存一次（日志里的「字符数 0」就是这么来的）。 */
+	if (isLoadingContent) return;
 	const draft: DraftFields = currentDraft();
 	// 草稿自动保存对新建与编辑都生效：编辑页同样会因误关标签页丢改动。
 	// 去抖时长对齐参考 use-auto-save.ts 的 debounceMs 默认值 1500ms。
@@ -1017,7 +1020,6 @@ function applyDraft(data: Partial<DraftBlob>) {
 
 /** 重新进入新建页时，恢复草稿：本地 localStorage 与云端各取较新者 */
 async function restoreCreateDraft() {
-	if (mode !== "create") return;
 	let local: DraftBlob | null = null;
 	try {
 		const raw = localStorage.getItem(DRAFT_KEY);
@@ -1026,25 +1028,51 @@ async function restoreCreateDraft() {
 		// 备份损坏：忽略
 	}
 	let cloud: DraftBlob | null = null;
-	try {
-		const res = await fetch(
-			`/api/admin/draft/?slug=${encodeURIComponent(post?.slug ?? "")}`,
-		);
-		const data = await res.json();
-		if (res.ok && data.success && data.draft) {
-			cloud = data.draft as DraftBlob;
+	/* 云端草稿只对新建页兜底：编辑页正文本身就在服务端，再叠加一层云端草稿
+	   容易把「历史遗留草稿」当成正文恢复，风险大于收益。 */
+	if (mode === "create") {
+		try {
+			const res = await fetch(
+				`/api/admin/draft/?slug=${encodeURIComponent(post?.slug ?? "")}`,
+			);
+			const data = await res.json();
+			if (res.ok && data.success && data.draft) {
+				cloud = data.draft as DraftBlob;
+			}
+		} catch {
+			// 云端不可达：仅使用本地草稿
 		}
-	} catch {
-		// 云端不可达：仅使用本地草稿
 	}
 	const localTs = local?.savedAt || 0;
 	const cloudTs = cloud?.savedAt || 0;
 	const source = localTs >= cloudTs ? local : cloud;
 	if (!source || (!source.title && !source.content)) return;
+
+	/* 编辑页：草稿必须与刚加载的正文不同，才说明有未保存改动。
+	   相同就直接跳过，避免把旧草稿无谓地写回表单。 */
+	if (mode === "edit") {
+		const sameAsPost =
+			(source.content ?? "") === editorState.content &&
+			(source.title ?? "") === editorState.title &&
+			(source.description ?? "") === editorState.description;
+		if (sameAsPost) {
+			// 正文已是最新，清掉这份冗余草稿
+			try {
+				localStorage.removeItem(DRAFT_KEY);
+			} catch {
+				// 忽略
+			}
+			return;
+		}
+	}
+
 	applyDraft(source);
 	resetHistory();
 	cloudSavedAt = cloudTs || null;
 	if (cloudTs) cloudSync = "local-only";
+	/* 恢复后的内容就是当前基线：不更新的话会被当成「用户刚改动」，
+	   立刻又触发一次草稿写入。 */
+	baselineDraftKey = JSON.stringify(currentDraft());
 }
 
 /** 有未保存内容时，拦截刷新 / 关闭页面（浏览器原生确认框） */
@@ -1085,11 +1113,16 @@ async function loadContent() {
 }
 
 onMount(() => {
-	loadContent();
 	registerBeforeUnload();
-	void restoreCreateDraft();
 	window.addEventListener("online", handleOnline);
 	window.addEventListener("offline", handleOffline);
+
+	/* 必须先等正文加载完再比对草稿：编辑页要拿「已加载的正文」与草稿比较，
+	   顺序反了会把草稿当成新改动、或把没有改动的旧草稿写回表单。 */
+	void (async () => {
+		await loadContent();
+		await restoreCreateDraft();
+	})();
 });
 
 onDestroy(() => {
