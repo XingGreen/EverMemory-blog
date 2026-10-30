@@ -34,6 +34,11 @@ export type AdminPostSummary = {
 	draft: boolean;
 	description: string;
 	password: string;
+	/* 列表返回这两个字段是必要的：编辑器以它们初始化表单，
+	   缺了就会在保存时把原文件里的值覆盖成默认值（曾导致 passwordHint 丢失、
+	   comment 被强制改回 true）。 */
+	passwordHint: string;
+	comment: boolean;
 	image: string;
 	pinned: boolean;
 	filePath: string;
