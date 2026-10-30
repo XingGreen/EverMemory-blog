@@ -851,9 +851,12 @@ $effect(() => {
 	if (draftTimer) clearTimeout(draftTimer);
 	draftTimer = setTimeout(() => {
 		const saved = persistLocalDraft(draft);
-		/* 本地已落地：云端若还没同步成功（或正在同步），状态如实降为「仅本地」，
-		   绝不沿用上一次的成功结果。写不进去则保持原状，让云端状态单独表达。 */
-		if (saved && cloudSync !== "synced" && cloudSync !== "syncing") {
+		/* 本地已落地 → 内容变了，云端此刻一定还没有这份新内容，
+		   所以状态必须降为「仅本地」，等云端请求成功后才回到「已同步」。
+		   旧实现排除了 synced，导致「已同步过」被当成「当前内容已同步」——
+		   用户继续编辑后界面仍显示已同步，而实际上云端还是旧内容（假阳性来源）。
+		   只在 syncing 时不覆盖：那次请求回来会自行决定最终状态。 */
+		if (saved && cloudSync !== "syncing") {
 			cloudSync = "local-only";
 		}
 	}, 400);
