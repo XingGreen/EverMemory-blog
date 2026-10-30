@@ -2,6 +2,7 @@
 import { getContext, onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import DatePicker from "./DatePicker.svelte";
+import Select from "./Select.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import { type FormGroup, POST_EDITOR_CONTEXT } from "./postEditorContext";
@@ -46,6 +47,18 @@ onMount(() => {
 		}
 	})();
 });
+
+/** 分类候选：首项是「未分类」空值；旧文章的分类若不在聚合结果里则补一项，避免丢值 */
+function categoryOptions(): { value: string; label: string }[] {
+	const opts = taxonomy.categories.map((c) => ({ value: c, label: c }));
+	if (
+		editorState.category &&
+		!taxonomy.categories.includes(editorState.category)
+	) {
+		opts.unshift({ value: editorState.category, label: editorState.category });
+	}
+	return [{ value: "", label: i18n(I18nKey.postCategoryPlaceholder) }, ...opts];
+}
 
 /** 按输入内容过滤候选标签 */
 function filteredTags(): string[] {
@@ -216,16 +229,12 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 						<div class="form-group">
 							<label>
 								{i18n(I18nKey.postCategory)}
-								<select bind:value={editorState.category} class="ui-input">
-									<option value="">{i18n(I18nKey.postCategoryPlaceholder)}</option>
-									{#each taxonomy.categories as c (c)}
-										<option value={c}>{c}</option>
-									{/each}
-									{#if editorState.category && !taxonomy.categories.includes(editorState.category)}
-										<!-- 旧文章里的分类若不在聚合结果里，保留它，避免一打开就丢值 -->
-										<option value={editorState.category}>{editorState.category}</option>
-									{/if}
-								</select>
+								<Select
+									value={editorState.category}
+									options={categoryOptions()}
+									placeholder={i18n(I18nKey.postCategoryPlaceholder)}
+									onChange={(v) => (editorState.category = v)}
+								/>
 							</label>
 						</div>
 {:else if group.key === "publish"}

@@ -1,0 +1,229 @@
+<script lang="ts">
+/**
+ * 通用下拉选择器：结构与视觉照搬参考项目 src/components/ui/select.tsx，
+ * 触发器沿用 DatePicker 的 h-10 / rounded-xl / --btn-regular-bg 规格，
+ * 保证同一表单里的「日期」与「下拉」看起来是同一套控件。
+ *
+ * 参考的 Select 是 Radix 风格（触发器 + portal 浮层 + 键盘导航），这里用
+ * 原生 button + 绝对定位浮层实现同等交互：点击展开、点击外部收起、Esc 关闭、
+ * 上下键在选项间移动、Enter 选中。
+ */
+import Icon from "@/components/common/Icon.svelte";
+
+let {
+	value = "",
+	options = [],
+	onChange,
+	placeholder,
+	id,
+	disabled = false,
+}: {
+	value?: string;
+	options: { value: string; label: string }[];
+	onChange: (next: string) => void;
+	placeholder?: string;
+	id?: string;
+	disabled?: boolean;
+} = $props();
+
+let open = $state(false);
+let containerEl = $state<HTMLDivElement | undefined>();
+let activeIndex = $state(-1);
+
+const selectedLabel = $derived(
+	options.find((o) => o.value === value)?.label ?? "",
+);
+
+function toggle() {
+	if (disabled) return;
+	open = !open;
+	if (open) {
+		activeIndex = options.findIndex((o) => o.value === value);
+	}
+}
+
+function pick(next: string) {
+	onChange(next);
+	open = false;
+}
+
+function handleKey(e: KeyboardEvent) {
+	if (disabled) return;
+	if (!open) {
+		if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+			e.preventDefault();
+			toggle();
+		}
+		return;
+	}
+	if (e.key === "Escape") {
+		open = false;
+		return;
+	}
+	if (e.key === "ArrowDown") {
+		e.preventDefault();
+		activeIndex = Math.min(options.length - 1, activeIndex + 1);
+		return;
+	}
+	if (e.key === "ArrowUp") {
+		e.preventDefault();
+		activeIndex = Math.max(0, activeIndex - 1);
+		return;
+	}
+	if (e.key === "Enter") {
+		e.preventDefault();
+		const opt = options[activeIndex];
+		if (opt) pick(opt.value);
+	}
+}
+
+function handleOutside(e: PointerEvent) {
+	if (!open) return;
+	if (containerEl && !containerEl.contains(e.target as Node)) open = false;
+}
+</script>
+
+<svelte:window onpointerdown={handleOutside} />
+
+<div class="select-root" bind:this={containerEl}>
+	<button
+		{id}
+		type="button"
+		class="select-trigger"
+		aria-haspopup="listbox"
+		aria-expanded={open}
+		{disabled}
+		onclick={toggle}
+		onkeydown={handleKey}
+	>
+		<span class={selectedLabel ? "" : "is-empty"}>
+			{selectedLabel || placeholder || ""}
+		</span>
+		<span class="select-caret" aria-hidden="true">
+			<Icon icon="material-symbols:expand-more" />
+		</span>
+	</button>
+
+	{#if open}
+		<ul class="select-panel" role="listbox" tabindex="-1">
+			{#each options as opt, i (opt.value)}
+				<li>
+					<button
+						type="button"
+						class="select-option"
+						class:is-active={i === activeIndex}
+						aria-selected={opt.value === value}
+						onclick={() => pick(opt.value)}
+						onmouseenter={() => (activeIndex = i)}
+					>
+						<span class="select-option-label">{opt.label}</span>
+						{#if opt.value === value}
+							<Icon icon="material-symbols:check" class="select-check" />
+						{/if}
+					</button>
+				</li>
+			{/each}
+		</ul>
+	{/if}
+</div>
+
+<style>
+	.select-root {
+		position: relative;
+		width: 100%;
+	}
+
+	/* 触发器：与 DatePicker 同高同圆角同底色 */
+	.select-trigger {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		width: 100%;
+		height: 2.5rem;
+		padding: 0 0.75rem;
+		border: none;
+		border-radius: 0.75rem;
+		background: var(--btn-regular-bg);
+		color: var(--deep-text);
+		font-family: inherit;
+		font-size: 0.875rem;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.select-trigger:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.select-trigger .is-empty {
+		color: color-mix(in srgb, var(--content-meta) 60%, transparent);
+	}
+
+	.select-caret {
+		display: inline-flex;
+		flex-shrink: 0;
+		color: var(--content-meta);
+	}
+
+	/* 浮层：absolute top-full mt-1 w-full rounded-xl bg-card ring-1 */
+	.select-panel {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		z-index: 50;
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		width: 100%;
+		max-height: 15rem;
+		margin: 0.25rem 0 0;
+		padding: 0.25rem;
+		overflow-y: auto;
+		border-radius: 0.75rem;
+		background: var(--card-bg);
+		box-shadow:
+			0 0 0 1px var(--input-border),
+			0 8px 24px rgb(0 0 0 / 0.18);
+		list-style: none;
+		overscroll-behavior: contain;
+	}
+
+	.select-option {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		padding: 0.5rem 0.75rem;
+		border: none;
+		border-radius: 0.5rem;
+		background: transparent;
+		color: var(--content-meta);
+		font-family: inherit;
+		font-size: 0.875rem;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.select-option.is-active {
+		background: var(--btn-plain-bg-hover);
+		color: var(--deep-text);
+	}
+
+	.select-option[aria-selected="true"] {
+		color: var(--primary);
+	}
+
+	.select-option-label {
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.select-check {
+		flex-shrink: 0;
+		font-size: 14px;
+	}
+</style>
