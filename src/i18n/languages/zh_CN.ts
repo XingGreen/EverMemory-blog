@@ -592,7 +592,7 @@ export const zh_CN: Translation = {
 	[Key.postSaving]: "保存中...",
 	[Key.postCancel]: "取消",
 	[Key.postLoadingContent]: "加载文章内容...",
-	[Key.postBasicInfo]: "基本信息",
+	[Key.postBasicInfo]: "文章信息",
 	[Key.postSectionEssential]: "必填基础",
 	[Key.postSectionEssentialHint]: "标题、URL 标识、分类",
 	[Key.postSectionPublish]: "发布设置",

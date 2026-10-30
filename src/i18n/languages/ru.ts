@@ -608,7 +608,7 @@ export const ru: Translation = {
 	[Key.postSaving]: "Сохранение...",
 	[Key.postCancel]: "Отмена",
 	[Key.postLoadingContent]: "Загрузка содержимого статьи...",
-	[Key.postBasicInfo]: "Основная информация",
+	[Key.postBasicInfo]: "Информация о статье",
 	[Key.postSectionEssential]: "Основное",
 	[Key.postSectionEssentialHint]: "Заголовок, URL-идентификатор, категория",
 	[Key.postSectionPublish]: "Публикация",

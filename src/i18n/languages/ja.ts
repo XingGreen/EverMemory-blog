@@ -604,7 +604,7 @@ export const ja: Translation = {
 	[Key.postSaving]: "保存中...",
 	[Key.postCancel]: "キャンセル",
 	[Key.postLoadingContent]: "記事の内容を読み込み中...",
-	[Key.postBasicInfo]: "基本情報",
+	[Key.postBasicInfo]: "記事情報",
 	[Key.postSectionEssential]: "基本情報",
 	[Key.postSectionEssentialHint]: "タイトル、URL スラッグ、カテゴリ",
 	[Key.postSectionPublish]: "公開設定",

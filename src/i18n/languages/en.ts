@@ -607,7 +607,7 @@ export const en: Translation = {
 	[Key.postSaving]: "Saving...",
 	[Key.postCancel]: "Cancel",
 	[Key.postLoadingContent]: "Loading post content...",
-	[Key.postBasicInfo]: "Basic Information",
+	[Key.postBasicInfo]: "Post info",
 	[Key.postSectionEssential]: "Essentials",
 	[Key.postSectionEssentialHint]: "Title, URL slug, category",
 	[Key.postSectionPublish]: "Publishing",

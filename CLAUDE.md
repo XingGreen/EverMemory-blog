@@ -2,6 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 硬性规则（用户 2026-10-30 锁定，优先级高于本文件其余内容）
+
+**规则 1 — 设计优先复用参考项目，禁止自研。**
+任何 UI / 交互 / 数据结构的实现，先到 `E:\flare-stack-blog`（Flare Stack Blog CMS）里找对应实现。
+找到就照搬其结构、尺寸、间距、状态机，只允许做技术栈适配（React → Svelte），
+不允许"我觉得更好"地重画一版。自研出来的东西一律视为不合格，需重做。
+
+**规则 2 — 无参考方案时立即停止并汇报，严禁硬写代码。**
+如果在参考项目里找不到对应方案，**停下来说明**：缺什么、查过哪些位置、可选路线有哪些，
+等用户指示后再动手。不要用"通用做法""最佳实践"自行补全设计决策。
+
+违反这两条的最典型后果：界面与参考项目逐步分叉，每个细节都要返工。
+
 ## Project Overview
 
 Firefly is a feature-rich static blog theme built on **Astro 6** with **Svelte 5** for interactive components. It's a fork of [Fuwari](https://github.com/saicaca/fuwari) extended with extensive features. Primary language is Chinese (Simplified) with i18n for en, zh_TW, ja, ru.

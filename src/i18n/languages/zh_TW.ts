@@ -594,7 +594,7 @@ export const zh_TW: Translation = {
 	[Key.postSaving]: "儲存中...",
 	[Key.postCancel]: "取消",
 	[Key.postLoadingContent]: "載入文章內容...",
-	[Key.postBasicInfo]: "基本資訊",
+	[Key.postBasicInfo]: "文章資訊",
 	[Key.postSectionEssential]: "必填基礎",
 	[Key.postSectionEssentialHint]: "標題、URL 標識、分類",
 	[Key.postSectionPublish]: "發布設置",
