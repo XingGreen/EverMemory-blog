@@ -796,6 +796,12 @@ export const zh_CN: Translation = {
 		"当前为生产构建，文件系统只读；请到部署平台（如 Vercel）的环境变量设置中配置",
 	[Key.secretsStatusAllDone]: "你已完成所有必要配置！修改将写入项目根目录的 {file}",
 	[Key.secretsStatusGotIt]: "知道了",
+	[Key.secretsLeakCheck]: "检测密钥泄露",
+	[Key.secretsLeakSafe]: "安全：该文件未被 git 追踪",
+	[Key.secretsLeakWarning]: "警告：已被 git 追踪但尚未提交，执行 git rm --cached 移出索引",
+	[Key.secretsLeakSerious]: "严重：已提交但未推送，push 之前必须清除历史",
+	[Key.secretsLeakDanger]: "危险：已推送到远端，视为已泄露，请立即轮换密钥并清除历史",
+	[Key.secretsLeakUnavailable]: "当前环境没有 git 仓库，检测仅本地可用",
 	[Key.secretsStatusPartial]: "已完成 {done}/{total} 项必要配置",
 	[Key.secretsStatusMissing]: "还缺：",
 	[Key.secretsExportInlineHint]:

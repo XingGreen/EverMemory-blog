@@ -86,6 +86,63 @@ function dismissSuccess() {
 		// localStorage 不可用时仅本次会话生效
 	}
 }
+
+/* ── 密钥泄露检测 ──
+   判据完全来自 git（见 docs/todo 单管理员博客：初始化、会话与凭据安全设计.md）：
+   只被追踪 → 警告；已 commit 未 push → 严重；已 push → 危险。 */
+type LeakLevel = "safe" | "warning" | "serious" | "danger" | "unknown";
+interface LeakResult {
+	file: string;
+	exists: boolean;
+	tracked: boolean;
+	commits: string[];
+	pushedCommits: string[];
+	level: LeakLevel;
+}
+
+let leakBusy = $state(false);
+let leakChecked = $state(false);
+let leakAvailable = $state(true);
+let leakReason = $state("");
+let leakResults = $state<LeakResult[]>([]);
+
+async function checkLeak() {
+	leakBusy = true;
+	try {
+		const res = await fetch("/api/admin/secret-leak-check/");
+		const data = await res.json();
+		if (!data.success) {
+			onNotify(data.message || "检测失败", "error");
+			return;
+		}
+		leakAvailable = data.available !== false;
+		leakReason = data.reason ?? "";
+		// 只展示实际存在或被追踪的文件，不存在的候选不占版面
+		leakResults = (data.results ?? []).filter(
+			(r: LeakResult) => r.exists || r.tracked,
+		);
+		leakChecked = true;
+	} catch {
+		onNotify("检测请求失败", "error");
+	} finally {
+		leakBusy = false;
+	}
+}
+
+function leakLabel(level: LeakLevel): string {
+	switch (level) {
+		case "safe":
+			return i18n(I18nKey.secretsLeakSafe);
+		case "warning":
+			return i18n(I18nKey.secretsLeakWarning);
+		case "serious":
+			return i18n(I18nKey.secretsLeakSerious);
+		case "danger":
+			return i18n(I18nKey.secretsLeakDanger);
+		default:
+			return "";
+	}
+}
 // 正在轮换的托管密钥 key（用于按钮 loading 态）
 let rotating = $state("");
 // 当前展开三点菜单的配置项 key（同一时刻只允许一个）
@@ -581,6 +638,24 @@ onMount(() => {
 		{/if}
 	{/if}
 
+	<!-- 泄露检测结果：判据是 git 追踪/提交/推送三层，等级与处置建议一一对应 -->
+	{#if leakChecked}
+		<div class="leak-panel">
+			{#if !leakAvailable}
+				<p class="leak-note">{leakReason || i18n(I18nKey.secretsLeakUnavailable)}</p>
+			{:else if leakResults.length === 0}
+				<p class="leak-note">{i18n(I18nKey.secretsLeakSafe)}</p>
+			{:else}
+				{#each leakResults as r (r.file)}
+					<div class="leak-row" data-level={r.level}>
+						<code class="leak-file">{r.file}</code>
+						<span class="leak-badge">{leakLabel(r.level)}</span>
+					</div>
+				{/each}
+			{/if}
+		</div>
+	{/if}
+
 	<!-- 操作栏：左说明右按钮，作为工作区顶部的工具栏（与设置页 savebar 同源） -->
 	<div class="action-bar">
 		<div class="action-info">
@@ -594,6 +669,16 @@ onMount(() => {
 			{/if}
 		</div>
 		<div class="action-buttons">
+			<button
+				class="btn"
+				type="button"
+				title={i18n(I18nKey.secretsLeakCheck)}
+				onclick={checkLeak}
+				disabled={leakBusy || loading}
+			>
+				<Icon icon="material-symbols:shield-lock" />
+				<span>{i18n(I18nKey.secretsLeakCheck)}</span>
+			</button>
 			<button class="btn" type="button" onclick={load} disabled={loading}>
 				<Icon icon="material-symbols:refresh" />
 				<span>{i18n(I18nKey.secretsReload)}</span>
@@ -1052,6 +1137,64 @@ onMount(() => {
 	}
 
 	/* 「知道了」：右侧文字按钮，继承 success 色系，不与主操作抢权重 */
+	/* 泄露检测结果：按等级着色，danger 用实心红，其余用淡底 */
+	.leak-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding: 0.75rem 1rem;
+		border: 1px solid var(--line-divider);
+		border-radius: 0.75rem;
+		background: var(--card-bg);
+	}
+
+	.leak-note {
+		margin: 0;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+	}
+
+	.leak-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+	}
+
+	.leak-file {
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: 0.8125rem;
+		color: var(--deep-text);
+	}
+
+	.leak-badge {
+		padding: 0.125rem 0.5rem;
+		border-radius: 999px;
+		font-size: 0.75rem;
+		font-weight: 500;
+		line-height: 1.5;
+	}
+
+	.leak-row[data-level="safe"] .leak-badge {
+		background: color-mix(in oklab, var(--success) 15%, transparent);
+		color: var(--success);
+	}
+
+	.leak-row[data-level="warning"] .leak-badge {
+		background: color-mix(in oklab, var(--warning) 18%, transparent);
+		color: var(--warning);
+	}
+
+	.leak-row[data-level="serious"] .leak-badge {
+		background: color-mix(in oklab, var(--destructive) 15%, transparent);
+		color: var(--destructive);
+	}
+
+	.leak-row[data-level="danger"] .leak-badge {
+		background: var(--destructive);
+		color: var(--primary-foreground);
+	}
+
 	.status-dismiss {
 		margin-left: auto;
 		flex-shrink: 0;

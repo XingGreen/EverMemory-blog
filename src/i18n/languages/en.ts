@@ -825,6 +825,12 @@ export const en: Translation = {
 		"Read-only in production. Configure these in your deploy platform's environment variables (e.g. Vercel).",
 	[Key.secretsStatusAllDone]: "All required configuration is complete! Changes are written to {file} at the project root",
 	[Key.secretsStatusGotIt]: "Got it",
+	[Key.secretsLeakCheck]: "Check for leaked secrets",
+	[Key.secretsLeakSafe]: "Safe: not tracked by git",
+	[Key.secretsLeakWarning]: "Warning: tracked but not committed yet — run git rm --cached",
+	[Key.secretsLeakSerious]: "Serious: committed but not pushed — purge history before pushing",
+	[Key.secretsLeakDanger]: "Danger: pushed to remote — treat as leaked, rotate the key now",
+	[Key.secretsLeakUnavailable]: "No git repository in this environment; check is local-only",
 	[Key.secretsStatusPartial]: "Completed {done}/{total} required items",
 	[Key.secretsStatusMissing]: "Missing: ",
 	[Key.secretsExportInlineHint]:

@@ -831,6 +831,12 @@ export const ru: Translation = {
 		"В продакшене файловая система доступна только для чтения. Настройте переменные окружения на платформе развёртывания (например, Vercel).",
 	[Key.secretsStatusAllDone]: "Все обязательные настройки выполнены! Изменения записываются в {file} в корне проекта",
 	[Key.secretsStatusGotIt]: "Понятно",
+	[Key.secretsLeakCheck]: "Проверить утечку ключей",
+	[Key.secretsLeakSafe]: "Безопасно: файл не отслеживается git",
+	[Key.secretsLeakWarning]: "Внимание: отслеживается, но не закоммичен — выполните git rm --cached",
+	[Key.secretsLeakSerious]: "Серьёзно: закоммичен, но не отправлен — очистите историю до push",
+	[Key.secretsLeakDanger]: "Опасно: отправлено в remote — считайте ключ скомпрометированным, смените его",
+	[Key.secretsLeakUnavailable]: "В этом окружении нет git-репозитория, проверка доступна только локально",
 	[Key.secretsStatusPartial]: "Выполнено {done}/{total} обязательных",
 	[Key.secretsStatusMissing]: "Отсутствуют: ",
 	[Key.secretsExportInlineHint]:

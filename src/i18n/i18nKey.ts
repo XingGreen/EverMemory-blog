@@ -799,6 +799,13 @@ enum I18nKey {
 	secretsReadonlyHint = "secretsReadonlyHint",
 	secretsStatusAllDone = "secretsStatusAllDone",
 	secretsStatusGotIt = "secretsStatusGotIt",
+	/** 密钥泄露检测：按钮与四级结论（判据见 docs/todo 下的凭据安全设计） */
+	secretsLeakCheck = "secretsLeakCheck",
+	secretsLeakSafe = "secretsLeakSafe",
+	secretsLeakWarning = "secretsLeakWarning",
+	secretsLeakSerious = "secretsLeakSerious",
+	secretsLeakDanger = "secretsLeakDanger",
+	secretsLeakUnavailable = "secretsLeakUnavailable",
 	secretsStatusPartial = "secretsStatusPartial",
 	secretsStatusMissing = "secretsStatusMissing",
 	secretsExportInlineHint = "secretsExportInlineHint",

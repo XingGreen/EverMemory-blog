@@ -819,6 +819,12 @@ export const ja: Translation = {
 		"本番ビルドではファイルシステムは読み取り専用です。デプロイプラットフォーム（Vercel など）の環境変数で設定してください",
 	[Key.secretsStatusAllDone]: "必要な設定はすべて完了しています！変更はプロジェクト直下の {file} に書き込まれます",
 	[Key.secretsStatusGotIt]: "了解しました",
+	[Key.secretsLeakCheck]: "鍵の漏洩を確認",
+	[Key.secretsLeakSafe]: "安全：git に追跡されていません",
+	[Key.secretsLeakWarning]: "警告：追跡済みだが未コミット。git rm --cached で除外してください",
+	[Key.secretsLeakSerious]: "重大：コミット済みで未プッシュ。プッシュ前に履歴を削除してください",
+	[Key.secretsLeakDanger]: "危険：リモートにプッシュ済み。漏洩とみなし、鍵を直ちに更新してください",
+	[Key.secretsLeakUnavailable]: "この環境には git リポジトリがありません（ローカルのみ）",
 	[Key.secretsStatusPartial]: "必須設定 {done}/{total} 件完了",
 	[Key.secretsStatusMissing]: "未設定：",
 	[Key.secretsExportInlineHint]:
