@@ -400,6 +400,8 @@ let cloudSavedAt = $state<number | null>(null);
 let cloudTimer: ReturnType<typeof setTimeout> | null = null;
 let cloudSeq = 0;
 let lastCloudKey = "";
+/* 在飞的草稿保存请求（参考的 inFlightRef）：用于挡并发，也供 flush 等待 */
+let cloudInFlight: Promise<void> | null = null;
 
 function formatDate(dateStr: string): string {
 	return new Date(dateStr).toISOString().split("T")[0];
@@ -780,8 +782,9 @@ function hasDraftContent(): boolean {
 }
 
 /** 本地持久备份 + 云端自动同步：内容变化后防抖写入 localStorage（400ms）与云端（1200ms，仅新建模式） */
-$effect(() => {
-	const draft: DraftFields = {
+/** 当前编辑器内容的草稿快照：effect 与「保存后再检脏」共用，避免两处手抄字段 */
+function currentDraft(): DraftFields {
+	return {
 		title: editorState.title,
 		author: editorState.author,
 		category: editorState.category,
@@ -800,8 +803,12 @@ $effect(() => {
 		enableComment: editorState.enableComment,
 		tags: editorState.tags,
 	};
+}
+
+$effect(() => {
+	const draft: DraftFields = currentDraft();
 	// 草稿自动保存对新建与编辑都生效：编辑页同样会因误关标签页丢改动。
-	// 触发时机保持一致——内容变化后本地 400ms 去抖、云端 1200ms 去抖。
+	// 去抖时长对齐参考 use-auto-save.ts 的 debounceMs 默认值 1500ms。
 	if (!hasDraftContent()) return;
 	if (draftTimer) clearTimeout(draftTimer);
 	draftTimer = setTimeout(() => {
@@ -817,7 +824,7 @@ $effect(() => {
 	if (cloudTimer) clearTimeout(cloudTimer);
 	cloudTimer = setTimeout(() => {
 		void saveCloudDraft(draft);
-	}, 1200);
+	}, 1500);
 	dirty = true;
 });
 
@@ -828,8 +835,25 @@ async function saveCloudDraft(draft: DraftFields) {
 		if (cloudSavedAt) cloudSync = "saved";
 		return;
 	}
+	/* 已有请求在飞：先等它落定，若那次保存的内容已覆盖当前状态就不必重发 */
+	if (cloudInFlight) {
+		await cloudInFlight;
+		if (JSON.stringify(currentDraft()) === lastCloudKey) {
+			cloudSync = "saved";
+			return;
+		}
+	}
+
 	cloudSync = "syncing";
 	const seq = ++cloudSeq;
+
+	/* 并发闸门：参考 use-auto-save 用 inFlightRef 挡住并发写。
+	   已有请求在飞时先等它结束，再判断内容是否已被那次保存覆盖。 */
+	let settle!: () => void;
+	cloudInFlight = new Promise<void>((resolve) => {
+		settle = resolve;
+	});
+
 	try {
 		const res = await fetch("/api/admin/draft/", {
 			method: "POST",
@@ -842,17 +866,39 @@ async function saveCloudDraft(draft: DraftFields) {
 			}),
 		});
 		const data = await res.json();
+		// 代际校验：保存期间又有新改动（cloudSeq 已递增）则丢弃本次结果
 		if (seq !== cloudSeq) return;
 		if (res.ok && data.success) {
 			lastCloudKey = key;
 			cloudSavedAt = data.savedAt ?? null;
 			cloudSync = "saved";
+			/* 保存期间内容又变了 → 重新排一次。
+			   对应参考 attemptSave 末尾「保存后 isDirtyNow 则回到 PENDING 并重试」 */
+			if (JSON.stringify(currentDraft()) !== lastCloudKey) {
+				if (cloudTimer) clearTimeout(cloudTimer);
+				cloudTimer = setTimeout(() => {
+					void saveCloudDraft(currentDraft());
+				}, 1500);
+			}
 		} else {
 			cloudSync = "error";
 		}
 	} catch {
 		if (seq === cloudSeq) cloudSync = "error";
+	} finally {
+		cloudInFlight = null;
+		settle();
 	}
+}
+
+/** 手动保存前把挂起的自动保存立刻刷掉（对应参考的 flush） */
+async function flushAutoSave(): Promise<void> {
+	if (draftTimer) clearTimeout(draftTimer);
+	if (cloudTimer) clearTimeout(cloudTimer);
+	if (cloudInFlight) await cloudInFlight;
+	const draft = currentDraft();
+	if (JSON.stringify(draft) === lastCloudKey) return;
+	await saveCloudDraft(draft);
 }
 
 interface DraftFields {
@@ -1006,6 +1052,9 @@ async function handleSave() {
 	}
 
 	isSaving = true;
+
+	// 正式保存前先把手头挂起的自动保存刷掉，避免草稿与正文状态错位
+	await flushAutoSave();
 
 	try {
 		const response = await fetch("/api/admin/save/", {
