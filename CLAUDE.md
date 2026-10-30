@@ -98,6 +98,34 @@ Vitest（`tests/`，Node 环境）。当前覆盖后台工具链中出错代价�
 - Relaxed rules for `.svelte`/`.astro` files (useConst off, noUnusedVariables off)
 - Commit convention: **Conventional Commits** (`feat:`, `fix:`, `chore:`, etc.)
 
+### 样式改动的验证（2026-10-30 补）
+
+`astro check` **不解析 `<style>` 里的 CSS**。括号不配对、语法写错它一律放过，直到
+Vite 编译时才由 postcss 报出来（形如 `xxx.vite-preprocess.css:312:2: Unexpected }`）。
+
+改动 `.svelte` / `.astro` 的样式段后，提交前必须做这三步：
+
+1. `npx biome check <改动的文件>` —— biome 有 CSS 解析器，能直接报语法错误
+   （同时会指出 import 排序问题，可 `--write` 自动修）；
+2. 核对 style 块括号平衡：
+
+   ```bash
+   awk -v s=$(grep -n '^<style>' FILE | cut -d: -f1) \
+     'NR>=s {o+=gsub(/{/,"{"); c+=gsub(/}/,"}")} END {print o"/"c}' FILE
+   ```
+
+   两个数字必须相等；
+3. 需要时请求一次组件模块，确认 Vite 真能编译：
+
+   ```bash
+   curl -o /dev/null -w '%{http_code}' \
+     http://localhost:4321/src/components/admin/X.svelte   # 应返回 200
+   ```
+
+**高危操作：按行区间批量删除样式块**（`sed -i 'A,Bd'`）。删除边界若落在某条规则的
+闭合括号之前，就会留下一个孤儿 `}`——`astro check` 报 0 error，只在 dev 启动时炸。
+删完务必按上面第 2 步核对。
+
 ### 提交约定
 
 - **每次改动完成后立即提交一次，无需等用户提醒。** 一个可验证的改动单元对应一个 commit。
