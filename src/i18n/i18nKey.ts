@@ -532,6 +532,10 @@ enum I18nKey {
 	postLineNumbers = "postLineNumbers",
 	/** 编辑区左右拖拽手柄的提示文案 */
 	postResizeEditor = "postResizeEditor",
+	/** 历史版本：入口、空态与恢复动作 */
+	postHistory = "postHistory",
+	postHistoryEmpty = "postHistoryEmpty",
+	postHistoryRestore = "postHistoryRestore",
 	postMdRedo = "postMdRedo",
 	postSlugGenerate = "postSlugGenerate",
 	postSlugRomanize = "postSlugRomanize",

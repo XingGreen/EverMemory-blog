@@ -234,6 +234,61 @@ function readEditorWidth(): number | null {
 let editorMaxWidth = $state<number | null>(readEditorWidth());
 let resizing = $state(false);
 
+/* ── 历史版本 ──
+   列表/详情/恢复统一走 /api/admin/post-revisions；仅编辑既有文章时可用。
+   恢复后重新载入正文，避免界面仍显示旧内容。 */
+type RevisionItem = { id: string; reason: string; savedAt: number };
+
+let historyOpen = $state(false);
+let historyLoading = $state(false);
+let historyItems = $state<RevisionItem[]>([]);
+let historyBusyId = $state("");
+
+function fmtRevisionTime(ts: number): string {
+	if (!ts) return "—";
+	const d = new Date(ts);
+	return `${d.toLocaleDateString()} ${d.toLocaleTimeString().slice(0, 5)}`;
+}
+
+async function openHistory() {
+	historyOpen = true;
+	historyLoading = true;
+	try {
+		const res = await fetch(
+			`/api/admin/post-revisions/?slug=${encodeURIComponent(post?.slug ?? "")}`,
+		);
+		const data = await res.json();
+		historyItems = data.success ? (data.revisions ?? []) : [];
+	} catch {
+		historyItems = [];
+	} finally {
+		historyLoading = false;
+	}
+}
+
+async function restoreRevision(id: string) {
+	historyBusyId = id;
+	try {
+		const res = await fetch("/api/admin/post-revisions/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ slug: post?.slug, id }),
+		});
+		const data = await res.json();
+		if (data.success) {
+			historyOpen = false;
+			await loadContent();
+			onError(data.message ?? "");
+		} else {
+			onError(data.message ?? "恢复失败");
+		}
+	} catch {
+		onError("恢复请求失败");
+	} finally {
+		historyBusyId = "";
+	}
+}
+
 function startResize(e: PointerEvent, side: "left" | "right") {
 	e.preventDefault();
 	resizing = true;
@@ -1081,6 +1136,12 @@ $effect(() => {
 				<Icon icon="material-symbols:toc" class="text-sm" />
 				{i18n(I18nKey.postToc)}
 			</button>
+			{#if mode === "edit" && post?.slug}
+				<button class="editor-text-btn" onclick={openHistory}>
+					<Icon icon="material-symbols:history-rounded" class="text-sm" />
+					{i18n(I18nKey.postHistory)}
+				</button>
+			{/if}
 			<button class="ui-btn ui-btn-primary" onclick={handleSave} disabled={isSaving}>
 				{#if isSaving}
 					<span class="spinner"></span>
@@ -1175,6 +1236,58 @@ $effect(() => {
 		</div>
 	{/if}
 </div>
+
+<!-- 历史版本：列出保存前的快照，点恢复会用该版本覆盖正文（恢复前自动备份当前版本） -->
+{#if historyOpen}
+	<div
+		class="history-overlay"
+		role="dialog"
+		aria-modal="true"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) historyOpen = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === "Escape") historyOpen = false;
+		}}
+	>
+		<div class="history-card">
+			<div class="history-head">
+				<h3>{i18n(I18nKey.postHistory)}</h3>
+				<button
+					class="history-close"
+					type="button"
+					aria-label={i18n(I18nKey.postHistory)}
+					onclick={() => (historyOpen = false)}
+				>
+					<Icon icon="material-symbols:close" />
+				</button>
+			</div>
+			{#if historyLoading}
+				<p class="history-note">…</p>
+			{:else if historyItems.length === 0}
+				<p class="history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
+			{:else}
+				<ul class="history-list">
+					{#each historyItems as item (item.id)}
+						<li class="history-row">
+							<span class="history-time">{fmtRevisionTime(item.savedAt)}</span>
+							<span class="history-reason">{item.reason}</span>
+							<button
+								class="history-restore"
+								type="button"
+								disabled={historyBusyId === item.id}
+								onclick={() => restoreRevision(item.id)}
+							>
+								{i18n(I18nKey.postHistoryRestore)}
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+	</div>
+{/if}
 
 <style>
 	/* 工作区：单张卡片，header 与书写区同处其内，用一条分隔线区分。
@@ -1494,5 +1607,116 @@ $effect(() => {
 		.header-actions {
 			width: 100%;
 		}
+	}
+	/* ── 历史版本弹窗 ── */
+	.history-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		background: rgb(0 0 0 / 0.35);
+	}
+
+	.history-card {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		width: 100%;
+		max-width: 26rem;
+		max-height: 70vh;
+		padding: 1.25rem;
+		border-radius: var(--radius-large);
+		background: var(--card-bg);
+		box-shadow: 0 16px 40px rgb(0 0 0 / 0.3);
+	}
+
+	.history-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.history-head h3 {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.history-close {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.75rem;
+		height: 1.75rem;
+		padding: 0;
+		border: none;
+		border-radius: 0.375rem;
+		background: transparent;
+		color: var(--content-meta);
+		cursor: pointer;
+	}
+
+	.history-note {
+		margin: 0;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+	}
+
+	.history-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		margin: 0;
+		padding: 0;
+		overflow-y: auto;
+		list-style: none;
+	}
+
+	.history-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 0.625rem;
+		border-radius: 0.5rem;
+	}
+
+	.history-row:hover {
+		background: var(--btn-plain-bg-hover);
+	}
+
+	.history-time {
+		flex: 1;
+		font-size: 0.8125rem;
+		color: var(--deep-text);
+	}
+
+	.history-reason {
+		font-size: 0.6875rem;
+		color: var(--content-meta);
+	}
+
+	.history-restore {
+		padding: 0.25rem 0.625rem;
+		border: 1px solid var(--line-divider);
+		border-radius: 0.375rem;
+		background: transparent;
+		color: var(--deep-text);
+		font-family: inherit;
+		font-size: 0.75rem;
+		cursor: pointer;
+	}
+
+	.history-restore:hover:not(:disabled) {
+		border-color: var(--primary);
+		color: var(--primary);
+	}
+
+	.history-restore:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 </style>

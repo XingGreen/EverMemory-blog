@@ -1,3 +1,5 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { requireAuth } from "@/utils/auth";
 import { IS_PROD_BUILD } from "@/utils/env";
 import {
@@ -78,6 +80,32 @@ export async function POST({ request }) {
 		});
 
 		const fullContent = `---\n${frontmatter}\n---\n\n${content}`;
+
+		/* 0. 保存前快照旧版本——历史版本功能的数据来源。
+		      只在开发构建（本地可写）下做：生产目录只读，写不进磁盘；
+		      内容没变也不产生版本，避免重复保存堆出一串空记录。 */
+		if (!IS_PROD_BUILD) {
+			try {
+				const absPath = path.resolve(process.cwd(), filePath);
+				if (existsSync(absPath)) {
+					const previous = readFileSync(absPath, "utf-8");
+					if (previous !== fullContent) {
+						const dir = path.resolve(
+							process.cwd(),
+							`src/content/.revisions/${slug}`,
+						);
+						mkdirSync(dir, { recursive: true });
+						writeFileSync(
+							path.join(dir, `${Date.now()}-auto.md`),
+							previous,
+							"utf-8",
+						);
+					}
+				}
+			} catch {
+				// 快照失败不影响正常保存
+			}
+		}
 
 		const commitMessage = `update post: ${title || slug} via admin dashboard`;
 
