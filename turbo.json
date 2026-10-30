@@ -32,8 +32,16 @@
       ],
       "outputs": ["src/constants/admin-config-snapshot.ts"]
     },
+    "taxonomy-check": {
+      "inputs": [
+        "src/content/**/*.md",
+        "src/content/**/*.mdx",
+        "src/content/taxonomy.json",
+        "scripts/validate-taxonomy.ts"
+      ]
+    },
     "astro-build": {
-      "dependsOn": ["icons", "lqips", "snapshot"],
+      "dependsOn": ["icons", "lqips", "snapshot", "taxonomy-check"],
       "cache": false,
       "env": ["CF_WORKERS", "VERCEL", "BASE_PATH"]
     },

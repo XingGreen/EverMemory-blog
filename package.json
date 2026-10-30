@@ -14,6 +14,8 @@
     "astro": "astro",
     "astro-build": "astro build",
     "snapshot": "npx tsx scripts/generate-config-snapshot.ts",
+    "taxonomy-check": "npx tsx scripts/validate-taxonomy.ts",
+    "taxonomy-sync": "npx tsx scripts/validate-taxonomy.ts --sync",
     "subset-fonts": "npx tsx scripts/subset-fonts.ts",
     "pagefind": "pagefind --site dist",
     "type-check": "tsc --noEmit --isolatedDeclarations",
