@@ -543,6 +543,7 @@ export const ja: Translation = {
 	[Key.postMdDivider]: "区切り線",
 	[Key.postMdUndo]: "元に戻す",
 	[Key.postLineNumbers]: "行番号を表示",
+	[Key.postResizeEditor]: "ドラッグして幅を調整",
 	[Key.postMdRedo]: "やり直す",
 	[Key.postSlugGenerate]: "タイトルから自動生成",
 	[Key.postSlugRomanize]: "ピンインに変換",

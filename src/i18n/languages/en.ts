@@ -546,6 +546,7 @@ export const en: Translation = {
 	[Key.postMdDivider]: "Divider",
 	[Key.postMdUndo]: "Undo",
 	[Key.postLineNumbers]: "Line numbers",
+	[Key.postResizeEditor]: "Drag to resize editor",
 	[Key.postMdRedo]: "Redo",
 	[Key.postSlugGenerate]: "Auto-generate from title",
 	[Key.postSlugRomanize]: "Romanize",

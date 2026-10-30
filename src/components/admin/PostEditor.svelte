@@ -213,6 +213,53 @@ function toggleLineNumbers() {
 	}
 }
 
+/* ── 拖拽调整编辑区宽度 ──
+   交互参考 VSCode 侧栏拖拽：按下手柄后跟随指针移动，松手落盘。
+   左右两侧各一条手柄，向内拖都是"变窄"，因此位移按 ±dx*2 计算（对称收缩）。
+   宽度即 .editor-layout 的 max-width，下限 720px 保证正文不至于挤成一列。 */
+const EDITOR_WIDTH_KEY = "admin-editor-max-width";
+const EDITOR_WIDTH_MIN = 720;
+
+function readEditorWidth(): number | null {
+	try {
+		const raw = Number(localStorage.getItem(EDITOR_WIDTH_KEY));
+		if (Number.isFinite(raw) && raw >= EDITOR_WIDTH_MIN) return raw;
+	} catch {
+		// SSR / 隐私模式：用配置默认值
+	}
+	// null 表示「未拖拽过」，继续沿用 editorConfig.maxPageWidth
+	return null;
+}
+
+let editorMaxWidth = $state<number | null>(readEditorWidth());
+let resizing = $state(false);
+
+function startResize(e: PointerEvent, side: "left" | "right") {
+	e.preventDefault();
+	resizing = true;
+	const startX = e.clientX;
+	const startW = editorMaxWidth ?? (typeof window === "undefined" ? 1440 : window.innerWidth);
+	const viewport = typeof window === "undefined" ? 1920 : window.innerWidth;
+
+	const onMove = (ev: PointerEvent) => {
+		const dx = side === "right" ? startX - ev.clientX : ev.clientX - startX;
+		const next = startW + dx * 2;
+		editorMaxWidth = Math.min(viewport, Math.max(EDITOR_WIDTH_MIN, next));
+	};
+	const onUp = () => {
+		resizing = false;
+		window.removeEventListener("pointermove", onMove);
+		window.removeEventListener("pointerup", onUp);
+		try {
+			localStorage.setItem(EDITOR_WIDTH_KEY, String(editorMaxWidth));
+		} catch {
+			// 忽略
+		}
+	};
+	window.addEventListener("pointermove", onMove);
+	window.addEventListener("pointerup", onUp);
+}
+
 // 草稿防丢失：本地持久备份（localStorage，跨会话/关浏览器仍保留）+ 刷新/关闭拦截（beforeunload）
 // 编辑页也启用，键按 slug 区分——否则编辑 A 文章的草稿会覆盖 B 文章的。
 const DRAFT_KEY = $derived(
@@ -1054,8 +1101,24 @@ $effect(() => {
 	{:else}
 		<div
 			class="editor-body"
-			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
+			class:is-resizing={resizing}
+			style={`--editor-max-page-width: ${editorMaxWidth === null ? editorConfig.maxPageWidth : `${editorMaxWidth}px`}`}
 		>
+			<!-- 左右拖拽手柄：向内拖 = 变窄，交互同 VSCode 侧栏分隔条 -->
+			<button
+				class="resize-handle left"
+				type="button"
+				aria-label={i18n(I18nKey.postResizeEditor)}
+				title={i18n(I18nKey.postResizeEditor)}
+				onpointerdown={(e) => startResize(e, "left")}
+			></button>
+			<button
+				class="resize-handle right"
+				type="button"
+				aria-label={i18n(I18nKey.postResizeEditor)}
+				title={i18n(I18nKey.postResizeEditor)}
+				onpointerdown={(e) => startResize(e, "right")}
+			></button>
 			<div class="editor-layout">
 				<PostEditorWritePanel />
 			</div>
@@ -1295,6 +1358,40 @@ $effect(() => {
 		margin-inline: auto;
 		width: 100%;
 		height: 100%;
+	}
+
+	/* ── 拖拽手柄 ──
+	   贴在工作区左右两侧，10px 热区；悬停/拖拽时显示主色细线，
+	   松手后宽度写入 localStorage（admin-editor-max-width）。 */
+	.resize-handle {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		z-index: 30;
+		width: 10px;
+		padding: 0;
+		border: none;
+		background: transparent;
+		cursor: col-resize;
+		touch-action: none;
+	}
+
+	.resize-handle.left {
+		left: 0;
+	}
+
+	.resize-handle.right {
+		right: 0;
+	}
+
+	.resize-handle:hover,
+	.editor-body.is-resizing .resize-handle {
+		background: color-mix(in srgb, var(--primary) 22%, transparent);
+	}
+
+	/* 拖拽过程中屏蔽文本选中，避免整页文字被反白 */
+	.editor-body.is-resizing {
+		user-select: none;
 	}
 
 	/* ── 右侧抽屉：基本信息 / 目录 共用外壳，内容按 drawer 切换 ── */

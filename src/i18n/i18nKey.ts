@@ -530,6 +530,8 @@ enum I18nKey {
 	postMdUndo = "postMdUndo",
 	/** 正文编辑器行号开关（配置项，持久化在 localStorage） */
 	postLineNumbers = "postLineNumbers",
+	/** 编辑区左右拖拽手柄的提示文案 */
+	postResizeEditor = "postResizeEditor",
 	postMdRedo = "postMdRedo",
 	postSlugGenerate = "postSlugGenerate",
 	postSlugRomanize = "postSlugRomanize",

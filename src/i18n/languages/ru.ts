@@ -546,6 +546,7 @@ export const ru: Translation = {
 	[Key.postMdDivider]: "Разделитель",
 	[Key.postMdUndo]: "Отменить",
 	[Key.postLineNumbers]: "Номера строк",
+	[Key.postResizeEditor]: "Потяните, чтобы изменить ширину",
 	[Key.postMdRedo]: "Повторить",
 	[Key.postSlugGenerate]: "Автогенерация из заголовка",
 	[Key.postSlugRomanize]: "Романизировать",

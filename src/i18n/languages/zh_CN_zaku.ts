@@ -528,6 +528,7 @@ export const zaku: Translation = {
 	[Key.postMdDivider]: "分割线",
 	[Key.postMdUndo]: "撤销",
 	[Key.postLineNumbers]: "显示行号",
+	[Key.postResizeEditor]: "拖拽调整编辑区宽度",
 	[Key.postMdRedo]: "重做",
 	[Key.postSlugGenerate]: "根据标题自动生成",
 	[Key.postSlugRomanize]: "转拼音",
