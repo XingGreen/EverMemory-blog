@@ -560,6 +560,7 @@ export const zaku: Translation = {
 	[Key.postColTitle]: "标题",
 	[Key.postColCategory]: "分类",
 	[Key.postColFileType]: "文件类型",
+	[Key.postColSettings]: "列显示",
 	[Key.postColDate]: "发布日期",
 	[Key.postColStatus]: "状态",
 	[Key.postColActions]: "操作",

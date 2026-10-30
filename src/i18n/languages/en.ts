@@ -578,6 +578,7 @@ export const en: Translation = {
 	[Key.postColTitle]: "Title",
 	[Key.postColCategory]: "Category",
 	[Key.postColFileType]: "File type",
+	[Key.postColSettings]: "Columns",
 	[Key.postColDate]: "Publish Date",
 	[Key.postColStatus]: "Status",
 	[Key.postColActions]: "Actions",

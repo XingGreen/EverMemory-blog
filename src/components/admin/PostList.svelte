@@ -63,6 +63,60 @@ const SORT_VALUES = new Set<string>([
 
 let searchTerm = $state("");
 let statusFilter = $state<StatusFilter>("all");
+
+/* ── 表项显隐（内置在列表页，不进设置页）──
+   只有次要列可隐藏；标题与操作列始终显示，否则会出现无法操作的行。
+   列宽通过 --post-grid-cols 下发，窄屏媒体查询里的单列布局优先级更高，不受影响。 */
+type HideableCol = "category" | "filetype" | "date" | "status";
+const HIDDEN_COLS_KEY = "admin-post-list-hidden-cols";
+
+function readHiddenCols(): Record<HideableCol, boolean> {
+	const empty: Record<HideableCol, boolean> = {
+		category: false,
+		filetype: false,
+		date: false,
+		status: false,
+	};
+	try {
+		const raw = localStorage.getItem(HIDDEN_COLS_KEY);
+		if (!raw) return empty;
+		const parsed = JSON.parse(raw) as Partial<Record<HideableCol, boolean>>;
+		return { ...empty, ...parsed };
+	} catch {
+		return empty;
+	}
+}
+
+let hiddenCols = $state<Record<HideableCol, boolean>>({
+	category: false,
+	filetype: false,
+	date: false,
+	status: false,
+});
+let colsPanelOpen = $state(false);
+
+function toggleCol(key: HideableCol) {
+	hiddenCols = { ...hiddenCols, [key]: !hiddenCols[key] };
+	try {
+		localStorage.setItem(HIDDEN_COLS_KEY, JSON.stringify(hiddenCols));
+	} catch {
+		// 隐私模式忽略
+	}
+}
+
+/** 按当前可见列拼出 grid 模板，顺序与表头一致 */
+const gridCols = $derived(
+	[
+		"2.9fr",
+		hiddenCols.category ? "" : "0.9fr",
+		hiddenCols.filetype ? "" : "0.7fr",
+		hiddenCols.date ? "" : "1.1fr",
+		hiddenCols.status ? "" : "0.9fr",
+		"1.2fr",
+	]
+		.filter(Boolean)
+		.join(" "),
+);
 let categoryFilter = $state("");
 let tagFilter = $state("");
 /* 默认按最近修改排：草稿没有 published，按发布时间排会全部沉底，
@@ -258,6 +312,7 @@ $effect(() => {
 });
 
 onMount(() => {
+	hiddenCols = readHiddenCols();
 	const saved = restoreFilters();
 	if (saved) {
 		searchTerm = saved.q;
@@ -504,6 +559,57 @@ function actionLabel(action: string, title: string): string {
 </select>
 			</div>
 			</label>
+
+			<!-- 列显示设置：内置在列表工具栏，勾选即时生效并写入 localStorage -->
+			<div class="toolbar-field cols-field">
+				<span class="field-label">{i18n(I18nKey.postColSettings)}</span>
+				<div class="cols-wrap">
+					<button
+						class="ui-select cols-trigger"
+						type="button"
+						aria-expanded={colsPanelOpen}
+						onclick={() => (colsPanelOpen = !colsPanelOpen)}
+					>
+						<Icon icon="material-symbols:more-horiz" class="text-sm" />
+					</button>
+					{#if colsPanelOpen}
+						<div class="cols-panel">
+							<label class="cols-item">
+								<input
+									type="checkbox"
+									checked={!hiddenCols.category}
+									onchange={() => toggleCol("category")}
+								/>
+								<span>{i18n(I18nKey.postColCategory)}</span>
+							</label>
+							<label class="cols-item">
+								<input
+									type="checkbox"
+									checked={!hiddenCols.filetype}
+									onchange={() => toggleCol("filetype")}
+								/>
+								<span>{i18n(I18nKey.postColFileType)}</span>
+							</label>
+							<label class="cols-item">
+								<input
+									type="checkbox"
+									checked={!hiddenCols.date}
+									onchange={() => toggleCol("date")}
+								/>
+								<span>{dateColLabel}</span>
+							</label>
+							<label class="cols-item">
+								<input
+									type="checkbox"
+									checked={!hiddenCols.status}
+									onchange={() => toggleCol("status")}
+								/>
+								<span>{i18n(I18nKey.postColStatus)}</span>
+							</label>
+						</div>
+					{/if}
+				</div>
+			</div>
 		</div>
 	</div>
 
@@ -513,14 +619,22 @@ function actionLabel(action: string, title: string): string {
 			<div class="col col-title" role="columnheader" aria-sort={ariaSortFor("title")}>
 				{i18n(I18nKey.postColTitle)}
 			</div>
-			<div class="col col-category" role="columnheader">{i18n(I18nKey.postColCategory)}</div>
-			<div class="col col-filetype" role="columnheader">
-				{i18n(I18nKey.postColFileType)}
-			</div>
-			<div class="col col-date" role="columnheader" aria-sort={ariaSortFor("date")}>
-				{dateColLabel}
-			</div>
-			<div class="col col-status" role="columnheader">{i18n(I18nKey.postColStatus)}</div>
+			{#if !hiddenCols.category}
+				<div class="col col-category" role="columnheader">{i18n(I18nKey.postColCategory)}</div>
+			{/if}
+			{#if !hiddenCols.filetype}
+				<div class="col col-filetype" role="columnheader">
+					{i18n(I18nKey.postColFileType)}
+				</div>
+			{/if}
+			{#if !hiddenCols.date}
+				<div class="col col-date" role="columnheader" aria-sort={ariaSortFor("date")}>
+					{dateColLabel}
+				</div>
+			{/if}
+			{#if !hiddenCols.status}
+				<div class="col col-status" role="columnheader">{i18n(I18nKey.postColStatus)}</div>
+			{/if}
 			<div class="col col-actions" role="columnheader">{i18n(I18nKey.postColActions)}</div>
 		</div>
 	{/snippet}
@@ -550,6 +664,7 @@ function actionLabel(action: string, title: string): string {
 			role="table"
 			aria-label={i18n(I18nKey.postTableLabel)}
 			aria-busy={isLoading}
+			style:--post-grid-cols={gridCols}
 		>
 			{@render headerRow()}
 
@@ -614,41 +729,49 @@ function actionLabel(action: string, title: string): string {
 						</div>
 
 						<!-- 分类 -->
-						<div class="col col-category" role="cell" data-label={i18n(I18nKey.postColCategory)}>
-							<span class="text-meta">{post.category || "—"}</span>
-						</div>
+						{#if !hiddenCols.category}
+							<div class="col col-category" role="cell" data-label={i18n(I18nKey.postColCategory)}>
+								<span class="text-meta">{post.category || "—"}</span>
+							</div>
+						{/if}
 
 						<!-- 文件类型：取自 filePath 的扩展名（.md / .mdx） -->
-						<div
-							class="col col-filetype"
-							role="cell"
-							data-label={i18n(I18nKey.postColFileType)}
-						>
-							<span class="filetype-chip">
-								{post.filePath.slice(post.filePath.lastIndexOf(".")) || "—"}
-							</span>
-						</div>
+						{#if !hiddenCols.filetype}
+							<div
+								class="col col-filetype"
+								role="cell"
+								data-label={i18n(I18nKey.postColFileType)}
+							>
+								<span class="filetype-chip">
+									{post.filePath.slice(post.filePath.lastIndexOf(".")) || "—"}
+								</span>
+							</div>
+						{/if}
 
 						<!-- 发布/修改日期，跟随当前排序字段 -->
-						<div class="col col-date" role="cell" data-label={dateColLabel}>
-							<span class="text-meta">{dateShown(post)}</span>
-						</div>
+						{#if !hiddenCols.date}
+							<div class="col col-date" role="cell" data-label={dateColLabel}>
+								<span class="text-meta">{dateShown(post)}</span>
+							</div>
+						{/if}
 
 						<!-- 状态 -->
-						<div class="col col-status" role="cell" data-label={i18n(I18nKey.postColStatus)}>
-							{#if post.syncState === "pending-deploy"}
-								<span class="sync-chip" data-sync="pending">
-									{i18n(I18nKey.postSyncPendingDeploy)}
+						{#if !hiddenCols.status}
+							<div class="col col-status" role="cell" data-label={i18n(I18nKey.postColStatus)}>
+								{#if post.syncState === "pending-deploy"}
+									<span class="sync-chip" data-sync="pending">
+										{i18n(I18nKey.postSyncPendingDeploy)}
+									</span>
+								{:else if post.syncState === "not-on-github"}
+									<span class="sync-chip" data-sync="local">
+										{i18n(I18nKey.postSyncNotOnGithub)}
+									</span>
+								{/if}
+								<span class="status-chip" data-draft={post.draft}>
+									{post.draft ? i18n(I18nKey.postDraft) : i18n(I18nKey.postPublished)}
 								</span>
-							{:else if post.syncState === "not-on-github"}
-								<span class="sync-chip" data-sync="local">
-									{i18n(I18nKey.postSyncNotOnGithub)}
-								</span>
-							{/if}
-							<span class="status-chip" data-draft={post.draft}>
-								{post.draft ? i18n(I18nKey.postDraft) : i18n(I18nKey.postPublished)}
-							</span>
-						</div>
+							</div>
+						{/if}
 
 						<!-- 操作（图标按钮） -->
 						<div class="col col-actions" role="cell" data-label={i18n(I18nKey.postColActions)}>
@@ -1080,7 +1203,7 @@ function actionLabel(action: string, title: string): string {
 	   背景用 --card-bg 实底，吸顶时遮住下方滚动内容。 */
 	.header-row {
 		display: grid;
-		grid-template-columns: 2.9fr 0.9fr 0.7fr 1.1fr 0.9fr 1.2fr;
+		grid-template-columns: var(--post-grid-cols, 2.9fr 0.9fr 0.7fr 1.1fr 0.9fr 1.2fr);
 		align-items: center;
 		height: 44px;
 		/* 左缘与列表行内容同轴（list-item 左右 1rem），
@@ -1127,7 +1250,7 @@ function actionLabel(action: string, title: string): string {
 	   悬停高亮保留，分隔线不随行变色是正常现象（参考项目同样如此）。 */
 	.list-item {
 		display: grid;
-		grid-template-columns: 2.9fr 0.9fr 0.7fr 1.1fr 0.9fr 1.2fr;
+		grid-template-columns: var(--post-grid-cols, 2.9fr 0.9fr 0.7fr 1.1fr 0.9fr 1.2fr);
 		align-items: center;
 		padding: 0.8125rem 1rem;
 		min-height: 76px;
@@ -1292,6 +1415,53 @@ function actionLabel(action: string, title: string): string {
 
 	/* 同步状态徽章：比内容状态小一档，避免两枚徽章抢同等的注意力。
 	   info 色表示「已提交、等构建」，warning 色表示「GitHub 上还没有」。 */
+	/* 列显示设置：触发器复用 .ui-select 观感，面板绝对定位浮在工具栏下方 */
+	.cols-wrap {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.cols-trigger {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: auto;
+		min-width: 2.25rem;
+		cursor: pointer;
+	}
+
+	.cols-panel {
+		position: absolute;
+		top: calc(100% + 0.375rem);
+		right: 0;
+		z-index: 20;
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		min-width: 10rem;
+		padding: 0.5rem;
+		border: 1px solid var(--line-divider);
+		border-radius: 0.625rem;
+		background: var(--card-bg);
+		box-shadow: var(--shadow-md, 0 8px 24px rgb(0 0 0 / 0.18));
+	}
+
+	.cols-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.3rem 0.375rem;
+		border-radius: 0.375rem;
+		font-size: 0.8125rem;
+		color: var(--deep-text);
+		cursor: pointer;
+	}
+
+	.cols-item:hover {
+		background: var(--btn-plain-bg-hover);
+	}
+
 	/* 文件类型列：等宽字体 + 低饱和底，避免和「状态」列的两个徽章抢视觉权重 */
 	.filetype-chip {
 		display: inline-flex;

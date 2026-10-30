@@ -578,6 +578,7 @@ export const ru: Translation = {
 	[Key.postColTitle]: "Заголовок",
 	[Key.postColCategory]: "Категория",
 	[Key.postColFileType]: "Тип файла",
+	[Key.postColSettings]: "Столбцы",
 	[Key.postColDate]: "Дата публикации",
 	[Key.postColStatus]: "Статус",
 	[Key.postColActions]: "Действия",

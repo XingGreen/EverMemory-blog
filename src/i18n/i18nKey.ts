@@ -564,6 +564,8 @@ enum I18nKey {
 	postColCategory = "postColCategory",
 	/** 文章列表「文件类型」列（.md / .mdx） */
 	postColFileType = "postColFileType",
+	/** 文章列表内建的「列显示」设置（不进设置页） */
+	postColSettings = "postColSettings",
 	postColDate = "postColDate",
 	postColStatus = "postColStatus",
 	postColActions = "postColActions",

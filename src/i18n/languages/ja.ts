@@ -575,6 +575,7 @@ export const ja: Translation = {
 	[Key.postColTitle]: "タイトル",
 	[Key.postColCategory]: "カテゴリ",
 	[Key.postColFileType]: "ファイル形式",
+	[Key.postColSettings]: "表示項目",
 	[Key.postColDate]: "公開日",
 	[Key.postColStatus]: "ステータス",
 	[Key.postColActions]: "操作",

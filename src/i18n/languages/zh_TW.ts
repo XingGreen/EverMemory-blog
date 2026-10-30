@@ -565,6 +565,7 @@ export const zh_TW: Translation = {
 	[Key.postColTitle]: "標題",
 	[Key.postColCategory]: "分類",
 	[Key.postColFileType]: "檔案類型",
+	[Key.postColSettings]: "列显示",
 	[Key.postColDate]: "發布日期",
 	[Key.postColStatus]: "狀態",
 	[Key.postColActions]: "操作",
