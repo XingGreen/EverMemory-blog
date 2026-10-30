@@ -42,8 +42,7 @@ type ViewMode = "list" | "edit" | "create";
 type Page =
 	| "dashboard"
 	| "posts"
-	| "categories"
-	| "tags"
+	| "categories-and-tags"
 	| "settings"
 	| "env"
 	| "404";
@@ -66,8 +65,7 @@ type Route =
 	| { page: "posts" }
 	| { page: "create" }
 	| { page: "edit"; slug: string }
-	| { page: "categories" }
-	| { page: "tags" }
+	| { page: "categories-and-tags" }
 	| { page: "settings"; section?: string }
 	| { page: "env" }
 	/* 无效路径：不在后台内渲染任何页面，直接交给项目原有的 /404 */
@@ -234,11 +232,9 @@ const activePage = $derived<Page>(
 				? "settings"
 				: route.page === "env"
 					? "env"
-					: route.page === "categories"
-						? "categories"
-						: route.page === "tags"
-							? "tags"
-							: "posts",
+					: route.page === "categories-and-tags"
+						? "categories-and-tags"
+						: "posts",
 );
 
 const viewMode = $derived<ViewMode>(
@@ -344,10 +340,16 @@ function parseRoute(pathname: string): Route {
 			if (segments[1] === "edit" && segments[2])
 				return { page: "edit", slug: segments[2] };
 			return segments.length === 1 ? { page: "posts" } : { page: "404" };
+		case "categories-and-tags":
+			return segments.length === 1
+				? { page: "categories-and-tags" }
+				: { page: "404" };
 		case "categories":
-			return segments.length === 1 ? { page: "categories" } : { page: "404" };
 		case "tags":
-			return segments.length === 1 ? { page: "tags" } : { page: "404" };
+			// 兼容旧链接：分类与标签已合并到一个工作台，旧入口一律渲染合并页
+			return segments.length === 1
+				? { page: "categories-and-tags" }
+				: { page: "404" };
 		case "settings": {
 			// /admin/settings/ 无子段时落到第一个配置项（概览层已移除）；
 			// 显式给了未知 section 视为无效地址
@@ -465,8 +467,8 @@ const headerTitle = $derived.by(() => {
 			: i18n(I18nKey.adminSettings);
 	}
 	if (activePage === "env") return i18n(I18nKey.adminEnvVars);
-	if (activePage === "categories") return i18n(I18nKey.adminCategories);
-	if (activePage === "tags") return i18n(I18nKey.adminTags);
+	if (activePage === "categories-and-tags")
+		return `${i18n(I18nKey.adminCategories)} & ${i18n(I18nKey.adminTags)}`;
 	if (viewMode === "edit" && editingPost) return i18n(I18nKey.adminEditPost);
 	if (viewMode === "create") return i18n(I18nKey.adminNewPost);
 	return i18n(I18nKey.adminPosts);
@@ -868,12 +870,8 @@ function goEnv() {
 	navigate(`${DASHBOARD_PATH}env/`);
 }
 
-function goCategories() {
-	navigate(`${DASHBOARD_PATH}categories/`);
-}
-
-function goTags() {
-	navigate(`${DASHBOARD_PATH}tags/`);
+function goCategoriesAndTags() {
+	navigate(`${DASHBOARD_PATH}categories-and-tags/`);
 }
 
 function goPostList() {
@@ -1437,31 +1435,18 @@ function formatDate(dateStr: string | null): string {
 				</button>
 
 				<!-- 分类管理 -->
+				<!-- 分类与标签：合并为一个工作台，分类/标签在面板左栏顶部切换 -->
 				<button
 					class="nav-item"
-					class:active={activePage === "categories"}
-					onclick={goCategories}
+					class:active={activePage === "categories-and-tags"}
+					onclick={goCategoriesAndTags}
 				>
-					{#if activePage === "categories"}
+					{#if activePage === "categories-and-tags"}
 						<Icon icon="material-symbols:folder-rounded" />
 					{:else}
 						<Icon icon="material-symbols:folder-outline" />
 					{/if}
-					<span>{i18n(I18nKey.adminCategories)}</span>
-				</button>
-
-				<!-- 标签管理 -->
-				<button
-					class="nav-item"
-					class:active={activePage === "tags"}
-					onclick={goTags}
-				>
-					{#if activePage === "tags"}
-						<Icon icon="material-symbols:label" />
-					{:else}
-						<Icon icon="material-symbols:label-outline" />
-					{/if}
-					<span>{i18n(I18nKey.adminTags)}</span>
+					<span>{i18n(I18nKey.adminCategories)} & {i18n(I18nKey.adminTags)}</span>
 				</button>
 
 				<!-- 网站配置：单一入口，不再展开子菜单——
@@ -1559,8 +1544,7 @@ function formatDate(dateStr: string | null): string {
 			class:content-wide={activePage === "posts" && viewMode !== "list"}
 			class:content-fixed={activePage === "settings" ||
 				activePage === "env" ||
-				activePage === "categories" ||
-				activePage === "tags"}
+				activePage === "categories-and-tags"}
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
 		>
 				{#if activePage === "dashboard"}
@@ -1694,23 +1678,13 @@ function formatDate(dateStr: string | null): string {
 					{/if}
 				{:else if activePage === "404"}
 					{@render adminNotFound()}
-				{:else if activePage === "categories"}
+				{:else if activePage === "categories-and-tags"}
 					<AdminPage
-						title={i18n(I18nKey.adminCategories)}
+						title={`${i18n(I18nKey.adminCategories)} & ${i18n(I18nKey.adminTags)}`}
 						intro={i18n(I18nKey.adminCategoriesIntro)}
 					>
 						<TaxonomyManager
 							kind="category"
-							onNotify={(msg, type) => showToast(msg, type)}
-						/>
-					</AdminPage>
-				{:else if activePage === "tags"}
-					<AdminPage
-						title={i18n(I18nKey.adminTags)}
-						intro={i18n(I18nKey.adminTagsIntro)}
-					>
-						<TaxonomyManager
-							kind="tag"
 							onNotify={(msg, type) => showToast(msg, type)}
 						/>
 					</AdminPage>
@@ -1922,9 +1896,13 @@ function formatDate(dateStr: string | null): string {
 	   .admin-content 带 zoom，其子元素的高度会被放大，
 	   所以这里预先除以 zoom，让卡片渲染后正好等于 (100vh - 3rem)。 */
 	.admin-layout {
-		--admin-viewport-h: calc(
-			(100vh - 3rem) / clamp(1, 0.07vw / 1px, 1.5)
-		);
+		/* 基准缩放 1：与参考项目保持一致。参考的 --taxonomy-unit 是
+		   clamp(1px, 0.07vw, 1.5px)，在 1080 视口下正好取到 1px，且全程没有额外 zoom；
+		   之前这里压到 0.85 会让圆角、行高、间距一并缩掉 15%，视觉上明显更"紧"。
+		   只在超宽视口分档放大，且每档的放大幅度都小于视口增幅，保证缩放单调：
+		   1500→1900 视口 +27% 对 zoom +9.5%；1900→2400 +26% 对 +13%。 */
+		--admin-zoom: 1;
+		--admin-viewport-h: calc((100vh - 3rem) / var(--admin-zoom));
 		display: flex;
 		align-items: stretch;
 		gap: 1.25rem;
@@ -1944,6 +1922,9 @@ function formatDate(dateStr: string | null): string {
 		position: sticky;
 		top: 1.5rem;
 		align-self: flex-start;
+		/* 展开态宽度分档：≥1280 用 20rem(320px)，对齐参考项目 .admin-sidebar 的
+		   max-width: 20rem；更窄的视口保持 16rem(256px)——实测 1080 视口下 320px
+		   会把文章列表的「状态/操作」列挤到换行。折叠态 5.75rem(92px) 两边一致。 */
 		width: 16rem;
 		flex-shrink: 0;
 		height: calc(100vh - 3rem);
@@ -2110,14 +2091,19 @@ function formatDate(dateStr: string | null): string {
 		width: 100%;
 		display: flex;
 		align-items: center;
-		gap: 0.625rem;
+		/* 22px：参考项目用 --sidebar-icon-column: 4.25rem(68px) 的网格列，
+		   24px 图标居中后右缘到文字正好 22px。之前 10px 明显偏挤。 */
+		gap: 1.375rem;
 		/* 左内边距固定为页面坐标里的图标列中心：12(侧栏) + 22 + 12 = 46px，
 		   与折叠态 92px 的中线一致，因此宽度动画时图标不会横向移动。
 		   上下 0.6875rem：图标 24px + 22px = 46px 行高，与参考项目 2.875rem 对齐 */
 		padding: 0.6875rem 0.75rem 0.6875rem 1.375rem;
 		border: none;
 		background: transparent;
-		color: var(--deep-text);
+		/* 78% 不透明度的主文字色，对齐参考项目 .admin-sidebar-item 的 --fuwari-fg-75。
+		   之前直接用 --deep-text（暗色下 oklch 0.95 的近白），深底上对比过强、发刺。
+		   用 color-mix 而非 rgba 字面量，明暗两种模式都跟随 --deep-text 自动换算。 */
+		color: color-mix(in srgb, var(--deep-text) 78%, transparent);
 		/* 保持 14px（0.875rem）不放大：一级项还要容纳展开箭头，
 		   240px 侧栏内文字可用仅 160px，而俄文「Управление статьями」
 		   需 150px、英文「Post Management」需 122px，提到 15px 会溢出换行 */
@@ -2400,7 +2386,7 @@ function formatDate(dateStr: string | null): string {
 	.settings-tabs {
 		display: flex;
 		gap: 1.75rem;
-		padding: 0 1.5rem;
+		padding: 0 1.75rem;
 		border-bottom: 1px solid var(--line-divider);
 		overflow-x: auto;
 		flex-shrink: 0;
@@ -2441,12 +2427,13 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	/* ── 工作区标题区：对齐参考 settings-heading ──
-	   28px/650 标题 + fg-50 灰字简介；位于容器顶部，左右 24px。 */
+	   28px/650 标题 + fg-50 灰字简介；位于容器顶部，左右 28px
+	   （与 AdminPage 的 .admin-page-heading 同步，对齐参考 workspace 的 28px 内边距）。 */
 	.settings-heading {
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
-		padding: 1.75rem 1.5rem 1.25rem;
+		padding: 1.75rem 1.75rem 1.25rem;
 		flex-shrink: 0;
 	}
 
@@ -2813,10 +2800,38 @@ function formatDate(dateStr: string | null): string {
 		width: 100%;
 		display: flex;
 		flex-direction: column;
-		/* 与参考项目 --dashboard-unit / --settings-unit 同源的视口自适应：
-		   0.07vw 在 ~1428px 视口为 1px，随视口线性放大，封顶 1.5
-		   （50% 缩放下视口约 3840px，正好取到 1.5，内容视觉密度与参考一致） */
-		zoom: clamp(1, 0.07vw / 1px, 1.5);
+		/* 与参考项目 --dashboard-unit / --settings-unit 同源的视口自适应，
+		   但改为固定分档（见 .admin-layout 的 --admin-zoom）：
+		   0.07vw 那种连续计算会与浏览器缩放反向耦合，缩放越小页面反而越大。
+		   0.85 解决 1024~1428 窗口里固定 px 显得过大的问题；≥1800 恢复 1，
+		   ≥2400 放大到 1.15，让超宽屏不至于过稀。 */
+		zoom: var(--admin-zoom);
+	}
+
+	/* 分档与 .admin-layout 上的变量定义配套；放这里是因为 zoom 只作用于本元素 */
+	/* 展开态宽度分档：与 .admin-sidebar 的 16rem 配套，≥1280 时对齐参考项目的 20rem */
+	@media (min-width: 1280px) {
+		.admin-sidebar {
+			width: 20rem;
+		}
+	}
+
+	@media (min-width: 1500px) {
+		.admin-layout {
+			--admin-zoom: 1.05;
+		}
+	}
+
+	@media (min-width: 1900px) {
+		.admin-layout {
+			--admin-zoom: 1.15;
+		}
+	}
+
+	@media (min-width: 2400px) {
+		.admin-layout {
+			--admin-zoom: 1.3;
+		}
 	}
 
 	/* 设置详情页：页面本身不滚动，滚动交给内部 .settings-body */

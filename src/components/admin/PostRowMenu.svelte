@@ -52,9 +52,10 @@ const menuStyle = $derived(
 );
 
 /* 触发器所在 zoom 容器相对视口的缩放比。
-   后台 .admin-content 带 zoom: clamp(1, 0.07vw/1px, 1.5)，其子树的
+   后台 .admin-content 带 zoom: var(--admin-zoom)（0.85 / 1 / 1.15 分档），其子树的
    getBoundingClientRect() 返回的是放大后的视觉坐标，而 offsetWidth 仍是布局
-   坐标——两者之比就是 zoom。取容器而非按钮自身：34px 小尺寸取整误差会放大。 */
+   坐标——两者之比就是 zoom。取容器而非按钮自身：34px 小尺寸取整误差会放大。
+   这里反算实际值而不是写死 0.85，分档调整或未来改档位时无需同步修改。 */
 function hostZoom(el: HTMLElement): number {
 	const host = el.closest<HTMLElement>(".admin-content");
 	if (!host) return 1;

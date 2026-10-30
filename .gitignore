@@ -74,3 +74,9 @@ docs/flows/
 docs/metadata/
 docs/index.md
 docs/todo/单管理员博客：初始化、会话与凭据安全设计.md
+
+.chrome*/
+
+.tmp*
+
+.examples/

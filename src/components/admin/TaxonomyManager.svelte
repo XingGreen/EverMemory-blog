@@ -5,18 +5,28 @@ import { i18n } from "@/i18n/translation";
 import type { TaxonomyKind } from "@/utils/taxonomy";
 
 /**
- * 分类 / 标签管理面板（两个路由共用，靠 kind 区分）
+ * 分类 / 标签管理面板（单一工作台，左栏顶部切换 kind）
  *
  * 布局与交互严格对照参考项目 taxonomy-workspace / taxonomy-explorer /
  * taxonomy-posts 的 CSS 数值，技术栈按本项目重写。
+ *
+ * kind 仍由 props 传入作为初始值，但切换后由内部状态决定——参考项目的
+ * taxonomy-explorer 也是用 taxonomy-mode-tabs 在同一面板里切，而不是两个页面。
  */
 let {
-	kind,
+	kind: initialKind,
 	onNotify,
 }: {
 	kind: TaxonomyKind;
 	onNotify: (message: string, type: "success" | "error") => void;
 } = $props();
+
+let kind = $state<TaxonomyKind>(initialKind);
+
+/** mode-tabs 的无障碍标签：复用现有文案拼接，不为此新增 i18n key */
+const modeTabsLabel = $derived(
+	`${i18n(I18nKey.adminCategories)} & ${i18n(I18nKey.adminTags)}`,
+);
 
 const NAME_MAX = 40;
 const PAGE_SIZE = 12;
@@ -223,6 +233,24 @@ function selectEntry(name: string) {
 	syncUrl(false);
 }
 
+/**
+ * 切换分类 / 标签。
+ *
+ * 两边的数据其实都已经在内存里：`/api/admin/taxonomy/` 一次返回 category + tag
+ * 两类 entries，`/api/admin/posts/` 一次返回全部文章（列表由 scopedPosts 按选中项
+ * 过滤）。所以切换不需要任何网络请求，只要重选该维度的第一项并清掉上一维度的
+ * 搜索/分页状态——与参考项目点 mode-tab 的行为一致。
+ */
+function switchKind(next: TaxonomyKind) {
+	if (next === kind) return;
+	kind = next;
+	navSearch = "";
+	postSearch = "";
+	page = 1;
+	selectedName = navEntries[0]?.name ?? "";
+	syncUrl();
+}
+
 function changeScope(next: Scope) {
 	scope = next;
 	page = 1;
@@ -369,6 +397,23 @@ $effect(() => {
 
 <div class="taxonomy-browser">
 	<aside class="taxonomy-explorer">
+		<div class="taxonomy-mode-tabs" role="group" aria-label={modeTabsLabel}>
+			<button
+				type="button"
+				aria-pressed={kind === "category"}
+				onclick={() => switchKind("category")}
+			>
+				{i18n(I18nKey.adminCategories)}
+			</button>
+			<button
+				type="button"
+				aria-pressed={kind === "tag"}
+				onclick={() => switchKind("tag")}
+			>
+				{i18n(I18nKey.adminTags)}
+			</button>
+		</div>
+
 		<div class="taxonomy-nav-search taxonomy-search">
 			<Icon icon="material-symbols:search" class="search-icon" />
 			<input
@@ -728,6 +773,14 @@ $effect(() => {
 				{/if}
 				<div class="modal-actions">
 					<button
+						class="ui-btn ui-btn-soft"
+						type="button"
+						onclick={closeDialog}
+						disabled={dialogBusy}
+					>
+						{i18n(I18nKey.taxonomyCancel)}
+					</button>
+					<button
 						class="ui-btn ui-btn-primary danger"
 						type="button"
 						onclick={submitDialog}
@@ -736,14 +789,6 @@ $effect(() => {
 						{dialogBusy
 							? i18n(I18nKey.taxonomySaving)
 							: i18n(I18nKey.taxonomyDelete)}
-					</button>
-					<button
-						class="ui-btn ui-btn-soft"
-						type="button"
-						onclick={closeDialog}
-						disabled={dialogBusy}
-					>
-						{i18n(I18nKey.taxonomyCancel)}
 					</button>
 				</div>
 			{:else}
@@ -779,6 +824,14 @@ $effect(() => {
 							</button>
 						{/if}
 						<button
+							class="ui-btn ui-btn-soft"
+							type="button"
+							onclick={closeDialog}
+							disabled={dialogBusy}
+						>
+							{i18n(I18nKey.taxonomyCancel)}
+						</button>
+						<button
 							class="ui-btn ui-btn-primary"
 							type="submit"
 							disabled={dialogBusy}
@@ -786,14 +839,6 @@ $effect(() => {
 							{dialogBusy
 								? i18n(I18nKey.taxonomySaving)
 								: i18n(I18nKey.taxonomyConfirm)}
-						</button>
-						<button
-							class="ui-btn ui-btn-soft"
-							type="button"
-							onclick={closeDialog}
-							disabled={dialogBusy}
-						>
-							{i18n(I18nKey.taxonomyCancel)}
 						</button>
 					</div>
 				</form>
@@ -803,9 +848,10 @@ $effect(() => {
 {/if}
 
 <style>
-	/* ── 尺寸单位：对齐参考项目 --taxonomy-unit（随视口缩放）── */
+	/* 尺寸单位固定 1px：外层 .admin-content 已经用 --admin-zoom 统一缩放，
+	   这里若再用 0.07vw 会因为浏览器缩放反向变化而与外层叠加成双重增益。 */
 	.taxonomy-browser {
-		--tx-unit: clamp(1px, 0.07vw, 1.5px);
+		--tx-unit: 1px;
 		--tx-rule: color-mix(in srgb, var(--content-meta) 20%, transparent);
 
 		display: grid;
@@ -823,6 +869,38 @@ $effect(() => {
 		min-height: 0;
 		border-right: 1px solid var(--tx-rule);
 		padding-right: calc(20 * var(--tx-unit));
+	}
+
+	/* 分类 / 标签切换：数值对齐参考项目 .taxonomy-mode-tabs */
+	.taxonomy-mode-tabs {
+		display: flex;
+		gap: 3px;
+		flex-shrink: 0;
+		padding: 4px;
+		border-radius: 11px;
+		background: color-mix(in srgb, var(--btn-regular-bg) 30%, var(--card-bg));
+		margin-bottom: calc(18 * var(--tx-unit));
+	}
+
+	.taxonomy-mode-tabs button {
+		flex: 1;
+		/* 32px / 13px：截图像素比对得出参考项目的 tab 文字墨迹 21px@2x，
+		   而 36px+14px 实测 31px，整体偏高一档。 */
+		min-height: calc(32 * var(--tx-unit));
+		border: none;
+		border-radius: 8px;
+		background: transparent;
+		color: var(--content-meta);
+		font-family: inherit;
+		font-size: calc(13 * var(--tx-unit));
+		cursor: pointer;
+		transition: background 0.15s ease, color 0.15s ease;
+	}
+
+	.taxonomy-mode-tabs button[aria-pressed="true"] {
+		background: var(--btn-regular-bg);
+		color: var(--primary);
+		font-weight: 500;
 	}
 
 	.taxonomy-nav-scroll {
@@ -1325,8 +1403,10 @@ $effect(() => {
 
 	.modal-card {
 		width: 100%;
-		max-width: 420px;
-		padding: 1.5rem;
+		/* 360px：之前 420px 偏大，弹窗在 1080 视口下几乎顶满内容区宽度；
+		   参考 .fuwari-modal 是 min(28rem, calc(100% - 32px))，取更紧凑的一档。 */
+		max-width: 360px;
+		padding: 1.25rem;
 		background: var(--float-panel-bg);
 		box-shadow: var(--shadow-card);
 		border-radius: var(--radius-large);
@@ -1419,7 +1499,11 @@ $effect(() => {
 
 	.modal-delete {
 		margin-right: auto;
-		padding: 0.5rem 0;
+		/* 之前 padding 只有上下，左右为 0 → 实测按钮宽仅 26px（与文字等宽），
+		   文字紧贴边缘看着像溢出。补左右内边距，再用负外边距抵消，
+		   保证文字左缘仍与弹窗内容对齐。 */
+		padding: 0.5rem 0.75rem;
+		margin-left: -0.75rem;
 		border: none;
 		background: transparent;
 		color: var(--destructive);
@@ -1432,7 +1516,6 @@ $effect(() => {
 
 	.modal-delete:hover:not(:disabled) {
 		opacity: 1;
-		text-decoration: underline;
 	}
 
 	.modal-delete:disabled {

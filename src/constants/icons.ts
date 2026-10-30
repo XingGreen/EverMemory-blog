@@ -257,8 +257,6 @@ const iconSvgData: Record<string, string> = {
 		'<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M11.625 14.913q-.175-.063-.325-.213l-4.6-4.6q-.275-.275-.275-.7t.275-.7t.7-.275t.7.275l3.9 3.9l3.9-3.9q.275-.275.7-.275t.7.275t.275.7t-.275.7l-4.6 4.6q-.15.15-.325.213t-.375.062t-.375-.062"/></svg>',
 	"material-symbols:keyboard-arrow-up-rounded":
 		'<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="m12 10.8l-3.9 3.9q-.275.275-.7.275t-.7-.275t-.275-.7t.275-.7l4.6-4.6q.3-.3.7-.3t.7.3l4.6 4.6q.275.275.275.7t-.275.7t-.7.275t-.7-.275z"/></svg>',
-	"material-symbols:label":
-		'<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4h11q.475 0 .9.213t.7.587L22 12l-5.4 7.2q-.275.375-.7.588T15 20z"/></svg>',
 	"material-symbols:label-off-outline-rounded":
 		'<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M18.925 16.075L17.5 14.65l2-2.65L15 6H8.85l-2-2H15q.475 0 .9.213t.7.587l4.5 6q.4.525.4 1.2t-.4 1.2zM4 18h11.2L4 6.8zm0 2q-.825 0-1.412-.587T2 18V6q0-.275.063-.513t.187-.437L1.4 4.2q-.275-.275-.275-.7t.275-.7t.7-.275t.7.275l18.4 18.4q.275.275.288.688t-.288.712q-.275.275-.7.275t-.7-.275l-3.275-3.275q-.25.325-.6.5T15.15 20zm10.175-9.675"/></svg>',
 	"material-symbols:label-outline":

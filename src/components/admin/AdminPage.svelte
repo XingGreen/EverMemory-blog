@@ -73,13 +73,18 @@ let {
 
 	/* 与 AdminDashboard 的 .settings-heading 取同一组数值，
 	     两处改动需同步。
+	     底部留白 26px + 24px 外边距 + 1px 分隔线，对齐参考项目 .taxonomy-heading：
+	     页头与内容之间需要一条结构线，之前完全缺失，两块内容糊在一起。
 	     横向布局：左侧标题/简介，右侧操作按钮组（有 actions 时）。 */
 	.admin-page-heading {
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: 1rem;
-		padding: 1.75rem 1.5rem 1.25rem;
+		padding: 1.75rem 1.75rem 1.625rem;
+		margin-bottom: 1.5rem;
+		border-bottom: 1px solid
+			color-mix(in srgb, var(--content-meta) 20%, transparent);
 		flex-shrink: 0;
 	}
 
@@ -97,6 +102,9 @@ let {
 		flex-shrink: 0;
 	}
 
+	/* 28px：与参考项目 .taxonomy-heading h1 的 calc(28 * unit) 一致。
+	   上一轮据截图墨迹高度误判成 24px（那张参考截图的 DPR 不是 2，
+	   换算基准错了），此处恢复 1.75rem。 */
 	.admin-page-heading h1 {
 		margin: 0;
 		font-size: 1.75rem;
@@ -123,7 +131,7 @@ let {
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
-		padding: 0 1.5rem 1.5rem;
+		padding: 0 1.75rem 1.75rem;
 	}
 
 	.admin-page-body > :global(*) {

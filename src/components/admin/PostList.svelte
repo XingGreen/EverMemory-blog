@@ -767,10 +767,11 @@ function actionLabel(action: string, title: string): string {
 		   故后台外观只在此 scoped 覆盖,不污染基类。 */
 		background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
 		/* 放弃失焦/聚焦的宽度伸缩,改为固定宽度:
-		   对齐参考项目 post-list-search 的默认宽度
-		   (390 × admin-unit,即约 27.3vw、上限 585px) */
+		   对齐参考项目 post-list-search 的默认宽度 390px。
+		   不再乘 clamp(1px, 0.07vw, 1.5px)——那会随浏览器缩放反向变化，
+		   与外层 --admin-zoom 叠加后导致缩放越小搜索框反而越大。 */
 		flex: 0 1 auto;
-		width: min(calc(390 * clamp(1px, 0.07vw, 1.5px)), 100%);
+		width: min(390px, 100%);
 	}
 
 	.search-bar:hover {

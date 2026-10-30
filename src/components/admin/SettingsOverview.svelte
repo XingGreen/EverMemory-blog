@@ -329,7 +329,7 @@ function handleKeydown(event: KeyboardEvent, key: string) {
 		display: flex;
 		align-items: center;
 		gap: 0.375rem;
-		padding: 0 1.5rem 1.25rem;
+		padding: 0 1.75rem 1.25rem;
 		background: transparent;
 		border-top: none;
 		color: color-mix(in oklab, var(--content-meta) 55%, transparent);
