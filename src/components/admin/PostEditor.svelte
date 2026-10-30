@@ -819,6 +819,24 @@ function currentDraft(): DraftFields {
 	};
 }
 
+/**
+ * 把草稿落到本地 localStorage，返回是否写入成功。
+ * 云端同步失败时会直接调用它，确保「失败」不等于「数据丢了」。
+ * 注意：写入本身不改状态，由调用方决定展示 local-only 还是 failed。
+ */
+function persistLocalDraft(draft: DraftFields): boolean {
+	try {
+		localStorage.setItem(
+			DRAFT_KEY,
+			JSON.stringify({ ...draft, savedAt: Date.now() }),
+		);
+		return true;
+	} catch {
+		// 隐私模式 / 配额不足：写不进去，由调用方按「未保存」处理
+		return false;
+	}
+}
+
 $effect(() => {
 	const draft: DraftFields = currentDraft();
 	// 草稿自动保存对新建与编辑都生效：编辑页同样会因误关标签页丢改动。
@@ -826,18 +844,11 @@ $effect(() => {
 	if (!hasDraftContent()) return;
 	if (draftTimer) clearTimeout(draftTimer);
 	draftTimer = setTimeout(() => {
-		try {
-			localStorage.setItem(
-				DRAFT_KEY,
-				JSON.stringify({ ...draft, savedAt: Date.now() }),
-			);
-			/* 本地已落地。云端若还没同步成功（或正在同步），状态如实降为「仅本地」，
-			   绝不沿用上一次的成功结果。 */
-			if (cloudSync !== "synced" && cloudSync !== "syncing") {
-				cloudSync = "local-only";
-			}
-		} catch {
-			// 隐私模式等场景下 localStorage 不可用，忽略即可
+		const saved = persistLocalDraft(draft);
+		/* 本地已落地：云端若还没同步成功（或正在同步），状态如实降为「仅本地」，
+		   绝不沿用上一次的成功结果。写不进去则保持原状，让云端状态单独表达。 */
+		if (saved && cloudSync !== "synced" && cloudSync !== "syncing") {
+			cloudSync = "local-only";
 		}
 	}, 400);
 	if (cloudTimer) clearTimeout(cloudTimer);
@@ -860,8 +871,10 @@ async function saveCloudDraft(draft: DraftFields) {
 		if (JSON.stringify(currentDraft()) === lastCloudKey) return;
 	}
 
-	/* 离线：不发请求，如实判为失败。恢复在线后由 online 事件自动重试。 */
+	/* 离线：不发请求。先确保内容已落到本地，再标失败——
+	   文案会明确告知「已保存至本地」，用户不必担心数据丢失。 */
 	if (!isOnline) {
+		persistLocalDraft(currentDraft());
 		cloudSync = "failed";
 		return;
 	}
@@ -903,10 +916,16 @@ async function saveCloudDraft(draft: DraftFields) {
 				}, 1500);
 			}
 		} else {
+			/* 服务端返回非成功：同样先落本地再标失败 */
+			persistLocalDraft(currentDraft());
 			cloudSync = "failed";
 		}
 	} catch {
-		if (seq === cloudSeq) cloudSync = "failed";
+		if (seq === cloudSeq) {
+			/* 网络异常：先落本地，保证「同步失败」不等于「改动丢了」 */
+			persistLocalDraft(currentDraft());
+			cloudSync = "failed";
+		}
 	} finally {
 		cloudInFlight = null;
 		settle();
@@ -1236,6 +1255,11 @@ $effect(() => {
 					class:error={cloudSync === "failed"}
 					class:syncing={cloudSync === "syncing"}
 					class:local={cloudSync === "local-only"}
+					title={cloudSync === "failed"
+						? isOnline
+							? i18n(I18nKey.cloudDraftFailed)
+							: i18n(I18nKey.cloudDraftOffline)
+						: undefined}
 				>
 					{#if cloudSync === "syncing"}
 						<span class="cloud-spinner"></span>
@@ -1598,10 +1622,14 @@ $effect(() => {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
+		max-width: min(26rem, 52vw);
 		padding: 0.2rem 0.6rem;
 		border-radius: 999px;
 		font-size: 0.75rem;
 		font-weight: 500;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		color: var(--success);
 		background: color-mix(in srgb, var(--success) 12%, transparent);
 		border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
