@@ -70,6 +70,8 @@ const editorState = $state({
 	previewEl: undefined as HTMLElement | undefined,
 	canUndo: false,
 	canRedo: false,
+	/* 行号默认关闭：多数写作场景不需要，开启后正文左侧多出 3rem 的 gutter */
+	showLineNumbers: readShowLineNumbers(),
 	slugVerified: false,
 } satisfies PostEditorFields & PostEditorUiState);
 
@@ -185,6 +187,32 @@ $effect(() => {
 let isLoadingContent = $state(false);
 // 标记用户是否手动编辑过 slug，防止自动生成覆盖用户输入
 let slugTouched = $state(false);
+
+/* ── 行号显示（配置项）──
+   键与草稿分开存：行号是编辑器偏好，同一篇文章的新建/编辑应共用。 */
+const LINE_NUMBERS_KEY = "admin-editor-line-numbers";
+
+function readShowLineNumbers(): boolean {
+	try {
+		return localStorage.getItem(LINE_NUMBERS_KEY) === "1";
+	} catch {
+		// SSR 或隐私模式：默认关闭
+		return false;
+	}
+}
+
+function toggleLineNumbers() {
+	editorState.showLineNumbers = !editorState.showLineNumbers;
+	try {
+		localStorage.setItem(
+			LINE_NUMBERS_KEY,
+			editorState.showLineNumbers ? "1" : "0",
+		);
+	} catch {
+		// 持久化失败不影响本次会话
+	}
+}
+
 // 草稿防丢失：本地持久备份（localStorage，跨会话/关浏览器仍保留）+ 刷新/关闭拦截（beforeunload）
 // 编辑页也启用，键按 slug 区分——否则编辑 A 文章的草稿会覆盖 B 文章的。
 const DRAFT_KEY = $derived(
@@ -491,6 +519,7 @@ setContext(POST_EDITOR_CONTEXT, {
 	state: editorState,
 	actions: {
 		toggleGroup,
+		toggleLineNumbers,
 		handleSlugInput,
 		generateSlugFromTitle,
 		normalizeSlug,

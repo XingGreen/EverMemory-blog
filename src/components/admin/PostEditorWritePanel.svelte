@@ -10,6 +10,16 @@ const { state: editorState, actions } = getContext<{
 	actions: import("./postEditorContext").PostEditorContextValue["actions"];
 }>(POST_EDITOR_CONTEXT);
 
+/* 行号列：textarea 的文本不是 DOM 节点，CSS 计数器数不了行，所以用一个与正文
+   同字体、同 line-height 的 gutter，靠 scrollTop 同步。行数按换行符统计。 */
+let gutterEl = $state<HTMLDivElement | undefined>();
+const lineNumbers = $derived(
+	Array.from(
+		{ length: Math.max(1, editorState.content.split("\n").length) },
+		(_, i) => i + 1,
+	),
+);
+
 /**
  * 把 Ctrl/Cmd+Z 接到编辑器自己的历史栈（原生 textarea 撤销与快照栈相互独立，
  * 不拦截会导致两种「撤销」交替、行为割裂）。Ctrl+Y 与 Ctrl+Shift+Z 作重做。
@@ -130,6 +140,17 @@ const TOOLS: {
 			</button>
 		{/each}
 		<div class="toolbar-end">
+			<!-- 行号开关：配置项，状态存 localStorage，跨文章复用 -->
+			<button
+				type="button"
+				class:is-on={editorState.showLineNumbers}
+				title={i18n(I18nKey.postLineNumbers)}
+				aria-label={i18n(I18nKey.postLineNumbers)}
+				aria-pressed={editorState.showLineNumbers}
+				onclick={() => actions.toggleLineNumbers()}
+			>
+				<Icon icon="material-symbols:format-list-numbered" class="text-sm" />
+			</button>
 			<button
 				type="button"
 				title={i18n(I18nKey.postMdUndo)}
@@ -152,14 +173,26 @@ const TOOLS: {
 	</div>
 
 	{#if editorState.activeTab === "editor"}
-		<textarea
-			bind:this={editorState.editorEl}
-			bind:value={editorState.content}
-			onscroll={actions.handleEditorScroll}
-			onkeydown={handleEditorKeydown}
-			placeholder={i18n(I18nKey.postContentPlaceholder)}
-			class="content-editor"
-		></textarea>
+		<div class="editor-field" class:with-lines={editorState.showLineNumbers}>
+			{#if editorState.showLineNumbers}
+				<div class="editor-gutter" bind:this={gutterEl} aria-hidden="true">
+					{#each lineNumbers as n (n)}
+						<span>{n}</span>
+					{/each}
+				</div>
+			{/if}
+			<textarea
+				bind:this={editorState.editorEl}
+				bind:value={editorState.content}
+				onscroll={(e) => {
+					actions.handleEditorScroll();
+					if (gutterEl) gutterEl.scrollTop = e.currentTarget.scrollTop;
+				}}
+				onkeydown={handleEditorKeydown}
+				placeholder={i18n(I18nKey.postContentPlaceholder)}
+				class="content-editor"
+			></textarea>
+		</div>
 	{:else}
 		<!-- biome-ignore lint/security/noDangerouslySetInnerHtml: 服务端渲染管线产出的可信 HTML -->
 		<div
@@ -347,5 +380,37 @@ const TOOLS: {
 		.content-preview {
 			height: 60vh;
 		}
+	}
+	/* ── 行号列 ──
+	   必须与 .content-editor 同字体、同 line-height(1.6)、同上下内边距，
+	   否则行号会逐行漂移；滚动由 textarea 的 onscroll 写 gutterEl.scrollTop 同步。 */
+	.editor-field {
+		position: relative;
+		display: flex;
+		flex: 1;
+		min-height: 0;
+	}
+
+	.editor-gutter {
+		flex: 0 0 auto;
+		width: 3rem;
+		overflow: hidden;
+		padding: 0.625rem 0.5rem 0.625rem 0;
+		text-align: right;
+		font-family: inherit;
+		font-size: 0.875rem;
+		line-height: 1.6;
+		color: color-mix(in srgb, var(--content-meta) 55%, transparent);
+		user-select: none;
+		pointer-events: none;
+	}
+
+	.editor-gutter span {
+		display: block;
+	}
+
+	/* 行号开启时工具栏按钮显示为主色 */
+	.toolbar-end button.is-on {
+		color: var(--primary);
 	}
 </style>

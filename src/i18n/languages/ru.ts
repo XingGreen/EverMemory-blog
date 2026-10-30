@@ -545,6 +545,7 @@ export const ru: Translation = {
 	[Key.postMdOl]: "Нумерованный список",
 	[Key.postMdDivider]: "Разделитель",
 	[Key.postMdUndo]: "Отменить",
+	[Key.postLineNumbers]: "Номера строк",
 	[Key.postMdRedo]: "Повторить",
 	[Key.postSlugGenerate]: "Автогенерация из заголовка",
 	[Key.postSlugRomanize]: "Романизировать",

@@ -530,6 +530,7 @@ export const zh_CN: Translation = {
 	[Key.postMdOl]: "有序列表",
 	[Key.postMdDivider]: "分割线",
 	[Key.postMdUndo]: "撤销",
+	[Key.postLineNumbers]: "显示行号",
 	[Key.postMdRedo]: "重做",
 	[Key.postSlugGenerate]: "根据标题自动生成",
 	[Key.postSlugRomanize]: "转拼音",

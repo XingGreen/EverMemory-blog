@@ -532,6 +532,7 @@ export const zh_TW: Translation = {
 	[Key.postMdOl]: "有序清單",
 	[Key.postMdDivider]: "分隔線",
 	[Key.postMdUndo]: "復原",
+	[Key.postLineNumbers]: "顯示行號",
 	[Key.postMdRedo]: "重做",
 	[Key.postSlugGenerate]: "根據標題自動生成",
 	[Key.postSlugRomanize]: "轉拼音",

@@ -528,6 +528,8 @@ enum I18nKey {
 	postMdOl = "postMdOl",
 	postMdDivider = "postMdDivider",
 	postMdUndo = "postMdUndo",
+	/** 正文编辑器行号开关（配置项，持久化在 localStorage） */
+	postLineNumbers = "postLineNumbers",
 	postMdRedo = "postMdRedo",
 	postSlugGenerate = "postSlugGenerate",
 	postSlugRomanize = "postSlugRomanize",

@@ -85,3 +85,19 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── 多行输入框统一约束 ──
+   禁止横向滚动（内容超宽时换行，而不是把框撑出横向滚动条），
+   并给一个上限高度，超出后纵向滚动。
+   正文编辑器 .content-editor 例外：它由 flex 父容器定高，这里只保证不横向滚动。 */
+.admin-shell textarea {
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 24rem;
+  resize: vertical;
+}
+
+.admin-shell textarea.content-editor {
+  max-height: 100%;
+  resize: none;
+}

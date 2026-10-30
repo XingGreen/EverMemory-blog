@@ -542,6 +542,7 @@ export const ja: Translation = {
 	[Key.postMdOl]: "番号付きリスト",
 	[Key.postMdDivider]: "区切り線",
 	[Key.postMdUndo]: "元に戻す",
+	[Key.postLineNumbers]: "行番号を表示",
 	[Key.postMdRedo]: "やり直す",
 	[Key.postSlugGenerate]: "タイトルから自動生成",
 	[Key.postSlugRomanize]: "ピンインに変換",

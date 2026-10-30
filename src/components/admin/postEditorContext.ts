@@ -47,11 +47,15 @@ export interface PostEditorUiState {
 	canRedo: boolean;
 	/** slug 生成后经标题复核通过的一次性成功反馈（约 1.5s 后自动复位） */
 	slugVerified: boolean;
+	/** 是否在正文编辑器左侧显示行号（配置项，持久化在 localStorage） */
+	showLineNumbers: boolean;
 }
 
 /** 容器提供、供三栏调用的动作 */
 export interface PostEditorActions {
 	toggleGroup: (group: FormGroup) => void;
+	/** 切换正文行号显示（写回 localStorage） */
+	toggleLineNumbers: () => void;
 	handleSlugInput: () => void;
 	generateSlugFromTitle: () => void;
 	normalizeSlug: () => void;
