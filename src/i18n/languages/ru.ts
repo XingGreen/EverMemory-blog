@@ -793,6 +793,8 @@ export const ru: Translation = {
 	[Key.sessionsKickedAll]: "Все остальные сеансы отозваны",
 	[Key.sessionsKickFail]: "Ошибка операции",
 	[Key.cloudDraftSaved]: "Синхронизировано",
+	[Key.cloudDraftLocalOnly]: "Только локально, не синхронизировано",
+	[Key.cloudDraftOffline]: "Офлайн, не синхронизировано",
 	[Key.cloudDraftSyncing]: "Синхронизация…",
 	[Key.cloudDraftFailed]: "Сбой синхронизации",
 	[Key.cloudDraftRetry]: "Повторить",

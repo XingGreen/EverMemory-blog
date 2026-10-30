@@ -394,9 +394,23 @@ let dirty = $state(false);
 let draftTimer: ReturnType<typeof setTimeout> | null = null;
 let beforeUnloadHandler: ((e: BeforeUnloadEvent) => void) | null = null;
 // 云端草稿同步（跨设备）：自动上传到服务端存储（本机文件 / Vercel KV）
-type CloudSyncState = "idle" | "syncing" | "saved" | "error";
+/**
+ * 同步状态五态 —— 表示「此刻」的真实状况，而不是「上次成功过」：
+ *   idle       尚未发生任何保存
+ *   local-only 已写入本地草稿，但云端没有（离线、未发起、或从未成功）
+ *   syncing    请求进行中
+ *   synced     云端请求成功，且当前内容与云端一致
+ *   failed     请求失败或设备离线
+ * 旧实现只有 idle/syncing/saved/error 四态，缺「仅本地」；
+ * 且内容未变跳过请求时会直接把状态写成 saved，离线也照写，因此误报「已同步」。
+ */
+type CloudSyncState = "idle" | "local-only" | "syncing" | "synced" | "failed";
 let cloudSync = $state<CloudSyncState>("idle");
 let cloudSavedAt = $state<number | null>(null);
+/** 设备在线状态：离线时不发请求，直接判 failed 并等 online 事件重试 */
+let isOnline = $state(
+	typeof navigator === "undefined" ? true : navigator.onLine,
+);
 let cloudTimer: ReturnType<typeof setTimeout> | null = null;
 let cloudSeq = 0;
 let lastCloudKey = "";
@@ -817,6 +831,11 @@ $effect(() => {
 				DRAFT_KEY,
 				JSON.stringify({ ...draft, savedAt: Date.now() }),
 			);
+			/* 本地已落地。云端若还没同步成功（或正在同步），状态如实降为「仅本地」，
+			   绝不沿用上一次的成功结果。 */
+			if (cloudSync !== "synced" && cloudSync !== "syncing") {
+				cloudSync = "local-only";
+			}
 		} catch {
 			// 隐私模式等场景下 localStorage 不可用，忽略即可
 		}
@@ -831,17 +850,20 @@ $effect(() => {
 /** 上传草稿到云端（内容无变化时跳过；敏感字段不上传） */
 async function saveCloudDraft(draft: DraftFields) {
 	const key = JSON.stringify(draft);
-	if (key === lastCloudKey) {
-		if (cloudSavedAt) cloudSync = "saved";
-		return;
-	}
-	/* 已有请求在飞：先等它落定，若那次保存的内容已覆盖当前状态就不必重发 */
+	/* 内容与上次成功上传的一致：不重发，也不改写状态。
+	   旧实现这里会写 "saved"，导致离线时仍显示「已同步」——误报的直接来源。 */
+	if (key === lastCloudKey) return;
+	/* 已有请求在飞：先等它落定；若那次保存的内容已覆盖当前状态就不必重发，
+	   同样不改写状态（避免把「上次成功」误当成「此刻已同步」）。 */
 	if (cloudInFlight) {
 		await cloudInFlight;
-		if (JSON.stringify(currentDraft()) === lastCloudKey) {
-			cloudSync = "saved";
-			return;
-		}
+		if (JSON.stringify(currentDraft()) === lastCloudKey) return;
+	}
+
+	/* 离线：不发请求，如实判为失败。恢复在线后由 online 事件自动重试。 */
+	if (!isOnline) {
+		cloudSync = "failed";
+		return;
 	}
 
 	cloudSync = "syncing";
@@ -871,7 +893,7 @@ async function saveCloudDraft(draft: DraftFields) {
 		if (res.ok && data.success) {
 			lastCloudKey = key;
 			cloudSavedAt = data.savedAt ?? null;
-			cloudSync = "saved";
+			cloudSync = "synced";
 			/* 保存期间内容又变了 → 重新排一次。
 			   对应参考 attemptSave 末尾「保存后 isDirtyNow 则回到 PENDING 并重试」 */
 			if (JSON.stringify(currentDraft()) !== lastCloudKey) {
@@ -881,18 +903,34 @@ async function saveCloudDraft(draft: DraftFields) {
 				}, 1500);
 			}
 		} else {
-			cloudSync = "error";
+			cloudSync = "failed";
 		}
 	} catch {
-		if (seq === cloudSeq) cloudSync = "error";
+		if (seq === cloudSeq) cloudSync = "failed";
 	} finally {
 		cloudInFlight = null;
 		settle();
 	}
 }
 
-/** 手动保存前把挂起的自动保存立刻刷掉（对应参考的 flush） */
-async function flushAutoSave(): Promise<void> {
+/* 设备网络状态：离线时不发请求、并把已同步状态立即降级；
+   恢复在线后自动补一次，避免用户手动点重试。 */
+function handleOnline() {
+	isOnline = true;
+	if (cloudSync === "failed" || cloudSync === "local-only") {
+		void saveCloudDraft(currentDraft());
+	}
+}
+
+function handleOffline() {
+	isOnline = false;
+	/* 此刻无法保证云端可达，正在同步或已同步都要如实降级 */
+	if (cloudSync === "syncing" || cloudSync === "synced") {
+		cloudSync = "failed";
+	}
+}
+
+/** 手动保存前把挂起的自动保存立刻刷掉（对应参考的 flush） */ async function flushAutoSave(): Promise<void> {
 	if (draftTimer) clearTimeout(draftTimer);
 	if (cloudTimer) clearTimeout(cloudTimer);
 	if (cloudInFlight) await cloudInFlight;
@@ -978,7 +1016,7 @@ async function restoreCreateDraft() {
 	applyDraft(source);
 	resetHistory();
 	cloudSavedAt = cloudTs || null;
-	if (cloudTs) cloudSync = "saved";
+	if (cloudTs) cloudSync = "local-only";
 }
 
 /** 有未保存内容时，拦截刷新 / 关闭页面（浏览器原生确认框） */
@@ -1018,9 +1056,13 @@ onMount(() => {
 	loadContent();
 	registerBeforeUnload();
 	void restoreCreateDraft();
+	window.addEventListener("online", handleOnline);
+	window.addEventListener("offline", handleOffline);
 });
 
 onDestroy(() => {
+	window.removeEventListener("online", handleOnline);
+	window.removeEventListener("offline", handleOffline);
 	if (draftTimer) clearTimeout(draftTimer);
 	if (cloudTimer) clearTimeout(cloudTimer);
 	if (historyTimer) clearTimeout(historyTimer);
@@ -1191,13 +1233,14 @@ $effect(() => {
 			{#if mode === "create" && cloudSync !== "idle"}
 				<span
 					class="cloud-badge"
-					class:error={cloudSync === "error"}
+					class:error={cloudSync === "failed"}
 					class:syncing={cloudSync === "syncing"}
+					class:local={cloudSync === "local-only"}
 				>
 					{#if cloudSync === "syncing"}
 						<span class="cloud-spinner"></span>
 						{i18n(I18nKey.cloudDraftSyncing)}
-					{:else if cloudSync === "saved"}
+					{:else if cloudSync === "synced"}
 						<Icon icon="material-symbols:cloud-done" class="text-sm" />
 						{i18n(I18nKey.cloudDraftSaved)}
 						{#if cloudSavedAt}
@@ -1206,9 +1249,14 @@ $effect(() => {
 								minute: "2-digit",
 							})}
 						{/if}
+					{:else if cloudSync === "local-only"}
+						<Icon icon="material-symbols:cloud-off" class="text-sm" />
+						{i18n(I18nKey.cloudDraftLocalOnly)}
 					{:else}
 						<Icon icon="material-symbols:cloud-off" class="text-sm" />
-						{i18n(I18nKey.cloudDraftFailed)}
+						{isOnline
+							? i18n(I18nKey.cloudDraftFailed)
+							: i18n(I18nKey.cloudDraftOffline)}
 						<button
 							class="cloud-retry"
 							onclick={() =>
@@ -1563,6 +1611,13 @@ $effect(() => {
 		color: var(--info);
 		background: color-mix(in srgb, var(--info) 12%, transparent);
 		border-color: color-mix(in srgb, var(--info) 30%, transparent);
+	}
+
+	/* 仅本地：中性灰——没同步但也不算失败，与「同步失败」的红色区分开 */
+	.cloud-badge.local {
+		color: var(--content-meta);
+		background: color-mix(in srgb, var(--content-meta) 10%, transparent);
+		border-color: color-mix(in srgb, var(--content-meta) 28%, transparent);
 	}
 
 	.cloud-badge.error {

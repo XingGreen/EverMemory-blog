@@ -781,6 +781,8 @@ export const ja: Translation = {
 	[Key.sessionsKickedAll]: "他のセッションをすべて切断しました",
 	[Key.sessionsKickFail]: "操作に失敗しました",
 	[Key.cloudDraftSaved]: "クラウドに同期済み",
+	[Key.cloudDraftLocalOnly]: "ローカルのみ、未同期",
+	[Key.cloudDraftOffline]: "オフライン、未同期",
 	[Key.cloudDraftSyncing]: "同期中…",
 	[Key.cloudDraftFailed]: "クラウド同期に失敗",
 	[Key.cloudDraftRetry]: "再試行",

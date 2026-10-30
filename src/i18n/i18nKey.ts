@@ -770,6 +770,10 @@ enum I18nKey {
 
 	// 云端草稿
 	cloudDraftSaved = "cloudDraftSaved",
+	/** 草稿仅存本地、未同步到云端（离线或从未成功） */
+	cloudDraftLocalOnly = "cloudDraftLocalOnly",
+	/** 设备离线，无法发起同步 */
+	cloudDraftOffline = "cloudDraftOffline",
 	cloudDraftSyncing = "cloudDraftSyncing",
 	cloudDraftFailed = "cloudDraftFailed",
 	cloudDraftRetry = "cloudDraftRetry",

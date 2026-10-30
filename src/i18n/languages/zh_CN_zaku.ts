@@ -755,6 +755,8 @@ export const zaku: Translation = {
 	[Key.sessionsKickedAll]: "其他设备全踢完了",
 	[Key.sessionsKickFail]: "没踢成功",
 	[Key.cloudDraftSaved]: "已同步到云上了",
+	[Key.cloudDraftLocalOnly]: "仅本地，未同步",
+	[Key.cloudDraftOffline]: "离线，未同步",
 	[Key.cloudDraftSyncing]: "正在往云上同步…",
 	[Key.cloudDraftFailed]: "云上同步失败了",
 	[Key.cloudDraftRetry]: "再来一次",

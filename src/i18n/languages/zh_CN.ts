@@ -759,6 +759,8 @@ export const zh_CN: Translation = {
 	[Key.sessionsKickedAll]: "已踢掉其他全部设备",
 	[Key.sessionsKickFail]: "操作失败",
 	[Key.cloudDraftSaved]: "已同步到云端",
+	[Key.cloudDraftLocalOnly]: "仅本地，未同步",
+	[Key.cloudDraftOffline]: "离线，未同步",
 	[Key.cloudDraftSyncing]: "正在同步…",
 	[Key.cloudDraftFailed]: "云端同步失败",
 	[Key.cloudDraftRetry]: "重试",

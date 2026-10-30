@@ -787,6 +787,8 @@ export const en: Translation = {
 	[Key.sessionsKickedAll]: "All other sessions revoked",
 	[Key.sessionsKickFail]: "Operation failed",
 	[Key.cloudDraftSaved]: "Synced to cloud",
+	[Key.cloudDraftLocalOnly]: "Local only, not synced",
+	[Key.cloudDraftOffline]: "Offline, not synced",
 	[Key.cloudDraftSyncing]: "Syncing...",
 	[Key.cloudDraftFailed]: "Cloud sync failed",
 	[Key.cloudDraftRetry]: "Retry",
