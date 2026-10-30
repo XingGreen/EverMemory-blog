@@ -46,11 +46,21 @@ function json(data: unknown, status = 200): Response {
 	});
 }
 
-/** 列出某篇文章的版本（新→旧），只读目录，不读内容 */
+/** 从 markdown 的 frontmatter 里取标题，用于历史列表的三行式展示 */
+function readFrontmatterTitle(content: string): string {
+	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+	if (!fm) return "";
+	const line = fm[1].match(/^title:\s*(.*)$/m);
+	if (!line) return "";
+	return line[1].trim().replace(/^"(.*)"$/, "$1");
+}
+
+/** 列出某篇文章的版本（新→旧）；带标题，列表项与参考一样显示「时间 / 原因 / 标题」 */
 function listRevisions(slug: string): {
 	id: string;
 	reason: RevisionReason;
 	savedAt: number;
+	title: string;
 }[] {
 	const abs = path.resolve(process.cwd(), revisionDirRel(slug));
 	if (!existsSync(abs)) return [];
@@ -58,16 +68,32 @@ function listRevisions(slug: string): {
 		return readdirSync(abs)
 			.filter((f) => f.endsWith(".md"))
 			.map(
-				(f): { id: string; reason: RevisionReason; savedAt: number } => {
-				const [tsRaw, reasonRaw] = f.replace(/\.md$/, "").split("-");
-				const ts = Number(tsRaw);
-				const reason = (reasonRaw ?? "auto") as RevisionReason;
-				return {
-					id: f,
-					reason:
-						reason === "publish" || reason === "restore_backup" ? reason : "auto",
-					savedAt: Number.isFinite(ts) ? ts : 0,
-				};
+				(f): {
+					id: string;
+					reason: RevisionReason;
+					savedAt: number;
+					title: string;
+				} => {
+					const [tsRaw, reasonRaw] = f.replace(/\.md$/, "").split("-");
+					const ts = Number(tsRaw);
+					const reason = (reasonRaw ?? "auto") as RevisionReason;
+					let title = "";
+					try {
+						title = readFrontmatterTitle(
+							readFileSync(path.join(abs, f), "utf-8"),
+						);
+					} catch {
+						title = "";
+					}
+					return {
+						id: f,
+						reason:
+							reason === "publish" || reason === "restore_backup"
+								? reason
+								: "auto",
+						savedAt: Number.isFinite(ts) ? ts : 0,
+						title,
+					};
 				},
 			)
 			.sort((a, b) => b.savedAt - a.savedAt);

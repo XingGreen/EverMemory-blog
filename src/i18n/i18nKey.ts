@@ -536,6 +536,13 @@ enum I18nKey {
 	postHistory = "postHistory",
 	postHistoryEmpty = "postHistoryEmpty",
 	postHistoryRestore = "postHistoryRestore",
+	/** 版本产生原因（对齐参考的 getRevisionReasonLabel 三态） */
+	postHistoryReasonAuto = "postHistoryReasonAuto",
+	postHistoryReasonPublish = "postHistoryReasonPublish",
+	postHistoryReasonRestore = "postHistoryReasonRestore",
+	/** 恢复前确认弹窗 */
+	postHistoryRestoreTitle = "postHistoryRestoreTitle",
+	postHistoryRestoreMessage = "postHistoryRestoreMessage",
 	postMdRedo = "postMdRedo",
 	postSlugGenerate = "postSlugGenerate",
 	postSlugRomanize = "postSlugRomanize",

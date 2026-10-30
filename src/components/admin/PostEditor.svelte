@@ -234,14 +234,23 @@ function readEditorWidth(): number | null {
 let editorMaxWidth = $state<number | null>(readEditorWidth());
 let resizing = $state(false);
 
-/* ── 历史版本 ──
-   列表/详情/恢复统一走 /api/admin/post-revisions；仅编辑既有文章时可用。
-   恢复后重新载入正文，避免界面仍显示旧内容。 */
-type RevisionItem = { id: string; reason: string; savedAt: number };
+/* ── 历史版本（主从两栏，结构照参考 post-history-page.tsx + history-list + history-document）──
+   左列表显示「时间 / 原因 / 标题」，点选后右侧只读渲染该版本正文；
+   恢复按钮在详情区，且恢复前有确认弹窗（对应参考的 ConfirmationModal）。 */
+type RevisionItem = {
+	id: string;
+	reason: string;
+	savedAt: number;
+	title: string;
+};
 
 let historyOpen = $state(false);
 let historyLoading = $state(false);
 let historyItems = $state<RevisionItem[]>([]);
+let historySelectedId = $state("");
+let historyDetailHtml = $state("");
+let historyDetailLoading = $state(false);
+let historyConfirmOpen = $state(false);
 let historyBusyId = $state("");
 
 function fmtRevisionTime(ts: number): string {
@@ -250,15 +259,35 @@ function fmtRevisionTime(ts: number): string {
 	return `${d.toLocaleDateString()} ${d.toLocaleTimeString().slice(0, 5)}`;
 }
 
+/** 原因标签：对齐参考的 getRevisionReasonLabel 三态 */
+function revisionReasonLabel(reason: string): string {
+	switch (reason) {
+		case "publish":
+			return i18n(I18nKey.postHistoryReasonPublish);
+		case "restore_backup":
+			return i18n(I18nKey.postHistoryReasonRestore);
+		default:
+			return i18n(I18nKey.postHistoryReasonAuto);
+	}
+}
+
+const selectedRevision = $derived(
+	historyItems.find((r) => r.id === historySelectedId) ?? null,
+);
+
 async function openHistory() {
 	historyOpen = true;
 	historyLoading = true;
+	historyItems = [];
+	historySelectedId = "";
+	historyDetailHtml = "";
 	try {
 		const res = await fetch(
 			`/api/admin/post-revisions/?slug=${encodeURIComponent(post?.slug ?? "")}`,
 		);
 		const data = await res.json();
 		historyItems = data.success ? (data.revisions ?? []) : [];
+		if (historyItems.length) await selectRevision(historyItems[0].id);
 	} catch {
 		historyItems = [];
 	} finally {
@@ -266,7 +295,44 @@ async function openHistory() {
 	}
 }
 
-async function restoreRevision(id: string) {
+/** 选中某个版本：取全文 → 剥 frontmatter → 走与预览相同的渲染管线 */
+async function selectRevision(id: string) {
+	historySelectedId = id;
+	historyDetailHtml = "";
+	historyDetailLoading = true;
+	try {
+		const res = await fetch(
+			`/api/admin/post-revisions/?slug=${encodeURIComponent(post?.slug ?? "")}&id=${encodeURIComponent(id)}`,
+		);
+		const data = await res.json();
+		if (!data.success) return;
+		const body = String(data.content ?? "").replace(
+			/^---\r?\n[\s\S]*?\r?\n---\r?\n?/,
+			"",
+		);
+		const pres = await fetch("/api/admin/preview/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ content: body }),
+		});
+		const pdata = await pres.json();
+		historyDetailHtml = pdata.success ? (pdata.html ?? "") : "";
+	} catch {
+		historyDetailHtml = "";
+	} finally {
+		historyDetailLoading = false;
+	}
+}
+
+function requestRestore() {
+	if (!historySelectedId || historyBusyId) return;
+	historyConfirmOpen = true;
+}
+
+async function confirmRestore() {
+	historyConfirmOpen = false;
+	const id = historySelectedId;
+	if (!id) return;
 	historyBusyId = id;
 	try {
 		const res = await fetch("/api/admin/post-revisions/", {
@@ -293,7 +359,9 @@ function startResize(e: PointerEvent, side: "left" | "right") {
 	e.preventDefault();
 	resizing = true;
 	const startX = e.clientX;
-	const startW = editorMaxWidth ?? (typeof window === "undefined" ? 1440 : window.innerWidth);
+	const startW =
+		editorMaxWidth ??
+		(typeof window === "undefined" ? 1440 : window.innerWidth);
 	const viewport = typeof window === "undefined" ? 1920 : window.innerWidth;
 
 	const onMove = (ev: PointerEvent) => {
@@ -847,7 +915,9 @@ async function restoreCreateDraft() {
 	}
 	let cloud: DraftBlob | null = null;
 	try {
-		const res = await fetch(`/api/admin/draft/?slug=${encodeURIComponent(post?.slug ?? "")}`);
+		const res = await fetch(
+			`/api/admin/draft/?slug=${encodeURIComponent(post?.slug ?? "")}`,
+		);
 		const data = await res.json();
 		if (res.ok && data.success && data.draft) {
 			cloud = data.draft as DraftBlob;
@@ -1237,7 +1307,8 @@ $effect(() => {
 	{/if}
 </div>
 
-<!-- 历史版本：列出保存前的快照，点恢复会用该版本覆盖正文（恢复前自动备份当前版本） -->
+<!-- 历史版本：左列表 + 右只读预览（结构照参考 post-history-page 的主从布局）。
+     恢复按钮在详情区，且恢复前先弹确认——对应参考的 ConfirmationModal。 -->
 {#if historyOpen}
 	<div
 		class="history-overlay"
@@ -1263,28 +1334,96 @@ $effect(() => {
 					<Icon icon="material-symbols:close" />
 				</button>
 			</div>
+
 			{#if historyLoading}
 				<p class="history-note">…</p>
 			{:else if historyItems.length === 0}
 				<p class="history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
 			{:else}
-				<ul class="history-list">
-					{#each historyItems as item (item.id)}
-						<li class="history-row">
-							<span class="history-time">{fmtRevisionTime(item.savedAt)}</span>
-							<span class="history-reason">{item.reason}</span>
+				<div class="history-body">
+					<!-- 左：版本列表，三项式（时间 / 原因 / 标题） -->
+					<div class="history-list">
+						{#each historyItems as item (item.id)}
 							<button
-								class="history-restore"
 								type="button"
-								disabled={historyBusyId === item.id}
-								onclick={() => restoreRevision(item.id)}
+								class="history-version"
+								class:is-selected={item.id === historySelectedId}
+								aria-current={item.id === historySelectedId ? "true" : undefined}
+								onclick={() => selectRevision(item.id)}
 							>
-								{i18n(I18nKey.postHistoryRestore)}
+								<time class="history-time">{fmtRevisionTime(item.savedAt)}</time>
+								<span class="history-reason">{revisionReasonLabel(item.reason)}</span>
+								<span class="history-version-title">{item.title || "—"}</span>
 							</button>
-						</li>
-					{/each}
-				</ul>
+						{/each}
+					</div>
+
+					<!-- 右：只读预览 + 恢复入口 -->
+					<div class="history-detail">
+						{#if historyDetailLoading}
+							<p class="history-note">…</p>
+						{:else if !selectedRevision}
+							<p class="history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
+						{:else}
+							<div class="history-detail-head">
+								<h4>{selectedRevision.title || "—"}</h4>
+								<button
+									class="history-restore"
+									type="button"
+									disabled={Boolean(historyBusyId)}
+									onclick={requestRestore}
+								>
+									{i18n(I18nKey.postHistoryRestore)}
+								</button>
+							</div>
+							<p class="history-note">
+								{fmtRevisionTime(selectedRevision.savedAt)} · {revisionReasonLabel(
+									selectedRevision.reason,
+								)}
+							</p>
+							<!-- biome-ignore lint/security/noDangerouslySetInnerHtml: 服务端渲染管线产出的可信 HTML -->
+							<div class="history-doc custom-md">{@html historyDetailHtml}</div>
+						{/if}
+					</div>
+				</div>
 			{/if}
+		</div>
+	</div>
+{/if}
+
+<!-- 恢复确认（对应参考的 history.confirm === "restore"） -->
+{#if historyConfirmOpen}
+	<div
+		class="history-overlay"
+		role="dialog"
+		aria-modal="true"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) historyConfirmOpen = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === "Escape") historyConfirmOpen = false;
+		}}
+	>
+		<div class="history-confirm">
+			<h3>{i18n(I18nKey.postHistoryRestoreTitle)}</h3>
+			<p class="history-note">{i18n(I18nKey.postHistoryRestoreMessage)}</p>
+			<div class="history-confirm-actions">
+				<button
+					class="history-btn"
+					type="button"
+					onclick={() => (historyConfirmOpen = false)}
+				>
+					{i18n(I18nKey.taxonomyCancel)}
+				</button>
+				<button
+					class="history-btn is-primary"
+					type="button"
+					onclick={confirmRestore}
+				>
+					{i18n(I18nKey.postHistoryRestore)}
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}
@@ -1608,7 +1747,9 @@ $effect(() => {
 			width: 100%;
 		}
 	}
-	/* ── 历史版本弹窗 ── */
+	/* ── 历史版本：主从两栏 ──
+	   左列固定 16rem 放版本列表，右侧自适应放只读预览；
+	   尺寸参考 post-history-page 的工作区卡片（整屏高、左右分栏）。 */
 	.history-overlay {
 		position: fixed;
 		inset: 0;
@@ -1624,9 +1765,8 @@ $effect(() => {
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-		width: 100%;
-		max-width: 26rem;
-		max-height: 70vh;
+		width: min(56rem, 92vw);
+		height: min(36rem, 82vh);
 		padding: 1.25rem;
 		border-radius: var(--radius-large);
 		background: var(--card-bg);
@@ -1660,53 +1800,110 @@ $effect(() => {
 		cursor: pointer;
 	}
 
+	.history-body {
+		display: grid;
+		grid-template-columns: 16rem minmax(0, 1fr);
+		gap: 0.75rem;
+		flex: 1;
+		min-height: 0;
+	}
+
+	.history-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		overflow-y: auto;
+		padding-right: 0.25rem;
+	}
+
+	/* 列表项三项式：时间 / 原因 / 标题（标题两行截断），选中态抬底 + 主色时间 */
+	.history-version {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		width: 100%;
+		padding: 0.5rem 0.625rem;
+		border: none;
+		border-radius: 0.5rem;
+		background: transparent;
+		font-family: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.history-version:hover {
+		background: color-mix(in srgb, var(--btn-regular-bg) 60%, transparent);
+	}
+
+	.history-version.is-selected {
+		background: var(--btn-regular-bg);
+	}
+
+	.history-version.is-selected .history-time {
+		color: var(--primary);
+	}
+
+	.history-time {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--deep-text);
+	}
+
+	.history-reason {
+		font-size: 0.875rem;
+		color: var(--content-meta);
+	}
+
+	.history-version-title {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		overflow: hidden;
+		font-size: 0.875rem;
+		color: var(--content-meta);
+	}
+
+	.history-detail {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		min-height: 0;
+		overflow-y: auto;
+		padding: 0.25rem 0.5rem;
+	}
+
+	.history-detail-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.history-detail-head h4 {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
 	.history-note {
 		margin: 0;
 		font-size: 0.8125rem;
 		color: var(--content-meta);
 	}
 
-	.history-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		margin: 0;
-		padding: 0;
-		overflow-y: auto;
-		list-style: none;
-	}
-
-	.history-row {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 0.625rem;
-		border-radius: 0.5rem;
-	}
-
-	.history-row:hover {
-		background: var(--btn-plain-bg-hover);
-	}
-
-	.history-time {
-		flex: 1;
-		font-size: 0.8125rem;
-		color: var(--deep-text);
-	}
-
-	.history-reason {
-		font-size: 0.6875rem;
-		color: var(--content-meta);
+	.history-doc {
+		font-size: 0.875rem;
 	}
 
 	.history-restore {
-		padding: 0.25rem 0.625rem;
+		padding: 0.3rem 0.75rem;
 		border: 1px solid var(--line-divider);
-		border-radius: 0.375rem;
+		border-radius: 0.5rem;
 		background: transparent;
 		color: var(--deep-text);
 		font-family: inherit;
-		font-size: 0.75rem;
+		font-size: 0.8125rem;
 		cursor: pointer;
 	}
 
@@ -1718,5 +1915,47 @@ $effect(() => {
 	.history-restore:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
+	}
+
+	/* 恢复确认弹窗 */
+	.history-confirm {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		width: min(24rem, 90vw);
+		padding: 1.25rem;
+		border-radius: var(--radius-large);
+		background: var(--card-bg);
+		box-shadow: 0 16px 40px rgb(0 0 0 / 0.3);
+	}
+
+	.history-confirm h3 {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.history-confirm-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+	}
+
+	.history-btn {
+		padding: 0.4rem 0.75rem;
+		border: 1px solid var(--line-divider);
+		border-radius: 0.5rem;
+		background: transparent;
+		color: var(--deep-text);
+		font-family: inherit;
+		font-size: 0.8125rem;
+		cursor: pointer;
+	}
+
+	.history-btn.is-primary {
+		border-color: transparent;
+		background: var(--primary);
+		color: var(--primary-foreground);
 	}
 </style>
