@@ -7,8 +7,9 @@ category: "demo"
 author: "demo"
 draft: false
 pinned: false
-comment: true
+comment: false
 password: "123"
+passwordHint: "123"
 ---
 
 # Markdown 语法测试文章
