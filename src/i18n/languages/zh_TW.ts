@@ -760,7 +760,7 @@ export const zh_TW: Translation = {
 	[Key.sessionsKicked]: "已踢下線",
 	[Key.sessionsKickedAll]: "已踢掉其他全部裝置",
 	[Key.sessionsKickFail]: "操作失敗",
-	[Key.cloudDraftSaved]: "已同步到雲端",
+	[Key.cloudDraftSaved]: "已同步至雲端",
 	[Key.cloudDraftLocalOnly]: "僅本機，未同步",
 	[Key.cloudDraftOffline]: "離線，已儲存至本機",
 	[Key.cloudDraftSyncing]: "正在同步…",

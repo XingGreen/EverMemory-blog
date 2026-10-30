@@ -796,6 +796,9 @@ function hasDraftContent(): boolean {
 }
 
 /** 本地持久备份 + 云端自动同步：内容变化后防抖写入 localStorage（400ms）与云端（1200ms，仅新建模式） */
+/** 加载完成时的内容基线：与它一致说明用户尚未改动，不触发草稿写入 */
+let baselineDraftKey = "";
+
 /** 当前编辑器内容的草稿快照：effect 与「保存后再检脏」共用，避免两处手抄字段 */
 function currentDraft(): DraftFields {
 	return {
@@ -842,6 +845,9 @@ $effect(() => {
 	// 草稿自动保存对新建与编辑都生效：编辑页同样会因误关标签页丢改动。
 	// 去抖时长对齐参考 use-auto-save.ts 的 debounceMs 默认值 1500ms。
 	if (!hasDraftContent()) return;
+	/* 与加载时的基线一致 → 用户还没改过，不写草稿。
+	   否则编辑页一进来就会因「正文从空变有值」触发一次保存并显示「仅本地」。 */
+	if (JSON.stringify(draft) === baselineDraftKey) return;
 	if (draftTimer) clearTimeout(draftTimer);
 	draftTimer = setTimeout(() => {
 		const saved = persistLocalDraft(draft);
@@ -1067,6 +1073,10 @@ async function loadContent() {
 		} finally {
 			isLoadingContent = false;
 			resetHistory();
+			/* 记录加载完成时的内容基线：编辑页正文是异步载入的，若不记基线，
+			   $effect 会因「内容从空变有值」立刻触发一次草稿写入，
+			   一进编辑页就显示「仅本地」。 */
+			baselineDraftKey = JSON.stringify(currentDraft());
 		}
 	}
 }
@@ -1249,7 +1259,9 @@ $effect(() => {
 			{i18n(I18nKey.postCancel)}
 		</button>
 		<div class="header-actions">
-			{#if mode === "create" && cloudSync !== "idle"}
+			<!-- 同步徽章对新建与编辑都显示：编辑页同样会自动保存草稿，
+			     只对新页面提示会让编辑页的失败完全无感知 -->
+			{#if cloudSync !== "idle"}
 				<span
 					class="cloud-badge"
 					class:error={cloudSync === "failed"}
