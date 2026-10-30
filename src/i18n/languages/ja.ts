@@ -574,6 +574,7 @@ export const ja: Translation = {
 	[Key.postSortTitleDesc]: "タイトル Z→A",
 	[Key.postColTitle]: "タイトル",
 	[Key.postColCategory]: "カテゴリ",
+	[Key.postColFileType]: "ファイル形式",
 	[Key.postColDate]: "公開日",
 	[Key.postColStatus]: "ステータス",
 	[Key.postColActions]: "操作",
@@ -590,6 +591,7 @@ export const ja: Translation = {
 	[Key.postSortDesc]: "降順で並べ替え",
 	[Key.postSyncPendingDeploy]: "デプロイ待ち",
 	[Key.postSyncNotOnGithub]: "未プッシュ",
+	[Key.postUnsynced]: "未同期",
 	[Key.postSyncSummary]: "{count} 件が GitHub に未同期",
 
 	[Key.postSave]: "記事を保存",

@@ -783,9 +783,20 @@ onDestroy(() => {
 });
 
 async function handleSave() {
+	/* 标题改为非必填：留空时用正文前 16 个字符兜底。先清掉 frontmatter 残留、
+	   Markdown 标记与多余空白，避免生成「# 标题」或「---」这样的标题。 */
 	if (!editorState.title.trim()) {
-		onError(i18n(I18nKey.postTitleRequired));
-		return;
+		const fallback = editorState.content
+			.replace(/^---[\s\S]*?\n---/, "")
+			.replace(/[#>*_`~[\]()!-]/g, "")
+			.replace(/\s+/g, " ")
+			.trim()
+			.slice(0, 16);
+		if (!fallback) {
+			onError(i18n(I18nKey.postTitleRequired));
+			return;
+		}
+		editorState.title = fallback;
 	}
 
 	if (!editorState.slug.trim()) {

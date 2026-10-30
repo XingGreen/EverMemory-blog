@@ -39,7 +39,7 @@ type SortKey = "updated" | "newest" | "oldest" | "titleAsc" | "titleDesc";
 /** 参与时间排序/时间列展示所需字段 */
 type TimeFields = { updated?: string | null; published?: string };
 
-type StatusFilter = "all" | "published" | "draft";
+type StatusFilter = "all" | "published" | "draft" | "unsynced";
 
 /** 一份筛选条件快照，URL query 与 sessionStorage 共用同一形状 */
 type SavedFilters = {
@@ -52,7 +52,7 @@ type SavedFilters = {
 
 const FILTER_STORAGE_KEY = "admin_posts_filters";
 const DEFAULT_SORT: SortKey = "updated";
-const STATUS_VALUES = new Set<string>(["all", "published", "draft"]);
+const STATUS_VALUES = new Set<string>(["all", "published", "draft", "unsynced"]);
 const SORT_VALUES = new Set<string>([
 	"updated",
 	"newest",
@@ -129,6 +129,15 @@ const filteredPosts = $derived.by(() => {
 		result = result.filter((post) => !post.draft);
 	} else if (statusFilter === "draft") {
 		result = result.filter((post) => post.draft);
+	} else if (statusFilter === "unsynced") {
+		/* 「未同步」= 尚未提交到 GitHub（not-on-github），或已提交但当前部署产物
+		   还没带上（pending-deploy）。远端清单取不到时 syncState 为 null，此时
+		   不并入本筛选，避免整表被误判为未同步。 */
+		result = result.filter(
+			(post) =>
+				post.syncState === "pending-deploy" ||
+				post.syncState === "not-on-github",
+		);
 	}
 
 	if (categoryFilter) {
@@ -422,6 +431,16 @@ function actionLabel(action: string, title: string): string {
 			<span class="chip-label">{i18n(I18nKey.postDraft)}</span>
 			<span class="chip-count">{posts.filter((p) => p.draft).length}</span>
 		</button>
+		<!-- 未同步：涵盖「尚未提交到 GitHub」与「已提交但未部署」两种，计数取两者之和 -->
+		<button
+			class="chip"
+			class:selected={statusFilter === "unsynced"}
+			aria-pressed={statusFilter === "unsynced"}
+			onclick={() => (statusFilter = "unsynced")}
+		>
+			<span class="chip-label">{i18n(I18nKey.postUnsynced)}</span>
+			<span class="chip-count">{unsyncedCount}</span>
+		</button>
 	</div>
 
 	<!-- 工具栏（第二行）：搜索居左，分类/标签/排序整组居右 -->
@@ -495,6 +514,9 @@ function actionLabel(action: string, title: string): string {
 				{i18n(I18nKey.postColTitle)}
 			</div>
 			<div class="col col-category" role="columnheader">{i18n(I18nKey.postColCategory)}</div>
+			<div class="col col-filetype" role="columnheader">
+				{i18n(I18nKey.postColFileType)}
+			</div>
 			<div class="col col-date" role="columnheader" aria-sort={ariaSortFor("date")}>
 				{dateColLabel}
 			</div>
@@ -594,6 +616,17 @@ function actionLabel(action: string, title: string): string {
 						<!-- 分类 -->
 						<div class="col col-category" role="cell" data-label={i18n(I18nKey.postColCategory)}>
 							<span class="text-meta">{post.category || "—"}</span>
+						</div>
+
+						<!-- 文件类型：取自 filePath 的扩展名（.md / .mdx） -->
+						<div
+							class="col col-filetype"
+							role="cell"
+							data-label={i18n(I18nKey.postColFileType)}
+						>
+							<span class="filetype-chip">
+								{post.filePath.slice(post.filePath.lastIndexOf(".")) || "—"}
+							</span>
 						</div>
 
 						<!-- 发布/修改日期，跟随当前排序字段 -->
@@ -1047,7 +1080,7 @@ function actionLabel(action: string, title: string): string {
 	   背景用 --card-bg 实底，吸顶时遮住下方滚动内容。 */
 	.header-row {
 		display: grid;
-		grid-template-columns: 2.9fr 0.9fr 1.1fr 0.9fr 1.2fr;
+		grid-template-columns: 2.9fr 0.9fr 0.7fr 1.1fr 0.9fr 1.2fr;
 		align-items: center;
 		height: 44px;
 		/* 左缘与列表行内容同轴（list-item 左右 1rem），
@@ -1094,7 +1127,7 @@ function actionLabel(action: string, title: string): string {
 	   悬停高亮保留，分隔线不随行变色是正常现象（参考项目同样如此）。 */
 	.list-item {
 		display: grid;
-		grid-template-columns: 2.9fr 0.9fr 1.1fr 0.9fr 1.2fr;
+		grid-template-columns: 2.9fr 0.9fr 0.7fr 1.1fr 0.9fr 1.2fr;
 		align-items: center;
 		padding: 0.8125rem 1rem;
 		min-height: 76px;
@@ -1259,6 +1292,20 @@ function actionLabel(action: string, title: string): string {
 
 	/* 同步状态徽章：比内容状态小一档，避免两枚徽章抢同等的注意力。
 	   info 色表示「已提交、等构建」，warning 色表示「GitHub 上还没有」。 */
+	/* 文件类型列：等宽字体 + 低饱和底，避免和「状态」列的两个徽章抢视觉权重 */
+	.filetype-chip {
+		display: inline-flex;
+		align-items: center;
+		min-height: 20px;
+		padding: 1px 0.5rem;
+		border-radius: 6px;
+		background: var(--btn-regular-bg);
+		color: var(--btn-content);
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: 0.6875rem;
+		white-space: nowrap;
+	}
+
 	.sync-chip {
 		display: inline-flex;
 		align-items: center;
@@ -1421,7 +1468,7 @@ function actionLabel(action: string, title: string): string {
 	@media (max-width: 1100px) {
 		.header-row,
 		.list-item {
-			grid-template-columns: 2.6fr 0.9fr 1.1fr 0.9fr 1.2fr;
+			grid-template-columns: 2.6fr 0.9fr 0.7fr 1.1fr 0.9fr 1.2fr;
 		}
 
 		.col-category {

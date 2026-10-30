@@ -564,6 +564,7 @@ export const zh_TW: Translation = {
 	[Key.postSortTitleDesc]: "標題 Z→A",
 	[Key.postColTitle]: "標題",
 	[Key.postColCategory]: "分類",
+	[Key.postColFileType]: "檔案類型",
 	[Key.postColDate]: "發布日期",
 	[Key.postColStatus]: "狀態",
 	[Key.postColActions]: "操作",
@@ -580,6 +581,7 @@ export const zh_TW: Translation = {
 	[Key.postSortDesc]: "降序排列",
 	[Key.postSyncPendingDeploy]: "待部署",
 	[Key.postSyncNotOnGithub]: "未推送",
+	[Key.postUnsynced]: "未同步",
 	[Key.postSyncSummary]: "有 {count} 篇未同步到 GitHub",
 
 	[Key.postSave]: "儲存文章",

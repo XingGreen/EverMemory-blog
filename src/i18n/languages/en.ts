@@ -577,6 +577,7 @@ export const en: Translation = {
 	[Key.postSortTitleDesc]: "Title Z→A",
 	[Key.postColTitle]: "Title",
 	[Key.postColCategory]: "Category",
+	[Key.postColFileType]: "File type",
 	[Key.postColDate]: "Publish Date",
 	[Key.postColStatus]: "Status",
 	[Key.postColActions]: "Actions",
@@ -593,6 +594,7 @@ export const en: Translation = {
 	[Key.postSortDesc]: "sorted descending",
 	[Key.postSyncPendingDeploy]: "pending deploy",
 	[Key.postSyncNotOnGithub]: "not pushed",
+	[Key.postUnsynced]: "unsynced",
 	[Key.postSyncSummary]: "{count} not synced to GitHub",
 
 	[Key.postSave]: "Save Post",

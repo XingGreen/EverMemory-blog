@@ -577,6 +577,7 @@ export const ru: Translation = {
 	[Key.postSortTitleDesc]: "Заголовок Я→А",
 	[Key.postColTitle]: "Заголовок",
 	[Key.postColCategory]: "Категория",
+	[Key.postColFileType]: "Тип файла",
 	[Key.postColDate]: "Дата публикации",
 	[Key.postColStatus]: "Статус",
 	[Key.postColActions]: "Действия",
@@ -594,6 +595,7 @@ export const ru: Translation = {
 	[Key.postSortDesc]: "сортировка по убыванию",
 	[Key.postSyncPendingDeploy]: "ожидает деплоя",
 	[Key.postSyncNotOnGithub]: "не отправлено",
+	[Key.postUnsynced]: "не синхронизировано",
 	[Key.postSyncSummary]: "{count} не синхронизировано с GitHub",
 
 	[Key.postSave]: "Сохранить статью",

@@ -562,6 +562,8 @@ enum I18nKey {
 	postSortTitleDesc = "postSortTitleDesc",
 	postColTitle = "postColTitle",
 	postColCategory = "postColCategory",
+	/** 文章列表「文件类型」列（.md / .mdx） */
+	postColFileType = "postColFileType",
 	postColDate = "postColDate",
 	postColStatus = "postColStatus",
 	postColActions = "postColActions",
@@ -578,6 +580,8 @@ enum I18nKey {
 	postSortDesc = "postSortDesc",
 	postSyncPendingDeploy = "postSyncPendingDeploy",
 	postSyncNotOnGithub = "postSyncNotOnGithub",
+	/** 文章列表「未同步」筛选项：涵盖未推送 + 待部署两种 */
+	postUnsynced = "postUnsynced",
 	postSyncSummary = "postSyncSummary",
 
 	// 文章编辑器

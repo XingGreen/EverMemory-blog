@@ -19,6 +19,7 @@ import PostEditor from "./PostEditor.svelte";
 import PostList from "./PostList.svelte";
 import AdminPage from "./AdminPage.svelte";
 import SecretManager from "./SecretManager.svelte";
+import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
 import TaxonomyManager from "./TaxonomyManager.svelte";
 
@@ -45,6 +46,7 @@ type Page =
 	| "categories-and-tags"
 	| "settings"
 	| "env"
+	| "sessions"
 	| "404";
 
 // 基于 URL 路径的真实路由（History API）：
@@ -68,6 +70,8 @@ type Route =
 	| { page: "categories-and-tags" }
 	| { page: "settings"; section?: string }
 	| { page: "env" }
+	/* 会话管理：从设置页独立出来，入口挂在侧栏 */
+	| { page: "sessions" }
 	/* 无效路径：不在后台内渲染任何页面，直接交给项目原有的 /404 */
 	| { page: "404" };
 
@@ -232,8 +236,10 @@ const activePage = $derived<Page>(
 				? "settings"
 				: route.page === "env"
 					? "env"
-					: route.page === "categories-and-tags"
-						? "categories-and-tags"
+				: route.page === "categories-and-tags"
+					? "categories-and-tags"
+					: route.page === "sessions"
+						? "sessions"
 						: "posts",
 );
 
@@ -361,6 +367,8 @@ function parseRoute(pathname: string): Route {
 		case "env":
 			// 环境变量页（原 /admin/user/）
 			return segments.length === 1 ? { page: "env" } : { page: "404" };
+		case "sessions":
+			return segments.length === 1 ? { page: "sessions" } : { page: "404" };
 		case "secrets":
 		case "user":
 			// 兼容旧链接：/admin/user/、/admin/secrets/ 归一化到 /admin/env/
@@ -467,11 +475,18 @@ const headerTitle = $derived.by(() => {
 			: i18n(I18nKey.adminSettings);
 	}
 	if (activePage === "env") return i18n(I18nKey.adminEnvVars);
+	if (activePage === "sessions") return i18n(I18nKey.adminSessions);
 	if (activePage === "categories-and-tags")
 		return `${i18n(I18nKey.adminCategories)} & ${i18n(I18nKey.adminTags)}`;
 	if (viewMode === "edit" && editingPost) return i18n(I18nKey.adminEditPost);
 	if (viewMode === "create") return i18n(I18nKey.adminNewPost);
 	return i18n(I18nKey.adminPosts);
+});
+
+/* 浏览器标签标题跟随当前页：后台是 SPA（pushState 切页），若不主动写
+   document.title，标签页会一直停在首屏进入时的标题。 */
+$effect(() => {
+	if (typeof document !== "undefined") document.title = headerTitle;
 });
 
 async function loadPosts() {
@@ -806,7 +821,16 @@ async function testAdminService() {
 	);
 }
 
-async function handleLogout() {
+/* 登出二次确认：点侧栏「退出登录」先弹确认框，避免误触把会话清掉。
+   真正的清理动作在 performLogout，两处命名别混。 */
+let logoutConfirmOpen = $state(false);
+
+function handleLogout() {
+	logoutConfirmOpen = true;
+}
+
+async function performLogout() {
+	logoutConfirmOpen = false;
 	isVerified = false;
 	sessionStorage.removeItem("admin_verified");
 	// 退出后回到独立登录页，同时清掉深链记录，避免下次登录被带回旧页
@@ -868,6 +892,10 @@ function goSettings(section?: string) {
 
 function goEnv() {
 	navigate(`${DASHBOARD_PATH}env/`);
+}
+
+function goSessions() {
+	navigate(`${DASHBOARD_PATH}sessions/`);
 }
 
 function goCategoriesAndTags() {
@@ -1478,6 +1506,16 @@ function formatDate(dateStr: string | null): string {
 					<span>{i18n(I18nKey.adminEnvVars)}</span>
 				</button>
 
+				<!-- 会话管理：原本埋在设置页里，独立成侧栏入口 -->
+				<button
+					class="nav-item"
+					class:active={activePage === "sessions"}
+					onclick={goSessions}
+				>
+					<Icon icon="material-symbols:devices" />
+					<span>{i18n(I18nKey.adminSessions)}</span>
+				</button>
+
 			</nav>
 
 			<div class="sidebar-footer">
@@ -1688,7 +1726,14 @@ function formatDate(dateStr: string | null): string {
 							onNotify={(msg, type) => showToast(msg, type)}
 						/>
 					</AdminPage>
-{:else if activePage === "env"}
+{:else if activePage === "sessions"}
+				<AdminPage
+					title={i18n(I18nKey.adminSessions)}
+					intro={i18n(I18nKey.adminSessionsDesc)}
+				>
+					<SessionManager onNotify={(msg, type) => showToast(msg, type)} />
+				</AdminPage>
+			{:else if activePage === "env"}
 				<AdminPage title={i18n(I18nKey.adminEnvVars)} intro={i18n(I18nKey.adminEnvVarsIntro)}>
 				{#if import.meta.env.PROD}
 					<section class="card-base secrets-guide">
@@ -1885,6 +1930,52 @@ function formatDate(dateStr: string | null): string {
 				</button>
 				<button class="savebar-btn" type="button" onclick={confirmLeave}>
 					{i18n(I18nKey.secretsLeaveConfirm)}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- 退出登录二次确认：退出会清掉服务端会话 Cookie，误触代价是重新登录一次，
+     所以加一层确认。复用与「未保存确认」相同的 modal 结构。 -->
+{#if logoutConfirmOpen}
+	<div
+		class="modal-overlay"
+		role="dialog"
+		aria-modal="true"
+		aria-label={i18n(I18nKey.adminLogout)}
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) logoutConfirmOpen = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === "Escape") logoutConfirmOpen = false;
+		}}
+	>
+		<div class="modal-card card-base">
+			<div class="modal-head">
+				<h3>
+					<span>{i18n(I18nKey.adminLogout)}</span>
+				</h3>
+				<button
+					class="modal-close"
+					type="button"
+					aria-label={i18n(I18nKey.taxonomyCancel)}
+					onclick={() => (logoutConfirmOpen = false)}
+				>
+					<Icon icon="material-symbols:close" />
+				</button>
+			</div>
+			<div class="modal-actions">
+				<button
+					class="savebar-btn"
+					type="button"
+					onclick={() => (logoutConfirmOpen = false)}
+				>
+					{i18n(I18nKey.taxonomyCancel)}
+				</button>
+				<button class="savebar-btn primary" type="button" onclick={performLogout}>
+					{i18n(I18nKey.taxonomyConfirm)}
 				</button>
 			</div>
 		</div>
@@ -2140,6 +2231,12 @@ function formatDate(dateStr: string | null): string {
 	.nav-item > span:not(.nav-arrow) {
 		min-width: 0;
 		max-width: 100%;
+		/* 收起动画期间 max-width 从 100% 过渡到 0，若允许换行，文字会在宽度不够时
+		   折成两三行然后被裁一半——看起来像被"挤压"。改成单行 + 裁切后，
+		   整个动画过程只会看到文字从右侧被依次截断。 */
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		transition:
 			opacity 0.18s ease 0.05s,
 			transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),

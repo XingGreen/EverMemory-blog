@@ -1056,10 +1056,13 @@ onMount(() => {
 		margin-left: auto;
 		flex-shrink: 0;
 		padding: 0.25rem 0.625rem;
-		border: 1px solid color-mix(in oklab, var(--success) 35%, transparent);
+		/* 跟随主题的黑/白：原来是 --success 绿色，与「已完成」提示条同色，
+		   按钮和说明文字混成一片、点不到重点。改用主文字色后亮色近黑、暗色近白。 */
+		border: 1px solid
+			color-mix(in oklab, var(--deep-text) 25%, transparent);
 		border-radius: 6px;
 		background: transparent;
-		color: var(--success);
+		color: var(--deep-text);
 		font-size: 0.8125rem;
 		font-family: inherit;
 		font-weight: 500;

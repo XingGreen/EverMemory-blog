@@ -559,6 +559,7 @@ export const zaku: Translation = {
 	[Key.postSortTitleDesc]: "标题 Z→A",
 	[Key.postColTitle]: "标题",
 	[Key.postColCategory]: "分类",
+	[Key.postColFileType]: "文件类型",
 	[Key.postColDate]: "发布日期",
 	[Key.postColStatus]: "状态",
 	[Key.postColActions]: "操作",
@@ -575,6 +576,7 @@ export const zaku: Translation = {
 	[Key.postSortDesc]: "降序排列",
 	[Key.postSyncPendingDeploy]: "待部署",
 	[Key.postSyncNotOnGithub]: "未推送",
+	[Key.postUnsynced]: "未同步",
 	[Key.postSyncSummary]: "有 {count} 篇未同步到 GitHub",
 
 	[Key.postSave]: "保存文章",
