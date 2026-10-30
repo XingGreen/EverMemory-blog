@@ -566,6 +566,12 @@ enum I18nKey {
 	postColFileType = "postColFileType",
 	/** 文章列表内建的「列显示」设置（不进设置页） */
 	postColSettings = "postColSettings",
+	/** 本地 / 线上冲突：检查入口 + 两种覆盖方向 + 两种无冲突结论 */
+	conflictCheck = "conflictCheck",
+	conflictLocalWins = "conflictLocalWins",
+	conflictRemoteWins = "conflictRemoteWins",
+	conflictInSync = "conflictInSync",
+	conflictNotOnRemote = "conflictNotOnRemote",
 	postColDate = "postColDate",
 	postColStatus = "postColStatus",
 	postColActions = "postColActions",
