@@ -1,11 +1,11 @@
 <script lang="ts">
 import { getContext, onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
-import DatePicker from "./DatePicker.svelte";
-import Select from "./Select.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import DatePicker from "./DatePicker.svelte";
 import { type FormGroup, POST_EDITOR_CONTEXT } from "./postEditorContext";
+import Select from "./Select.svelte";
 
 const { state: editorState, actions } = getContext<{
 	state: import("./postEditorContext").PostEditorContextValue["state"];
@@ -111,12 +111,18 @@ function handleTagKey(e: KeyboardEvent) {
 		e.preventDefault();
 		const q = editorState.tagInput.trim();
 		if (!q) return;
-		const exact = taxonomy.tags.find((t) => t.toLowerCase() === q.toLowerCase());
+		const exact = taxonomy.tags.find(
+			(t) => t.toLowerCase() === q.toLowerCase(),
+		);
 		if (exact) toggleTag(exact);
 		else void createTag();
 		return;
 	}
-	if (e.key === "Backspace" && !editorState.tagInput && editorState.tags.length) {
+	if (
+		e.key === "Backspace" &&
+		!editorState.tagInput &&
+		editorState.tags.length
+	) {
 		editorState.tags = editorState.tags.slice(0, -1);
 		return;
 	}
@@ -830,7 +836,6 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 		line-height: 1;
 	}
 
-	}
 	/* ── 标签选择器 ──
 	   尺寸/层级照搬参考项目 tag-selector.tsx 的 Tailwind 值：
 	   容器 min-h-10 / rounded-xl / px-2 py-1.5 / gap-1.5，底 fuwari-btn-regular-bg；
