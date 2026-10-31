@@ -555,9 +555,10 @@ export const ja: Translation = {
 	[Key.postHistoryEmpty]: "履歴はありません",
 	[Key.postHistoryRestore]: "復元",
 	[Key.postHistoryBannerTitle]: "{time} の版を表示中",
-	[Key.postHistoryBack]: "エディタに戻る",
+	[Key.postHistoryBack]: "編集に戻る",
 	[Key.postHistoryReadonly]: "読み取り専用",
-	[Key.postHistoryRestoreHint]: "スナップショットを確認し、現在の本文に復元できます",
+	[Key.postHistoryRestoreHint]:
+		"スナップショットを確認し、現在の本文に復元できます",
 	[Key.postHistoryRestoreThis]: "この版を復元",
 	[Key.postHistoryListTitle]: "バージョン一覧",
 	[Key.postHistoryReasonAuto]: "自動スナップショット",

@@ -559,9 +559,10 @@ export const ru: Translation = {
 	[Key.postHistoryEmpty]: "Версий нет",
 	[Key.postHistoryRestore]: "Восстановить",
 	[Key.postHistoryBannerTitle]: "Просмотр версии от {time}",
-	[Key.postHistoryBack]: "Назад к редактору",
+	[Key.postHistoryBack]: "Назад к редактированию",
 	[Key.postHistoryReadonly]: "Версия только для чтения",
-	[Key.postHistoryRestoreHint]: "Просмотрите снимок и восстановите его поверх текущего текста",
+	[Key.postHistoryRestoreHint]:
+		"Просмотрите снимок и восстановите его поверх текущего текста",
 	[Key.postHistoryRestoreThis]: "Восстановить эту версию",
 	[Key.postHistoryListTitle]: "Список версий",
 	[Key.postHistoryReasonAuto]: "Автоснимок",

@@ -559,9 +559,10 @@ export const en: Translation = {
 	[Key.postHistoryEmpty]: "No saved versions",
 	[Key.postHistoryRestore]: "Restore",
 	[Key.postHistoryBannerTitle]: "Viewing the version from {time}",
-	[Key.postHistoryBack]: "Back to editor",
+	[Key.postHistoryBack]: "Back to edit",
 	[Key.postHistoryReadonly]: "Read-only version",
-	[Key.postHistoryRestoreHint]: "Inspect a snapshot and restore it over the current content",
+	[Key.postHistoryRestoreHint]:
+		"Inspect a snapshot and restore it over the current content",
 	[Key.postHistoryRestoreThis]: "Restore this version",
 	[Key.postHistoryListTitle]: "Versions",
 	[Key.postHistoryReasonAuto]: "Auto snapshot",

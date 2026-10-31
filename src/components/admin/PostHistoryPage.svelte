@@ -215,7 +215,7 @@ $effect(() => {
 					<div class="history-meta">
 						<span>
 							<Icon icon="material-symbols:menu-book" />
-							{selected.category || "—"}
+							{selected.category || i18n(I18nKey.postCategoryPlaceholder)}
 						</span>
 						{#if selected.tags.length}
 							<span class="history-meta-tags">
@@ -425,10 +425,14 @@ $effect(() => {
 		padding: 3.75rem var(--document-inset) 3rem;
 	}
 
+	/* 文章标题：照参考 .post-editor-title（2.25rem / 1.4 / 700 / -0.025em / mb 1rem），
+	   此前 1.25rem 与正文几乎同大，缺页面标题感 */
 	.history-doc-title {
-		margin: 0 0 0.25rem;
-		font-size: 1.25rem;
-		font-weight: 600;
+		margin: 0 0 1rem;
+		font-size: 2.25rem;
+		line-height: 1.4;
+		font-weight: 700;
+		letter-spacing: -0.025em;
 		color: var(--deep-text);
 	}
 
@@ -451,11 +455,12 @@ $effect(() => {
 		background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
 	}
 
-	/* 侧栏标题容器：对应参考 .post-editor-panel-heading */
+	/* 侧栏标题容器：对应参考 .post-editor-panel-heading，带卡片底使其成为独立标题条 */
 	.history-sidebar-head {
 		flex-shrink: 0;
 		padding: 1rem 1.25rem 0.75rem 2rem;
 		border-bottom: 1px solid var(--line-divider);
+		background: var(--card-bg);
 	}
 
 	.history-sidebar-title {
@@ -475,23 +480,24 @@ $effect(() => {
 		padding: 0.5rem 1.25rem 1.5rem 2rem;
 	}
 
-	/* 列表项：照参考 .post-history-version —— 0.625rem 圆角、1rem/1.125rem 内边距、
-	   0.75rem 间距，并用 ::before 画左侧时间轴竖线 */
+	/* 列表项：照参考做成独立卡片块（描边 + 卡片底 + 圆角 + 块间距），
+	   选中项整块抬底并换主色边框，而不是只有文字变色 */
 	.history-version {
 		position: relative;
 		display: block;
 		width: 100%;
 		margin-bottom: 0.75rem;
 		padding: 1rem 1.125rem;
-		border: none;
+		border: 1px solid var(--line-divider);
 		border-radius: 0.625rem;
-		background: transparent;
+		background: var(--card-bg);
 		font-family: inherit;
 		color: inherit;
 		text-align: left;
 		cursor: pointer;
 		transition:
 			background-color 0.15s,
+			border-color 0.15s,
 			color 0.15s;
 	}
 
@@ -511,6 +517,7 @@ $effect(() => {
 
 	.history-version.is-selected {
 		background: var(--btn-regular-bg);
+		border-color: var(--primary);
 	}
 
 	.history-version.is-selected .history-time {
@@ -582,6 +589,13 @@ $effect(() => {
 	/* 正文排版：照参考 .post-editor-document .tiptap 的 1.0625rem / 1.85 行高。
 	   标题字号不再覆盖——.custom-md 已有项目既定的标题层级（h1 3xl / h2 2xl / h3 xl），
 	   在这里另设一套只会与它打架，导致标题忽大忽小。 */
+	/* 窄屏标题降档：参考 .post-editor-title 在移动端是 1.75rem */
+	@media (max-width: 768px) {
+		.history-doc-title {
+			font-size: 1.75rem;
+		}
+	}
+
 	.history-doc {
 		margin-top: 1rem;
 		font-size: 1.0625rem;

@@ -542,7 +542,7 @@ export const zh_TW: Translation = {
 	[Key.postHistoryEmpty]: "尚無歷史版本",
 	[Key.postHistoryRestore]: "還原",
 	[Key.postHistoryBannerTitle]: "正在檢視 {time} 的版本",
-	[Key.postHistoryBack]: "返回編輯器",
+	[Key.postHistoryBack]: "返回編輯",
 	[Key.postHistoryReadonly]: "唯讀版本",
 	[Key.postHistoryRestoreHint]: "檢視歷史快照，可還原該版本覆蓋目前正文",
 	[Key.postHistoryRestoreThis]: "還原此版本",

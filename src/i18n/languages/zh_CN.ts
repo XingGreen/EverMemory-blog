@@ -540,7 +540,7 @@ export const zh_CN: Translation = {
 	[Key.postHistoryEmpty]: "暂无历史版本",
 	[Key.postHistoryRestore]: "恢复",
 	[Key.postHistoryBannerTitle]: "正在查看 {time} 的版本",
-	[Key.postHistoryBack]: "返回编辑器",
+	[Key.postHistoryBack]: "返回编辑",
 	[Key.postHistoryReadonly]: "只读版本",
 	[Key.postHistoryRestoreHint]: "查看历史快照，可恢复该版本覆盖当前正文",
 	[Key.postHistoryRestoreThis]: "恢复此版本",
