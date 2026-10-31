@@ -18,6 +18,7 @@ import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
 import OnboardingTour from "./OnboardingTour.svelte";
 import PostEditor from "./PostEditor.svelte";
 import PostList from "./PostList.svelte";
+import PostHistoryPage from "./PostHistoryPage.svelte";
 import SecretManager from "./SecretManager.svelte";
 import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
@@ -43,6 +44,8 @@ type ViewMode = "list" | "edit" | "create";
 type Page =
 	| "dashboard"
 	| "posts"
+	/** 文章历史版本（独立 URL，见 Route.page === "history"） */
+	| "history"
 	| "categories-and-tags"
 	| "settings"
 	| "env"
@@ -67,6 +70,8 @@ type Route =
 	| { page: "posts" }
 	| { page: "create" }
 	| { page: "edit"; slug: string }
+	/** 历史版本：/admin/posts/edit/:slug/history/[:revisionId]/ */
+	| { page: "history"; slug: string; revisionId: string }
 	| { page: "categories-and-tags" }
 	| { page: "settings"; section?: string }
 	| { page: "env" }
@@ -232,7 +237,9 @@ const activePage = $derived<Page>(
 		? "404"
 		: route.page === "dashboard"
 			? "dashboard"
-			: route.page === "settings"
+			: route.page === "history"
+				? "history"
+				: route.page === "settings"
 				? "settings"
 				: route.page === "env"
 					? "env"
@@ -336,8 +343,21 @@ function parseRoute(pathname: string): Route {
 			return { page: "dashboard" };
 		case "posts":
 			if (segments[1] === "new") return { page: "create" };
-			if (segments[1] === "edit" && segments[2])
+			if (segments[1] === "edit" && segments[2]) {
+				/* 历史版本走独立 URL（与参考的路由结构一致）：
+				   /admin/posts/edit/:slug/history/             ← 列表
+				   /admin/posts/edit/:slug/history/:revisionId/ ← 选中某版本
+				   参考的 history.tsx / history_.$revisionId.tsx 两个路由在此合并为一条
+				   路径模式，revisionId 为空即列表页。 */
+				if (segments[3] === "history") {
+					return {
+						page: "history",
+						slug: segments[2],
+						revisionId: segments[4] ?? "",
+					};
+				}
 				return { page: "edit", slug: segments[2] };
+			}
 			// 仅 /admin/posts/ 是列表页，其余子路径无效
 			return segments.length === 1 ? { page: "posts" } : { page: "404" };
 		case "articles":
@@ -1583,10 +1603,13 @@ function formatDate(dateStr: string | null): string {
 			class:content-wide={activePage === "posts" && viewMode !== "list"}
 			class:content-fixed={activePage === "settings" ||
 				activePage === "env" ||
+				activePage === "history" ||
 				activePage === "categories-and-tags"}
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
 		>
-				{#if activePage === "dashboard"}
+				{#if activePage === "history" && route.page === "history"}
+					<PostHistoryPage slug={route.slug} revisionId={route.revisionId} />
+				{:else if activePage === "dashboard"}
 					{@render dashboardHome()}
 				{:else if activePage === "posts"}
 					{#if viewMode === "list"}

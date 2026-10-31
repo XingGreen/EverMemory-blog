@@ -1385,7 +1385,15 @@ $effect(() => {
 				{i18n(I18nKey.postToc)}
 			</button>
 			{#if mode === "edit" && post?.slug}
-				<button class="editor-text-btn" onclick={openHistory}>
+				<!-- 历史版本改为独立 URL（对齐参考的 history / history_.$revisionId 两个路由） -->
+				<button
+					class="editor-text-btn"
+					onclick={() => {
+						window.location.href = `/admin/posts/edit/${encodeURIComponent(
+							post?.slug ?? "",
+						)}/history/`;
+					}}
+				>
 					<Icon icon="material-symbols:history-rounded" class="text-sm" />
 					{i18n(I18nKey.postHistory)}
 				</button>

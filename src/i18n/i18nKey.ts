@@ -542,6 +542,12 @@ enum I18nKey {
 	postHistoryRestore = "postHistoryRestore",
 	/** 详情区横幅：正在查看某个时间点的版本（对应 editor_history_banner_title） */
 	postHistoryBannerTitle = "postHistoryBannerTitle",
+	/** 独立历史页（对应参考 post-history-page.tsx 的头部与侧栏） */
+	postHistoryBack = "postHistoryBack",
+	postHistoryReadonly = "postHistoryReadonly",
+	postHistoryRestoreHint = "postHistoryRestoreHint",
+	postHistoryRestoreThis = "postHistoryRestoreThis",
+	postHistoryListTitle = "postHistoryListTitle",
 	/** 版本产生原因（对齐参考的 getRevisionReasonLabel 三态） */
 	postHistoryReasonAuto = "postHistoryReasonAuto",
 	postHistoryReasonPublish = "postHistoryReasonPublish",

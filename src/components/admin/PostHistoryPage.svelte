@@ -1,0 +1,562 @@
+<script lang="ts">
+/**
+ * 文章历史版本页 —— 结构照参考
+ * src/features/posts/components/post-editor/post-history-page.tsx
+ *
+ * 参考的布局要点（不要改顺序）：
+ *   1. 顶部 header 三段：返回编辑器 ← | 只读标识（锁 + 标题 + 说明） | 恢复此版本按钮
+ *   2. 主区 post-history-body：**详情在左占主区**，版本列表在右侧栏（aside）
+ *   3. 列表项是链接，点击即导航到 /history/:revisionId，用 URL 表达「选中哪一版」
+ *   4. 恢复前弹确认；恢复成功后跳回编辑器
+ * 无 revisionId 时对应参考的 PostHistoryIndex：只有返回 + 标题 + 整宽列表。
+ */
+import Icon from "@/components/common/Icon.svelte";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
+
+let { slug, revisionId = "" }: { slug: string; revisionId?: string } = $props();
+
+type RevisionItem = {
+	id: string;
+	reason: string;
+	savedAt: number;
+	title: string;
+	category: string;
+	tags: string[];
+};
+
+let revisions = $state<RevisionItem[]>([]);
+let listLoading = $state(true);
+let detailHtml = $state("");
+let detailLoading = $state(false);
+let confirmOpen = $state(false);
+let busy = $state(false);
+let errorText = $state("");
+
+const editorUrl = `/admin/posts/edit/${encodeURIComponent(slug)}/`;
+const historyUrl = `/admin/posts/edit/${encodeURIComponent(slug)}/history/`;
+
+const selected = $derived(
+	revisions.find((r) => r.id === revisionId) ?? null,
+);
+const canRestore = $derived(Boolean(selected) && !busy);
+
+function fmtTime(ts: number): string {
+	if (!ts) return "—";
+	const d = new Date(ts);
+	return `${d.toLocaleDateString()} ${d.toLocaleTimeString().slice(0, 5)}`;
+}
+
+function reasonLabel(reason: string): string {
+	switch (reason) {
+		case "publish":
+			return i18n(I18nKey.postHistoryReasonPublish);
+		case "restore_backup":
+			return i18n(I18nKey.postHistoryReasonRestore);
+		default:
+			return i18n(I18nKey.postHistoryReasonAuto);
+	}
+}
+
+async function loadList() {
+	listLoading = true;
+	try {
+		const res = await fetch(
+			`/api/admin/post-revisions/?slug=${encodeURIComponent(slug)}`,
+		);
+		const data = await res.json();
+		revisions = data.success ? (data.revisions ?? []) : [];
+	} catch {
+		revisions = [];
+	} finally {
+		listLoading = false;
+	}
+}
+
+/** 详情：取全文 → 剥 frontmatter → 走与预览相同的渲染管线 */
+async function loadDetail(id: string) {
+	if (!id) {
+		detailHtml = "";
+		return;
+	}
+	detailLoading = true;
+	detailHtml = "";
+	try {
+		const res = await fetch(
+			`/api/admin/post-revisions/?slug=${encodeURIComponent(slug)}&id=${encodeURIComponent(id)}`,
+		);
+		const data = await res.json();
+		if (!data.success) return;
+		const body = String(data.content ?? "").replace(
+			/^---\r?\n[\s\S]*?\r?\n---\r?\n?/,
+			"",
+		);
+		const pres = await fetch("/api/admin/preview/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ content: body }),
+		});
+		const pdata = await pres.json();
+		detailHtml = pdata.success ? (pdata.html ?? "") : "";
+	} catch {
+		detailHtml = "";
+	} finally {
+		detailLoading = false;
+	}
+}
+
+async function doRestore() {
+	confirmOpen = false;
+	if (!selected) return;
+	busy = true;
+	errorText = "";
+	try {
+		const res = await fetch("/api/admin/post-revisions/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ slug, id: selected.id }),
+		});
+		const data = await res.json();
+		if (data.success) {
+			// 对应参考的 onRestored: goEditor
+			window.location.href = editorUrl;
+			return;
+		}
+		errorText = data.message ?? "";
+	} catch {
+		errorText = i18n(I18nKey.taxonomyLoadFailed);
+	} finally {
+		busy = false;
+	}
+}
+
+$effect(() => {
+	void loadList();
+});
+
+$effect(() => {
+	if (revisionId) void loadDetail(revisionId);
+});
+</script>
+
+<div class="history-page">
+	<header class="history-header">
+		<a class="history-back" href={editorUrl}>
+			<Icon icon="material-symbols:arrow-back" />
+			{i18n(I18nKey.postHistoryBack)}
+		</a>
+
+		{#if revisionId}
+			<div class="history-context">
+				<Icon icon="material-symbols:lock" />
+				<div>
+					<h1>{i18n(I18nKey.postHistoryReadonly)}</h1>
+					<p>{i18n(I18nKey.postHistoryRestoreHint)}</p>
+				</div>
+			</div>
+		{:else}
+			<h1 class="history-title">{i18n(I18nKey.postHistory)}</h1>
+		{/if}
+
+		<div class="history-actions">
+			{#if revisionId}
+				<button
+					class="history-restore-this"
+					type="button"
+					disabled={!canRestore}
+					onclick={() => (confirmOpen = true)}
+				>
+					{i18n(I18nKey.postHistoryRestoreThis)}
+				</button>
+			{/if}
+		</div>
+	</header>
+
+	{#if revisionId}
+		<!-- 主区：详情在左，列表在右（照参考 post-history-body 的顺序） -->
+		<div class="history-body">
+			<section class="history-content">
+				{#if detailLoading}
+					<p class="history-note">…</p>
+				{:else if !selected}
+					<p class="history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
+				{:else}
+					<h2 class="history-doc-title">{selected.title || "—"}</h2>
+					<p class="history-note">
+						{i18n(I18nKey.postHistoryBannerTitle).replace(
+							"{time}",
+							fmtTime(selected.savedAt),
+						)}
+						· {reasonLabel(selected.reason)}
+					</p>
+					<div class="history-meta">
+						<span>
+							<Icon icon="material-symbols:menu-book" />
+							{selected.category || "—"}
+						</span>
+						{#if selected.tags.length}
+							<span class="history-meta-tags">
+								<Icon icon="material-symbols:label" />
+								{selected.tags.join(" · ")}
+							</span>
+						{/if}
+					</div>
+					<!-- biome-ignore lint/security/noDangerouslySetInnerHtml: 服务端渲染管线产出的可信 HTML -->
+					<div class="history-doc custom-md">{@html detailHtml}</div>
+				{/if}
+			</section>
+
+			<aside class="history-sidebar">
+				<h2 class="history-sidebar-title">
+					{i18n(I18nKey.postHistoryListTitle)}
+				</h2>
+				{#if listLoading}
+					<p class="history-note">…</p>
+				{:else if revisions.length === 0}
+					<p class="history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
+				{:else}
+					<nav class="history-list">
+						{#each revisions as item (item.id)}
+							<a
+								class="history-version"
+								class:is-selected={item.id === revisionId}
+								href={`${historyUrl}${encodeURIComponent(item.id)}/`}
+								aria-current={item.id === revisionId ? "page" : undefined}
+							>
+								<time class="history-time">{fmtTime(item.savedAt)}</time>
+								<span class="history-reason">{reasonLabel(item.reason)}</span>
+								<span class="history-version-title">{item.title || "—"}</span>
+							</a>
+						{/each}
+					</nav>
+				{/if}
+			</aside>
+		</div>
+	{:else}
+		<div class="history-index-list">
+			{#if listLoading}
+				<p class="history-note">…</p>
+			{:else if revisions.length === 0}
+				<p class="history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
+			{:else}
+				<nav class="history-list">
+					{#each revisions as item (item.id)}
+						<a
+							class="history-version"
+							href={`${historyUrl}${encodeURIComponent(item.id)}/`}
+						>
+							<time class="history-time">{fmtTime(item.savedAt)}</time>
+							<span class="history-reason">{reasonLabel(item.reason)}</span>
+							<span class="history-version-title">{item.title || "—"}</span>
+						</a>
+					{/each}
+				</nav>
+			{/if}
+		</div>
+	{/if}
+
+	{#if errorText}
+		<p class="history-error">{errorText}</p>
+	{/if}
+</div>
+
+{#if confirmOpen}
+	<div
+		class="history-overlay"
+		role="dialog"
+		aria-modal="true"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) confirmOpen = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === "Escape") confirmOpen = false;
+		}}
+	>
+		<div class="history-confirm">
+			<h3>{i18n(I18nKey.postHistoryRestoreTitle)}</h3>
+			<p class="history-note">{i18n(I18nKey.postHistoryRestoreMessage)}</p>
+			<div class="history-confirm-actions">
+				<button
+					class="history-btn"
+					type="button"
+					onclick={() => (confirmOpen = false)}
+				>
+					{i18n(I18nKey.taxonomyCancel)}
+				</button>
+				<button class="history-btn is-primary" type="button" onclick={doRestore}>
+					{i18n(I18nKey.postHistoryRestoreThis)}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<style>
+	.history-page {
+		display: flex;
+		flex-direction: column;
+		gap: 0.875rem;
+		height: 100%;
+		min-height: 0;
+		padding: 1rem;
+	}
+
+	/* header 三段：返回 | 只读标识 | 恢复按钮（照参考 post-editor-header 的排布） */
+	.history-header {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid var(--line-divider);
+	}
+
+	.history-back {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		color: var(--content-meta);
+		font-size: 0.875rem;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+
+	.history-back:hover {
+		color: var(--primary);
+	}
+
+	.history-context {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex: 1;
+		min-width: 0;
+		color: var(--content-meta);
+	}
+
+	.history-context h1 {
+		margin: 0;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.history-context p {
+		margin: 0.125rem 0 0;
+		font-size: 0.75rem;
+	}
+
+	.history-title {
+		flex: 1;
+		margin: 0;
+		font-size: 1.125rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.history-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.history-restore-this {
+		display: inline-flex;
+		align-items: center;
+		height: 2.25rem;
+		padding: 0 1.25rem;
+		border: none;
+		border-radius: 0.5rem;
+		background: var(--primary);
+		color: var(--primary-foreground);
+		font-family: inherit;
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+	}
+
+	.history-restore-this:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	/* 主区：详情占主区，列表固定右栏 */
+	.history-body {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 17rem;
+		gap: 1rem;
+		flex: 1;
+		min-height: 0;
+	}
+
+	.history-content {
+		min-height: 0;
+		overflow-y: auto;
+		padding: 0.25rem 0.5rem;
+	}
+
+	.history-doc-title {
+		margin: 0 0 0.25rem;
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.history-doc {
+		margin-top: 0.75rem;
+		font-size: 0.875rem;
+	}
+
+	.history-sidebar {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		min-height: 0;
+		padding-left: 1rem;
+		border-left: 1px solid var(--line-divider);
+	}
+
+	.history-sidebar-title {
+		margin: 0;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--content-meta);
+	}
+
+	.history-index-list {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+	}
+
+	.history-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		min-height: 0;
+		overflow-y: auto;
+	}
+
+	/* 列表项三项式：时间 / 原因 / 标题（两行截断），选中态抬底 + 主色时间 */
+	.history-version {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		padding: 0.5rem 0.625rem;
+		border-radius: 0.5rem;
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.history-version:hover {
+		background: color-mix(in oklab, var(--btn-regular-bg) 60%, transparent);
+	}
+
+	.history-version.is-selected {
+		background: var(--btn-regular-bg);
+	}
+
+	.history-version.is-selected .history-time {
+		color: var(--primary);
+	}
+
+	.history-time {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--deep-text);
+	}
+
+	.history-reason {
+		font-size: 0.875rem;
+		color: var(--content-meta);
+	}
+
+	.history-version-title {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		overflow: hidden;
+		font-size: 0.875rem;
+		color: var(--content-meta);
+	}
+
+	.history-meta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 1rem;
+		margin-top: 0.5rem;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+	}
+
+	.history-meta span {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	.history-note {
+		margin: 0;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+	}
+
+	.history-error {
+		margin: 0;
+		font-size: 0.8125rem;
+		color: var(--destructive);
+	}
+
+	.history-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		background: rgb(0 0 0 / 0.3);
+	}
+
+	.history-confirm {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		width: min(clamp(420px, 30vw, 520px), calc(100% - 32px));
+		padding: clamp(24px, 1.5vw, 32px);
+		border-radius: var(--radius-large);
+		background: var(--card-bg);
+		box-shadow: 0 16px 40px rgb(0 0 0 / 0.3);
+	}
+
+	.history-confirm h3 {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.history-confirm-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+	}
+
+	.history-btn {
+		padding: 0.5rem 1rem;
+		border: 1px solid var(--line-divider);
+		border-radius: 0.5rem;
+		background: transparent;
+		color: var(--deep-text);
+		font-family: inherit;
+		font-size: 0.875rem;
+		cursor: pointer;
+	}
+
+	.history-btn.is-primary {
+		border-color: transparent;
+		background: var(--primary);
+		color: var(--primary-foreground);
+	}
+</style>
