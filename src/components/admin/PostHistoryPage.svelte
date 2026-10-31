@@ -58,6 +58,50 @@ const errorText = $derived(
 const editorUrl = `/admin/posts/edit/${encodeURIComponent(slug)}/`;
 const historyUrl = `/admin/posts/edit/${encodeURIComponent(slug)}/history/`;
 
+/* 正文限宽可拖拽，与编辑页共用同一个 localStorage 键，宽度偏好两处一致 */
+const WIDTH_KEY = "admin-editor-max-width";
+const WIDTH_MIN = 480;
+
+function readWidth(): number | null {
+	try {
+		const raw = Number(localStorage.getItem(WIDTH_KEY));
+		return Number.isFinite(raw) && raw >= WIDTH_MIN ? raw : null;
+	} catch {
+		return null;
+	}
+}
+
+let contentWidth = $state<number | null>(readWidth());
+let resizing = $state(false);
+
+function startResize(e: PointerEvent, side: "left" | "right") {
+	e.preventDefault();
+	resizing = true;
+	const startX = e.clientX;
+	const startW =
+		contentWidth ?? (typeof window === "undefined" ? 1056 : window.innerWidth);
+	const viewport = typeof window === "undefined" ? 1920 : window.innerWidth;
+	const mySide = side;
+	const move = (ev: PointerEvent) => {
+		const delta = (ev.clientX - startX) * (mySide === "right" ? 1 : -1);
+		const next = startW + delta * 2;
+		contentWidth = Math.min(viewport, Math.max(WIDTH_MIN, next));
+	};
+	const up = () => {
+		resizing = false;
+		window.removeEventListener("pointermove", move);
+		window.removeEventListener("pointerup", up);
+		try {
+			if (contentWidth !== null)
+				localStorage.setItem(WIDTH_KEY, String(contentWidth));
+		} catch {
+			// 忽略存储失败
+		}
+	};
+	window.addEventListener("pointermove", move);
+	window.addEventListener("pointerup", up);
+}
+
 const selected = $derived(revisions.find((r) => r.id === currentId) ?? null);
 
 function fmtTime(ts: number): string {
@@ -250,7 +294,26 @@ $effect(() => {
 		</div>
 	</header>
 
-	<div class="post-history-body">
+	<div
+		class="post-history-body"
+		class:is-resizing={resizing}
+		style={`--history-doc-width: ${contentWidth === null ? "66rem" : `${contentWidth}px`}`}
+	>
+		<!-- 左右拖拽手柄：移植自编辑页 .resize-handle，交互一致（向内拖=变窄） -->
+		<button
+			class="resize-handle left"
+			type="button"
+			aria-label={i18n(I18nKey.postResizeEditor)}
+			title={i18n(I18nKey.postResizeEditor)}
+			onpointerdown={(e) => startResize(e, "left")}
+		></button>
+		<button
+			class="resize-handle right"
+			type="button"
+			aria-label={i18n(I18nKey.postResizeEditor)}
+			title={i18n(I18nKey.postResizeEditor)}
+			onpointerdown={(e) => startResize(e, "right")}
+		></button>
 		<section class="post-history-content">
 			<!-- 滚动与限宽都交给 .post-editor-document（参考同款），
 			     不再由外层 section 承担，避免滚动条挤在正文与右栏之间 -->
@@ -512,9 +575,37 @@ $effect(() => {
 
 	/* 参考 .post-history-body */
 	.post-history-body {
+		position: relative;
 		display: flex;
 		flex: 1;
 		min-height: 0;
+	}
+
+	/* 拖拽手柄：移植自编辑页，10px 热区 + col-resize 光标 */
+	.resize-handle {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		z-index: 30;
+		width: 10px;
+		padding: 0;
+		border: none;
+		background: transparent;
+		cursor: col-resize;
+		touch-action: none;
+	}
+
+	.resize-handle.left {
+		left: 0;
+	}
+
+	.resize-handle.right {
+		right: 20rem;
+	}
+
+	.resize-handle:hover,
+	.post-history-body.is-resizing .resize-handle {
+		background: color-mix(in srgb, var(--primary) 22%, transparent);
 	}
 
 	/* 参考 .post-history-content */
@@ -526,9 +617,13 @@ $effect(() => {
 		min-width: 0;
 	}
 
-	/* 参考 .post-editor-document：滚动 + 66rem 限宽都在这里 */
+	/* 参考 .post-editor-document：滚动 + 限宽；
+	   宽度改由 --history-doc-width 控制，可拖拽手柄实时调整（默认 66rem） */
 	.post-editor-document {
-		--document-inset: max(3rem, calc((100% - 66rem) / 2));
+		--document-inset: max(
+			2rem,
+			calc((100% - var(--history-doc-width, 66rem)) / 2)
+		);
 		flex: 1;
 		min-height: 0;
 		overflow-y: auto;
@@ -560,10 +655,12 @@ $effect(() => {
 	/* 元数据栏：抄前台 PostMeta.astro + main.css 442-449 的 .meta-icon */
 	.post-meta-root {
 		display: flex;
+		flex-direction: row;
 		flex-wrap: wrap;
 		align-items: center;
+		justify-content: flex-start;
 		gap: 1rem;
-		margin-bottom: 1.25rem;
+		margin-bottom: 1.5rem;
 		font-size: 0.875rem;
 		font-weight: 500;
 		color: var(--content-meta);
@@ -571,6 +668,7 @@ $effect(() => {
 
 	.post-meta-item {
 		display: flex;
+		flex-direction: row;
 		align-items: center;
 	}
 
@@ -583,13 +681,15 @@ $effect(() => {
 		margin-right: 0.5rem;
 		border-radius: 0.375rem;
 		background: var(--btn-regular-bg);
-		color: var(--btn-content);
+		/* --btn-content 在本项目未定义时会回落到纯黑，深色主题下看不见图标 */
+		color: var(--btn-content, var(--deep-text));
 		transition: colors 0.15s;
 	}
 
 	.post-meta-item :global(svg) {
 		width: 1.25rem;
 		height: 1.25rem;
+		fill: currentcolor;
 	}
 
 	/* 标签之间的「/」分隔 */
@@ -607,13 +707,21 @@ $effect(() => {
 	}
 
 	.post-editor-body :global(p) {
-		margin: 0 0 1.25rem;
+		margin: 0 0 1.5rem;
 		font-size: 1.0625rem;
 		color: var(--deep-text);
 	}
 
 	.post-editor-body :global(li) {
-		margin-bottom: 0.5rem;
+		margin-bottom: 0.75rem;
+	}
+
+	/* 引用块：左侧竖线与文字留出 1.25rem，避免贴字 */
+	.post-editor-body :global(blockquote) {
+		margin: 0 0 1.5rem;
+		padding: 0.25rem 0 0.25rem 1.25rem;
+		border-left: 3px solid var(--line-divider);
+		color: var(--content-meta);
 	}
 
 	/* 标题锚点图标：抄前台 src/styles/markdown.css 38-61 的规则
