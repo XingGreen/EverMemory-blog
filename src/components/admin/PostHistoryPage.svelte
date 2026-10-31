@@ -338,24 +338,31 @@ $effect(() => {
 		color: var(--primary);
 	}
 
+	/* 只读标识居中：照参考 .post-history-context 的 margin-inline: auto，
+	   不论窗口多宽都保持在 header 正中，不随左右两侧内容宽度漂移 */
 	.history-context {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		flex: 1;
+		gap: 0.625rem;
 		min-width: 0;
+		margin-inline: auto;
+		text-align: center;
 		color: var(--content-meta);
+	}
+
+	.history-context svg {
+		flex-shrink: 0;
 	}
 
 	.history-context h1 {
 		margin: 0;
-		font-size: 0.9375rem;
-		font-weight: 600;
+		font-size: 0.875rem;
+		font-weight: 500;
 		color: var(--deep-text);
 	}
 
 	.history-context p {
-		margin: 0.125rem 0 0;
+		margin: 0.15rem 0 0;
 		font-size: 0.75rem;
 	}
 
@@ -393,20 +400,23 @@ $effect(() => {
 		cursor: not-allowed;
 	}
 
-	/* 主区：详情占主区，列表固定右栏；左右留白与 header 对齐 */
+	/* 主区：flex（参考 .post-history-body 用 flex，不是 grid）；
+	   详情占满剩余，列表固定 20rem 右栏 */
 	.history-body {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) 17rem;
-		gap: 1rem;
+		display: flex;
 		flex: 1;
 		min-height: 0;
-		padding: 1rem 1.5rem;
 	}
 
 	.history-content {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-width: 0;
 		min-height: 0;
 		overflow-y: auto;
-		padding-right: 0.5rem;
+		/* 参考 .post-history-document 的 padding-top: 3.75rem */
+		padding: 3.75rem 2.5rem 3rem;
 	}
 
 	.history-doc-title {
@@ -416,18 +426,23 @@ $effect(() => {
 		color: var(--deep-text);
 	}
 
-	.history-doc {
-		margin-top: 0.75rem;
-		font-size: 0.875rem;
+	/* 空态落在卡片里，需要与主区一致的留白 */
+	.history-empty {
+		flex: 1;
+		padding: 2.5rem 1.5rem;
+		text-align: center;
 	}
 
+	/* 右栏：照参考 .post-history-sidebar —— 20rem 固定宽、左侧分隔线、
+	   比卡片略深的背景色，让列表与正文明确分区 */
 	.history-sidebar {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		width: 20rem;
+		flex-shrink: 0;
 		min-height: 0;
-		padding-left: 1rem;
 		border-left: 1px solid var(--line-divider);
+		background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
 	}
 
 	.history-sidebar-title {
@@ -437,28 +452,44 @@ $effect(() => {
 		color: var(--content-meta);
 	}
 
+	/* 列表容器：照参考 .post-history-list 的 padding（左宽右窄，为时间轴留位） */
 	.history-list {
 		display: flex;
+		flex: 1;
 		flex-direction: column;
-		gap: 0.125rem;
 		min-height: 0;
 		overflow-y: auto;
+		padding: 0.5rem 1.25rem 1.5rem 2rem;
 	}
 
-	/* 列表项三项式：时间 / 原因 / 标题（两行截断），选中态抬底 + 主色时间 */
+	/* 列表项：照参考 .post-history-version —— 0.625rem 圆角、1rem/1.125rem 内边距、
+	   0.75rem 间距，并用 ::before 画左侧时间轴竖线 */
 	.history-version {
-		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
+		position: relative;
+		display: block;
 		width: 100%;
-		padding: 0.5rem 0.625rem;
+		margin-bottom: 0.75rem;
+		padding: 1rem 1.125rem;
 		border: none;
-		border-radius: 0.5rem;
+		border-radius: 0.625rem;
 		background: transparent;
 		font-family: inherit;
 		color: inherit;
 		text-align: left;
 		cursor: pointer;
+		transition:
+			background-color 0.15s,
+			color 0.15s;
+	}
+
+	.history-version::before {
+		content: "";
+		position: absolute;
+		left: -0.625rem;
+		top: 0;
+		bottom: -0.75rem;
+		width: 1px;
+		background: var(--line-divider);
 	}
 
 	.history-version:hover {
@@ -509,17 +540,60 @@ $effect(() => {
 		gap: 0.375rem;
 	}
 
+	/* 提示文本居中（含「正在查看…」横幅、空态、加载中） */
 	.history-note {
 		margin: 0;
 		font-size: 0.8125rem;
 		color: var(--content-meta);
+		text-align: center;
 	}
 
-	/* 空态落在卡片里，需要与主区一致的留白 */
-	.history-empty {
-		flex: 1;
-		padding: 2.5rem 1.5rem;
-		text-align: center;
+	/* 正文排版：照参考 .post-editor-document .tiptap 的 1.0625rem / 1.85 行高，
+	   并给段落、列表、标题补上下间距，避免整页文字挤成一团 */
+	.history-doc {
+		margin-top: 1rem;
+		font-size: 1.0625rem;
+		line-height: 1.85;
+	}
+
+	.history-doc :global(p) {
+		margin: 0 0 1.25rem;
+	}
+
+	.history-doc :global(h2) {
+		margin: 2rem 0 0.875rem;
+		font-size: 1.375rem;
+		line-height: 1.4;
+	}
+
+	.history-doc :global(h3) {
+		margin: 1.75rem 0 0.75rem;
+		font-size: 1.1875rem;
+		line-height: 1.45;
+	}
+
+	.history-doc :global(ul),
+	.history-doc :global(ol) {
+		margin: 0 0 1.25rem;
+		padding-left: 1.5rem;
+	}
+
+	.history-doc :global(li) {
+		margin-bottom: 0.5rem;
+	}
+
+	.history-doc :global(blockquote) {
+		margin: 0 0 1.25rem;
+		padding: 0.25rem 0 0.25rem 1rem;
+		border-left: 3px solid var(--line-divider);
+	}
+
+	.history-doc :global(pre) {
+		margin: 0 0 1.25rem;
+	}
+
+	.history-doc :global(img) {
+		margin: 1.25rem 0;
 	}
 
 	.history-error {
