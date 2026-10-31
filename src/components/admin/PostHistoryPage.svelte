@@ -70,6 +70,15 @@ function fmtTime(ts: number): string {
 	).padStart(2, "0")}`;
 }
 
+/** 只到日的日期，对应前台 formatDateToYYYYMMDD 的展示口径 */
+function fmtDate(ts: number): string {
+	if (!ts) return "";
+	const d = new Date(ts);
+	return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(
+		d.getDate(),
+	).padStart(2, "0")}`;
+}
+
 function reasonLabel(reason: string): string {
 	if (reason === "publish") return i18n(I18nKey.postHistoryReasonPublish);
 	if (reason === "restore_backup")
@@ -259,25 +268,39 @@ $effect(() => {
 						)}
 						· {reasonLabel(selected.reason)}
 					</p>
-					<!-- 摘要三段，对齐参考 post-editor-summary.tsx：
-					     分类（图标 + 名称，空则「未分类」）
-					     标签（图标 + join " / "，空则「未设置标签」）
-					     封面（图标 + 有则「封面」，无则「未设置封面」） -->
-					<div class="post-editor-summary">
-						<span>
-							<Icon icon="material-symbols:menu-book" />
-							{selected.category || i18n(I18nKey.postCategoryPlaceholder)}
-						</span>
-						<span>
-							<Icon icon="material-symbols:label" />
-							{selected.tags.join(" / ") || i18n(I18nKey.postMetaTagsEmpty)}
-						</span>
-						<span>
-							<Icon icon="material-symbols:image" />
-							{selected.image
-								? i18n(I18nKey.postMetaCover)
-								: i18n(I18nKey.postMetaCoverEmpty)}
-						</span>
+					<!-- 元数据栏：结构与图标全部照搬前台 src/components/layout/PostMeta.astro
+					     日期（calendar-today-outline-rounded）/ 分类（book-2-outline-rounded）/
+					     标签（tag-rounded，用「/」分隔）。前台该栏没有封面项，故不渲染封面。 -->
+					<div class="post-meta-root">
+						<div class="post-meta-item">
+							<div class="meta-icon">
+								<Icon icon="material-symbols:calendar-today-outline-rounded" />
+							</div>
+							<span>{fmtDate(selected.savedAt)}</span>
+						</div>
+						<div class="post-meta-item">
+							<div class="meta-icon">
+								<Icon icon="material-symbols:book-2-outline-rounded" />
+							</div>
+							<span>
+								{selected.category || i18n(I18nKey.postCategoryPlaceholder)}
+							</span>
+						</div>
+						<div class="post-meta-item">
+							<div class="meta-icon">
+								<Icon icon="material-symbols:tag-rounded" />
+							</div>
+							{#if selected.tags.length > 0}
+								{#each selected.tags as tag, i (tag)}
+									{#if i > 0}
+										<span class="post-meta-divider">/</span>
+									{/if}
+									<span>{tag.trim()}</span>
+								{/each}
+							{:else}
+								<span>{i18n(I18nKey.postMetaTagsEmpty)}</span>
+							{/if}
+						</div>
 					</div>
 					<div class="post-editor-body custom-md">{@html detailHtml}</div>
 				{/if}
@@ -534,25 +557,45 @@ $effect(() => {
 		color: var(--content-meta);
 	}
 
-	/* 参考 .post-editor-summary：分类 / 标签，图标 + 文本 */
-	.post-editor-summary {
+	/* 元数据栏：抄前台 PostMeta.astro + main.css 442-449 的 .meta-icon */
+	.post-meta-root {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 1rem;
-		margin-bottom: 1.5rem;
+		margin-bottom: 1.25rem;
 		font-size: 0.875rem;
+		font-weight: 500;
 		color: var(--content-meta);
 	}
 
-	.post-editor-summary span {
-		display: inline-flex;
+	.post-meta-item {
+		display: flex;
 		align-items: center;
-		gap: 0.375rem;
 	}
 
-	.post-editor-summary :global(svg) {
-		flex-shrink: 0;
+	.meta-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		margin-right: 0.5rem;
+		border-radius: 0.375rem;
+		background: var(--btn-regular-bg);
+		color: var(--btn-content);
+		transition: colors 0.15s;
+	}
+
+	.post-meta-item :global(svg) {
+		width: 1.25rem;
+		height: 1.25rem;
+	}
+
+	/* 标签之间的「/」分隔 */
+	.post-meta-divider {
+		margin-inline: 0.375rem;
+		color: var(--line-divider);
 	}
 
 	/* 参考 .post-editor-document .tiptap：字号与行高；
