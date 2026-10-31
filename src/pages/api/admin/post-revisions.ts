@@ -12,10 +12,17 @@
  * 保证「恢复」本身也可回退。
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+} from "node:fs";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
 import {
+	deleteFileFromGitHub,
 	getFileFromGitHub,
 	saveFileLocally,
 	saveFileToGitHub,
@@ -188,7 +195,7 @@ export async function POST({
 	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 
-	let body: { slug?: string; id?: string };
+	let body: { slug?: string; id?: string; action?: string };
 	try {
 		body = await request.json();
 	} catch {
@@ -201,6 +208,35 @@ export async function POST({
 		return json({ success: false, message: "缺少 slug 或 id" }, 400);
 	if (id.includes("/") || id.includes("..")) {
 		return json({ success: false, message: "非法的版本 id" }, 400);
+	}
+
+	/* 删除单个版本：对应参考 revisions.remove({ revisionIds: [id] })。
+	   返回 deletedIds，前端据此判断删掉的的是否为当前选中项。 */
+	if (body.action === "delete") {
+		const revRel = `${revisionDirRel(slug)}/${id}`;
+		const revAbs = path.resolve(process.cwd(), revRel);
+		let removedLocal = false;
+		if (existsSync(revAbs)) {
+			try {
+				rmSync(revAbs, { force: true });
+				removedLocal = true;
+			} catch {
+				return json({ success: false, message: "删除版本失败" }, 500);
+			}
+		}
+		let removedRemote = false;
+		try {
+			await deleteFileFromGitHub(
+				revRel,
+				`chore(history): 删除历史版本 ${slug}/${id}`,
+			);
+			removedRemote = true;
+		} catch {
+			removedRemote = false;
+		}
+		if (!removedLocal && !removedRemote)
+			return json({ success: false, message: "REVISION_NOT_FOUND" }, 404);
+		return json({ success: true, deletedIds: [id] });
 	}
 
 	const revRel = `${revisionDirRel(slug)}/${id}`;
