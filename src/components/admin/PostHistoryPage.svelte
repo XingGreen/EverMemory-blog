@@ -256,7 +256,7 @@ $effect(() => {
 		</div>
 	{:else}
 		<!-- 没有可查看的版本（或列表还在加载）：给出明确空态，不留整页空白 -->
-		<p class="history-note">
+		<p class="history-note history-empty">
 			{listLoading ? "…" : i18n(I18nKey.postHistoryEmpty)}
 		</p>
 	{/if}
@@ -299,13 +299,18 @@ $effect(() => {
 {/if}
 
 <style>
+	/* 外层容器与编辑器 .editor-shell 同规格：等高、卡片底、描边、大圆角、卡片阴影。
+	   历史页此前只是一层裸 flex，没有外壳，视觉上与编辑页/列表页不成体系。 */
 	.history-page {
 		display: flex;
 		flex-direction: column;
-		gap: 0.875rem;
-		height: 100%;
-		min-height: 0;
-		padding: 1rem;
+		gap: 0;
+		height: var(--admin-viewport-h, calc(100vh - 3rem));
+		background: var(--card-bg);
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-large);
+		box-shadow: var(--shadow-card);
+		overflow: hidden;
 	}
 
 	/* header 三段：返回 | 只读标识 | 恢复按钮（照参考 post-editor-header 的排布） */
@@ -313,8 +318,10 @@ $effect(() => {
 		display: flex;
 		align-items: center;
 		gap: 1rem;
-		padding-bottom: 0.75rem;
+		flex-shrink: 0;
+		padding: 1rem 1.5rem;
 		border-bottom: 1px solid var(--line-divider);
+		border-radius: var(--radius-large) var(--radius-large) 0 0;
 	}
 
 	.history-back {
@@ -386,19 +393,20 @@ $effect(() => {
 		cursor: not-allowed;
 	}
 
-	/* 主区：详情占主区，列表固定右栏 */
+	/* 主区：详情占主区，列表固定右栏；左右留白与 header 对齐 */
 	.history-body {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) 17rem;
 		gap: 1rem;
 		flex: 1;
 		min-height: 0;
+		padding: 1rem 1.5rem;
 	}
 
 	.history-content {
 		min-height: 0;
 		overflow-y: auto;
-		padding: 0.25rem 0.5rem;
+		padding-right: 0.5rem;
 	}
 
 	.history-doc-title {
@@ -505,6 +513,13 @@ $effect(() => {
 		margin: 0;
 		font-size: 0.8125rem;
 		color: var(--content-meta);
+	}
+
+	/* 空态落在卡片里，需要与主区一致的留白 */
+	.history-empty {
+		flex: 1;
+		padding: 2.5rem 1.5rem;
+		text-align: center;
 	}
 
 	.history-error {
