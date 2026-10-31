@@ -365,7 +365,15 @@ $effect(() => {
 							{/if}
 						</div>
 					</div>
-					<div class="post-editor-body custom-md">{@html detailHtml}</div>
+					<!-- 渲染容器与编辑页预览完全同一组 class：
+					     src/components/admin/PostEditorWritePanel.svelte:201
+					     "prose dark:prose-invert prose-base max-w-none! content-preview custom-md"
+					     prose / prose-base 负责行高与段落间距，此前漏了它们才显得挤。 -->
+					<div
+						class="prose dark:prose-invert prose-base max-w-none post-editor-body custom-md"
+					>
+						{@html detailHtml}
+					</div>
 				{/if}
 			</div>
 		</section>
@@ -704,12 +712,9 @@ $effect(() => {
 		color: var(--line-divider);
 	}
 
-	/* 正文：只声明字号、行高、颜色。
-	   段落/列表/引用的间距与标题锚点一律交给 .custom-md（markdown.css），
-	   和编辑页预览用的是同一套——在这里重复设 margin 只会与它打架，导致排版漂移。 */
+	/* 正文：行高与段落间距由 prose / prose-base 负责（与编辑页预览同一组 class），
+	   这里只补颜色，避免深色主题下正文发暗。 */
 	.post-editor-body {
-		font-size: 1.0625rem;
-		line-height: 1.85;
 		color: var(--deep-text);
 	}
 
