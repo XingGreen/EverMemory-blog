@@ -230,9 +230,11 @@ $effect(() => {
 			</section>
 
 			<aside class="history-sidebar">
-				<h2 class="history-sidebar-title">
-					{i18n(I18nKey.postHistoryListTitle)}
-				</h2>
+				<div class="history-sidebar-head">
+					<h2 class="history-sidebar-title">
+						{i18n(I18nKey.postHistoryListTitle)}
+					</h2>
+				</div>
 				{#if listLoading}
 					<p class="history-note">…</p>
 				{:else if revisions.length === 0}
@@ -438,7 +440,7 @@ $effect(() => {
 	}
 
 	/* 右栏：照参考 .post-history-sidebar —— 20rem 固定宽、左侧分隔线、
-	   比卡片略深的背景色，让列表与正文明确分区 */
+	   比卡片略深的背景色；标题区独立成段并加分隔线，避免列表直接贴顶部 */
 	.history-sidebar {
 		display: flex;
 		flex-direction: column;
@@ -447,6 +449,13 @@ $effect(() => {
 		min-height: 0;
 		border-left: 1px solid var(--line-divider);
 		background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
+	}
+
+	/* 侧栏标题容器：对应参考 .post-editor-panel-heading */
+	.history-sidebar-head {
+		flex-shrink: 0;
+		padding: 1rem 1.25rem 0.75rem 2rem;
+		border-bottom: 1px solid var(--line-divider);
 	}
 
 	.history-sidebar-title {
@@ -535,6 +544,7 @@ $effect(() => {
 		gap: 1rem;
 		margin-top: 0.5rem;
 		font-size: 0.8125rem;
+		line-height: 1;
 		color: var(--content-meta);
 	}
 
@@ -542,6 +552,15 @@ $effect(() => {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.375rem;
+		line-height: 1.4;
+	}
+
+	/* 图标与文字基线对齐：Icon 组件默认按基线排，这里统一成块级居中 */
+	.history-meta :global(.icon),
+	.history-meta :global(svg) {
+		display: inline-block;
+		flex-shrink: 0;
+		vertical-align: middle;
 	}
 
 	/* 提示文本居中（仅用于 header 中段的只读标识与空态） */
@@ -560,28 +579,20 @@ $effect(() => {
 		text-align: left;
 	}
 
-	/* 正文排版：照参考 .post-editor-document .tiptap 的 1.0625rem / 1.85 行高，
-	   并给段落、列表、标题补上下间距，避免整页文字挤成一团 */
+	/* 正文排版：照参考 .post-editor-document .tiptap 的 1.0625rem / 1.85 行高。
+	   标题字号不再覆盖——.custom-md 已有项目既定的标题层级（h1 3xl / h2 2xl / h3 xl），
+	   在这里另设一套只会与它打架，导致标题忽大忽小。 */
 	.history-doc {
 		margin-top: 1rem;
 		font-size: 1.0625rem;
 		line-height: 1.85;
 	}
 
+	/* 段落显式给字号：.custom-md p 自带 @apply text-base，会与容器的 1.0625rem
+	   打架，导致同一页里段落忽大忽小 */
 	.history-doc :global(p) {
 		margin: 0 0 1.25rem;
-	}
-
-	.history-doc :global(h2) {
-		margin: 2rem 0 0.875rem;
-		font-size: 1.375rem;
-		line-height: 1.4;
-	}
-
-	.history-doc :global(h3) {
-		margin: 1.75rem 0 0.75rem;
-		font-size: 1.1875rem;
-		line-height: 1.45;
+		font-size: 1.0625rem;
 	}
 
 	.history-doc :global(ul),
