@@ -1546,10 +1546,14 @@ $effect(() => {
 									{i18n(I18nKey.postHistoryRestore)}
 								</button>
 							</div>
+							<!-- 横幅：对齐参考 post-editor-history-document 的
+							     m.editor_history_banner_title({ time }) -->
 							<p class="history-note">
-								{fmtRevisionTime(selectedRevision.savedAt)} · {revisionReasonLabel(
-									selectedRevision.reason,
+								{i18n(I18nKey.postHistoryBannerTitle).replace(
+									"{time}",
+									fmtRevisionTime(selectedRevision.savedAt),
 								)}
+								· {revisionReasonLabel(selectedRevision.reason)}
 							</p>
 							<!-- 分类与标签摘要：对齐参考 PostEditorSummary（图标 + 文本） -->
 							<div class="history-meta">

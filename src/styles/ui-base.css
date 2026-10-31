@@ -107,7 +107,9 @@
    亮色黑 7%/10%、暗色白 5%/10% 的透明叠加),与按钮底区分 */
 .ui-input {
 	width: 100%;
-	height: 44px;
+	/* 36px = 参考 src/components/ui/input.tsx 的 h-9；此前 44px 偏高，
+	   与同排的自定义下拉（40px，对齐参考 select.tsx 的 h-10）也不协调 */
+	height: 2.25rem;
 	padding: 0 0.75rem;
 	background: var(--input-bg);
 	border: 1px solid var(--input-border);
@@ -123,8 +125,8 @@
 
 textarea.ui-input {
 	height: auto;
-	min-height: 44px;
-	padding-block: 0.625rem;
+	min-height: 2.25rem;
+	padding-block: 0.5rem;
 	resize: vertical;
 	line-height: 1.5;
 }

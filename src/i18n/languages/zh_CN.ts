@@ -452,9 +452,11 @@ export const zh_CN: Translation = {
 	[Key.adminBackHome]: "返回前台",
 	[Key.adminCategoriesAndTags]: "分类与标签管理",
 	[Key.adminEnvVars]: "环境变量",
-	[Key.adminEnvVarsIntro]: "此处管理站点运行所需的密钥与环境变量，修改会写入项目根目录的配置文件",
+	[Key.adminEnvVarsIntro]:
+		"此处管理站点运行所需的密钥与环境变量，修改会写入项目根目录的配置文件",
 	[Key.adminCategories]: "分类管理",
-	[Key.adminCategoriesIntro]: "管理文章分类：新建、重命名、删除会同步更新相关文章",
+	[Key.adminCategoriesIntro]:
+		"管理文章分类：新建、重命名、删除会同步更新相关文章",
 	[Key.adminTags]: "标签管理",
 	[Key.adminTagsIntro]: "管理文章标签：新建、重命名、删除会同步更新相关文章",
 	[Key.taxonomyNew]: "新建",
@@ -465,7 +467,8 @@ export const zh_CN: Translation = {
 	[Key.taxonomyDeleteTitle]: "确认删除",
 	[Key.taxonomyNameLabel]: "名称",
 	[Key.taxonomyNamePlaceholder]: "输入名称",
-	[Key.taxonomyDeleteConfirm]: "确定删除「{name}」吗？引用了它的 {count} 篇文章会被同步清除该项。",
+	[Key.taxonomyDeleteConfirm]:
+		"确定删除「{name}」吗？引用了它的 {count} 篇文章会被同步清除该项。",
 	[Key.taxonomyPostCount]: "{count} 篇",
 	[Key.taxonomySearch]: "搜索",
 	[Key.taxonomyEmpty]: "还没有任何内容",
@@ -536,11 +539,13 @@ export const zh_CN: Translation = {
 	[Key.postHistory]: "历史版本",
 	[Key.postHistoryEmpty]: "暂无历史版本",
 	[Key.postHistoryRestore]: "恢复",
+	[Key.postHistoryBannerTitle]: "正在查看 {time} 的版本",
 	[Key.postHistoryReasonAuto]: "自动快照",
 	[Key.postHistoryReasonPublish]: "发布前快照",
 	[Key.postHistoryReasonRestore]: "恢复前备份",
 	[Key.postHistoryRestoreTitle]: "恢复这个版本？",
-	[Key.postHistoryRestoreMessage]: "当前正文会先备份成一个新版本，然后被该版本覆盖。",
+	[Key.postHistoryRestoreMessage]:
+		"当前正文会先备份成一个新版本，然后被该版本覆盖。",
 	[Key.postResizeEditor]: "拖拽调整编辑区宽度",
 	[Key.postMdRedo]: "重做",
 	[Key.postSlugGenerate]: "根据标题自动生成",
@@ -596,7 +601,8 @@ export const zh_CN: Translation = {
 	[Key.postSortAsc]: "升序排列",
 	[Key.postSortDesc]: "降序排列",
 	[Key.postSyncPendingDeploy]: "待部署",
-	[Key.postSyncPendingDeployHint]: "GitHub 上已有这篇，但当前站点构建里还没有——通常是上次构建之后才推送的，等下次构建生效",
+	[Key.postSyncPendingDeployHint]:
+		"GitHub 上已有这篇，但当前站点构建里还没有——通常是上次构建之后才推送的，等下次构建生效",
 	[Key.postSyncNotOnGithub]: "未推送",
 	[Key.postUnsynced]: "未同步",
 	[Key.postSyncSummary]: "有 {count} 篇未同步到 GitHub",
@@ -785,7 +791,8 @@ export const zh_CN: Translation = {
 	[Key.secretsMenuCopyKey]: "复制变量名",
 	[Key.secretsFieldMenu]: "更多操作",
 	[Key.secretsUploadLabel]: "上传 App 私钥文件",
-	[Key.secretsUploadInvalid]: "文件内容不含 PEM 头（-----BEGIN），请确认选对了文件",
+	[Key.secretsUploadInvalid]:
+		"文件内容不含 PEM 头（-----BEGIN），请确认选对了文件",
 	[Key.secretsUploadTooLarge]: "文件过大（超过 100KB），请确认是私钥文件",
 	[Key.secretsUploadedConfigured]: "已配置",
 	[Key.secretsEdit]: "编辑",
@@ -793,7 +800,8 @@ export const zh_CN: Translation = {
 	[Key.secretsUnsavedCount]: "还有 {count} 项未保存",
 	[Key.secretsDirtyGoto]: "跳转",
 	[Key.secretsLeaveTitle]: "有未保存的修改",
-	[Key.secretsLeaveDesc]: "当前有 {count} 项未保存的修改，离开后将丢失。确定要离开吗？",
+	[Key.secretsLeaveDesc]:
+		"当前有 {count} 项未保存的修改，离开后将丢失。确定要离开吗？",
 	[Key.secretsLeaveStay]: "留在本页",
 	[Key.secretsLeaveConfirm]: "放弃并离开",
 	[Key.secretsLayoutSwitchToTwoCol]: "切换为新设计（表单样式）",
@@ -815,13 +823,16 @@ export const zh_CN: Translation = {
 	[Key.secretsWritableHint]: "修改将写入项目根目录的 {file}，重启服务后生效",
 	[Key.secretsReadonlyHint]:
 		"当前为生产构建，文件系统只读；请到部署平台（如 Vercel）的环境变量设置中配置",
-	[Key.secretsStatusAllDone]: "你已完成所有必要配置！修改将写入项目根目录的 {file}",
+	[Key.secretsStatusAllDone]:
+		"你已完成所有必要配置！修改将写入项目根目录的 {file}",
 	[Key.secretsStatusGotIt]: "知道了",
 	[Key.secretsLeakCheck]: "检测密钥泄露",
 	[Key.secretsLeakSafe]: "安全：该文件未被 git 追踪",
-	[Key.secretsLeakWarning]: "警告：已被 git 追踪但尚未提交，执行 git rm --cached 移出索引",
+	[Key.secretsLeakWarning]:
+		"警告：已被 git 追踪但尚未提交，执行 git rm --cached 移出索引",
 	[Key.secretsLeakSerious]: "严重：已提交但未推送，push 之前必须清除历史",
-	[Key.secretsLeakDanger]: "危险：已推送到远端，视为已泄露，请立即轮换密钥并清除历史",
+	[Key.secretsLeakDanger]:
+		"危险：已推送到远端，视为已泄露，请立即轮换密钥并清除历史",
 	[Key.secretsLeakUnavailable]: "当前环境没有 git 仓库，检测仅本地可用",
 	[Key.secretsStatusPartial]: "已完成 {done}/{total} 项必要配置",
 	[Key.secretsStatusMissing]: "还缺：",
@@ -838,7 +849,8 @@ export const zh_CN: Translation = {
 	[Key.secretsRotating]: "轮换中…",
 	[Key.secretsRotateHint]: "生成新密钥并让所有已登录会话立即失效",
 	[Key.secretsRotateReadonly]: "只读部署环境无法自动轮换，请到部署平台修改",
-	[Key.secretsRotateConfirm]: "确定轮换 {label} 吗？所有已登录设备（包括当前设备）都会被迫重新登录。",
+	[Key.secretsRotateConfirm]:
+		"确定轮换 {label} 吗？所有已登录设备（包括当前设备）都会被迫重新登录。",
 	[Key.secretsRotateDone]: "轮换成功，所有旧会话已失效",
 	[Key.secretsRotateFailed]: "轮换失败",
 	[Key.secretsRotateJwt]: "轮换 JWT 签名密钥",

@@ -462,16 +462,20 @@ export const en: Translation = {
 	[Key.adminNewPost]: "New Post",
 	[Key.adminEditPost]: "Edit Post",
 	[Key.adminSettings]: "Site Configuration",
-	[Key.configSettingsIntro]: "Site configuration is managed here; changes are written to the matching config files",
+	[Key.configSettingsIntro]:
+		"Site configuration is managed here; changes are written to the matching config files",
 	[Key.adminSettingsOverview]: "Configuration Overview",
 	[Key.adminBackHome]: "Back to site",
 	[Key.adminCategoriesAndTags]: "Categories & tags",
 	[Key.adminEnvVars]: "Env Vars",
-	[Key.adminEnvVarsIntro]: "Manage the secrets and environment variables this site needs; changes are written to the config file in the project root",
+	[Key.adminEnvVarsIntro]:
+		"Manage the secrets and environment variables this site needs; changes are written to the config file in the project root",
 	[Key.adminCategories]: "Categories",
-	[Key.adminCategoriesIntro]: "Manage post categories: create, rename and delete update related posts",
+	[Key.adminCategoriesIntro]:
+		"Manage post categories: create, rename and delete update related posts",
 	[Key.adminTags]: "Tags",
-	[Key.adminTagsIntro]: "Manage post tags: create, rename and delete update related posts",
+	[Key.adminTagsIntro]:
+		"Manage post tags: create, rename and delete update related posts",
 	[Key.taxonomyNew]: "New",
 	[Key.taxonomyRename]: "Rename",
 	[Key.taxonomyDelete]: "Delete",
@@ -480,7 +484,8 @@ export const en: Translation = {
 	[Key.taxonomyDeleteTitle]: "Confirm deletion",
 	[Key.taxonomyNameLabel]: "Name",
 	[Key.taxonomyNamePlaceholder]: "Enter a name",
-	[Key.taxonomyDeleteConfirm]: "Delete \"{name}\"? {count} post(s) referencing it will have it removed.",
+	[Key.taxonomyDeleteConfirm]:
+		'Delete "{name}"? {count} post(s) referencing it will have it removed.',
 	[Key.taxonomyPostCount]: "{count} post(s)",
 	[Key.taxonomySearch]: "Search",
 	[Key.taxonomyEmpty]: "Nothing here yet",
@@ -497,7 +502,8 @@ export const en: Translation = {
 	[Key.taxonomyLoadFailed]: "Failed to load",
 	[Key.taxonomyNameExists]: "An item with this name already exists",
 	[Key.taxonomyNameTooLong]: "Name cannot exceed {max} characters",
-	[Key.taxonomyDeleteToUncategorized]: "These posts will become Uncategorized after deletion",
+	[Key.taxonomyDeleteToUncategorized]:
+		"These posts will become Uncategorized after deletion",
 	[Key.taxonomyScopeAll]: "All",
 	[Key.taxonomyScopeAllHint]: "All posts including drafts",
 	[Key.taxonomyScopePublishedHint]: "Published posts only; drafts are excluded",
@@ -519,7 +525,8 @@ export const en: Translation = {
 	[Key.adminExpandSidebar]: "Expand sidebar",
 	[Key.adminSidebarRole]: "Administrator",
 	[Key.adminLogout]: "Log Out",
-	[Key.adminLogoutConfirmMessage]: "You will need to sign in again to access the dashboard.",
+	[Key.adminLogoutConfirmMessage]:
+		"You will need to sign in again to access the dashboard.",
 
 	[Key.verifyTitle]: "Admin Login",
 	[Key.verifySubtitle]: "Welcome back, please enter your credentials",
@@ -551,11 +558,13 @@ export const en: Translation = {
 	[Key.postHistory]: "History",
 	[Key.postHistoryEmpty]: "No saved versions",
 	[Key.postHistoryRestore]: "Restore",
+	[Key.postHistoryBannerTitle]: "Viewing the version from {time}",
 	[Key.postHistoryReasonAuto]: "Auto snapshot",
 	[Key.postHistoryReasonPublish]: "Before publish",
 	[Key.postHistoryReasonRestore]: "Before restore",
 	[Key.postHistoryRestoreTitle]: "Restore this version?",
-	[Key.postHistoryRestoreMessage]: "The current content is backed up as a new version first, then overwritten.",
+	[Key.postHistoryRestoreMessage]:
+		"The current content is backed up as a new version first, then overwritten.",
 	[Key.postResizeEditor]: "Drag to resize editor",
 	[Key.postMdRedo]: "Redo",
 	[Key.postSlugGenerate]: "Auto-generate from title",
@@ -611,7 +620,8 @@ export const en: Translation = {
 	[Key.postSortAsc]: "sorted ascending",
 	[Key.postSortDesc]: "sorted descending",
 	[Key.postSyncPendingDeploy]: "pending deploy",
-	[Key.postSyncPendingDeployHint]: "Exists on GitHub but not in the current site build — usually pushed after the last build",
+	[Key.postSyncPendingDeployHint]:
+		"Exists on GitHub but not in the current site build — usually pushed after the last build",
 	[Key.postSyncNotOnGithub]: "not pushed",
 	[Key.postUnsynced]: "unsynced",
 	[Key.postSyncSummary]: "{count} not synced to GitHub",
@@ -795,15 +805,18 @@ export const en: Translation = {
 	[Key.cloudDraftSyncing]: "Syncing...",
 	[Key.cloudDraftFailed]: "Cloud sync failed, saved locally",
 	[Key.cloudDraftRetry]: "Retry",
-	[Key.secretsGroupGithubDesc]: "GitHub App identity and private key used to write to your repository",
-	[Key.secretsGroupAuthDesc]: "Controls who can sign in and how admin sessions are signed",
+	[Key.secretsGroupGithubDesc]:
+		"GitHub App identity and private key used to write to your repository",
+	[Key.secretsGroupAuthDesc]:
+		"Controls who can sign in and how admin sessions are signed",
 	[Key.secretsGroupTurnstile]: "Human verification (optional)",
 	[Key.secretsUploadReplace]: "Key loaded — click to upload a different file",
 	[Key.secretsMenuClearValue]: "Clear this value",
 	[Key.secretsMenuClearKey]: "Clear private key",
 	[Key.secretsMenuReupload]: "Re-upload",
 	[Key.secretsMenuViewKey]: "View private key",
-	[Key.secretsPemUploadPrompt]: "Not configured yet — upload your .pem private key file",
+	[Key.secretsPemUploadPrompt]:
+		"Not configured yet — upload your .pem private key file",
 	[Key.secretsViewTitle]: "View private key",
 	[Key.secretsViewPlain]: "Plain text",
 	[Key.secretsViewBase64]: "Convert to Base64",
@@ -813,15 +826,18 @@ export const en: Translation = {
 	[Key.secretsMenuCopyKey]: "Copy variable name",
 	[Key.secretsFieldMenu]: "More actions",
 	[Key.secretsUploadLabel]: "Upload App private key file",
-	[Key.secretsUploadInvalid]: "The file has no PEM header (-----BEGIN); check you picked the right file",
-	[Key.secretsUploadTooLarge]: "File is too large (over 100KB); make sure it is a private key",
+	[Key.secretsUploadInvalid]:
+		"The file has no PEM header (-----BEGIN); check you picked the right file",
+	[Key.secretsUploadTooLarge]:
+		"File is too large (over 100KB); make sure it is a private key",
 	[Key.secretsUploadedConfigured]: "Configured",
 	[Key.secretsEdit]: "Edit",
 	[Key.secretsCollapse]: "Collapse",
 	[Key.secretsUnsavedCount]: "{count} unsaved change(s)",
 	[Key.secretsDirtyGoto]: "Jump to",
 	[Key.secretsLeaveTitle]: "Unsaved changes",
-	[Key.secretsLeaveDesc]: "You have {count} unsaved change(s) that will be lost. Leave anyway?",
+	[Key.secretsLeaveDesc]:
+		"You have {count} unsaved change(s) that will be lost. Leave anyway?",
 	[Key.secretsLeaveStay]: "Stay on this page",
 	[Key.secretsLeaveConfirm]: "Discard and leave",
 	[Key.secretsLayoutSwitchToTwoCol]: "Switch to the new design (form)",
@@ -831,7 +847,8 @@ export const en: Translation = {
 	[Key.secretsCredentialActions]: "Credential actions",
 	[Key.secretsUploadReadFailed]: "Could not read the file, please try again",
 	[Key.secretsFieldHelp]: "Show field description",
-	[Key.secretsGroupTurnstileDesc]: "Bot check on the login page; skipped entirely when unconfigured",
+	[Key.secretsGroupTurnstileDesc]:
+		"Bot check on the login page; skipped entirely when unconfigured",
 	[Key.secretsGroupGithub]: "GitHub App Credentials",
 	[Key.secretsGroupAuth]: "Admin Authentication",
 	[Key.secretsConfigured]: "Configured",
@@ -844,14 +861,19 @@ export const en: Translation = {
 		"Changes are written to {file} in the project root. Restart the service to apply.",
 	[Key.secretsReadonlyHint]:
 		"Read-only in production. Configure these in your deploy platform's environment variables (e.g. Vercel).",
-	[Key.secretsStatusAllDone]: "All required configuration is complete! Changes are written to {file} at the project root",
+	[Key.secretsStatusAllDone]:
+		"All required configuration is complete! Changes are written to {file} at the project root",
 	[Key.secretsStatusGotIt]: "Got it",
 	[Key.secretsLeakCheck]: "Check for leaked secrets",
 	[Key.secretsLeakSafe]: "Safe: not tracked by git",
-	[Key.secretsLeakWarning]: "Warning: tracked but not committed yet — run git rm --cached",
-	[Key.secretsLeakSerious]: "Serious: committed but not pushed — purge history before pushing",
-	[Key.secretsLeakDanger]: "Danger: pushed to remote — treat as leaked, rotate the key now",
-	[Key.secretsLeakUnavailable]: "No git repository in this environment; check is local-only",
+	[Key.secretsLeakWarning]:
+		"Warning: tracked but not committed yet — run git rm --cached",
+	[Key.secretsLeakSerious]:
+		"Serious: committed but not pushed — purge history before pushing",
+	[Key.secretsLeakDanger]:
+		"Danger: pushed to remote — treat as leaked, rotate the key now",
+	[Key.secretsLeakUnavailable]:
+		"No git repository in this environment; check is local-only",
 	[Key.secretsStatusPartial]: "Completed {done}/{total} required items",
 	[Key.secretsStatusMissing]: "Missing: ",
 	[Key.secretsExportInlineHint]:
@@ -862,17 +884,24 @@ export const en: Translation = {
 	[Key.secretsClear]: "Clear",
 	[Key.secretsShow]: "Show",
 	[Key.secretsHide]: "Hide",
-	[Key.secretsManagedConfigured]: "Managed automatically by the server (64-char random key)",
-	[Key.secretsManagedMissing]: "Not managed yet — start the server once in a writable environment to generate it",
+	[Key.secretsManagedConfigured]:
+		"Managed automatically by the server (64-char random key)",
+	[Key.secretsManagedMissing]:
+		"Not managed yet — start the server once in a writable environment to generate it",
 	[Key.secretsRotate]: "Rotate",
 	[Key.secretsRotating]: "Rotating…",
-	[Key.secretsRotateHint]: "Generate a new key and invalidate every signed-in session",
-	[Key.secretsRotateReadonly]: "Read-only deployment cannot rotate automatically; update it on your hosting platform",
-	[Key.secretsRotateConfirm]: "Rotate {label}? Every signed-in device (including this one) will be forced to sign in again.",
-	[Key.secretsRotateDone]: "Rotated successfully. All previous sessions are now invalid.",
+	[Key.secretsRotateHint]:
+		"Generate a new key and invalidate every signed-in session",
+	[Key.secretsRotateReadonly]:
+		"Read-only deployment cannot rotate automatically; update it on your hosting platform",
+	[Key.secretsRotateConfirm]:
+		"Rotate {label}? Every signed-in device (including this one) will be forced to sign in again.",
+	[Key.secretsRotateDone]:
+		"Rotated successfully. All previous sessions are now invalid.",
 	[Key.secretsRotateFailed]: "Rotation failed",
 	[Key.secretsRotateJwt]: "Rotate JWT signing key",
-	[Key.secretsStepUpRequired]: "Your credentials have expired, redirecting to re-authenticate…",
+	[Key.secretsStepUpRequired]:
+		"Your credentials have expired, redirecting to re-authenticate…",
 	[Key.secretsGenerateJwt]: "Generate JWT Secret",
 	[Key.secretsGenerateJwtDone]:
 		"Generated a 64-char random key and filled it in. Click Save to apply.",

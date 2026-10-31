@@ -454,9 +454,11 @@ export const zh_TW: Translation = {
 	[Key.adminBackHome]: "返回前台",
 	[Key.adminCategoriesAndTags]: "分类与标签管理",
 	[Key.adminEnvVars]: "環境變數",
-	[Key.adminEnvVarsIntro]: "此處管理站點運行所需的密鑰與環境變數，修改會寫入專案根目錄的設定檔",
+	[Key.adminEnvVarsIntro]:
+		"此處管理站點運行所需的密鑰與環境變數，修改會寫入專案根目錄的設定檔",
 	[Key.adminCategories]: "分類管理",
-	[Key.adminCategoriesIntro]: "管理文章分類：新建、重新命名、刪除會同步更新相關文章",
+	[Key.adminCategoriesIntro]:
+		"管理文章分類：新建、重新命名、刪除會同步更新相關文章",
 	[Key.adminTags]: "標籤管理",
 	[Key.adminTagsIntro]: "管理文章標籤：新建、重新命名、刪除會同步更新相關文章",
 	[Key.taxonomyNew]: "新建",
@@ -467,7 +469,8 @@ export const zh_TW: Translation = {
 	[Key.taxonomyDeleteTitle]: "確認刪除",
 	[Key.taxonomyNameLabel]: "名稱",
 	[Key.taxonomyNamePlaceholder]: "輸入名稱",
-	[Key.taxonomyDeleteConfirm]: "確定刪除「{name}」嗎？引用了它的 {count} 篇文章會被同步清除該項。",
+	[Key.taxonomyDeleteConfirm]:
+		"確定刪除「{name}」嗎？引用了它的 {count} 篇文章會被同步清除該項。",
 	[Key.taxonomyPostCount]: "{count} 篇",
 	[Key.taxonomySearch]: "搜尋",
 	[Key.taxonomyEmpty]: "還沒有任何內容",
@@ -538,11 +541,13 @@ export const zh_TW: Translation = {
 	[Key.postHistory]: "歷史版本",
 	[Key.postHistoryEmpty]: "尚無歷史版本",
 	[Key.postHistoryRestore]: "還原",
+	[Key.postHistoryBannerTitle]: "正在檢視 {time} 的版本",
 	[Key.postHistoryReasonAuto]: "自動快照",
 	[Key.postHistoryReasonPublish]: "發布前快照",
 	[Key.postHistoryReasonRestore]: "還原前備份",
 	[Key.postHistoryRestoreTitle]: "還原這個版本？",
-	[Key.postHistoryRestoreMessage]: "目前正文會先備份成新版本，然後被該版本覆蓋。",
+	[Key.postHistoryRestoreMessage]:
+		"目前正文會先備份成新版本，然後被該版本覆蓋。",
 	[Key.postResizeEditor]: "拖曳調整編輯區寬度",
 	[Key.postMdRedo]: "重做",
 	[Key.postSlugGenerate]: "根據標題自動生成",
@@ -598,7 +603,8 @@ export const zh_TW: Translation = {
 	[Key.postSortAsc]: "升序排列",
 	[Key.postSortDesc]: "降序排列",
 	[Key.postSyncPendingDeploy]: "待部署",
-	[Key.postSyncPendingDeployHint]: "GitHub 上已有這篇，但目前站點建置裡還沒有——通常是上次建置之後才推送的",
+	[Key.postSyncPendingDeployHint]:
+		"GitHub 上已有這篇，但目前站點建置裡還沒有——通常是上次建置之後才推送的",
 	[Key.postSyncNotOnGithub]: "未推送",
 	[Key.postUnsynced]: "未同步",
 	[Key.postSyncSummary]: "有 {count} 篇未同步到 GitHub",
@@ -787,7 +793,8 @@ export const zh_TW: Translation = {
 	[Key.secretsMenuCopyKey]: "複製變數名稱",
 	[Key.secretsFieldMenu]: "更多操作",
 	[Key.secretsUploadLabel]: "上傳 App 私鑰檔案",
-	[Key.secretsUploadInvalid]: "檔案內容不含 PEM 標頭（-----BEGIN），請確認選對檔案",
+	[Key.secretsUploadInvalid]:
+		"檔案內容不含 PEM 標頭（-----BEGIN），請確認選對檔案",
 	[Key.secretsUploadTooLarge]: "檔案過大（超過 100KB），請確認是私鑰檔案",
 	[Key.secretsUploadedConfigured]: "已設定",
 	[Key.secretsEdit]: "編輯",
@@ -795,7 +802,8 @@ export const zh_TW: Translation = {
 	[Key.secretsUnsavedCount]: "還有 {count} 項未儲存",
 	[Key.secretsDirtyGoto]: "跳轉",
 	[Key.secretsLeaveTitle]: "有未儲存的修改",
-	[Key.secretsLeaveDesc]: "目前有 {count} 項未儲存的修改，離開後將遺失。確定要離開嗎？",
+	[Key.secretsLeaveDesc]:
+		"目前有 {count} 項未儲存的修改，離開後將遺失。確定要離開嗎？",
 	[Key.secretsLeaveStay]: "留在本頁",
 	[Key.secretsLeaveConfirm]: "放棄並離開",
 	[Key.secretsLayoutSwitchToTwoCol]: "切換為新設計（表單樣式）",
@@ -818,13 +826,16 @@ export const zh_TW: Translation = {
 		"修改將寫入專案根目錄的 {file}，重新啟動服務後生效",
 	[Key.secretsReadonlyHint]:
 		"目前為正式環境建置，檔案系統唯讀；請到部署平台（如 Vercel）的環境變數設定中設定",
-	[Key.secretsStatusAllDone]: "你已完成所有必要設定！修改將寫入專案根目錄的 {file}",
+	[Key.secretsStatusAllDone]:
+		"你已完成所有必要設定！修改將寫入專案根目錄的 {file}",
 	[Key.secretsStatusGotIt]: "知道了",
 	[Key.secretsLeakCheck]: "检测密钥泄露",
 	[Key.secretsLeakSafe]: "安全：该文件未被 git 追踪",
-	[Key.secretsLeakWarning]: "警告：已被 git 追踪但尚未提交，执行 git rm --cached 移出索引",
+	[Key.secretsLeakWarning]:
+		"警告：已被 git 追踪但尚未提交，执行 git rm --cached 移出索引",
 	[Key.secretsLeakSerious]: "严重：已提交但未推送，push 之前必须清除历史",
-	[Key.secretsLeakDanger]: "危险：已推送到远端，视为已泄露，请立即轮换密钥并清除历史",
+	[Key.secretsLeakDanger]:
+		"危险：已推送到远端，视为已泄露，请立即轮换密钥并清除历史",
 	[Key.secretsLeakUnavailable]: "当前环境没有 git 仓库，检测仅本地可用",
 	[Key.secretsStatusPartial]: "已完成 {done}/{total} 項必要設定",
 	[Key.secretsStatusMissing]: "還缺：",
@@ -841,7 +852,8 @@ export const zh_TW: Translation = {
 	[Key.secretsRotating]: "輪換中…",
 	[Key.secretsRotateHint]: "產生新密鑰並讓所有已登入工作階段立即失效",
 	[Key.secretsRotateReadonly]: "唯讀部署環境無法自動輪換，請到部署平台修改",
-	[Key.secretsRotateConfirm]: "確定輪換 {label} 嗎？所有已登入裝置（包含目前裝置）都會被迫重新登入。",
+	[Key.secretsRotateConfirm]:
+		"確定輪換 {label} 嗎？所有已登入裝置（包含目前裝置）都會被迫重新登入。",
 	[Key.secretsRotateDone]: "輪換成功，所有舊工作階段已失效",
 	[Key.secretsRotateFailed]: "輪換失敗",
 	[Key.secretsRotateJwt]: "輪換 JWT 簽章密鑰",

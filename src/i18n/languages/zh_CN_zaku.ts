@@ -449,9 +449,11 @@ export const zaku: Translation = {
 	[Key.adminBackHome]: "返回前台",
 	[Key.adminCategoriesAndTags]: "分类与标签管理",
 	[Key.adminEnvVars]: "环境变量",
-	[Key.adminEnvVarsIntro]: "这里管站点要用的密钥和环境变量，改了会写进项目根目录的配置文件",
+	[Key.adminEnvVarsIntro]:
+		"这里管站点要用的密钥和环境变量，改了会写进项目根目录的配置文件",
 	[Key.adminCategories]: "分类管管",
-	[Key.adminCategoriesIntro]: "管理文章分类：新建、改名、删除都会同步更新相关文章哦",
+	[Key.adminCategoriesIntro]:
+		"管理文章分类：新建、改名、删除都会同步更新相关文章哦",
 	[Key.adminTags]: "标签管管",
 	[Key.adminTagsIntro]: "管理文章标签：新建、改名、删除都会同步更新相关文章哦",
 	[Key.taxonomyNew]: "新建",
@@ -462,7 +464,8 @@ export const zaku: Translation = {
 	[Key.taxonomyDeleteTitle]: "真要删吗",
 	[Key.taxonomyNameLabel]: "名字",
 	[Key.taxonomyNamePlaceholder]: "起个名字吧",
-	[Key.taxonomyDeleteConfirm]: "确定删掉「{name}」吗？有 {count} 篇文章用到它，会一起清掉哦。",
+	[Key.taxonomyDeleteConfirm]:
+		"确定删掉「{name}」吗？有 {count} 篇文章用到它，会一起清掉哦。",
 	[Key.taxonomyPostCount]: "{count} 篇",
 	[Key.taxonomySearch]: "找找看",
 	[Key.taxonomyEmpty]: "空空如也",
@@ -533,11 +536,13 @@ export const zaku: Translation = {
 	[Key.postHistory]: "历史版本",
 	[Key.postHistoryEmpty]: "暂无历史版本",
 	[Key.postHistoryRestore]: "恢复",
+	[Key.postHistoryBannerTitle]: "正在查看 {time} 的版本",
 	[Key.postHistoryReasonAuto]: "自动快照",
 	[Key.postHistoryReasonPublish]: "发布前快照",
 	[Key.postHistoryReasonRestore]: "恢复前备份",
 	[Key.postHistoryRestoreTitle]: "恢复这个版本？",
-	[Key.postHistoryRestoreMessage]: "当前正文会先备份成一个新版本，然后被该版本覆盖。",
+	[Key.postHistoryRestoreMessage]:
+		"当前正文会先备份成一个新版本，然后被该版本覆盖。",
 	[Key.postResizeEditor]: "拖拽调整编辑区宽度",
 	[Key.postMdRedo]: "重做",
 	[Key.postSlugGenerate]: "根据标题自动生成",
@@ -593,7 +598,8 @@ export const zaku: Translation = {
 	[Key.postSortAsc]: "升序排列",
 	[Key.postSortDesc]: "降序排列",
 	[Key.postSyncPendingDeploy]: "待部署",
-	[Key.postSyncPendingDeployHint]: "GitHub 上已有这篇，但当前站点构建里还没有——通常是上次构建之后才推送的，等下次构建生效",
+	[Key.postSyncPendingDeployHint]:
+		"GitHub 上已有这篇，但当前站点构建里还没有——通常是上次构建之后才推送的，等下次构建生效",
 	[Key.postSyncNotOnGithub]: "未推送",
 	[Key.postUnsynced]: "未同步",
 	[Key.postSyncSummary]: "有 {count} 篇未同步到 GitHub",
@@ -815,9 +821,11 @@ export const zaku: Translation = {
 	[Key.secretsStatusGotIt]: "晓得啦",
 	[Key.secretsLeakCheck]: "检测密钥泄露",
 	[Key.secretsLeakSafe]: "安全：该文件未被 git 追踪",
-	[Key.secretsLeakWarning]: "警告：已被 git 追踪但尚未提交，执行 git rm --cached 移出索引",
+	[Key.secretsLeakWarning]:
+		"警告：已被 git 追踪但尚未提交，执行 git rm --cached 移出索引",
 	[Key.secretsLeakSerious]: "严重：已提交但未推送，push 之前必须清除历史",
-	[Key.secretsLeakDanger]: "危险：已推送到远端，视为已泄露，请立即轮换密钥并清除历史",
+	[Key.secretsLeakDanger]:
+		"危险：已推送到远端，视为已泄露，请立即轮换密钥并清除历史",
 	[Key.secretsLeakUnavailable]: "当前环境没有 git 仓库，检测仅本地可用",
 	[Key.secretsStatusPartial]: "必配项搞定 {done}/{total}",
 	[Key.secretsStatusMissing]: "还差：",
@@ -834,7 +842,8 @@ export const zaku: Translation = {
 	[Key.secretsRotating]: "轮换中…",
 	[Key.secretsRotateHint]: "生成新密钥，把已登录的会话全踢下线",
 	[Key.secretsRotateReadonly]: "只读部署环境没法自动轮换，去部署平台改",
-	[Key.secretsRotateConfirm]: "确定轮换 {label} 吗？所有已登录设备（包括当前这台）都得重新登录。",
+	[Key.secretsRotateConfirm]:
+		"确定轮换 {label} 吗？所有已登录设备（包括当前这台）都得重新登录。",
 	[Key.secretsRotateDone]: "轮换成功，旧会话全失效了",
 	[Key.secretsRotateFailed]: "轮换失败",
 	[Key.secretsRotateJwt]: "轮换 JWT 签名密钥",

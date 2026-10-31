@@ -462,16 +462,20 @@ export const ru: Translation = {
 	[Key.adminNewPost]: "Новая статья",
 	[Key.adminEditPost]: "Редактировать статью",
 	[Key.adminSettings]: "Конфигурация сайта",
-	[Key.configSettingsIntro]: "Настройки сайта управляются здесь; изменения записываются в соответствующие файлы конфигурации",
+	[Key.configSettingsIntro]:
+		"Настройки сайта управляются здесь; изменения записываются в соответствующие файлы конфигурации",
 	[Key.adminSettingsOverview]: "Обзор конфигурации",
 	[Key.adminBackHome]: "На сайт",
 	[Key.adminCategoriesAndTags]: "Категории и теги",
 	[Key.adminEnvVars]: "Переменные среды",
-	[Key.adminEnvVarsIntro]: "Здесь управляются секреты и переменные среды сайта; изменения записываются в файл конфигурации в корне проекта",
+	[Key.adminEnvVarsIntro]:
+		"Здесь управляются секреты и переменные среды сайта; изменения записываются в файл конфигурации в корне проекта",
 	[Key.adminCategories]: "Категории",
-	[Key.adminCategoriesIntro]: "Управление категориями: создание, переименование и удаление обновляют связанные статьи",
+	[Key.adminCategoriesIntro]:
+		"Управление категориями: создание, переименование и удаление обновляют связанные статьи",
 	[Key.adminTags]: "Теги",
-	[Key.adminTagsIntro]: "Управление тегами: создание, переименование и удаление обновляют связанные статьи",
+	[Key.adminTagsIntro]:
+		"Управление тегами: создание, переименование и удаление обновляют связанные статьи",
 	[Key.taxonomyNew]: "Создать",
 	[Key.taxonomyRename]: "Переименовать",
 	[Key.taxonomyDelete]: "Удалить",
@@ -480,7 +484,8 @@ export const ru: Translation = {
 	[Key.taxonomyDeleteTitle]: "Подтвердите удаление",
 	[Key.taxonomyNameLabel]: "Название",
 	[Key.taxonomyNamePlaceholder]: "Введите название",
-	[Key.taxonomyDeleteConfirm]: "Удалить «{name}»? У {count} статей это поле будет очищено.",
+	[Key.taxonomyDeleteConfirm]:
+		"Удалить «{name}»? У {count} статей это поле будет очищено.",
 	[Key.taxonomyPostCount]: "{count} шт.",
 	[Key.taxonomySearch]: "Поиск",
 	[Key.taxonomyEmpty]: "Пока ничего нет",
@@ -497,7 +502,8 @@ export const ru: Translation = {
 	[Key.taxonomyLoadFailed]: "Ошибка загрузки",
 	[Key.taxonomyNameExists]: "Элемент с таким названием уже существует",
 	[Key.taxonomyNameTooLong]: "Название не должно превышать {max} символов",
-	[Key.taxonomyDeleteToUncategorized]: "После удаления эти статьи станут «Без категории»",
+	[Key.taxonomyDeleteToUncategorized]:
+		"После удаления эти статьи станут «Без категории»",
 	[Key.taxonomyScopeAll]: "Все",
 	[Key.taxonomyScopeAllHint]: "Все статьи, включая черновики",
 	[Key.taxonomyScopePublishedHint]: "Только опубликованные статьи",
@@ -519,7 +525,8 @@ export const ru: Translation = {
 	[Key.adminExpandSidebar]: "Развернуть боковую панель",
 	[Key.adminSidebarRole]: "Администратор",
 	[Key.adminLogout]: "Выйти",
-	[Key.adminLogoutConfirmMessage]: "Чтобы снова войти, потребуется авторизация.",
+	[Key.adminLogoutConfirmMessage]:
+		"Чтобы снова войти, потребуется авторизация.",
 
 	[Key.verifyTitle]: "Вход для администратора",
 	[Key.verifySubtitle]: "С возвращением, введите свои учётные данные",
@@ -551,11 +558,13 @@ export const ru: Translation = {
 	[Key.postHistory]: "История",
 	[Key.postHistoryEmpty]: "Версий нет",
 	[Key.postHistoryRestore]: "Восстановить",
+	[Key.postHistoryBannerTitle]: "Просмотр версии от {time}",
 	[Key.postHistoryReasonAuto]: "Автоснимок",
 	[Key.postHistoryReasonPublish]: "Перед публикацией",
 	[Key.postHistoryReasonRestore]: "Перед восстановлением",
 	[Key.postHistoryRestoreTitle]: "Восстановить эту версию?",
-	[Key.postHistoryRestoreMessage]: "Текущий текст сначала сохранится как новая версия.",
+	[Key.postHistoryRestoreMessage]:
+		"Текущий текст сначала сохранится как новая версия.",
 	[Key.postResizeEditor]: "Потяните, чтобы изменить ширину",
 	[Key.postMdRedo]: "Повторить",
 	[Key.postSlugGenerate]: "Автогенерация из заголовка",
@@ -612,7 +621,8 @@ export const ru: Translation = {
 	[Key.postSortAsc]: "сортировка по возрастанию",
 	[Key.postSortDesc]: "сортировка по убыванию",
 	[Key.postSyncPendingDeploy]: "ожидает деплоя",
-	[Key.postSyncPendingDeployHint]: "Есть в GitHub, но не в текущей сборке сайта — отправлено после последней сборки",
+	[Key.postSyncPendingDeployHint]:
+		"Есть в GitHub, но не в текущей сборке сайта — отправлено после последней сборки",
 	[Key.postSyncNotOnGithub]: "не отправлено",
 	[Key.postUnsynced]: "не синхронизировано",
 	[Key.postSyncSummary]: "{count} не синхронизировано с GitHub",
@@ -801,15 +811,18 @@ export const ru: Translation = {
 	[Key.cloudDraftSyncing]: "Синхронизация…",
 	[Key.cloudDraftFailed]: "Не удалось синхронизировать, сохранено локально",
 	[Key.cloudDraftRetry]: "Повторить",
-	[Key.secretsGroupGithubDesc]: "Идентичность GitHub App и приватный ключ для записи в репозиторий",
-	[Key.secretsGroupAuthDesc]: "Определяет, кто может входить, и как подписываются сессии",
+	[Key.secretsGroupGithubDesc]:
+		"Идентичность GitHub App и приватный ключ для записи в репозиторий",
+	[Key.secretsGroupAuthDesc]:
+		"Определяет, кто может входить, и как подписываются сессии",
 	[Key.secretsGroupTurnstile]: "Проверка на робота (необязательно)",
 	[Key.secretsUploadReplace]: "Ключ загружен — нажмите, чтобы заменить файл",
 	[Key.secretsMenuClearValue]: "Очистить это значение",
 	[Key.secretsMenuClearKey]: "Очистить ключ",
 	[Key.secretsMenuReupload]: "Загрузить заново",
 	[Key.secretsMenuViewKey]: "Показать ключ",
-	[Key.secretsPemUploadPrompt]: "Не настроено — загрузите файл закрытого ключа .pem",
+	[Key.secretsPemUploadPrompt]:
+		"Не настроено — загрузите файл закрытого ключа .pem",
 	[Key.secretsViewTitle]: "Просмотр закрытого ключа",
 	[Key.secretsViewPlain]: "Исходный текст",
 	[Key.secretsViewBase64]: "Преобразовать в Base64",
@@ -819,15 +832,18 @@ export const ru: Translation = {
 	[Key.secretsMenuCopyKey]: "Скопировать имя переменной",
 	[Key.secretsFieldMenu]: "Другие действия",
 	[Key.secretsUploadLabel]: "Загрузить файл закрытого ключа App",
-	[Key.secretsUploadInvalid]: "В файле нет PEM-заголовка (-----BEGIN); проверьте, тот ли файл выбран",
-	[Key.secretsUploadTooLarge]: "Файл слишком большой (более 100KB); убедитесь, что это ключ",
+	[Key.secretsUploadInvalid]:
+		"В файле нет PEM-заголовка (-----BEGIN); проверьте, тот ли файл выбран",
+	[Key.secretsUploadTooLarge]:
+		"Файл слишком большой (более 100KB); убедитесь, что это ключ",
 	[Key.secretsUploadedConfigured]: "Настроено",
 	[Key.secretsEdit]: "Изменить",
 	[Key.secretsCollapse]: "Свернуть",
 	[Key.secretsUnsavedCount]: "Несохранённых изменений: {count}",
 	[Key.secretsDirtyGoto]: "Перейти",
 	[Key.secretsLeaveTitle]: "Есть несохранённые изменения",
-	[Key.secretsLeaveDesc]: "У вас {count} несохранённых изменений, они будут потеряны. Всё равно уйти?",
+	[Key.secretsLeaveDesc]:
+		"У вас {count} несохранённых изменений, они будут потеряны. Всё равно уйти?",
 	[Key.secretsLeaveStay]: "Остаться на странице",
 	[Key.secretsLeaveConfirm]: "Отменить и уйти",
 	[Key.secretsLayoutSwitchToTwoCol]: "Переключить на новый дизайн (форма)",
@@ -835,9 +851,11 @@ export const ru: Translation = {
 	[Key.secretsDiscard]: "Отменить изменения",
 	[Key.secretsUploadRemove]: "Удалить этот файл",
 	[Key.secretsCredentialActions]: "Действия с учётными данными",
-	[Key.secretsUploadReadFailed]: "Не удалось прочитать файл, попробуйте ещё раз",
+	[Key.secretsUploadReadFailed]:
+		"Не удалось прочитать файл, попробуйте ещё раз",
 	[Key.secretsFieldHelp]: "Показать описание поля",
-	[Key.secretsGroupTurnstileDesc]: "Проверка на странице входа; без настройки полностью пропускается",
+	[Key.secretsGroupTurnstileDesc]:
+		"Проверка на странице входа; без настройки полностью пропускается",
 	[Key.secretsGroupGithub]: "Учётные данные GitHub App",
 	[Key.secretsGroupAuth]: "Аутентификация администратора",
 	[Key.secretsConfigured]: "Настроено",
@@ -850,14 +868,19 @@ export const ru: Translation = {
 		"Изменения будут записаны в {file} в корне проекта. Применятся после перезапуска.",
 	[Key.secretsReadonlyHint]:
 		"В продакшене файловая система доступна только для чтения. Настройте переменные окружения на платформе развёртывания (например, Vercel).",
-	[Key.secretsStatusAllDone]: "Все обязательные настройки выполнены! Изменения записываются в {file} в корне проекта",
+	[Key.secretsStatusAllDone]:
+		"Все обязательные настройки выполнены! Изменения записываются в {file} в корне проекта",
 	[Key.secretsStatusGotIt]: "Понятно",
 	[Key.secretsLeakCheck]: "Проверить утечку ключей",
 	[Key.secretsLeakSafe]: "Безопасно: файл не отслеживается git",
-	[Key.secretsLeakWarning]: "Внимание: отслеживается, но не закоммичен — выполните git rm --cached",
-	[Key.secretsLeakSerious]: "Серьёзно: закоммичен, но не отправлен — очистите историю до push",
-	[Key.secretsLeakDanger]: "Опасно: отправлено в remote — считайте ключ скомпрометированным, смените его",
-	[Key.secretsLeakUnavailable]: "В этом окружении нет git-репозитория, проверка доступна только локально",
+	[Key.secretsLeakWarning]:
+		"Внимание: отслеживается, но не закоммичен — выполните git rm --cached",
+	[Key.secretsLeakSerious]:
+		"Серьёзно: закоммичен, но не отправлен — очистите историю до push",
+	[Key.secretsLeakDanger]:
+		"Опасно: отправлено в remote — считайте ключ скомпрометированным, смените его",
+	[Key.secretsLeakUnavailable]:
+		"В этом окружении нет git-репозитория, проверка доступна только локально",
 	[Key.secretsStatusPartial]: "Выполнено {done}/{total} обязательных",
 	[Key.secretsStatusMissing]: "Отсутствуют: ",
 	[Key.secretsExportInlineHint]:
@@ -868,17 +891,24 @@ export const ru: Translation = {
 	[Key.secretsClear]: "Очистить",
 	[Key.secretsShow]: "Показать",
 	[Key.secretsHide]: "Скрыть",
-	[Key.secretsManagedConfigured]: "Управляется сервером автоматически (64-символьный случайный ключ)",
-	[Key.secretsManagedMissing]: "Ещё не создан — запустите сервис один раз в среде с записью, чтобы сгенерировать его",
+	[Key.secretsManagedConfigured]:
+		"Управляется сервером автоматически (64-символьный случайный ключ)",
+	[Key.secretsManagedMissing]:
+		"Ещё не создан — запустите сервис один раз в среде с записью, чтобы сгенерировать его",
 	[Key.secretsRotate]: "Ротация",
 	[Key.secretsRotating]: "Ротация…",
-	[Key.secretsRotateHint]: "Сгенерировать новый ключ и завершить все активные сессии",
-	[Key.secretsRotateReadonly]: "В среде только для чтения автоматическая ротация невозможна — измените значение на платформе размещения",
-	[Key.secretsRotateConfirm]: "Выполнить ротацию {label}? Все устройства (включая текущее) потребуется авторизовать заново.",
-	[Key.secretsRotateDone]: "Ротация выполнена. Все предыдущие сессии недействительны.",
+	[Key.secretsRotateHint]:
+		"Сгенерировать новый ключ и завершить все активные сессии",
+	[Key.secretsRotateReadonly]:
+		"В среде только для чтения автоматическая ротация невозможна — измените значение на платформе размещения",
+	[Key.secretsRotateConfirm]:
+		"Выполнить ротацию {label}? Все устройства (включая текущее) потребуется авторизовать заново.",
+	[Key.secretsRotateDone]:
+		"Ротация выполнена. Все предыдущие сессии недействительны.",
 	[Key.secretsRotateFailed]: "Не удалось выполнить ротацию",
 	[Key.secretsRotateJwt]: "Ротировать ключ подписи JWT",
-	[Key.secretsStepUpRequired]: "Срок действия учётных данных истёк, перенаправление на повторную аутентификацию…",
+	[Key.secretsStepUpRequired]:
+		"Срок действия учётных данных истёк, перенаправление на повторную аутентификацию…",
 	[Key.secretsGenerateJwt]: "Сгенерировать JWT-ключ",
 	[Key.secretsGenerateJwtDone]:
 		"Сгенерирован случайный ключ (64 символа) и вставлен. Нажмите «Сохранить».",

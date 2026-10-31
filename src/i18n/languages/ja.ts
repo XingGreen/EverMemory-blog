@@ -459,16 +459,20 @@ export const ja: Translation = {
 	[Key.adminNewPost]: "新規記事",
 	[Key.adminEditPost]: "記事を編集",
 	[Key.adminSettings]: "サイト設定",
-	[Key.configSettingsIntro]: "サイト設定はここで管理され、変更は対応する設定ファイルに書き込まれます",
+	[Key.configSettingsIntro]:
+		"サイト設定はここで管理され、変更は対応する設定ファイルに書き込まれます",
 	[Key.adminSettingsOverview]: "設定の概要",
 	[Key.adminBackHome]: "サイトに戻る",
 	[Key.adminCategoriesAndTags]: "カテゴリとタグ管理",
 	[Key.adminEnvVars]: "環境変数",
-	[Key.adminEnvVarsIntro]: "サイトの実行に必要なシークレットと環境変数を管理します。変更はプロジェクト直下の設定ファイルに書き込まれます",
+	[Key.adminEnvVarsIntro]:
+		"サイトの実行に必要なシークレットと環境変数を管理します。変更はプロジェクト直下の設定ファイルに書き込まれます",
 	[Key.adminCategories]: "カテゴリ管理",
-	[Key.adminCategoriesIntro]: "記事カテゴリを管理します。作成・名前変更・削除は関連記事にも反映されます",
+	[Key.adminCategoriesIntro]:
+		"記事カテゴリを管理します。作成・名前変更・削除は関連記事にも反映されます",
 	[Key.adminTags]: "タグ管理",
-	[Key.adminTagsIntro]: "記事タグを管理します。作成・名前変更・削除は関連記事にも反映されます",
+	[Key.adminTagsIntro]:
+		"記事タグを管理します。作成・名前変更・削除は関連記事にも反映されます",
 	[Key.taxonomyNew]: "新規",
 	[Key.taxonomyRename]: "名前を変更",
 	[Key.taxonomyDelete]: "削除",
@@ -477,7 +481,8 @@ export const ja: Translation = {
 	[Key.taxonomyDeleteTitle]: "削除の確認",
 	[Key.taxonomyNameLabel]: "名前",
 	[Key.taxonomyNamePlaceholder]: "名前を入力",
-	[Key.taxonomyDeleteConfirm]: "「{name}」を削除しますか？参照している {count} 件の記事からも削除されます。",
+	[Key.taxonomyDeleteConfirm]:
+		"「{name}」を削除しますか？参照している {count} 件の記事からも削除されます。",
 	[Key.taxonomyPostCount]: "{count} 件",
 	[Key.taxonomySearch]: "検索",
 	[Key.taxonomyEmpty]: "まだ何もありません",
@@ -494,7 +499,8 @@ export const ja: Translation = {
 	[Key.taxonomyLoadFailed]: "読み込みに失敗しました",
 	[Key.taxonomyNameExists]: "同じ名前の項目が既に存在します",
 	[Key.taxonomyNameTooLong]: "名前は {max} 文字以内にしてください",
-	[Key.taxonomyDeleteToUncategorized]: "削除後、これらの記事は「未分類」になります",
+	[Key.taxonomyDeleteToUncategorized]:
+		"削除後、これらの記事は「未分類」になります",
 	[Key.taxonomyScopeAll]: "すべて",
 	[Key.taxonomyScopeAllHint]: "下書きを含むすべての記事",
 	[Key.taxonomyScopePublishedHint]: "公開済みの記事のみ表示します",
@@ -548,11 +554,13 @@ export const ja: Translation = {
 	[Key.postHistory]: "履歴",
 	[Key.postHistoryEmpty]: "履歴はありません",
 	[Key.postHistoryRestore]: "復元",
+	[Key.postHistoryBannerTitle]: "{time} の版を表示中",
 	[Key.postHistoryReasonAuto]: "自動スナップショット",
 	[Key.postHistoryReasonPublish]: "公開前",
 	[Key.postHistoryReasonRestore]: "復元前",
 	[Key.postHistoryRestoreTitle]: "この版を復元しますか？",
-	[Key.postHistoryRestoreMessage]: "現在の本文は新しい版としてバックアップされます。",
+	[Key.postHistoryRestoreMessage]:
+		"現在の本文は新しい版としてバックアップされます。",
 	[Key.postResizeEditor]: "ドラッグして幅を調整",
 	[Key.postMdRedo]: "やり直す",
 	[Key.postSlugGenerate]: "タイトルから自動生成",
@@ -608,7 +616,8 @@ export const ja: Translation = {
 	[Key.postSortAsc]: "昇順で並べ替え",
 	[Key.postSortDesc]: "降順で並べ替え",
 	[Key.postSyncPendingDeploy]: "デプロイ待ち",
-	[Key.postSyncPendingDeployHint]: "GitHub には存在しますが、現在のビルドには未反映です（前回ビルド後のプッシュ）",
+	[Key.postSyncPendingDeployHint]:
+		"GitHub には存在しますが、現在のビルドには未反映です（前回ビルド後のプッシュ）",
 	[Key.postSyncNotOnGithub]: "未プッシュ",
 	[Key.postUnsynced]: "未同期",
 	[Key.postSyncSummary]: "{count} 件が GitHub に未同期",
@@ -789,15 +798,18 @@ export const ja: Translation = {
 	[Key.cloudDraftSyncing]: "同期中…",
 	[Key.cloudDraftFailed]: "クラウド同期に失敗しました（ローカルに保存済み）",
 	[Key.cloudDraftRetry]: "再試行",
-	[Key.secretsGroupGithubDesc]: "リポジトリへの書き込みに使う GitHub App の身元と秘密鍵",
-	[Key.secretsGroupAuthDesc]: "誰がログインできるか、セッションをどう署名するかを決めます",
+	[Key.secretsGroupGithubDesc]:
+		"リポジトリへの書き込みに使う GitHub App の身元と秘密鍵",
+	[Key.secretsGroupAuthDesc]:
+		"誰がログインできるか、セッションをどう署名するかを決めます",
 	[Key.secretsGroupTurnstile]: "人機認証（任意）",
 	[Key.secretsUploadReplace]: "読み込み済み — クリックで再アップロード",
 	[Key.secretsMenuClearValue]: "この値をクリア",
 	[Key.secretsMenuClearKey]: "秘密鍵をクリア",
 	[Key.secretsMenuReupload]: "再アップロード",
 	[Key.secretsMenuViewKey]: "秘密鍵を表示",
-	[Key.secretsPemUploadPrompt]: "未設定です。.pem 秘密鍵ファイルをアップロードしてください",
+	[Key.secretsPemUploadPrompt]:
+		"未設定です。.pem 秘密鍵ファイルをアップロードしてください",
 	[Key.secretsViewTitle]: "秘密鍵を表示",
 	[Key.secretsViewPlain]: "原文",
 	[Key.secretsViewBase64]: "Base64 に変換",
@@ -807,15 +819,18 @@ export const ja: Translation = {
 	[Key.secretsMenuCopyKey]: "変数名をコピー",
 	[Key.secretsFieldMenu]: "その他の操作",
 	[Key.secretsUploadLabel]: "App 秘密鍵ファイルをアップロード",
-	[Key.secretsUploadInvalid]: "PEM ヘッダー（-----BEGIN）が見つかりません。正しいファイルか確認してください",
-	[Key.secretsUploadTooLarge]: "ファイルが大きすぎます（100KB 超）。秘密鍵か確認してください",
+	[Key.secretsUploadInvalid]:
+		"PEM ヘッダー（-----BEGIN）が見つかりません。正しいファイルか確認してください",
+	[Key.secretsUploadTooLarge]:
+		"ファイルが大きすぎます（100KB 超）。秘密鍵か確認してください",
 	[Key.secretsUploadedConfigured]: "設定済み",
 	[Key.secretsEdit]: "編集",
 	[Key.secretsCollapse]: "折りたたむ",
 	[Key.secretsUnsavedCount]: "未保存の変更が {count} 件あります",
 	[Key.secretsDirtyGoto]: "移動",
 	[Key.secretsLeaveTitle]: "未保存の変更があります",
-	[Key.secretsLeaveDesc]: "{count} 件の未保存の変更があり、離れると失われます。移動しますか？",
+	[Key.secretsLeaveDesc]:
+		"{count} 件の未保存の変更があり、離れると失われます。移動しますか？",
 	[Key.secretsLeaveStay]: "このページに留まる",
 	[Key.secretsLeaveConfirm]: "破棄して移動",
 	[Key.secretsLayoutSwitchToTwoCol]: "新しいデザイン（フォーム）に切り替え",
@@ -823,9 +838,11 @@ export const ja: Translation = {
 	[Key.secretsDiscard]: "変更を破棄",
 	[Key.secretsUploadRemove]: "このファイルを削除",
 	[Key.secretsCredentialActions]: "認証情報の操作",
-	[Key.secretsUploadReadFailed]: "ファイルの読み込みに失敗しました。再試行してください",
+	[Key.secretsUploadReadFailed]:
+		"ファイルの読み込みに失敗しました。再試行してください",
 	[Key.secretsFieldHelp]: "項目の説明を表示",
-	[Key.secretsGroupTurnstileDesc]: "ログインページのボット対策。未設定なら完全にスキップされます",
+	[Key.secretsGroupTurnstileDesc]:
+		"ログインページのボット対策。未設定なら完全にスキップされます",
 	[Key.secretsGroupGithub]: "GitHub App 認証情報",
 	[Key.secretsGroupAuth]: "管理者認証",
 	[Key.secretsConfigured]: "設定済み",
@@ -838,14 +855,19 @@ export const ja: Translation = {
 		"変更はプロジェクトルートの {file} に書き込まれます。再起動後に有効になります",
 	[Key.secretsReadonlyHint]:
 		"本番ビルドではファイルシステムは読み取り専用です。デプロイプラットフォーム（Vercel など）の環境変数で設定してください",
-	[Key.secretsStatusAllDone]: "必要な設定はすべて完了しています！変更はプロジェクト直下の {file} に書き込まれます",
+	[Key.secretsStatusAllDone]:
+		"必要な設定はすべて完了しています！変更はプロジェクト直下の {file} に書き込まれます",
 	[Key.secretsStatusGotIt]: "了解しました",
 	[Key.secretsLeakCheck]: "鍵の漏洩を確認",
 	[Key.secretsLeakSafe]: "安全：git に追跡されていません",
-	[Key.secretsLeakWarning]: "警告：追跡済みだが未コミット。git rm --cached で除外してください",
-	[Key.secretsLeakSerious]: "重大：コミット済みで未プッシュ。プッシュ前に履歴を削除してください",
-	[Key.secretsLeakDanger]: "危険：リモートにプッシュ済み。漏洩とみなし、鍵を直ちに更新してください",
-	[Key.secretsLeakUnavailable]: "この環境には git リポジトリがありません（ローカルのみ）",
+	[Key.secretsLeakWarning]:
+		"警告：追跡済みだが未コミット。git rm --cached で除外してください",
+	[Key.secretsLeakSerious]:
+		"重大：コミット済みで未プッシュ。プッシュ前に履歴を削除してください",
+	[Key.secretsLeakDanger]:
+		"危険：リモートにプッシュ済み。漏洩とみなし、鍵を直ちに更新してください",
+	[Key.secretsLeakUnavailable]:
+		"この環境には git リポジトリがありません（ローカルのみ）",
 	[Key.secretsStatusPartial]: "必須設定 {done}/{total} 件完了",
 	[Key.secretsStatusMissing]: "未設定：",
 	[Key.secretsExportInlineHint]:
@@ -856,17 +878,24 @@ export const ja: Translation = {
 	[Key.secretsClear]: "この項目をクリア",
 	[Key.secretsShow]: "表示",
 	[Key.secretsHide]: "非表示",
-	[Key.secretsManagedConfigured]: "サーバーが自動管理しています（64 桁のランダムキー）",
-	[Key.secretsManagedMissing]: "未管理です。書き込み可能な環境でサービスを一度起動すると自動生成されます",
+	[Key.secretsManagedConfigured]:
+		"サーバーが自動管理しています（64 桁のランダムキー）",
+	[Key.secretsManagedMissing]:
+		"未管理です。書き込み可能な環境でサービスを一度起動すると自動生成されます",
 	[Key.secretsRotate]: "ローテーション",
 	[Key.secretsRotating]: "ローテーション中…",
-	[Key.secretsRotateHint]: "新しいキーを生成し、すべてのログイン済みセッションを無効化します",
-	[Key.secretsRotateReadonly]: "読み取り専用の環境では自動ローテーションできません。ホスティング側で変更してください",
-	[Key.secretsRotateConfirm]: "{label} をローテーションしますか？ログイン中のすべての端末（この端末を含む）が再ログインを求められます。",
-	[Key.secretsRotateDone]: "ローテーションに成功しました。以前のセッションはすべて無効です。",
+	[Key.secretsRotateHint]:
+		"新しいキーを生成し、すべてのログイン済みセッションを無効化します",
+	[Key.secretsRotateReadonly]:
+		"読み取り専用の環境では自動ローテーションできません。ホスティング側で変更してください",
+	[Key.secretsRotateConfirm]:
+		"{label} をローテーションしますか？ログイン中のすべての端末（この端末を含む）が再ログインを求められます。",
+	[Key.secretsRotateDone]:
+		"ローテーションに成功しました。以前のセッションはすべて無効です。",
 	[Key.secretsRotateFailed]: "ローテーションに失敗しました",
 	[Key.secretsRotateJwt]: "JWT 署名キーをローテーション",
-	[Key.secretsStepUpRequired]: "認証情報の有効期限が切れました。再認証のためリダイレクトします…",
+	[Key.secretsStepUpRequired]:
+		"認証情報の有効期限が切れました。再認証のためリダイレクトします…",
 	[Key.secretsGenerateJwt]: "JWT キーを生成",
 	[Key.secretsGenerateJwtDone]:
 		"64 桁のランダムキーを生成して入力しました。保存をクリックして適用",

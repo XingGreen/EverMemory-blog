@@ -540,6 +540,8 @@ enum I18nKey {
 	postHistory = "postHistory",
 	postHistoryEmpty = "postHistoryEmpty",
 	postHistoryRestore = "postHistoryRestore",
+	/** 详情区横幅：正在查看某个时间点的版本（对应 editor_history_banner_title） */
+	postHistoryBannerTitle = "postHistoryBannerTitle",
 	/** 版本产生原因（对齐参考的 getRevisionReasonLabel 三态） */
 	postHistoryReasonAuto = "postHistoryReasonAuto",
 	postHistoryReasonPublish = "postHistoryReasonPublish",
