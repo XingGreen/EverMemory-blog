@@ -1,14 +1,19 @@
 <script lang="ts">
 /**
- * 文章历史版本页 —— 结构照参考
- * src/features/posts/components/post-editor/post-history-page.tsx
+ * 文章历史版本页
  *
- * 参考的布局要点（不要改顺序）：
- *   1. 顶部 header 三段：返回编辑器 ← | 只读标识（锁 + 标题 + 说明） | 恢复此版本按钮
- *   2. 主区 post-history-body：**详情在左占主区**，版本列表在右侧栏（aside）
- *   3. 列表项是链接，点击即导航到 /history/:revisionId，用 URL 表达「选中哪一版」
- *   4. 恢复前弹确认；恢复成功后跳回编辑器
- * 无 revisionId 时对应参考的 PostHistoryIndex：只有返回 + 标题 + 整宽列表。
+ * 结构、类名、样式数值全部来自参考项目：
+ *   src/features/posts/components/post-editor/post-history-page.tsx
+ *   src/features/posts/components/post-editor/post-editor.css（post-editor-* / post-history-*）
+ *
+ * 只做了一件事：把 --fuwari-* 设计变量映射到本项目同名变量，其余原样照抄。
+ * 不再有自创的 .history-page / .history-body 那套命名与布局。
+ *
+ * 参考布局要点：
+ *   1. header 三段：返回 ← ｜ 只读标识（居中，margin-inline:auto）｜ 恢复此版本（margin-left:auto）
+ *   2. 主区 flex：左 .post-history-content（内含 .post-editor-document 负责滚动与 66rem 限宽）
+ *      右 .post-history-sidebar（20rem 固定宽）
+ *   3. 列表项是带描边的卡片块，::before 画左侧时间轴
  */
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
@@ -16,7 +21,7 @@ import { i18n } from "@/i18n/translation";
 
 let { slug, revisionId = "" }: { slug: string; revisionId?: string } = $props();
 
-type RevisionItem = {
+type Revision = {
 	id: string;
 	reason: string;
 	savedAt: number;
@@ -25,10 +30,11 @@ type RevisionItem = {
 	tags: string[];
 };
 
-let revisions = $state<RevisionItem[]>([]);
+let revisions = $state<Revision[]>([]);
 let listLoading = $state(true);
 let detailHtml = $state("");
 let detailLoading = $state(false);
+let currentId = $state(revisionId);
 let confirmOpen = $state(false);
 let busy = $state(false);
 let errorText = $state("");
@@ -36,42 +42,23 @@ let errorText = $state("");
 const editorUrl = `/admin/posts/edit/${encodeURIComponent(slug)}/`;
 const historyUrl = `/admin/posts/edit/${encodeURIComponent(slug)}/history/`;
 
-/** 当前查看的版本：初始化自 URL，之后由列表点击原地切换（不整页跳转） */
-let currentId = $state(revisionId);
-
 const selected = $derived(revisions.find((r) => r.id === currentId) ?? null);
-const canRestore = $derived(Boolean(selected) && !busy);
-
-/** 单次点击即切换：原地加载详情 + replaceState 同步 URL（可刷新/可分享） */
-function selectRevision(id: string) {
-	currentId = id;
-	try {
-		window.history.replaceState(
-			null,
-			"",
-			`${historyUrl}${encodeURIComponent(id)}/`,
-		);
-	} catch {
-		// 忽略：URL 同步失败不影响查看
-	}
-	void loadDetail(id);
-}
 
 function fmtTime(ts: number): string {
-	if (!ts) return "—";
+	if (!ts) return "";
 	const d = new Date(ts);
-	return `${d.toLocaleDateString()} ${d.toLocaleTimeString().slice(0, 5)}`;
+	return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(
+		d.getDate(),
+	).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(
+		d.getMinutes(),
+	).padStart(2, "0")}`;
 }
 
 function reasonLabel(reason: string): string {
-	switch (reason) {
-		case "publish":
-			return i18n(I18nKey.postHistoryReasonPublish);
-		case "restore_backup":
-			return i18n(I18nKey.postHistoryReasonRestore);
-		default:
-			return i18n(I18nKey.postHistoryReasonAuto);
-	}
+	if (reason === "publish") return i18n(I18nKey.postHistoryReasonPublish);
+	if (reason === "restore_backup")
+		return i18n(I18nKey.postHistoryReasonRestore);
+	return i18n(I18nKey.postHistoryReasonAuto);
 }
 
 async function loadList() {
@@ -82,11 +69,7 @@ async function loadList() {
 		);
 		const data = await res.json();
 		revisions = data.success ? (data.revisions ?? []) : [];
-		/* 直接进入分栏：自动选中最新一条，省掉「先看列表页、再点一次」的步骤。
-		   这样从编辑器点「历史版本」进来就是「左正文 + 右列表」的成品状态。 */
-		if (!currentId && revisions.length > 0) {
-			selectRevision(revisions[0].id);
-		}
+		if (!currentId && revisions.length > 0) selectRevision(revisions[0].id);
 	} catch {
 		revisions = [];
 	} finally {
@@ -94,7 +77,6 @@ async function loadList() {
 	}
 }
 
-/** 详情：取全文 → 剥 frontmatter → 走与预览相同的渲染管线 */
 async function loadDetail(id: string) {
 	if (!id) {
 		detailHtml = "";
@@ -126,6 +108,20 @@ async function loadDetail(id: string) {
 	}
 }
 
+function selectRevision(id: string) {
+	currentId = id;
+	try {
+		window.history.replaceState(
+			null,
+			"",
+			`${historyUrl}${encodeURIComponent(id)}/`,
+		);
+	} catch {
+		// URL 同步失败不影响查看
+	}
+	void loadDetail(id);
+}
+
 async function doRestore() {
 	confirmOpen = false;
 	if (!selected) return;
@@ -139,7 +135,6 @@ async function doRestore() {
 		});
 		const data = await res.json();
 		if (data.success) {
-			// 对应参考的 onRestored: goEditor
 			window.location.href = editorUrl;
 			return;
 		}
@@ -160,119 +155,104 @@ $effect(() => {
 });
 </script>
 
-<div class="history-page">
-	<header class="history-header">
-		<a class="history-back" href={editorUrl}>
+<!-- 对应参考的 <div className="post-editor-workspace fuwari-card-base"> -->
+<div class="post-editor-workspace post-history-shell">
+	<header class="post-editor-header post-history-header">
+		<a class="post-editor-back" href={editorUrl}>
 			<Icon icon="material-symbols:arrow-back" />
 			{i18n(I18nKey.postHistoryBack)}
 		</a>
 
-		{#if currentId}
-			<div class="history-context">
-				<Icon icon="material-symbols:lock" />
-				<div>
-					<h1>{i18n(I18nKey.postHistoryReadonly)}</h1>
-					<p>{i18n(I18nKey.postHistoryRestoreHint)}</p>
-				</div>
+		<div class="post-history-context">
+			<Icon icon="material-symbols:lock" />
+			<div>
+				<h1>{i18n(I18nKey.postHistoryReadonly)}</h1>
+				<p>{i18n(I18nKey.postHistoryRestoreHint)}</p>
 			</div>
-		{:else}
-			<h1 class="history-title">{i18n(I18nKey.postHistory)}</h1>
-		{/if}
+		</div>
 
-		<div class="history-actions">
-			{#if currentId}
-				<button
-					class="history-restore-this"
-					type="button"
-					disabled={!canRestore}
-					onclick={() => (confirmOpen = true)}
-				>
-					{i18n(I18nKey.postHistoryRestoreThis)}
-				</button>
-			{/if}
+		<div class="post-editor-header-actions">
+			<button
+				class="post-editor-restore"
+				type="button"
+				disabled={!selected || busy}
+				onclick={() => (confirmOpen = true)}
+			>
+				{i18n(I18nKey.postHistoryRestoreThis)}
+			</button>
 		</div>
 	</header>
 
-	{#if currentId}
-		<!-- 主区：详情在左，列表在右（照参考 post-history-body 的顺序） -->
-		<div class="history-body">
-			<section class="history-content">
+	<div class="post-history-body">
+		<section class="post-history-content">
+			<!-- 滚动与限宽都交给 .post-editor-document（参考同款），
+			     不再由外层 section 承担，避免滚动条挤在正文与右栏之间 -->
+			<div class="post-editor-document">
 				{#if detailLoading}
-					<p class="history-note">…</p>
+					<p class="post-history-note">…</p>
 				{:else if !selected}
-					<p class="history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
+					<p class="post-history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
 				{:else}
-					<h2 class="history-doc-title">{selected.title || "—"}</h2>
-					<!-- 正文里的横幅跟标题左对齐（参考是 h2 下方的 p）；
-					     居中的那个是 header 中段的只读标识，两者不要混用同一条规则 -->
-					<p class="history-banner">
+					<h2 class="post-editor-title">{selected.title || "—"}</h2>
+					<p class="post-history-banner">
 						{i18n(I18nKey.postHistoryBannerTitle).replace(
 							"{time}",
 							fmtTime(selected.savedAt),
 						)}
 						· {reasonLabel(selected.reason)}
 					</p>
-					<div class="history-meta">
+					<div class="post-editor-summary">
 						<span>
 							<Icon icon="material-symbols:menu-book" />
 							{selected.category || i18n(I18nKey.postCategoryPlaceholder)}
 						</span>
 						{#if selected.tags.length}
-							<span class="history-meta-tags">
+							<span>
 								<Icon icon="material-symbols:label" />
 								{selected.tags.join(" · ")}
 							</span>
 						{/if}
 					</div>
-					<!-- biome-ignore lint/security/noDangerouslySetInnerHtml: 服务端渲染管线产出的可信 HTML -->
-					<div class="history-doc custom-md">{@html detailHtml}</div>
+					<div class="post-editor-body custom-md">{@html detailHtml}</div>
 				{/if}
-			</section>
+			</div>
+		</section>
 
-			<aside class="history-sidebar">
-				<div class="history-sidebar-head">
-					<h2 class="history-sidebar-title">
-						{i18n(I18nKey.postHistoryListTitle)}
-					</h2>
-				</div>
+		<aside class="post-history-sidebar">
+			<h2 class="post-editor-panel-heading">
+				{i18n(I18nKey.postHistoryListTitle)}
+			</h2>
+			<div class="post-history-list">
 				{#if listLoading}
-					<p class="history-note">…</p>
+					<p class="post-history-note">…</p>
 				{:else if revisions.length === 0}
-					<p class="history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
+					<p class="post-history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
 				{:else}
-					<nav class="history-list">
-						{#each revisions as item (item.id)}
-							<button
-								type="button"
-								class="history-version"
-								class:is-selected={item.id === currentId}
-								aria-current={item.id === currentId ? "true" : undefined}
-								onclick={() => selectRevision(item.id)}
-							>
-								<time class="history-time">{fmtTime(item.savedAt)}</time>
-								<span class="history-reason">{reasonLabel(item.reason)}</span>
-								<span class="history-version-title">{item.title || "—"}</span>
-							</button>
-						{/each}
-					</nav>
+					{#each revisions as item (item.id)}
+						<button
+							type="button"
+							class="post-history-version"
+							class:is-active={item.id === currentId}
+							onclick={() => selectRevision(item.id)}
+						>
+							<time class="post-history-time">{fmtTime(item.savedAt)}</time>
+							<span class="post-history-reason">{reasonLabel(item.reason)}</span>
+							<span class="post-history-version-title">{item.title || "—"}</span>
+						</button>
+					{/each}
 				{/if}
-			</aside>
-		</div>
-	{:else}
-		<!-- 没有可查看的版本（或列表还在加载）：给出明确空态，不留整页空白 -->
-		<p class="history-note history-empty">
-			{listLoading ? "…" : i18n(I18nKey.postHistoryEmpty)}
-		</p>
-	{/if}
+			</div>
+		</aside>
+	</div>
 
 	{#if errorText}
-		<p class="history-error">{errorText}</p>
+		<p class="post-history-error">{errorText}</p>
 	{/if}
 </div>
 
 {#if confirmOpen}
 	<div
-		class="history-overlay"
+		class="post-history-overlay"
 		role="dialog"
 		aria-modal="true"
 		tabindex="-1"
@@ -283,18 +263,14 @@ $effect(() => {
 			if (e.key === "Escape") confirmOpen = false;
 		}}
 	>
-		<div class="history-confirm">
+		<div class="post-history-confirm">
 			<h3>{i18n(I18nKey.postHistoryRestoreTitle)}</h3>
-			<p class="history-note">{i18n(I18nKey.postHistoryRestoreMessage)}</p>
-			<div class="history-confirm-actions">
-				<button
-					class="history-btn"
-					type="button"
-					onclick={() => (confirmOpen = false)}
-				>
+			<p>{i18n(I18nKey.postHistoryRestoreMessage)}</p>
+			<div class="post-history-confirm-actions">
+				<button type="button" onclick={() => (confirmOpen = false)}>
 					{i18n(I18nKey.taxonomyCancel)}
 				</button>
-				<button class="history-btn is-primary" type="button" onclick={doRestore}>
+				<button class="is-primary" type="button" onclick={doRestore}>
 					{i18n(I18nKey.postHistoryRestoreThis)}
 				</button>
 			</div>
@@ -303,12 +279,18 @@ $effect(() => {
 {/if}
 
 <style>
-	/* 外层容器与编辑器 .editor-shell 同规格：等高、卡片底、描边、大圆角、卡片阴影。
-	   历史页此前只是一层裸 flex，没有外壳，视觉上与编辑页/列表页不成体系。 */
-	.history-page {
+	/* ── 变量映射：把参考的 --fuwari-* 换成本项目同名变量，其余原样 ── */
+	.post-history-shell {
+		/* 参考 .post-editor-workspace */
+		--post-editor-rule: color-mix(in srgb, var(--deep-text) 8%, transparent);
+		--post-editor-header-height: 4.75rem;
+		position: relative;
 		display: flex;
+		flex: 1;
 		flex-direction: column;
-		gap: 0;
+		min-width: 0;
+		min-height: 0;
+		/* fuwari-card-base 的等价物：卡片底 + 描边 + 大圆角 + 阴影 */
 		height: var(--admin-viewport-h, calc(100vh - 3rem));
 		background: var(--card-bg);
 		border: 1px solid var(--line-divider);
@@ -317,74 +299,71 @@ $effect(() => {
 		overflow: hidden;
 	}
 
-	/* header 三段：返回 | 只读标识 | 恢复按钮（照参考 post-editor-header 的排布） */
-	.history-header {
+	/* 参考 .post-editor-header */
+	.post-editor-header {
 		display: flex;
 		align-items: center;
-		gap: 1rem;
 		flex-shrink: 0;
-		padding: 1rem 1.5rem;
-		border-bottom: 1px solid var(--line-divider);
-		border-radius: var(--radius-large) var(--radius-large) 0 0;
+		gap: 1rem;
+		min-height: var(--post-editor-header-height);
+		padding: 1rem 1.75rem;
+		border-bottom: 1px solid var(--post-editor-rule);
 	}
 
-	.history-back {
+	/* 参考 .post-editor-back */
+	.post-editor-back {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.375rem;
-		color: var(--content-meta);
-		font-size: 0.875rem;
-		text-decoration: none;
+		gap: 0.6rem;
+		padding: 0.5rem;
+		border-radius: 0.5rem;
 		white-space: nowrap;
+		font-size: 0.875rem;
+		color: var(--content-meta);
+		text-decoration: none;
 	}
 
-	.history-back:hover {
-		color: var(--primary);
+	.post-editor-back:hover {
+		background: var(--btn-regular-bg);
+		color: var(--btn-content);
 	}
 
-	/* 只读标识居中：照参考 .post-history-context 的 margin-inline: auto，
-	   不论窗口多宽都保持在 header 正中，不随左右两侧内容宽度漂移 */
-	.history-context {
+	/* 参考 .post-history-context：margin-inline:auto 居中 */
+	.post-history-context {
 		display: flex;
 		align-items: center;
 		gap: 0.625rem;
 		min-width: 0;
 		margin-inline: auto;
-		text-align: center;
 		color: var(--content-meta);
 	}
 
-	.history-context svg {
+	.post-history-context :global(svg) {
 		flex-shrink: 0;
 	}
 
-	.history-context h1 {
+	.post-history-context h1 {
 		margin: 0;
 		font-size: 0.875rem;
 		font-weight: 500;
 		color: var(--deep-text);
 	}
 
-	.history-context p {
+	.post-history-context p {
 		margin: 0.15rem 0 0;
 		font-size: 0.75rem;
 	}
 
-	.history-title {
-		flex: 1;
-		margin: 0;
-		font-size: 1.125rem;
-		font-weight: 600;
-		color: var(--deep-text);
-	}
-
-	.history-actions {
+	/* 参考 .post-editor-header-actions */
+	.post-editor-header-actions {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		justify-content: flex-end;
+		gap: 0.375rem;
+		margin-left: auto;
 	}
 
-	.history-restore-this {
+	.post-editor-restore {
 		display: inline-flex;
 		align-items: center;
 		height: 2.25rem;
@@ -399,36 +378,41 @@ $effect(() => {
 		cursor: pointer;
 	}
 
-	.history-restore-this:disabled {
+	.post-editor-restore:disabled {
 		opacity: 0.4;
 		cursor: not-allowed;
 	}
 
-	/* 主区：flex（参考 .post-history-body 用 flex，不是 grid）；
-	   详情占满剩余，列表固定 20rem 右栏 */
-	.history-body {
+	/* 参考 .post-history-body */
+	.post-history-body {
 		display: flex;
 		flex: 1;
 		min-height: 0;
 	}
 
-	.history-content {
+	/* 参考 .post-history-content */
+	.post-history-content {
 		display: flex;
 		flex-direction: column;
 		flex: 1;
-		min-width: 0;
 		min-height: 0;
-		overflow-y: auto;
-		/* 照参考 .post-editor-document：正文限宽 66rem 并居中，
-		   左右内边距取 max(3rem, (100% - 66rem)/2)，避免长行铺满整屏难读 */
-		--document-inset: max(3rem, calc((100% - 66rem) / 2));
-		padding: 3.75rem var(--document-inset) 3rem;
+		min-width: 0;
 	}
 
-	/* 文章标题：照参考 .post-editor-title（2.25rem / 1.4 / 700 / -0.025em / mb 1rem），
-	   此前 1.25rem 与正文几乎同大，缺页面标题感 */
-	.history-doc-title {
+	/* 参考 .post-editor-document：滚动 + 66rem 限宽都在这里 */
+	.post-editor-document {
+		--document-inset: max(3rem, calc((100% - 66rem) / 2));
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		padding: 3.5rem var(--document-inset) 5rem;
+	}
+
+	/* 参考 .post-editor-title */
+	.post-editor-title {
 		margin: 0 0 1rem;
+		padding: 0;
 		font-size: 2.25rem;
 		line-height: 1.4;
 		font-weight: 700;
@@ -436,59 +420,88 @@ $effect(() => {
 		color: var(--deep-text);
 	}
 
-	/* 空态落在卡片里，需要与主区一致的留白 */
-	.history-empty {
-		flex: 1;
-		padding: 2.5rem 1.5rem;
-		text-align: center;
+	.post-history-banner {
+		/* 参考里紧跟标题的说明行：小字、次级色、左对齐 */
+		margin: -0.5rem 0 0.75rem;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
 	}
 
-	/* 右栏：照参考 .post-history-sidebar —— 20rem 固定宽、左侧分隔线、
-	   比卡片略深的背景色；标题区独立成段并加分隔线，避免列表直接贴顶部 */
-	.history-sidebar {
+	/* 参考 .post-editor-summary：分类 / 标签，图标 + 文本 */
+	.post-editor-summary {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+		font-size: 0.875rem;
+		color: var(--content-meta);
+	}
+
+	.post-editor-summary span {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	.post-editor-summary :global(svg) {
+		flex-shrink: 0;
+	}
+
+	/* 参考 .post-editor-document .tiptap */
+	.post-editor-body {
+		font-size: 1.0625rem;
+		line-height: 1.85;
+	}
+
+	.post-editor-body :global(p) {
+		margin: 0 0 1.25rem;
+		font-size: 1.0625rem;
+	}
+
+	.post-editor-body :global(li) {
+		margin-bottom: 0.5rem;
+	}
+
+	/* 参考 .post-history-sidebar */
+	.post-history-sidebar {
 		display: flex;
 		flex-direction: column;
 		width: 20rem;
 		flex-shrink: 0;
 		min-height: 0;
-		border-left: 1px solid var(--line-divider);
+		border-left: 1px solid var(--post-editor-rule);
 		background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
 	}
 
-	/* 侧栏标题容器：对应参考 .post-editor-panel-heading，带卡片底使其成为独立标题条 */
-	.history-sidebar-head {
+	/* 参考 .post-editor-panel-heading */
+	.post-editor-panel-heading {
 		flex-shrink: 0;
-		padding: 1rem 1.25rem 0.75rem 2rem;
-		border-bottom: 1px solid var(--line-divider);
-		background: var(--card-bg);
-	}
-
-	.history-sidebar-title {
 		margin: 0;
-		font-size: 0.8125rem;
-		font-weight: 600;
+		padding: 1rem 1.25rem 0.75rem 2rem;
+		border-bottom: 1px solid var(--post-editor-rule);
+		background: var(--card-bg);
+		font-size: 0.875rem;
+		font-weight: 500;
 		color: var(--content-meta);
 	}
 
-	/* 列表容器：照参考 .post-history-list 的 padding（左宽右窄，为时间轴留位） */
-	.history-list {
-		display: flex;
+	/* 参考 .post-history-list */
+	.post-history-list {
 		flex: 1;
-		flex-direction: column;
 		min-height: 0;
 		overflow-y: auto;
 		padding: 0.5rem 1.25rem 1.5rem 2rem;
 	}
 
-	/* 列表项：照参考做成独立卡片块（描边 + 卡片底 + 圆角 + 块间距），
-	   选中项整块抬底并换主色边框，而不是只有文字变色 */
-	.history-version {
+	/* 参考 .post-history-version */
+	.post-history-version {
 		position: relative;
 		display: block;
 		width: 100%;
-		margin-bottom: 0.75rem;
 		padding: 1rem 1.125rem;
-		border: 1px solid var(--line-divider);
+		margin-bottom: 0.75rem;
+		border: 1px solid transparent;
 		border-radius: 0.625rem;
 		background: var(--card-bg);
 		font-family: inherit;
@@ -497,45 +510,42 @@ $effect(() => {
 		cursor: pointer;
 		transition:
 			background-color 0.15s,
-			border-color 0.15s,
 			color 0.15s;
 	}
 
-	.history-version::before {
+	/* 参考 .post-history-version::before：左侧时间轴 */
+	.post-history-version::before {
 		content: "";
 		position: absolute;
 		left: -0.625rem;
 		top: 0;
 		bottom: -0.75rem;
 		width: 1px;
-		background: var(--line-divider);
+		background: var(--post-editor-rule);
 	}
 
-	.history-version:hover {
-		background: color-mix(in oklab, var(--btn-regular-bg) 60%, transparent);
-	}
-
-	.history-version.is-selected {
+	.post-history-version.is-active {
 		background: var(--btn-regular-bg);
-		border-color: var(--primary);
 	}
 
-	.history-version.is-selected .history-time {
+	.post-history-version.is-active .post-history-time {
 		color: var(--primary);
 	}
 
-	.history-time {
+	.post-history-time {
+		display: block;
 		font-size: 0.875rem;
 		font-weight: 500;
 		color: var(--deep-text);
 	}
 
-	.history-reason {
+	.post-history-reason {
+		display: block;
 		font-size: 0.875rem;
 		color: var(--content-meta);
 	}
 
-	.history-version-title {
+	.post-history-version-title {
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 2;
@@ -544,102 +554,21 @@ $effect(() => {
 		color: var(--content-meta);
 	}
 
-	.history-meta {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 1rem;
-		margin-top: 0.5rem;
-		font-size: 0.8125rem;
-		line-height: 1;
-		color: var(--content-meta);
-	}
-
-	.history-meta span {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		line-height: 1.4;
-	}
-
-	/* 图标与文字基线对齐：Icon 组件默认按基线排，这里统一成块级居中 */
-	.history-meta :global(.icon),
-	.history-meta :global(svg) {
-		display: inline-block;
-		flex-shrink: 0;
-		vertical-align: middle;
-	}
-
-	/* 提示文本居中（仅用于 header 中段的只读标识与空态） */
-	.history-note {
+	.post-history-note {
 		margin: 0;
 		font-size: 0.8125rem;
 		color: var(--content-meta);
-		text-align: center;
 	}
 
-	/* 正文横幅：左对齐，跟在标题下方（对应参考 h2 之后的 p） */
-	.history-banner {
-		margin: 0.25rem 0 0;
-		font-size: 0.8125rem;
-		color: var(--content-meta);
-		text-align: left;
-	}
-
-	/* 正文排版：照参考 .post-editor-document .tiptap 的 1.0625rem / 1.85 行高。
-	   标题字号不再覆盖——.custom-md 已有项目既定的标题层级（h1 3xl / h2 2xl / h3 xl），
-	   在这里另设一套只会与它打架，导致标题忽大忽小。 */
-	/* 窄屏标题降档：参考 .post-editor-title 在移动端是 1.75rem */
-	@media (max-width: 768px) {
-		.history-doc-title {
-			font-size: 1.75rem;
-		}
-	}
-
-	.history-doc {
-		margin-top: 1rem;
-		font-size: 1.0625rem;
-		line-height: 1.85;
-	}
-
-	/* 段落显式给字号：.custom-md p 自带 @apply text-base，会与容器的 1.0625rem
-	   打架，导致同一页里段落忽大忽小 */
-	.history-doc :global(p) {
-		margin: 0 0 1.25rem;
-		font-size: 1.0625rem;
-	}
-
-	.history-doc :global(ul),
-	.history-doc :global(ol) {
-		margin: 0 0 1.25rem;
-		padding-left: 1.5rem;
-	}
-
-	.history-doc :global(li) {
-		margin-bottom: 0.5rem;
-	}
-
-	.history-doc :global(blockquote) {
-		margin: 0 0 1.25rem;
-		padding: 0.25rem 0 0.25rem 1rem;
-		border-left: 3px solid var(--line-divider);
-	}
-
-	.history-doc :global(pre) {
-		margin: 0 0 1.25rem;
-	}
-
-	.history-doc :global(img) {
-		margin: 1.25rem 0;
-	}
-
-	.history-error {
+	.post-history-error {
 		margin: 0;
+		padding: 0 1.75rem 1rem;
 		font-size: 0.8125rem;
 		color: var(--destructive);
 	}
 
-	.history-overlay {
+	/* 恢复确认 */
+	.post-history-overlay {
 		position: fixed;
 		inset: 0;
 		z-index: 9999;
@@ -650,7 +579,7 @@ $effect(() => {
 		background: rgb(0 0 0 / 0.3);
 	}
 
-	.history-confirm {
+	.post-history-confirm {
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
@@ -661,20 +590,26 @@ $effect(() => {
 		box-shadow: 0 16px 40px rgb(0 0 0 / 0.3);
 	}
 
-	.history-confirm h3 {
+	.post-history-confirm h3 {
 		margin: 0;
 		font-size: 1rem;
 		font-weight: 600;
 		color: var(--deep-text);
 	}
 
-	.history-confirm-actions {
+	.post-history-confirm p {
+		margin: 0;
+		font-size: 0.875rem;
+		color: var(--content-meta);
+	}
+
+	.post-history-confirm-actions {
 		display: flex;
 		justify-content: flex-end;
 		gap: 0.5rem;
 	}
 
-	.history-btn {
+	.post-history-confirm-actions button {
 		padding: 0.5rem 1rem;
 		border: 1px solid var(--line-divider);
 		border-radius: 0.5rem;
@@ -685,9 +620,15 @@ $effect(() => {
 		cursor: pointer;
 	}
 
-	.history-btn.is-primary {
+	.post-history-confirm-actions button.is-primary {
 		border-color: transparent;
 		background: var(--primary);
 		color: var(--primary-foreground);
+	}
+
+	@media (max-width: 768px) {
+		.post-editor-title {
+			font-size: 1.75rem;
+		}
 	}
 </style>
