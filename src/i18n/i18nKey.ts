@@ -447,6 +447,8 @@ enum I18nKey {
 	adminSettingsOverview = "adminSettingsOverview",
 	configSettingsIntro = "configSettingsIntro",
 	adminLogout = "adminLogout",
+	/** 退出登录确认弹窗的说明（参考 fuwari-confirmation 的 h2 + p 结构） */
+	adminLogoutConfirmMessage = "adminLogoutConfirmMessage",
 	adminBackHome = "adminBackHome",
 	/** 分类与标签合并页的标题（原先拼接「分类管理 & 标签管理」） */
 	adminCategoriesAndTags = "adminCategoriesAndTags",

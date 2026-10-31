@@ -506,6 +506,7 @@ export const zh_TW: Translation = {
 	[Key.adminExpandSidebar]: "展開側邊欄",
 	[Key.adminSidebarRole]: "管理員",
 	[Key.adminLogout]: "登出",
+	[Key.adminLogoutConfirmMessage]: "登出後需要重新登入才能進入後台。",
 
 	[Key.verifyTitle]: "管理員登入",
 	[Key.verifySubtitle]: "歡迎回來，請輸入你的登入憑證",

@@ -519,6 +519,7 @@ export const ru: Translation = {
 	[Key.adminExpandSidebar]: "Развернуть боковую панель",
 	[Key.adminSidebarRole]: "Администратор",
 	[Key.adminLogout]: "Выйти",
+	[Key.adminLogoutConfirmMessage]: "Чтобы снова войти, потребуется авторизация.",
 
 	[Key.verifyTitle]: "Вход для администратора",
 	[Key.verifySubtitle]: "С возвращением, введите свои учётные данные",

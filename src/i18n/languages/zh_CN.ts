@@ -504,6 +504,7 @@ export const zh_CN: Translation = {
 	[Key.adminExpandSidebar]: "展开侧边栏",
 	[Key.adminSidebarRole]: "管理员",
 	[Key.adminLogout]: "退出登录",
+	[Key.adminLogoutConfirmMessage]: "退出后需要重新登录才能进入后台。",
 
 	[Key.verifyTitle]: "管理员登录",
 	[Key.verifySubtitle]: "欢迎回来，请输入你的登录凭证",

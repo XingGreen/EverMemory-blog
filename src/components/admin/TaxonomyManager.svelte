@@ -290,12 +290,52 @@ function openEdit(name: string) {
 	void focusDialogInput();
 }
 
+/* 删除确认独立成叠加弹窗：原来的做法是把 dialogMode 改成 "delete"，
+   等于把重命名/新建弹窗替换掉；用户要求保留原弹窗、确认框叠在上面。 */
+let deleteTarget = $state<string | null>(null);
+let deleteBusy = $state(false);
+let deleteError = $state("");
+
 function openDelete(name: string) {
 	if (name === UNCATEGORIZED) return;
-	dialogMode = "delete";
-	dialogName = name;
-	dialogOriginal = name;
-	dialogError = "";
+	deleteTarget = name;
+	deleteError = "";
+}
+
+function closeDelete() {
+	if (deleteBusy) return;
+	deleteTarget = null;
+	deleteError = "";
+}
+
+/** 确认删除：叠加弹窗的独立提交，不走 dialogMode 分支 */
+async function confirmDelete() {
+	const name = deleteTarget;
+	if (!name) return;
+	deleteBusy = true;
+	deleteError = "";
+	try {
+		const res = await fetch("/api/admin/taxonomy/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ action: "delete", kind, name }),
+		});
+		const data = await res.json();
+		if (!data.success) {
+			deleteError = data.message || "failed";
+			return;
+		}
+		onNotify(i18n(I18nKey.taxonomyDeleted), "success");
+		selectedName = "";
+		deleteTarget = null;
+		await load();
+		await loadPosts();
+		syncUrl();
+	} catch {
+		deleteError = i18n(I18nKey.taxonomyLoadFailed);
+	} finally {
+		deleteBusy = false;
+	}
 }
 
 async function focusDialogInput() {
@@ -843,6 +883,60 @@ $effect(() => {
 					</div>
 				</form>
 			{/if}
+		</div>
+	</div>
+{/if}
+
+<!-- 删除确认：叠加在主弹窗之上，不替换它（取消后原弹窗仍在，可继续改名/新建） -->
+{#if deleteTarget}
+	<div
+		class="modal-overlay is-stacked"
+		role="dialog"
+		aria-modal="true"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) closeDelete();
+		}}
+		onkeydown={(e) => {
+			if (e.key === "Escape") closeDelete();
+		}}
+	>
+		<div class="modal-card card-base">
+			<div class="modal-head">
+				<h3>{i18n(I18nKey.taxonomyDeleteTitle)}</h3>
+				<button
+					class="modal-close"
+					type="button"
+					aria-label={i18n(I18nKey.taxonomyCancel)}
+					onclick={closeDelete}
+				>
+					<Icon icon="material-symbols:close" />
+				</button>
+			</div>
+			<p class="modal-desc">
+				{i18n(I18nKey.taxonomyDeleteConfirm).replace("{name}", deleteTarget)}
+			</p>
+			{#if deleteError}
+				<p class="modal-error">{deleteError}</p>
+			{/if}
+			<div class="dialog-actions">
+				<button
+					class="ui-btn"
+					type="button"
+					onclick={closeDelete}
+					disabled={deleteBusy}
+				>
+					{i18n(I18nKey.taxonomyCancel)}
+				</button>
+				<button
+					class="ui-btn ui-btn-primary danger"
+					type="button"
+					onclick={confirmDelete}
+					disabled={deleteBusy}
+				>
+					{deleteBusy ? i18n(I18nKey.taxonomySaving) : i18n(I18nKey.taxonomyDelete)}
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}
@@ -1401,11 +1495,31 @@ $effect(() => {
 		backdrop-filter: blur(4px);
 	}
 
+	/* 叠加层：删除确认盖在主弹窗之上，主弹窗保持打开 */
+	.modal-overlay.is-stacked {
+		z-index: 10000;
+		background: rgb(0 0 0 / 0.38);
+	}
+
+	/* 弹窗内按钮按参考的小号规格收窄（全局 .ui-btn 偏大，这里只覆盖弹窗作用域） */
+	.dialog-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+		margin-top: 1rem;
+	}
+
+	.dialog-actions :global(.ui-btn) {
+		padding: 0.375rem 0.875rem;
+		font-size: 0.8125rem;
+	}
+
 	.modal-card {
 		width: 100%;
-		/* 360px：之前 420px 偏大，弹窗在 1080 视口下几乎顶满内容区宽度；
-		   参考 .fuwari-modal 是 min(28rem, calc(100% - 32px))，取更紧凑的一档。 */
-		max-width: 360px;
+		/* 340px：参考 .fuwari-modal 是 min(28rem, calc(100% - 32px))，但重命名/删除
+		   这类弹窗内容只有标题 + 一行输入 + 两个按钮，按参考的 28rem 显得空荡，
+		   取更紧凑的一档——用户要求「缩窄」。 */
+		max-width: 340px;
 		padding: 1.25rem;
 		background: var(--float-panel-bg);
 		box-shadow: var(--shadow-card);

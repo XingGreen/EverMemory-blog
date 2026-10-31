@@ -5,6 +5,7 @@ import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import type { AdminPostSummary } from "@/types/adminApi";
+import Select from "./Select.svelte";
 
 let {
 	posts,
@@ -592,39 +593,43 @@ function actionLabel(action: string, title: string): string {
 			<!-- 分类、标签、排序：常驻一行直接可点，不做二次点击收折 -->
 			<label class="toolbar-field">
 				<span class="field-label">{i18n(I18nKey.postFilterCategory)}</span>
-				<div class="select-wrap">
-					<select class="ui-select" bind:value={categoryFilter} disabled={categories.length === 0}>
-						<option value="">{i18n(I18nKey.postAll)}</option>
-						{#each categories as category (category)}
-							<option value={category}>{category}</option>
-						{/each}
-</select>
-			</div>
+				<Select
+					value={categoryFilter}
+					options={[
+						{ value: "", label: i18n(I18nKey.postAll) },
+						...categories.map((c) => ({ value: c, label: c })),
+					]}
+					onChange={(v) => (categoryFilter = v)}
+					disabled={categories.length === 0}
+				/>
 			</label>
 
 			<label class="toolbar-field">
 				<span class="field-label">{i18n(I18nKey.postFilterTag)}</span>
-				<div class="select-wrap">
-					<select class="ui-select" bind:value={tagFilter} disabled={tags.length === 0}>
-						<option value="">{i18n(I18nKey.postAll)}</option>
-						{#each tags as tag (tag)}
-							<option value={tag}>{tag}</option>
-						{/each}
-</select>
-			</div>
+				<Select
+					value={tagFilter}
+					options={[
+						{ value: "", label: i18n(I18nKey.postAll) },
+						...tags.map((t) => ({ value: t, label: t })),
+					]}
+					onChange={(v) => (tagFilter = v)}
+					disabled={tags.length === 0}
+				/>
 			</label>
 
 			<label class="toolbar-field">
 				<span class="field-label">{i18n(I18nKey.postSort)}</span>
-				<div class="select-wrap">
-					<select class="ui-select" bind:value={sortKey} aria-label={i18n(I18nKey.postSort)}>
-						<option value="updated">{i18n(I18nKey.postSortUpdated)}</option>
-						<option value="newest">{i18n(I18nKey.postSortNewest)}</option>
-						<option value="oldest">{i18n(I18nKey.postSortOldest)}</option>
-						<option value="titleAsc">{i18n(I18nKey.postSortTitleAsc)}</option>
-						<option value="titleDesc">{i18n(I18nKey.postSortTitleDesc)}</option>
-</select>
-			</div>
+				<Select
+					value={sortKey}
+					options={[
+						{ value: "updated", label: i18n(I18nKey.postSortUpdated) },
+						{ value: "newest", label: i18n(I18nKey.postSortNewest) },
+						{ value: "oldest", label: i18n(I18nKey.postSortOldest) },
+						{ value: "titleAsc", label: i18n(I18nKey.postSortTitleAsc) },
+						{ value: "titleDesc", label: i18n(I18nKey.postSortTitleDesc) },
+					]}
+					onChange={(v) => (sortKey = v as typeof sortKey)}
+				/>
 			</label>
 
 			<!-- 列显示设置：内置在列表工具栏，勾选即时生效并写入 localStorage -->
@@ -637,7 +642,7 @@ function actionLabel(action: string, title: string): string {
 						aria-expanded={colsPanelOpen}
 						onclick={() => (colsPanelOpen = !colsPanelOpen)}
 					>
-						<Icon icon="material-symbols:more-horiz" class="text-sm" />
+						<Icon icon="material-symbols:view-list-outline" class="text-sm" />
 					</button>
 					{#if colsPanelOpen}
 						<div class="cols-panel">
@@ -1204,6 +1209,11 @@ function actionLabel(action: string, title: string): string {
 		align-items: center;
 		gap: 0.5rem;
 		flex-shrink: 0;
+	}
+
+	/* 工具栏里的自定义下拉限宽：Select 默认 100%，在 flex 行里会撑满剩余空间 */
+	.toolbar-field :global(.select-root) {
+		width: 10rem;
 	}
 
 	.field-label {

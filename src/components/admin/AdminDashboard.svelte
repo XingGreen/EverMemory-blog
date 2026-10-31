@@ -1953,7 +1953,7 @@ function formatDate(dateStr: string | null): string {
 			if (e.key === "Escape") logoutConfirmOpen = false;
 		}}
 	>
-		<div class="modal-card card-base">
+		<div class="modal-card confirm-card">
 			<div class="modal-head">
 				<h3>
 					<span>{i18n(I18nKey.adminLogout)}</span>
@@ -1967,6 +1967,7 @@ function formatDate(dateStr: string | null): string {
 					<Icon icon="material-symbols:close" />
 				</button>
 			</div>
+			<p class="confirm-message">{i18n(I18nKey.adminLogoutConfirmMessage)}</p>
 			<div class="modal-actions">
 				<button
 					class="savebar-btn"
@@ -1975,7 +1976,7 @@ function formatDate(dateStr: string | null): string {
 				>
 					{i18n(I18nKey.taxonomyCancel)}
 				</button>
-				<button class="savebar-btn primary" type="button" onclick={performLogout}>
+				<button class="savebar-btn danger" type="button" onclick={performLogout}>
 					{i18n(I18nKey.taxonomyConfirm)}
 				</button>
 			</div>
@@ -2845,6 +2846,28 @@ function formatDate(dateStr: string | null): string {
 
 	/* 保存栏按钮：与 SecretManager 的 sec-btn 同规格。
 	   因 scoped 样式不跨组件，这里需要独立定义一份。 */
+	/* 登出确认：按参考 fuwari-confirmation 的 h2 + 说明 + 双按钮结构，
+	   宽度取参考的 clamp(420px, 30vw, 520px)；确认按钮用危险色，退出不可逆 */
+	.confirm-card {
+		width: min(clamp(420px, 30vw, 520px), 92vw);
+	}
+
+	.confirm-message {
+		margin: 0 0 1rem;
+		font-size: 0.875rem;
+		line-height: 1.6;
+		color: var(--content-meta);
+	}
+
+	.savebar-btn.danger {
+		background: var(--destructive);
+		color: var(--primary-foreground);
+	}
+
+	.savebar-btn.danger:hover {
+		background: color-mix(in oklab, var(--destructive) 84%, black);
+	}
+
 	.savebar-btn {
 		display: inline-flex;
 		align-items: center;
@@ -2853,8 +2876,7 @@ function formatDate(dateStr: string | null): string {
 		border: 1px solid transparent;
 		border-radius: 8px;
 		background: var(--btn-regular-bg);
-		color: var(--btn-content);
-		font-size: 0.875rem;
+		color: var(--btn-content);		font-size: 0.875rem;
 		font-weight: 500;
 		font-family: inherit;
 		cursor: pointer;

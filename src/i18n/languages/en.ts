@@ -519,6 +519,7 @@ export const en: Translation = {
 	[Key.adminExpandSidebar]: "Expand sidebar",
 	[Key.adminSidebarRole]: "Administrator",
 	[Key.adminLogout]: "Log Out",
+	[Key.adminLogoutConfirmMessage]: "You will need to sign in again to access the dashboard.",
 
 	[Key.verifyTitle]: "Admin Login",
 	[Key.verifySubtitle]: "Welcome back, please enter your credentials",

@@ -516,6 +516,7 @@ export const ja: Translation = {
 	[Key.adminExpandSidebar]: "サイドバーを展開",
 	[Key.adminSidebarRole]: "管理者",
 	[Key.adminLogout]: "ログアウト",
+	[Key.adminLogoutConfirmMessage]: "再度ログインが必要になります。",
 
 	[Key.verifyTitle]: "管理者ログイン",
 	[Key.verifySubtitle]: "おかえりなさい。ログイン情報を入力してください",
