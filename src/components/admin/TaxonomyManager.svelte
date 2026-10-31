@@ -23,10 +23,8 @@ let {
 
 let kind = $state<TaxonomyKind>(initialKind);
 
-/** mode-tabs 的无障碍标签：复用现有文案拼接，不为此新增 i18n key */
-const modeTabsLabel = $derived(
-	`${i18n(I18nKey.adminCategories)} & ${i18n(I18nKey.adminTags)}`,
-);
+/** mode-tabs 的无障碍标签 */
+const modeTabsLabel = $derived(i18n(I18nKey.adminCategoriesAndTags));
 
 const NAME_MAX = 40;
 const PAGE_SIZE = 12;
@@ -1501,7 +1499,7 @@ $effect(() => {
 		background: rgb(0 0 0 / 0.38);
 	}
 
-	/* 弹窗内按钮按参考的小号规格收窄（全局 .ui-btn 偏大，这里只覆盖弹窗作用域） */
+	/* 弹窗内按钮按参考 .fuwari-btn-regular 的规格（0.5rem 1rem / 0.875rem） */
 	.dialog-actions {
 		display: flex;
 		justify-content: flex-end;
@@ -1510,17 +1508,16 @@ $effect(() => {
 	}
 
 	.dialog-actions :global(.ui-btn) {
-		padding: 0.375rem 0.875rem;
-		font-size: 0.8125rem;
+		padding: 0.5rem 1rem;
+		font-size: 0.875rem;
 	}
 
 	.modal-card {
-		width: 100%;
-		/* 340px：参考 .fuwari-modal 是 min(28rem, calc(100% - 32px))，但重命名/删除
-		   这类弹窗内容只有标题 + 一行输入 + 两个按钮，按参考的 28rem 显得空荡，
-		   取更紧凑的一档——用户要求「缩窄」。 */
-		max-width: 340px;
-		padding: 1.25rem;
+		/* 尺寸照搬参考 taxonomy-name-dialog + fuwari-modal：
+		   width min(28rem, calc(100% - 32px))、padding clamp(24px, 1.5vw, 32px)。
+		   此前用 340/360px 是自选数值，不符合「复用参考」的要求。 */
+		width: min(28rem, calc(100% - 32px));
+		padding: clamp(24px, 1.5vw, 32px);
 		background: var(--float-panel-bg);
 		box-shadow: var(--shadow-card);
 		border-radius: var(--radius-large);

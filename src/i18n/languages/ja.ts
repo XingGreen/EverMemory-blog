@@ -608,7 +608,7 @@ export const ja: Translation = {
 	[Key.postSortAsc]: "昇順で並べ替え",
 	[Key.postSortDesc]: "降順で並べ替え",
 	[Key.postSyncPendingDeploy]: "デプロイ待ち",
-	[Key.postSyncPendingDeployHint]: "GitHub にプッシュ済み。サイトの再ビルド・デプロイ待ちです",
+	[Key.postSyncPendingDeployHint]: "GitHub には存在しますが、現在のビルドには未反映です（前回ビルド後のプッシュ）",
 	[Key.postSyncNotOnGithub]: "未プッシュ",
 	[Key.postUnsynced]: "未同期",
 	[Key.postSyncSummary]: "{count} 件が GitHub に未同期",

@@ -596,7 +596,7 @@ export const zh_CN: Translation = {
 	[Key.postSortAsc]: "升序排列",
 	[Key.postSortDesc]: "降序排列",
 	[Key.postSyncPendingDeploy]: "待部署",
-	[Key.postSyncPendingDeployHint]: "已推送 GitHub，等待站点重新构建部署后生效",
+	[Key.postSyncPendingDeployHint]: "GitHub 上已有这篇，但当前站点构建里还没有——通常是上次构建之后才推送的，等下次构建生效",
 	[Key.postSyncNotOnGithub]: "未推送",
 	[Key.postUnsynced]: "未同步",
 	[Key.postSyncSummary]: "有 {count} 篇未同步到 GitHub",

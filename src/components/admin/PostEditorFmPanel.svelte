@@ -86,7 +86,8 @@ function toggleTag(name: string) {
 
 /** 新建标签：先登记到 taxonomy（后台接口），再选中；失败也允许本次使用 */
 async function createTag() {
-	const name = editorState.tagInput.trim();
+	// 列表里标签统一显示为「#foo」，用户手输时可能带上 #，入库前剥掉
+	const name = editorState.tagInput.trim().replace(/^#+/, "");
 	if (!name) return;
 	try {
 		await fetch("/api/admin/taxonomy/", {
@@ -109,7 +110,7 @@ async function createTag() {
 function handleTagKey(e: KeyboardEvent) {
 	if (e.key === "Enter") {
 		e.preventDefault();
-		const q = editorState.tagInput.trim();
+		const q = editorState.tagInput.trim().replace(/^#+/, "");
 		if (!q) return;
 		const exact = taxonomy.tags.find(
 			(t) => t.toLowerCase() === q.toLowerCase(),
@@ -384,7 +385,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 									>
 										{#each editorState.tags as tag, i (tag)}
 											<span class="tag-chip">
-												<span class="tag-chip-name">{tag}</span>
+												<span class="tag-chip-name">#{tag}</span>
 												<button
 													class="tag-chip-x"
 													type="button"
@@ -440,7 +441,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 														aria-pressed={editorState.tags.includes(t)}
 														onclick={() => toggleTag(t)}
 													>
-														<span class="tag-option-name">{t}</span>
+														<span class="tag-option-name">#{t}</span>
 														{#if editorState.tags.includes(t)}
 															<Icon
 																icon="material-symbols:check"

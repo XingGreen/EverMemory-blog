@@ -612,7 +612,7 @@ export const ru: Translation = {
 	[Key.postSortAsc]: "сортировка по возрастанию",
 	[Key.postSortDesc]: "сортировка по убыванию",
 	[Key.postSyncPendingDeploy]: "ожидает деплоя",
-	[Key.postSyncPendingDeployHint]: "Отправлено в GitHub, ожидает пересборки и деплоя сайта",
+	[Key.postSyncPendingDeployHint]: "Есть в GitHub, но не в текущей сборке сайта — отправлено после последней сборки",
 	[Key.postSyncNotOnGithub]: "не отправлено",
 	[Key.postUnsynced]: "не синхронизировано",
 	[Key.postSyncSummary]: "{count} не синхронизировано с GitHub",

@@ -1475,7 +1475,7 @@ function formatDate(dateStr: string | null): string {
 					{:else}
 						<Icon icon="material-symbols:folder-outline" />
 					{/if}
-					<span>{i18n(I18nKey.adminCategories)} & {i18n(I18nKey.adminTags)}</span>
+					<span>{i18n(I18nKey.adminCategoriesAndTags)}</span>
 				</button>
 
 				<!-- 网站配置：单一入口，不再展开子菜单——
@@ -1719,7 +1719,7 @@ function formatDate(dateStr: string | null): string {
 					{@render adminNotFound()}
 				{:else if activePage === "categories-and-tags"}
 					<AdminPage
-						title={`${i18n(I18nKey.adminCategories)} & ${i18n(I18nKey.adminTags)}`}
+						title={i18n(I18nKey.adminCategoriesAndTags)}
 						intro={i18n(I18nKey.adminCategoriesIntro)}
 					>
 						<TaxonomyManager
@@ -2178,12 +2178,6 @@ function formatDate(dateStr: string | null): string {
 		gap: 0.25rem;
 	}
 
-	/* 退出登录：悬停转红底红字，与普通导航项（主色淡底）区分开 */
-	.nav-item.is-danger:hover {
-		background: color-mix(in srgb, var(--destructive) 12%, transparent);
-		color: var(--destructive);
-	}
-
 	.nav-item {
 		width: 100%;
 		display: flex;
@@ -2275,6 +2269,14 @@ function formatDate(dateStr: string | null): string {
 
 	.nav-item:hover:not(.active) {
 		background: color-mix(in oklab, var(--primary) 8%, transparent);
+	}
+
+	/* 退出登录：悬停为实底红 + 白字。必须写在上面那条之后，并带 :not(.active)
+	   提高特异性——否则会被 .nav-item:hover:not(.active) 的主色淡底覆盖，
+	   在深色背景上表现为「没有红色」。 */
+	.nav-item.is-danger:hover:not(.active) {
+		background: var(--destructive);
+		color: var(--primary-foreground);
 	}
 
 	/* 底部管理员信息：纯展示，不可点击、无 hover 与选中态 */

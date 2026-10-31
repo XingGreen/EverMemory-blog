@@ -611,7 +611,7 @@ export const en: Translation = {
 	[Key.postSortAsc]: "sorted ascending",
 	[Key.postSortDesc]: "sorted descending",
 	[Key.postSyncPendingDeploy]: "pending deploy",
-	[Key.postSyncPendingDeployHint]: "Pushed to GitHub, waiting for the site to rebuild and deploy",
+	[Key.postSyncPendingDeployHint]: "Exists on GitHub but not in the current site build — usually pushed after the last build",
 	[Key.postSyncNotOnGithub]: "not pushed",
 	[Key.postUnsynced]: "unsynced",
 	[Key.postSyncSummary]: "{count} not synced to GitHub",
