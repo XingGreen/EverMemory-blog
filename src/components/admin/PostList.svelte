@@ -52,7 +52,12 @@ type SavedFilters = {
 
 const FILTER_STORAGE_KEY = "admin_posts_filters";
 const DEFAULT_SORT: SortKey = "updated";
-const STATUS_VALUES = new Set<string>(["all", "published", "draft", "unsynced"]);
+const STATUS_VALUES = new Set<string>([
+	"all",
+	"published",
+	"draft",
+	"unsynced",
+]);
 const SORT_VALUES = new Set<string>([
 	"updated",
 	"newest",
@@ -169,7 +174,11 @@ async function resolveConflict(how: "local" | "remote") {
 			// 覆盖会改动文件内容，重新拉一次列表让标题/摘要跟上
 			onRefresh?.();
 		} else {
-			conflictDialog = { ...conflictDialog, busy: false, message: data.message };
+			conflictDialog = {
+				...conflictDialog,
+				busy: false,
+				message: data.message,
+			};
 		}
 	} catch {
 		conflictDialog = { ...conflictDialog, busy: false, message: "请求失败" };
@@ -817,9 +826,13 @@ function actionLabel(action: string, title: string): string {
 						{#if !hiddenCols.status}
 							<div class="col col-status" role="cell" data-label={i18n(I18nKey.postColStatus)}>
 								{#if post.syncState === "pending-deploy"}
-									<span class="sync-chip" data-sync="pending">
-										{i18n(I18nKey.postSyncPendingDeploy)}
-									</span>
+								<span
+									class="sync-chip"
+									data-sync="pending"
+									title={i18n(I18nKey.postSyncPendingDeployHint)}
+								>
+									{i18n(I18nKey.postSyncPendingDeploy)}
+								</span>
 								{:else if post.syncState === "not-on-github"}
 									<span class="sync-chip" data-sync="local">
 										{i18n(I18nKey.postSyncNotOnGithub)}
@@ -841,7 +854,7 @@ function actionLabel(action: string, title: string): string {
 									aria-label={i18n(I18nKey.conflictCheck)}
 									title={i18n(I18nKey.conflictCheck)}
 								>
-									<Icon icon="material-symbols:refresh" class="action-icon" />
+									<Icon icon="material-symbols:sync-rounded" class="action-icon" />
 								</button>
 								<a
 									class="icon-action view"

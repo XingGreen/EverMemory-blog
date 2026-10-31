@@ -98,9 +98,7 @@ const navEntries = $derived.by(() => {
 	];
 });
 
-const selectedEntry = $derived(
-	navEntries.find((e) => e.name === selectedName),
-);
+const selectedEntry = $derived(navEntries.find((e) => e.name === selectedName));
 const isUncategorized = $derived(selectedName === UNCATEGORIZED);
 
 const scopedPosts = $derived.by(() => {
@@ -475,7 +473,9 @@ $effect(() => {
 							aria-pressed={selectedName === entry.name}
 							onclick={() => selectEntry(entry.name)}
 						>
-							<span class="taxonomy-nav-name">{entry.name}</span>
+							<span class="taxonomy-nav-name"
+								>{kind === "tag" ? `#${entry.name}` : entry.name}</span
+							>
 							<span class="taxonomy-nav-count">
 								{entry.count}
 								{#if entry.publishedCount > 0 && entry.count === 0}
@@ -1525,7 +1525,13 @@ $effect(() => {
 
 	.ui-btn.danger {
 		background: var(--destructive);
-		color: #fff;
+		color: var(--primary-foreground);
+	}
+
+	/* 危险按钮的 hover 必须留在红色系：原先没有这条规则，会继承
+	   .ui-btn-primary 的主色 hover，鼠标移上去变成主题色，语义完全跑偏 */
+	.ui-btn.danger:hover:not(:disabled) {
+		background: color-mix(in oklab, var(--destructive) 84%, black);
 	}
 
 	@media (max-width: 900px) {

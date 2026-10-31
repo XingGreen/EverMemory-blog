@@ -448,6 +448,8 @@ enum I18nKey {
 	configSettingsIntro = "configSettingsIntro",
 	adminLogout = "adminLogout",
 	adminBackHome = "adminBackHome",
+	/** 分类与标签合并页的标题（原先拼接「分类管理 & 标签管理」） */
+	adminCategoriesAndTags = "adminCategoriesAndTags",
 	adminUserCenter = "adminUserCenter",
 	adminEnvVars = "adminEnvVars",
 	adminEnvVarsIntro = "adminEnvVarsIntro",
@@ -602,6 +604,8 @@ enum I18nKey {
 	postSortAsc = "postSortAsc",
 	postSortDesc = "postSortDesc",
 	postSyncPendingDeploy = "postSyncPendingDeploy",
+	/** 「待部署」含义说明：已推 GitHub，但站点还没重新构建 */
+	postSyncPendingDeployHint = "postSyncPendingDeployHint",
 	postSyncNotOnGithub = "postSyncNotOnGithub",
 	/** 文章列表「未同步」筛选项：涵盖未推送 + 待部署两种 */
 	postUnsynced = "postUnsynced",

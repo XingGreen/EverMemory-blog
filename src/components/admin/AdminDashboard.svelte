@@ -13,11 +13,11 @@ import {
 	getConfigLabelKey,
 } from "@/utils/admin-settings";
 import { isTourDone, resetTour } from "@/utils/onboarding";
+import AdminPage from "./AdminPage.svelte";
 import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
 import OnboardingTour from "./OnboardingTour.svelte";
 import PostEditor from "./PostEditor.svelte";
 import PostList from "./PostList.svelte";
-import AdminPage from "./AdminPage.svelte";
 import SecretManager from "./SecretManager.svelte";
 import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
@@ -236,11 +236,11 @@ const activePage = $derived<Page>(
 				? "settings"
 				: route.page === "env"
 					? "env"
-				: route.page === "categories-and-tags"
-					? "categories-and-tags"
-					: route.page === "sessions"
-						? "sessions"
-						: "posts",
+					: route.page === "categories-and-tags"
+						? "categories-and-tags"
+						: route.page === "sessions"
+							? "sessions"
+							: "posts",
 );
 
 const viewMode = $derived<ViewMode>(
@@ -359,7 +359,8 @@ function parseRoute(pathname: string): Route {
 		case "settings": {
 			// /admin/settings/ 无子段时落到第一个配置项（概览层已移除）；
 			// 显式给了未知 section 视为无效地址
-			if (!segments[1]) return { page: "settings", section: CONFIG_ITEMS[0]?.key };
+			if (!segments[1])
+				return { page: "settings", section: CONFIG_ITEMS[0]?.key };
 			return CONFIG_ITEMS.some((item) => item.key === segments[1])
 				? { page: "settings", section: segments[1] }
 				: { page: "404" };
@@ -477,7 +478,7 @@ const headerTitle = $derived.by(() => {
 	if (activePage === "env") return i18n(I18nKey.adminEnvVars);
 	if (activePage === "sessions") return i18n(I18nKey.adminSessions);
 	if (activePage === "categories-and-tags")
-		return `${i18n(I18nKey.adminCategories)} & ${i18n(I18nKey.adminTags)}`;
+		return i18n(I18nKey.adminCategoriesAndTags);
 	if (viewMode === "edit" && editingPost) return i18n(I18nKey.adminEditPost);
 	if (viewMode === "create") return i18n(I18nKey.adminNewPost);
 	return i18n(I18nKey.adminPosts);
@@ -1554,7 +1555,7 @@ function formatDate(dateStr: string | null): string {
 					/>
 					<span>{i18n(I18nKey.adminToggleTheme)}</span>
 				</button>
-				<button class="nav-item" onclick={handleLogout}>
+				<button class="nav-item is-danger" onclick={handleLogout}>
 					<Icon icon="material-symbols:arrow-back" />
 					<span>{i18n(I18nKey.adminLogout)}</span>
 				</button>
@@ -2053,8 +2054,6 @@ function formatDate(dateStr: string | null): string {
 		   左 1.25rem + logo 14px = 图标中心 46px，与导航图标列对齐；
 		   上下 0.5rem：32px + 16px = 48px 行高，与参考项目 3rem 对齐 */
 		padding: 0.5rem 0.75rem 0.5rem 1.25rem;
-		/* 品牌区底部分隔：结构线用低对比度内容线，不用容器轮廓色 */
-		border-bottom: 1px solid var(--line-color);
 		margin-bottom: 0.75rem;
 		border-radius: var(--radius-xl);
 		transition: background 0.15s;
@@ -2176,6 +2175,12 @@ function formatDate(dateStr: string | null): string {
 		display: flex;
 		flex-direction: column;
 		gap: 0.25rem;
+	}
+
+	/* 退出登录：悬停转红底红字，与普通导航项（主色淡底）区分开 */
+	.nav-item.is-danger:hover {
+		background: color-mix(in srgb, var(--destructive) 12%, transparent);
+		color: var(--destructive);
 	}
 
 	.nav-item {
