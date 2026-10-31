@@ -552,15 +552,18 @@ $effect(() => {
 		flex-shrink: 0;
 	}
 
-	/* 参考 .post-editor-document .tiptap */
+	/* 参考 .post-editor-document .tiptap：字号与行高；
+	   颜色必须显式声明——不写就继承容器默认色，深色主题下正文会发暗看不清 */
 	.post-editor-body {
 		font-size: 1.0625rem;
 		line-height: 1.85;
+		color: var(--deep-text);
 	}
 
 	.post-editor-body :global(p) {
 		margin: 0 0 1.25rem;
 		font-size: 1.0625rem;
+		color: var(--deep-text);
 	}
 
 	.post-editor-body :global(li) {
@@ -598,16 +601,17 @@ $effect(() => {
 		padding: 0.5rem 1.25rem 1.5rem 2rem;
 	}
 
-	/* 参考 .post-history-version */
+	/* 参考 .post-history-version：只有圆角 + 内边距 + 块间距 + 时间轴，
+	   没有描边、没有卡片底；选中态只改圆点颜色（见 .is-active::after） */
 	.post-history-version {
 		position: relative;
 		display: block;
 		width: 100%;
 		padding: 1rem 1.125rem;
 		margin-bottom: 0.75rem;
-		border: 1px solid transparent;
+		border: none;
 		border-radius: 0.625rem;
-		background: var(--card-bg);
+		background: transparent;
 		font-family: inherit;
 		color: inherit;
 		text-align: left;
@@ -617,7 +621,8 @@ $effect(() => {
 			color 0.15s;
 	}
 
-	/* 参考 .post-history-version::before：左侧时间轴 */
+	/* 时间轴：竖线（::before）+ 节点圆点（::after），
+	   末项的竖线只画到节点处，不拖到底——三条规则都照参考 296-330 行 */
 	.post-history-version::before {
 		content: "";
 		position: absolute;
@@ -628,13 +633,26 @@ $effect(() => {
 		background: var(--post-editor-rule);
 	}
 
-	.post-history-version.is-active {
-		background: var(--btn-regular-bg);
+	.post-history-version:last-child::before {
+		bottom: calc(100% - 2rem);
 	}
 
-	.post-history-version.is-active .post-history-time {
-		color: var(--primary);
+	.post-history-version::after {
+		content: "";
+		position: absolute;
+		left: calc(-0.625rem - 3px);
+		top: 1.625rem;
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		background: color-mix(in srgb, var(--deep-text) 30%, transparent);
 	}
+
+	.post-history-version.is-active::after {
+		background: var(--primary);
+	}
+
+	/* 选中态只改圆点（参考 .is-selected::after），不改文字颜色 */
 
 	.post-history-time {
 		display: block;
