@@ -60,7 +60,8 @@ const historyUrl = `/admin/posts/edit/${encodeURIComponent(slug)}/history/`;
 
 /* 正文限宽可拖拽，与编辑页共用同一个 localStorage 键，宽度偏好两处一致 */
 const WIDTH_KEY = "admin-editor-max-width";
-const WIDTH_MIN = 480;
+/* 正文最小宽度：与编辑页一致，到达该值后拖拽不再继续缩小 */
+const WIDTH_MIN = 400;
 
 function readWidth(): number | null {
 	try {
@@ -85,7 +86,8 @@ function startResize(e: PointerEvent, side: "left" | "right") {
 	const move = (ev: PointerEvent) => {
 		const delta = (ev.clientX - startX) * (mySide === "right" ? 1 : -1);
 		const next = startW + delta * 2;
-		contentWidth = Math.min(viewport, Math.max(WIDTH_MIN, next));
+		/* 先按视口收敛，再兜底最小宽度 */
+		contentWidth = Math.max(WIDTH_MIN, Math.min(viewport, next));
 	};
 	const up = () => {
 		resizing = false;

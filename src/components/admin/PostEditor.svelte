@@ -218,7 +218,8 @@ function toggleLineNumbers() {
    左右两侧各一条手柄，向内拖都是"变窄"，因此位移按 ±dx*2 计算（对称收缩）。
    宽度即 .editor-layout 的 max-width，下限 720px 保证正文不至于挤成一列。 */
 const EDITOR_WIDTH_KEY = "admin-editor-max-width";
-const EDITOR_WIDTH_MIN = 720;
+/* 正文最小宽度：到达该值后拖拽不再继续缩小，避免排版被挤压崩坏 */
+const EDITOR_WIDTH_MIN = 400;
 
 function readEditorWidth(): number | null {
 	try {
@@ -250,7 +251,8 @@ function startResize(e: PointerEvent, side: "left" | "right") {
 		   所以表现为「只有 hover 效果、拖动无反应」。 */
 		const delta = side === "right" ? startX - ev.clientX : ev.clientX - startX;
 		const next = startW - delta * 2;
-		editorMaxWidth = Math.min(viewport, Math.max(EDITOR_WIDTH_MIN, next));
+		/* 先按视口收敛，再兜底最小宽度——顺序反了的话，窗口比 400 窄时仍会突破下限 */
+		editorMaxWidth = Math.max(EDITOR_WIDTH_MIN, Math.min(viewport, next));
 	};
 	const onUp = () => {
 		resizing = false;
