@@ -516,7 +516,9 @@ $effect(() => {
 	/* 参考 .post-editor-title */
 	.post-editor-title {
 		margin: 0 0 1rem;
-		padding: 0;
+		padding: 0 0 1rem;
+		/* 标题与正文之间补一条分隔线（本条按用户要求，不参照参考项目） */
+		border-bottom: 1px solid var(--post-editor-rule);
 		font-size: 2.25rem;
 		line-height: 1.4;
 		font-weight: 700;

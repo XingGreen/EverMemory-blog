@@ -97,7 +97,12 @@ export async function POST({ request }) {
 						mkdirSync(dir, { recursive: true });
 						writeFileSync(
 							path.join(dir, `${Date.now()}-auto.md`),
-							previous,
+							/* 记录保存后的内容，而不是 previous。
+							   previous 是「这次保存之前」的样子，于是历史列表里永远
+							   看不到刚刚设置的封面/分类——最新一条反映的是旧状态，
+							   用户会以为封面没存进去。改成 fullContent 后，
+							   最新版本即当前文章状态，恢复语义不变（仍是完整快照）。 */
+							fullContent,
 							"utf-8",
 						);
 					}
