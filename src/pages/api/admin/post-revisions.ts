@@ -46,13 +46,40 @@ function json(data: unknown, status = 200): Response {
 	});
 }
 
-/** 从 markdown 的 frontmatter 里取标题，用于历史列表的三行式展示 */
-function readFrontmatterTitle(content: string): string {
+/** 从 markdown 的 frontmatter 里取标题、分类、标签（供历史列表与详情摘要） */
+function readFrontmatterMeta(content: string): {
+	title: string;
+	category: string;
+	tags: string[];
+} {
 	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-	if (!fm) return "";
-	const line = fm[1].match(/^title:\s*(.*)$/m);
-	if (!line) return "";
-	return line[1].trim().replace(/^"(.*)"$/, "$1");
+	if (!fm) return { title: "", category: "", tags: [] };
+	const body = fm[1];
+	const titleLine = body.match(/^title:\s*(.*)$/m);
+	const title = titleLine ? titleLine[1].trim().replace(/^"(.*)"$/, "$1") : "";
+	const catLine = body.match(/^category:\s*(.*)$/m);
+	const category = catLine ? catLine[1].trim().replace(/^"(.*)"$/, "$1") : "";
+	const tags: string[] = [];
+	const inline = body.match(/^tags:\s*\[(.*)\]$/m);
+	if (inline) {
+		for (const raw of inline[1].split(",")) {
+			const t = raw.trim().replace(/^["'](.*)["']$/, "$1");
+			if (t) tags.push(t);
+		}
+	} else {
+		// 块式写法：tags:\n  - foo\n  - bar
+		const block = body.match(/^tags:\s*\n((?:\s*-\s*.+\n?)+)/m);
+		if (block) {
+			for (const line of block[1].split("\n")) {
+				const t = line
+					.replace(/^\s*-\s*/, "")
+					.trim()
+					.replace(/^["'](.*)["']$/, "$1");
+				if (t) tags.push(t);
+			}
+		}
+	}
+	return { title, category, tags };
 }
 
 /** 列出某篇文章的版本（新→旧）；带标题，列表项与参考一样显示「时间 / 原因 / 标题」 */
@@ -61,6 +88,8 @@ function listRevisions(slug: string): {
 	reason: RevisionReason;
 	savedAt: number;
 	title: string;
+	category: string;
+	tags: string[];
 }[] {
 	const abs = path.resolve(process.cwd(), revisionDirRel(slug));
 	if (!existsSync(abs)) return [];
@@ -68,22 +97,30 @@ function listRevisions(slug: string): {
 		return readdirSync(abs)
 			.filter((f) => f.endsWith(".md"))
 			.map(
-				(f): {
+				(
+					f,
+				): {
 					id: string;
 					reason: RevisionReason;
 					savedAt: number;
 					title: string;
+					category: string;
+					tags: string[];
 				} => {
 					const [tsRaw, reasonRaw] = f.replace(/\.md$/, "").split("-");
 					const ts = Number(tsRaw);
 					const reason = (reasonRaw ?? "auto") as RevisionReason;
-					let title = "";
+					let meta = {
+						title: "",
+						category: "",
+						tags: [] as string[],
+					};
 					try {
-						title = readFrontmatterTitle(
+						meta = readFrontmatterMeta(
 							readFileSync(path.join(abs, f), "utf-8"),
 						);
 					} catch {
-						title = "";
+						// 快照损坏：留空，不影响列表展示
 					}
 					return {
 						id: f,
@@ -92,7 +129,9 @@ function listRevisions(slug: string): {
 								? reason
 								: "auto",
 						savedAt: Number.isFinite(ts) ? ts : 0,
-						title,
+						title: meta.title,
+						category: meta.category,
+						tags: meta.tags,
 					};
 				},
 			)
@@ -102,7 +141,11 @@ function listRevisions(slug: string): {
 	}
 }
 
-export async function GET({ request }: { request: Request }): Promise<Response> {
+export async function GET({
+	request,
+}: {
+	request: Request;
+}): Promise<Response> {
 	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 
@@ -137,7 +180,11 @@ export async function GET({ request }: { request: Request }): Promise<Response> 
 	return json({ success: true, content });
 }
 
-export async function POST({ request }: { request: Request }): Promise<Response> {
+export async function POST({
+	request,
+}: {
+	request: Request;
+}): Promise<Response> {
 	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 
@@ -150,7 +197,8 @@ export async function POST({ request }: { request: Request }): Promise<Response>
 
 	const slug = body.slug?.trim() ?? "";
 	const id = body.id?.trim() ?? "";
-	if (!slug || !id) return json({ success: false, message: "缺少 slug 或 id" }, 400);
+	if (!slug || !id)
+		return json({ success: false, message: "缺少 slug 或 id" }, 400);
 	if (id.includes("/") || id.includes("..")) {
 		return json({ success: false, message: "非法的版本 id" }, 400);
 	}
@@ -166,7 +214,8 @@ export async function POST({ request }: { request: Request }): Promise<Response>
 			target = null;
 		}
 	}
-	if (target === null) return json({ success: false, message: "版本不存在" }, 404);
+	if (target === null)
+		return json({ success: false, message: "版本不存在" }, 404);
 
 	const postRel = postRelPath(slug);
 	const postAbs = path.resolve(process.cwd(), postRel);

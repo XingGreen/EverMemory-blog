@@ -242,6 +242,8 @@ type RevisionItem = {
 	reason: string;
 	savedAt: number;
 	title: string;
+	category: string;
+	tags: string[];
 };
 
 let historyOpen = $state(false);
@@ -1557,6 +1559,19 @@ $effect(() => {
 									selectedRevision.reason,
 								)}
 							</p>
+							<!-- 分类与标签摘要：对齐参考 PostEditorSummary（图标 + 文本） -->
+							<div class="history-meta">
+								<span>
+									<Icon icon="material-symbols:menu-book" />
+									{selectedRevision.category || "—"}
+								</span>
+								{#if selectedRevision.tags.length}
+									<span class="history-meta-tags">
+										<Icon icon="material-symbols:label" />
+										{selectedRevision.tags.join(" · ")}
+									</span>
+								{/if}
+							</div>
 							<!-- biome-ignore lint/security/noDangerouslySetInnerHtml: 服务端渲染管线产出的可信 HTML -->
 							<div class="history-doc custom-md">{@html historyDetailHtml}</div>
 						{/if}
@@ -2077,6 +2092,26 @@ $effect(() => {
 		margin: 0;
 		font-size: 0.8125rem;
 		color: var(--content-meta);
+	}
+
+	/* 版本摘要：分类 / 标签，图标 + 文本，对齐参考 PostEditorSummary 的排布 */
+	.history-meta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 1rem;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+	}
+
+	.history-meta span {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	.history-meta-tags {
+		min-width: 0;
 	}
 
 	.history-doc {
