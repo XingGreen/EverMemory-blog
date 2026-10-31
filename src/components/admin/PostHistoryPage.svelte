@@ -82,6 +82,11 @@ async function loadList() {
 		);
 		const data = await res.json();
 		revisions = data.success ? (data.revisions ?? []) : [];
+		/* 直接进入分栏：自动选中最新一条，省掉「先看列表页、再点一次」的步骤。
+		   这样从编辑器点「历史版本」进来就是「左正文 + 右列表」的成品状态。 */
+		if (!currentId && revisions.length > 0) {
+			selectRevision(revisions[0].id);
+		}
 	} catch {
 		revisions = [];
 	} finally {
@@ -250,27 +255,10 @@ $effect(() => {
 			</aside>
 		</div>
 	{:else}
-		<div class="history-index-list">
-			{#if listLoading}
-				<p class="history-note">…</p>
-			{:else if revisions.length === 0}
-				<p class="history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
-			{:else}
-				<nav class="history-list">
-					{#each revisions as item (item.id)}
-						<button
-							type="button"
-							class="history-version"
-							onclick={() => selectRevision(item.id)}
-						>
-							<time class="history-time">{fmtTime(item.savedAt)}</time>
-							<span class="history-reason">{reasonLabel(item.reason)}</span>
-							<span class="history-version-title">{item.title || "—"}</span>
-						</button>
-					{/each}
-				</nav>
-			{/if}
-		</div>
+		<!-- 没有可查看的版本（或列表还在加载）：给出明确空态，不留整页空白 -->
+		<p class="history-note">
+			{listLoading ? "…" : i18n(I18nKey.postHistoryEmpty)}
+		</p>
 	{/if}
 
 	{#if errorText}
@@ -439,12 +427,6 @@ $effect(() => {
 		font-size: 0.8125rem;
 		font-weight: 600;
 		color: var(--content-meta);
-	}
-
-	.history-index-list {
-		flex: 1;
-		min-height: 0;
-		overflow-y: auto;
 	}
 
 	.history-list {
