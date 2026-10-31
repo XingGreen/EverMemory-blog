@@ -1262,10 +1262,14 @@ $effect(() => {
 				{i18n(I18nKey.postToc)}
 			</button>
 			{#if mode === "edit" && post?.slug}
-				<!-- 历史版本改为独立 URL（对齐参考的 history / history_.$revisionId 两个路由） -->
+				<!-- 历史版本改为独立 URL（对齐参考的 history / history_.$revisionId 两个路由）。
+				     跳转前先把草稿刷到本地/云端并清脏，否则 beforeunload 会把这次主动导航
+				     当成「离开未保存页面」而弹提示。 -->
 				<button
 					class="editor-text-btn"
-					onclick={() => {
+					onclick={async () => {
+						await flushAutoSave();
+						dirty = false;
 						window.location.href = `/admin/posts/edit/${encodeURIComponent(
 							post?.slug ?? "",
 						)}/history/`;

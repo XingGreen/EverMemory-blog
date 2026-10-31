@@ -36,10 +36,26 @@ let errorText = $state("");
 const editorUrl = `/admin/posts/edit/${encodeURIComponent(slug)}/`;
 const historyUrl = `/admin/posts/edit/${encodeURIComponent(slug)}/history/`;
 
-const selected = $derived(
-	revisions.find((r) => r.id === revisionId) ?? null,
-);
+/** 当前查看的版本：初始化自 URL，之后由列表点击原地切换（不整页跳转） */
+let currentId = $state(revisionId);
+
+const selected = $derived(revisions.find((r) => r.id === currentId) ?? null);
 const canRestore = $derived(Boolean(selected) && !busy);
+
+/** 单次点击即切换：原地加载详情 + replaceState 同步 URL（可刷新/可分享） */
+function selectRevision(id: string) {
+	currentId = id;
+	try {
+		window.history.replaceState(
+			null,
+			"",
+			`${historyUrl}${encodeURIComponent(id)}/`,
+		);
+	} catch {
+		// 忽略：URL 同步失败不影响查看
+	}
+	void loadDetail(id);
+}
 
 function fmtTime(ts: number): string {
 	if (!ts) return "—";
@@ -135,7 +151,7 @@ $effect(() => {
 });
 
 $effect(() => {
-	if (revisionId) void loadDetail(revisionId);
+	if (currentId) void loadDetail(currentId);
 });
 </script>
 
@@ -146,7 +162,7 @@ $effect(() => {
 			{i18n(I18nKey.postHistoryBack)}
 		</a>
 
-		{#if revisionId}
+		{#if currentId}
 			<div class="history-context">
 				<Icon icon="material-symbols:lock" />
 				<div>
@@ -159,7 +175,7 @@ $effect(() => {
 		{/if}
 
 		<div class="history-actions">
-			{#if revisionId}
+			{#if currentId}
 				<button
 					class="history-restore-this"
 					type="button"
@@ -172,7 +188,7 @@ $effect(() => {
 		</div>
 	</header>
 
-	{#if revisionId}
+	{#if currentId}
 		<!-- 主区：详情在左，列表在右（照参考 post-history-body 的顺序） -->
 		<div class="history-body">
 			<section class="history-content">
@@ -217,16 +233,17 @@ $effect(() => {
 				{:else}
 					<nav class="history-list">
 						{#each revisions as item (item.id)}
-							<a
+							<button
+								type="button"
 								class="history-version"
-								class:is-selected={item.id === revisionId}
-								href={`${historyUrl}${encodeURIComponent(item.id)}/`}
-								aria-current={item.id === revisionId ? "page" : undefined}
+								class:is-selected={item.id === currentId}
+								aria-current={item.id === currentId ? "true" : undefined}
+								onclick={() => selectRevision(item.id)}
 							>
 								<time class="history-time">{fmtTime(item.savedAt)}</time>
 								<span class="history-reason">{reasonLabel(item.reason)}</span>
 								<span class="history-version-title">{item.title || "—"}</span>
-							</a>
+							</button>
 						{/each}
 					</nav>
 				{/if}
@@ -241,14 +258,15 @@ $effect(() => {
 			{:else}
 				<nav class="history-list">
 					{#each revisions as item (item.id)}
-						<a
+						<button
+							type="button"
 							class="history-version"
-							href={`${historyUrl}${encodeURIComponent(item.id)}/`}
+							onclick={() => selectRevision(item.id)}
 						>
 							<time class="history-time">{fmtTime(item.savedAt)}</time>
 							<span class="history-reason">{reasonLabel(item.reason)}</span>
 							<span class="history-version-title">{item.title || "—"}</span>
-						</a>
+						</button>
 					{/each}
 				</nav>
 			{/if}
@@ -442,10 +460,15 @@ $effect(() => {
 		display: flex;
 		flex-direction: column;
 		gap: 0.125rem;
+		width: 100%;
 		padding: 0.5rem 0.625rem;
+		border: none;
 		border-radius: 0.5rem;
+		background: transparent;
+		font-family: inherit;
 		color: inherit;
-		text-decoration: none;
+		text-align: left;
+		cursor: pointer;
 	}
 
 	.history-version:hover {
