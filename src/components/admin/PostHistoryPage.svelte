@@ -203,7 +203,9 @@ $effect(() => {
 					<p class="history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
 				{:else}
 					<h2 class="history-doc-title">{selected.title || "—"}</h2>
-					<p class="history-note">
+					<!-- 正文里的横幅跟标题左对齐（参考是 h2 下方的 p）；
+					     居中的那个是 header 中段的只读标识，两者不要混用同一条规则 -->
+					<p class="history-banner">
 						{i18n(I18nKey.postHistoryBannerTitle).replace(
 							"{time}",
 							fmtTime(selected.savedAt),
@@ -415,8 +417,10 @@ $effect(() => {
 		min-width: 0;
 		min-height: 0;
 		overflow-y: auto;
-		/* 参考 .post-history-document 的 padding-top: 3.75rem */
-		padding: 3.75rem 2.5rem 3rem;
+		/* 照参考 .post-editor-document：正文限宽 66rem 并居中，
+		   左右内边距取 max(3rem, (100% - 66rem)/2)，避免长行铺满整屏难读 */
+		--document-inset: max(3rem, calc((100% - 66rem) / 2));
+		padding: 3.75rem var(--document-inset) 3rem;
 	}
 
 	.history-doc-title {
@@ -540,12 +544,20 @@ $effect(() => {
 		gap: 0.375rem;
 	}
 
-	/* 提示文本居中（含「正在查看…」横幅、空态、加载中） */
+	/* 提示文本居中（仅用于 header 中段的只读标识与空态） */
 	.history-note {
 		margin: 0;
 		font-size: 0.8125rem;
 		color: var(--content-meta);
 		text-align: center;
+	}
+
+	/* 正文横幅：左对齐，跟在标题下方（对应参考 h2 之后的 p） */
+	.history-banner {
+		margin: 0.25rem 0 0;
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+		text-align: left;
 	}
 
 	/* 正文排版：照参考 .post-editor-document .tiptap 的 1.0625rem / 1.85 行高，
