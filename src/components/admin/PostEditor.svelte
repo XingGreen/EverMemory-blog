@@ -365,8 +365,12 @@ function startResize(e: PointerEvent, side: "left" | "right") {
 	const viewport = typeof window === "undefined" ? 1920 : window.innerWidth;
 
 	const onMove = (ev: PointerEvent) => {
-		const dx = side === "right" ? startX - ev.clientX : ev.clientX - startX;
-		const next = startW + dx * 2;
+		/* delta > 0 表示向内收（右侧手柄左移 / 左侧手柄右移）→ 宽度要变小；
+		   delta < 0 表示向外放 → 变宽。上一版写成 startW + delta*2，
+		   「向内拖」反而在加宽，随即被 Math.min(viewport) 夹回原值，
+		   所以表现为「只有 hover 效果、拖动无反应」。 */
+		const delta = side === "right" ? startX - ev.clientX : ev.clientX - startX;
+		const next = startW - delta * 2;
 		editorMaxWidth = Math.min(viewport, Math.max(EDITOR_WIDTH_MIN, next));
 	};
 	const onUp = () => {
@@ -706,6 +710,9 @@ setContext(POST_EDITOR_CONTEXT, {
 	actions: {
 		toggleGroup,
 		toggleLineNumbers,
+		markDirty: () => {
+			dirty = true;
+		},
 		handleSlugInput,
 		generateSlugFromTitle,
 		normalizeSlug,

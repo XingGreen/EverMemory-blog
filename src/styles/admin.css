@@ -93,7 +93,8 @@
 .admin-shell textarea {
   overflow-x: hidden;
   overflow-y: auto;
-  max-height: 24rem;
+  /* 24rem 偏矮，长摘要/正文片段要频繁滚动；放宽到 32rem 且不超过视口 60% */
+  max-height: min(32rem, 60vh);
   resize: vertical;
 }
 

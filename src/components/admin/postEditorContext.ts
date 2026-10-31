@@ -56,6 +56,8 @@ export interface PostEditorActions {
 	toggleGroup: (group: FormGroup) => void;
 	/** 切换正文行号显示（写回 localStorage） */
 	toggleLineNumbers: () => void;
+	/** 立即置脏（供标签等不经过主编辑区的操作调用，让 beforeunload 及时生效） */
+	markDirty: () => void;
 	handleSlugInput: () => void;
 	generateSlugFromTitle: () => void;
 	normalizeSlug: () => void;

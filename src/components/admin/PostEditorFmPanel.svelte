@@ -82,6 +82,9 @@ function toggleTag(name: string) {
 		: [...tags, name];
 	editorState.tagInput = "";
 	tagInputEl?.focus();
+	/* 标签也是文章数据的一部分：立即置脏，让刷新/关闭时的 beforeunload 提示生效，
+	   不必等 400ms 的草稿定时器把它带出来。 */
+	actions.markDirty();
 }
 
 /** 新建标签：先登记到 taxonomy（后台接口），再选中；失败也允许本次使用 */
