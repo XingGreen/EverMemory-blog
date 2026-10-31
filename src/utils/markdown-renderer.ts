@@ -15,12 +15,20 @@ import remarkAdmonitionToBlockquoteCallout from "remark-admonition-to-blockquote
 import remarkDirective from "remark-directive";
 import remarkMath from "remark-math";
 import remarkSectionize from "remark-sectionize";
-import { expressiveCodeConfig, siteConfig } from "@/config";
+import { expressiveCodeConfig, plantumlConfig, siteConfig } from "@/config";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import rehypeEmailProtection from "@/plugins/rehype-email-protection.mjs";
 import rehypeExternalLinks from "@/plugins/rehype-external-links.mjs";
 import rehypeFigure from "@/plugins/rehype-figure.mjs";
+import { rehypeMermaid } from "@/plugins/rehype-mermaid.mjs";
+import { rehypePlantuml } from "@/plugins/rehype-plantuml.mjs";
 import { parseDirectiveNode } from "@/plugins/remark-directive-rehype.js";
+import { remarkExcerpt } from "@/plugins/remark-excerpt.js";
+import { remarkImageGrid } from "@/plugins/remark-image-grid.js";
+import { remarkMermaid } from "@/plugins/remark-mermaid.js";
+import { remarkPlantuml } from "@/plugins/remark-plantuml.js";
+import { remarkReadingTime } from "@/plugins/remark-reading-time.mjs";
 
 let processorInstance: ReturnType<typeof unified> | null = null;
 let rendererPromise: Promise<
@@ -112,39 +120,50 @@ function getProcessor() {
 					? [remarkAdmonitionToBlockquoteCallout]
 					: []),
 				remarkMath,
+				remarkReadingTime,
+				remarkImageGrid,
+				remarkExcerpt,
 				remarkDirective,
 				remarkSectionize,
 				parseDirectiveNode,
+				remarkMermaid,
+				[remarkPlantuml, plantumlConfig],
 			],
 			rehypePlugins: [
 				[rehypeKatex, { katex }],
 				[rehypeCallouts, { theme: siteConfig.post.rehypeCallouts.theme }],
 				rehypeSlug,
+				rehypeMermaid,
+				rehypePlantuml,
 				rehypeFigure as any,
 				[rehypeExternalLinks as any, { siteUrl: siteConfig.site_url }],
-[
-				rehypeAutolinkHeadings,
-				{
-					behavior: "append",
-					properties: {
-						className: ["anchor"],
-					},
-					content: {
-						type: "element",
-						tagName: "span",
+				[rehypeEmailProtection, { method: "base64" }],
+				/* 参考 astro.config 的 rehypeComponents + GithubCardComponent 需要
+				   Astro 组件渲染上下文，运行时管线取不到，故跳过——github 短代码
+				   在历史版本里会退化为普通链接，这是方案 a 已知的唯一缺口。 */
+				[
+					rehypeAutolinkHeadings,
+					{
+						behavior: "append",
 						properties: {
-							className: ["anchor-icon"],
-							"data-pagefind-ignore": true,
+							className: ["anchor"],
 						},
-						children: [
-							{
-								type: "text",
-								value: "#",
+						content: {
+							type: "element",
+							tagName: "span",
+							properties: {
+								className: ["anchor-icon"],
+								"data-pagefind-ignore": true,
 							},
-						],
+							children: [
+								{
+									type: "text",
+									value: "#",
+								},
+							],
+						},
 					},
-				},
-			],
+				],
 				rehypeExpressiveCodePreview,
 			],
 		});
