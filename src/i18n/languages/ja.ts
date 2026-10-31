@@ -635,7 +635,7 @@ export const ja: Translation = {
 	[Key.postAuthor]: "著者",
 	[Key.postAuthorPlaceholder]: "著者名",
 	[Key.postCategory]: "カテゴリ",
-	[Key.postCategoryPlaceholder]: "記事のカテゴリ",
+	[Key.postCategoryPlaceholder]: "未分類",
 	[Key.postPubDate]: "公開日",
 	[Key.postUpdateDate]: "更新日",
 	[Key.postLang]: "言語コード",

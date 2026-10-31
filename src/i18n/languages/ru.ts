@@ -639,7 +639,7 @@ export const ru: Translation = {
 	[Key.postAuthor]: "Автор",
 	[Key.postAuthorPlaceholder]: "Имя автора",
 	[Key.postCategory]: "Категория",
-	[Key.postCategoryPlaceholder]: "Категория статьи",
+	[Key.postCategoryPlaceholder]: "Без категории",
 	[Key.postPubDate]: "Дата публикации",
 	[Key.postUpdateDate]: "Дата обновления",
 	[Key.postLang]: "Код языка",

@@ -37,9 +37,7 @@ function toggleTheme() {
 function startGithubLogin() {
 	const params = new URLSearchParams(location.search);
 	const next =
-		params.get("next") ||
-		sessionStorage.getItem("admin_redirect") ||
-		"/admin/";
+		params.get("next") || sessionStorage.getItem("admin_redirect") || "/admin/";
 	// 整页跳转到后端发起点，由它 302 到 GitHub 授权页
 	location.href = `/api/admin/auth/github/?next=${encodeURIComponent(next)}`;
 }

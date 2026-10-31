@@ -562,7 +562,11 @@ async function rotate(item: SecretItemDTO) {
 			return;
 		}
 		if (res.ok && data.success) {
-			onNotify(data.message || i18n(I18nKey.secretsRotateDone), "success", 10000);
+			onNotify(
+				data.message || i18n(I18nKey.secretsRotateDone),
+				"success",
+				10000,
+			);
 			await load();
 			return;
 		}

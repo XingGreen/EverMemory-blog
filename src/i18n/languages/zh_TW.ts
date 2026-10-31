@@ -625,7 +625,7 @@ export const zh_TW: Translation = {
 	[Key.postAuthor]: "作者",
 	[Key.postAuthorPlaceholder]: "作者名稱",
 	[Key.postCategory]: "分類",
-	[Key.postCategoryPlaceholder]: "文章分類",
+	[Key.postCategoryPlaceholder]: "未分類",
 	[Key.postPubDate]: "發布日期",
 	[Key.postUpdateDate]: "更新日期",
 	[Key.postLang]: "語言代碼",

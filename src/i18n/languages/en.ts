@@ -638,7 +638,7 @@ export const en: Translation = {
 	[Key.postAuthor]: "Author",
 	[Key.postAuthorPlaceholder]: "Author name",
 	[Key.postCategory]: "Category",
-	[Key.postCategoryPlaceholder]: "Post category",
+	[Key.postCategoryPlaceholder]: "Uncategorized",
 	[Key.postPubDate]: "Publish Date",
 	[Key.postUpdateDate]: "Update Date",
 	[Key.postLang]: "Language Code",

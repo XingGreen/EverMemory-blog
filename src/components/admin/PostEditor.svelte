@@ -1503,14 +1503,6 @@ $effect(() => {
 		<div class="history-card">
 			<div class="history-head">
 				<h3>{i18n(I18nKey.postHistory)}</h3>
-				<button
-					class="history-close"
-					type="button"
-					aria-label={i18n(I18nKey.postHistory)}
-					onclick={() => (historyOpen = false)}
-				>
-					<Icon icon="material-symbols:close" />
-				</button>
 			</div>
 
 			{#if historyLoading}
@@ -1578,6 +1570,16 @@ $effect(() => {
 					</div>
 				</div>
 			{/if}
+			<!-- 弃用 X 关闭图标，底部统一给「取消」 -->
+			<div class="history-actions">
+				<button
+					class="history-btn"
+					type="button"
+					onclick={() => (historyOpen = false)}
+				>
+					{i18n(I18nKey.postCancel)}
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}
@@ -2112,6 +2114,12 @@ $effect(() => {
 
 	.history-meta-tags {
 		min-width: 0;
+	}
+
+	.history-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
 	}
 
 	.history-doc {

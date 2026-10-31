@@ -1906,14 +1906,6 @@ function formatDate(dateStr: string | null): string {
 				<h3>
 					<span>{i18n(I18nKey.secretsLeaveTitle)}</span>
 				</h3>
-				<button
-					class="modal-close"
-					type="button"
-					aria-label={i18n(I18nKey.secretsClose)}
-					onclick={() => (leaveConfirmOpen = false)}
-				>
-					<Icon icon="material-symbols:close" />
-				</button>
 			</div>
 			<p class="modal-desc">
 				{i18n(I18nKey.secretsLeaveDesc).replace(
@@ -1958,14 +1950,6 @@ function formatDate(dateStr: string | null): string {
 				<h3>
 					<span>{i18n(I18nKey.adminLogout)}</span>
 				</h3>
-				<button
-					class="modal-close"
-					type="button"
-					aria-label={i18n(I18nKey.taxonomyCancel)}
-					onclick={() => (logoutConfirmOpen = false)}
-				>
-					<Icon icon="material-symbols:close" />
-				</button>
 			</div>
 			<p class="confirm-message">{i18n(I18nKey.adminLogoutConfirmMessage)}</p>
 			<div class="modal-actions">
@@ -1976,7 +1960,7 @@ function formatDate(dateStr: string | null): string {
 				>
 					{i18n(I18nKey.taxonomyCancel)}
 				</button>
-				<button class="savebar-btn danger" type="button" onclick={performLogout}>
+				<button class="savebar-btn primary" type="button" onclick={performLogout}>
 					{i18n(I18nKey.taxonomyConfirm)}
 				</button>
 			</div>
@@ -2267,16 +2251,10 @@ function formatDate(dateStr: string | null): string {
 		background: color-mix(in oklab, var(--primary) 26%, transparent);
 	}
 
+	/* 悬停反馈对齐参考 .admin-sidebar-item:hover 的 --fuwari-btn-regular-bg：
+	   中性底色，退出登录项也走同一套，不再给单独的红/主色。 */
 	.nav-item:hover:not(.active) {
-		background: color-mix(in oklab, var(--primary) 8%, transparent);
-	}
-
-	/* 退出登录：悬停为实底红 + 白字。必须写在上面那条之后，并带 :not(.active)
-	   提高特异性——否则会被 .nav-item:hover:not(.active) 的主色淡底覆盖，
-	   在深色背景上表现为「没有红色」。 */
-	.nav-item.is-danger:hover:not(.active) {
-		background: var(--destructive);
-		color: var(--primary-foreground);
+		background: var(--btn-regular-bg);
 	}
 
 	/* 底部管理员信息：纯展示，不可点击、无 hover 与选中态 */
@@ -2859,15 +2837,6 @@ function formatDate(dateStr: string | null): string {
 		font-size: 0.875rem;
 		line-height: 1.6;
 		color: var(--content-meta);
-	}
-
-	.savebar-btn.danger {
-		background: var(--destructive);
-		color: var(--primary-foreground);
-	}
-
-	.savebar-btn.danger:hover {
-		background: color-mix(in oklab, var(--destructive) 84%, black);
 	}
 
 	.savebar-btn {

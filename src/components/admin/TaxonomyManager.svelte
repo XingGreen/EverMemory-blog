@@ -778,14 +778,6 @@ $effect(() => {
 							? i18n(I18nKey.taxonomyRenameTitle)
 							: i18n(I18nKey.taxonomyDeleteTitle)}
 				</h3>
-				<button
-					class="modal-close"
-					type="button"
-					aria-label={i18n(I18nKey.taxonomyCancel)}
-					onclick={closeDialog}
-				>
-					<Icon icon="material-symbols:close" />
-				</button>
 			</div>
 
 			{#if dialogMode === "delete"}
@@ -902,14 +894,6 @@ $effect(() => {
 		<div class="modal-card card-base">
 			<div class="modal-head">
 				<h3>{i18n(I18nKey.taxonomyDeleteTitle)}</h3>
-				<button
-					class="modal-close"
-					type="button"
-					aria-label={i18n(I18nKey.taxonomyCancel)}
-					onclick={closeDelete}
-				>
-					<Icon icon="material-symbols:close" />
-				</button>
 			</div>
 			<p class="modal-desc">
 				{i18n(I18nKey.taxonomyDeleteConfirm).replace("{name}", deleteTarget)}
@@ -1513,10 +1497,10 @@ $effect(() => {
 	}
 
 	.modal-card {
-		/* 尺寸照搬参考 taxonomy-name-dialog + fuwari-modal：
-		   width min(28rem, calc(100% - 32px))、padding clamp(24px, 1.5vw, 32px)。
-		   此前用 340/360px 是自选数值，不符合「复用参考」的要求。 */
-		width: min(28rem, calc(100% - 32px));
+		/* 宽度取参考 confirmation-modal 的原值 clamp(420px, 30vw, 520px)：
+		   比 fuwari-modal 的 28rem 更宽，长文案不再被挤成矮胖一块。
+		   padding 同为参考的 clamp(24px, 1.5vw, 32px)。 */
+		width: min(clamp(420px, 30vw, 520px), calc(100% - 32px));
 		padding: clamp(24px, 1.5vw, 32px);
 		background: var(--float-panel-bg);
 		box-shadow: var(--shadow-card);

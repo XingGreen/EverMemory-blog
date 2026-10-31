@@ -620,7 +620,7 @@ export const zaku: Translation = {
 	[Key.postAuthor]: "作者",
 	[Key.postAuthorPlaceholder]: "作者名称",
 	[Key.postCategory]: "分类",
-	[Key.postCategoryPlaceholder]: "文章分类",
+	[Key.postCategoryPlaceholder]: "未分类",
 	[Key.postPubDate]: "发布日期",
 	[Key.postUpdateDate]: "更新日期",
 	[Key.postLang]: "语言代码",
