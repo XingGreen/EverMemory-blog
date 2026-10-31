@@ -297,7 +297,7 @@ $effect(() => {
 	<div
 		class="post-history-body"
 		class:is-resizing={resizing}
-		style={`--history-doc-width: ${contentWidth === null ? "66rem" : `${contentWidth}px`}`}
+		style={`--history-doc-width: ${contentWidth === null ? "none" : `${contentWidth}px`}`}
 	>
 		<!-- 左右拖拽手柄：移植自编辑页 .resize-handle，交互一致（向内拖=变窄） -->
 		<button
@@ -617,18 +617,24 @@ $effect(() => {
 		min-width: 0;
 	}
 
-	/* 参考 .post-editor-document：滚动 + 限宽；
-	   宽度改由 --history-doc-width 控制，可拖拽手柄实时调整（默认 66rem） */
+	/* 文章渲染容器：直接抄编辑页 src/components/admin/PostEditorWritePanel.svelte
+	   的 .content-preview（padding 1.25rem、无边框、无底色、无固定限宽）。
+	   之前照参考项目写的 66rem 限宽 + 3.5rem/5rem 内边距，是排版漂移的根源。 */
 	.post-editor-document {
-		--document-inset: max(
-			2rem,
-			calc((100% - var(--history-doc-width, 66rem)) / 2)
-		);
 		flex: 1;
 		min-height: 0;
+		padding: 1.25rem;
 		overflow-y: auto;
-		overscroll-behavior: contain;
-		padding: 3.5rem var(--document-inset) 5rem;
+		border: none;
+		border-radius: var(--radius-md);
+		background: none;
+	}
+
+	/* 拖拽调宽：默认不限宽（与编辑页一致），拖过之后才按记忆值限宽并居中 */
+	.post-history-body .post-editor-document {
+		max-width: var(--history-doc-width, none);
+		margin-inline: auto;
+		width: 100%;
 	}
 
 	/* 参考 .post-editor-title */
@@ -698,60 +704,13 @@ $effect(() => {
 		color: var(--line-divider);
 	}
 
-	/* 参考 .post-editor-document .tiptap：字号与行高；
-	   颜色必须显式声明——不写就继承容器默认色，深色主题下正文会发暗看不清 */
+	/* 正文：只声明字号、行高、颜色。
+	   段落/列表/引用的间距与标题锚点一律交给 .custom-md（markdown.css），
+	   和编辑页预览用的是同一套——在这里重复设 margin 只会与它打架，导致排版漂移。 */
 	.post-editor-body {
 		font-size: 1.0625rem;
 		line-height: 1.85;
 		color: var(--deep-text);
-	}
-
-	.post-editor-body :global(p) {
-		margin: 0 0 1.5rem;
-		font-size: 1.0625rem;
-		color: var(--deep-text);
-	}
-
-	.post-editor-body :global(li) {
-		margin-bottom: 0.75rem;
-	}
-
-	/* 引用块：左侧竖线与文字留出 1.25rem，避免贴字 */
-	.post-editor-body :global(blockquote) {
-		margin: 0 0 1.5rem;
-		padding: 0.25rem 0 0.25rem 1.25rem;
-		border-left: 3px solid var(--line-divider);
-		color: var(--content-meta);
-	}
-
-	/* 标题锚点图标：抄前台 src/styles/markdown.css 38-61 的规则
-	   （默认透明，标题 hover 时淡入；图标本身左右留 0.45ch） */
-	.post-editor-body :global(h1 .anchor),
-	.post-editor-body :global(h2 .anchor),
-	.post-editor-body :global(h3 .anchor),
-	.post-editor-body :global(h4 .anchor),
-	.post-editor-body :global(h5 .anchor),
-	.post-editor-body :global(h6 .anchor) {
-		display: inline-block;
-		margin: -0.125rem 0 -0.125rem 0.2ch;
-		padding: 0.125rem;
-		opacity: 0;
-		user-select: none;
-		text-decoration: none;
-		transition: opacity 0.15s ease;
-	}
-
-	.post-editor-body :global(.anchor-icon) {
-		margin-inline: 0.45ch;
-	}
-
-	.post-editor-body :global(h1:hover .anchor),
-	.post-editor-body :global(h2:hover .anchor),
-	.post-editor-body :global(h3:hover .anchor),
-	.post-editor-body :global(h4:hover .anchor),
-	.post-editor-body :global(h5:hover .anchor),
-	.post-editor-body :global(h6:hover .anchor) {
-		opacity: 1;
 	}
 
 	/* 参考 .post-history-sidebar */
