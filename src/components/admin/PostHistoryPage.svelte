@@ -515,9 +515,10 @@ $effect(() => {
 
 	/* 参考 .post-editor-title */
 	.post-editor-title {
-		margin: 0 0 1rem;
-		padding: 0 0 1rem;
-		/* 标题与正文之间补一条分隔线（本条按用户要求，不参照参考项目） */
+		margin: 0 0 1.75rem;
+		padding: 0 0 1.5rem;
+		/* 标题与正文之间补一条分隔线（本条按用户要求，不参照参考项目）；
+		   上下留白 1.5rem / 1.75rem，避免分隔线贴住标题和首段 */
 		border-bottom: 1px solid var(--post-editor-rule);
 		font-size: 2.25rem;
 		line-height: 1.4;
@@ -570,6 +571,36 @@ $effect(() => {
 
 	.post-editor-body :global(li) {
 		margin-bottom: 0.5rem;
+	}
+
+	/* 标题锚点图标：抄前台 src/styles/markdown.css 38-61 的规则
+	   （默认透明，标题 hover 时淡入；图标本身左右留 0.45ch） */
+	.post-editor-body :global(h1 .anchor),
+	.post-editor-body :global(h2 .anchor),
+	.post-editor-body :global(h3 .anchor),
+	.post-editor-body :global(h4 .anchor),
+	.post-editor-body :global(h5 .anchor),
+	.post-editor-body :global(h6 .anchor) {
+		display: inline-block;
+		margin: -0.125rem 0 -0.125rem 0.2ch;
+		padding: 0.125rem;
+		opacity: 0;
+		user-select: none;
+		text-decoration: none;
+		transition: opacity 0.15s ease;
+	}
+
+	.post-editor-body :global(.anchor-icon) {
+		margin-inline: 0.45ch;
+	}
+
+	.post-editor-body :global(h1:hover .anchor),
+	.post-editor-body :global(h2:hover .anchor),
+	.post-editor-body :global(h3:hover .anchor),
+	.post-editor-body :global(h4:hover .anchor),
+	.post-editor-body :global(h5:hover .anchor),
+	.post-editor-body :global(h6:hover .anchor) {
+		opacity: 1;
 	}
 
 	/* 参考 .post-history-sidebar */

@@ -174,8 +174,12 @@ function getProcessor() {
 async function getRenderer() {
 	if (!rendererPromise) {
 		const processor = getProcessor();
+		/* 必须开启语法高亮：syntaxHighlight: false 会连带不生成主题颜色变量，
+		   于是浅色模式下代码块仍是黑底（expressive-code 的双主题靠这些变量切换）。
+		   类型定义只接受对象形式，但运行时布尔 true 才是「启用并复用插件已配的主题」，
+		   故用 as any 绕过——实测 false 与「省略」都不生成变量，只有 true 生成。 */
 		rendererPromise = processor.createRenderer({
-			syntaxHighlight: false,
+			syntaxHighlight: true as unknown as undefined,
 		});
 	}
 	return rendererPromise;
