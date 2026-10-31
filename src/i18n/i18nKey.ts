@@ -548,6 +548,14 @@ enum I18nKey {
 	postHistoryRestoreHint = "postHistoryRestoreHint",
 	postHistoryRestoreThis = "postHistoryRestoreThis",
 	postHistoryListTitle = "postHistoryListTitle",
+	/** 删除版本（参考 editor_history_delete_*） */
+	postHistoryDeleteTitle = "postHistoryDeleteTitle",
+	postHistoryDeleteMessage = "postHistoryDeleteMessage",
+	postHistoryDeleteAction = "postHistoryDeleteAction",
+	/** 错误态（参考 editor_history_error_*） */
+	postHistoryErrorPostNotFound = "postHistoryErrorPostNotFound",
+	postHistoryErrorRevisionNotFound = "postHistoryErrorRevisionNotFound",
+	postHistoryErrorInvalidSnapshot = "postHistoryErrorInvalidSnapshot",
 	/** 版本产生原因（对齐参考的 getRevisionReasonLabel 三态） */
 	postHistoryReasonAuto = "postHistoryReasonAuto",
 	postHistoryReasonPublish = "postHistoryReasonPublish",

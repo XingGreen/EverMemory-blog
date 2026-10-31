@@ -36,8 +36,23 @@ let detailHtml = $state("");
 let detailLoading = $state(false);
 let currentId = $state(revisionId);
 let confirmOpen = $state(false);
+let deleteConfirmOpen = $state(false);
 let busy = $state(false);
-let errorText = $state("");
+let deleting = $state(false);
+/** 错误态：按参考分成三种，前端据 message 映射 */
+let errorKind = $state<
+	"" | "post-not-found" | "revision-not-found" | "generic"
+>("");
+
+const errorText = $derived(
+	errorKind === "post-not-found"
+		? i18n(I18nKey.postHistoryErrorPostNotFound)
+		: errorKind === "revision-not-found"
+			? i18n(I18nKey.postHistoryErrorRevisionNotFound)
+			: errorKind === "generic"
+				? i18n(I18nKey.taxonomyLoadFailed)
+				: "",
+);
 
 const editorUrl = `/admin/posts/edit/${encodeURIComponent(slug)}/`;
 const historyUrl = `/admin/posts/edit/${encodeURIComponent(slug)}/history/`;
@@ -126,7 +141,7 @@ async function doRestore() {
 	confirmOpen = false;
 	if (!selected) return;
 	busy = true;
-	errorText = "";
+	errorKind = "";
 	try {
 		const res = await fetch("/api/admin/post-revisions/", {
 			method: "POST",
@@ -138,11 +153,53 @@ async function doRestore() {
 			window.location.href = editorUrl;
 			return;
 		}
-		errorText = data.message ?? "";
+		// 对应参考的 getRestoreErrorMessage：404 分「文章没了」和「版本没了」
+		const msg = String(data.message ?? "");
+		errorKind =
+			res.status === 404
+				? msg.includes("版本")
+					? "revision-not-found"
+					: "post-not-found"
+				: "generic";
 	} catch {
-		errorText = i18n(I18nKey.taxonomyLoadFailed);
+		errorKind = "generic";
 	} finally {
 		busy = false;
+	}
+}
+
+/** 删除版本：对应参考 deleteMutation（成功后若删的是当前项，自动切到下一条） */
+async function doDelete() {
+	deleteConfirmOpen = false;
+	if (!selected) return;
+	const targetId = selected.id;
+	deleting = true;
+	errorKind = "";
+	try {
+		const res = await fetch("/api/admin/post-revisions/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ slug, id: targetId, action: "delete" }),
+		});
+		const data = await res.json();
+		if (!data.success) {
+			errorKind =
+				String(data.message ?? "") === "REVISION_NOT_FOUND"
+					? "revision-not-found"
+					: "generic";
+			return;
+		}
+		const rest = revisions.filter((r) => r.id !== targetId);
+		revisions = rest;
+		if (rest.length > 0) selectRevision(rest[0].id);
+		else {
+			currentId = "";
+			detailHtml = "";
+		}
+	} catch {
+		errorKind = "generic";
+	} finally {
+		deleting = false;
 	}
 }
 
@@ -242,6 +299,16 @@ $effect(() => {
 					{/each}
 				{/if}
 			</div>
+			<!-- 参考 deleteAction：侧栏底部整宽按钮，危险色 + 顶部分隔线 -->
+			<button
+				class="post-history-delete"
+				type="button"
+				disabled={!selected || deleting}
+				onclick={() => (deleteConfirmOpen = true)}
+			>
+				<Icon icon="material-symbols:delete" />
+				{i18n(I18nKey.postHistoryDeleteAction)}
+			</button>
 		</aside>
 	</div>
 
@@ -249,6 +316,34 @@ $effect(() => {
 		<p class="post-history-error">{errorText}</p>
 	{/if}
 </div>
+
+{#if deleteConfirmOpen}
+	<div
+		class="post-history-overlay"
+		role="dialog"
+		aria-modal="true"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) deleteConfirmOpen = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === "Escape") deleteConfirmOpen = false;
+		}}
+	>
+		<div class="post-history-confirm">
+			<h3>{i18n(I18nKey.postHistoryDeleteTitle)}</h3>
+			<p>{i18n(I18nKey.postHistoryDeleteMessage)}</p>
+			<div class="post-history-confirm-actions">
+				<button type="button" onclick={() => (deleteConfirmOpen = false)}>
+					{i18n(I18nKey.taxonomyCancel)}
+				</button>
+				<button class="is-danger" type="button" onclick={doDelete}>
+					{i18n(I18nKey.postHistoryDeleteAction)}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 {#if confirmOpen}
 	<div
@@ -554,6 +649,34 @@ $effect(() => {
 		color: var(--content-meta);
 	}
 
+	/* 参考 .post-history-delete */
+	.post-history-delete {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-shrink: 0;
+		width: 100%;
+		padding: 1.25rem 1.5rem;
+		border: none;
+		border-top: 1px solid var(--post-editor-rule);
+		background: transparent;
+		font-family: inherit;
+		font-size: 0.8125rem;
+		color: var(--destructive);
+		cursor: pointer;
+	}
+
+	.post-history-delete:hover {
+		background: color-mix(in srgb, var(--destructive) 12%, transparent);
+	}
+
+	.post-history-delete:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	/* 参考 .post-history-note */
+	/* 参考 .post-history-note */
 	.post-history-note {
 		margin: 0;
 		font-size: 0.8125rem;
@@ -623,6 +746,12 @@ $effect(() => {
 	.post-history-confirm-actions button.is-primary {
 		border-color: transparent;
 		background: var(--primary);
+		color: var(--primary-foreground);
+	}
+
+	.post-history-confirm-actions button.is-danger {
+		border-color: transparent;
+		background: var(--destructive);
 		color: var(--primary-foreground);
 	}
 
