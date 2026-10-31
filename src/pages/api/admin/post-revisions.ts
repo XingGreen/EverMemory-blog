@@ -58,9 +58,10 @@ function readFrontmatterMeta(content: string): {
 	title: string;
 	category: string;
 	tags: string[];
+	image: string;
 } {
 	const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-	if (!fm) return { title: "", category: "", tags: [] };
+	if (!fm) return { title: "", category: "", tags: [], image: "" };
 	const body = fm[1];
 	const titleLine = body.match(/^title:\s*(.*)$/m);
 	const title = titleLine ? titleLine[1].trim().replace(/^"(.*)"$/, "$1") : "";
@@ -86,7 +87,11 @@ function readFrontmatterMeta(content: string): {
 			}
 		}
 	}
-	return { title, category, tags };
+	const imgLine = body.match(/^image:\s*(.*)$/m);
+	const image = imgLine
+		? imgLine[1].trim().replace(/^["'](.*)["']$/, "$1")
+		: "";
+	return { title, category, tags, image };
 }
 
 /** 列出某篇文章的版本（新→旧）；带标题，列表项与参考一样显示「时间 / 原因 / 标题」 */
@@ -97,6 +102,7 @@ function listRevisions(slug: string): {
 	title: string;
 	category: string;
 	tags: string[];
+	image: string;
 }[] {
 	const abs = path.resolve(process.cwd(), revisionDirRel(slug));
 	if (!existsSync(abs)) return [];
@@ -113,6 +119,7 @@ function listRevisions(slug: string): {
 					title: string;
 					category: string;
 					tags: string[];
+					image: string;
 				} => {
 					const [tsRaw, reasonRaw] = f.replace(/\.md$/, "").split("-");
 					const ts = Number(tsRaw);
@@ -121,6 +128,7 @@ function listRevisions(slug: string): {
 						title: "",
 						category: "",
 						tags: [] as string[],
+						image: "",
 					};
 					try {
 						meta = readFrontmatterMeta(
@@ -139,6 +147,7 @@ function listRevisions(slug: string): {
 						title: meta.title,
 						category: meta.category,
 						tags: meta.tags,
+						image: meta.image,
 					};
 				},
 			)

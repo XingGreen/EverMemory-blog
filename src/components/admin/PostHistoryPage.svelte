@@ -28,6 +28,7 @@ type Revision = {
 	title: string;
 	category: string;
 	tags: string[];
+	image: string;
 };
 
 let revisions = $state<Revision[]>([]);
@@ -258,17 +259,25 @@ $effect(() => {
 						)}
 						· {reasonLabel(selected.reason)}
 					</p>
+					<!-- 摘要三段，对齐参考 post-editor-summary.tsx：
+					     分类（图标 + 名称，空则「未分类」）
+					     标签（图标 + join " / "，空则「未设置标签」）
+					     封面（图标 + 有则「封面」，无则「未设置封面」） -->
 					<div class="post-editor-summary">
 						<span>
 							<Icon icon="material-symbols:menu-book" />
 							{selected.category || i18n(I18nKey.postCategoryPlaceholder)}
 						</span>
-						{#if selected.tags.length}
-							<span>
-								<Icon icon="material-symbols:label" />
-								{selected.tags.join(" · ")}
-							</span>
-						{/if}
+						<span>
+							<Icon icon="material-symbols:label" />
+							{selected.tags.join(" / ") || i18n(I18nKey.postMetaTagsEmpty)}
+						</span>
+						<span>
+							<Icon icon="material-symbols:image" />
+							{selected.image
+								? i18n(I18nKey.postMetaCover)
+								: i18n(I18nKey.postMetaCoverEmpty)}
+						</span>
 					</div>
 					<div class="post-editor-body custom-md">{@html detailHtml}</div>
 				{/if}

@@ -556,6 +556,10 @@ enum I18nKey {
 	postHistoryErrorPostNotFound = "postHistoryErrorPostNotFound",
 	postHistoryErrorRevisionNotFound = "postHistoryErrorRevisionNotFound",
 	postHistoryErrorInvalidSnapshot = "postHistoryErrorInvalidSnapshot",
+	/** 摘要三段（参考 post-editor-summary.tsx 用到的 editor_meta_*） */
+	postMetaTagsEmpty = "postMetaTagsEmpty",
+	postMetaCover = "postMetaCover",
+	postMetaCoverEmpty = "postMetaCoverEmpty",
 	/** 版本产生原因（对齐参考的 getRevisionReasonLabel 三态） */
 	postHistoryReasonAuto = "postHistoryReasonAuto",
 	postHistoryReasonPublish = "postHistoryReasonPublish",
