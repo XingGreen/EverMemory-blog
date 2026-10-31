@@ -625,13 +625,12 @@ $effect(() => {
 		min-width: 0;
 	}
 
-	/* 文章渲染容器：直接抄编辑页 src/components/admin/PostEditorWritePanel.svelte
-	   的 .content-preview（padding 1.25rem、无边框、无底色、无固定限宽）。
-	   之前照参考项目写的 66rem 限宽 + 3.5rem/5rem 内边距，是排版漂移的根源。 */
+	/* 正文内边距对齐编辑页：.write-panel 的 padding 1.25rem 1.5rem
+	   与 .content-preview 的 padding 1.25rem 相加 —— 上 2.5rem、左右 2.75rem */
 	.post-editor-document {
 		flex: 1;
 		min-height: 0;
-		padding: 1.25rem;
+		padding: 2.5rem 2.75rem;
 		overflow-y: auto;
 		border: none;
 		border-radius: var(--radius-md);
@@ -647,11 +646,8 @@ $effect(() => {
 
 	/* 参考 .post-editor-title */
 	.post-editor-title {
-		margin: 0 0 1.75rem;
-		padding: 0 0 1.5rem;
-		/* 标题与正文之间补一条分隔线（本条按用户要求，不参照参考项目）；
-		   上下留白 1.5rem / 1.75rem，避免分隔线贴住标题和首段 */
-		border-bottom: 1px solid var(--post-editor-rule);
+		margin: 0 0 1rem;
+		padding: 0;
 		font-size: 2.25rem;
 		line-height: 1.4;
 		font-weight: 700;
@@ -666,24 +662,37 @@ $effect(() => {
 		color: var(--content-meta);
 	}
 
-	/* 元数据栏：抄前台 PostMeta.astro + main.css 442-449 的 .meta-icon */
+	/* 元数据栏：抄前台 PostMeta.astro + main.css 442-449 的 .meta-icon。
+	   分隔线挂在栏底（与正文隔开），并允许换行：窄屏挤不下时自动折行。 */
 	.post-meta-root {
 		display: flex;
 		flex-direction: row;
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: flex-start;
-		gap: 1rem;
-		margin-bottom: 1.5rem;
+		gap: 0.75rem 1.25rem;
+		margin: 0 0 1.5rem;
+		padding: 0 0 1.25rem;
+		border-bottom: 1px solid var(--post-editor-rule);
 		font-size: 0.875rem;
 		font-weight: 500;
 		color: var(--content-meta);
+	}
+
+	/* 窄屏收紧间距，尽量在折行前多放一项 */
+	@media (max-width: 900px) {
+		.post-meta-root {
+			gap: 0.5rem 0.875rem;
+		}
 	}
 
 	.post-meta-item {
 		display: flex;
 		flex-direction: row;
 		align-items: center;
+		flex-shrink: 0;
+		max-width: 100%;
+		min-width: 0;
 	}
 
 	.meta-icon {
