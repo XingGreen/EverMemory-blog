@@ -585,7 +585,10 @@ const siteLang = lang.replace("_", "-");
     ]}
   >
 
-    <div id="progress-bar"></div>
+    {/* 页面切换进度条：后台（excludeFrontendEffects）是自带前端路由的 SPA，
+        不需要 Swup 的页面级进度条；它还会被正文锚点点击误触发，
+        在顶部闪出一条横线（#progress-bar.loading）。 */}
+    {!excludeFrontendEffects && <div id="progress-bar"></div>}
 
     <!-- 页面顶部渐变高光效果 - 只在full和semifull模式下显示 -->
     {shouldShowTopHighlight && <div class="top-gradient-highlight" />}
