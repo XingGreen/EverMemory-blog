@@ -526,14 +526,13 @@ $effect(() => {
 							>
 								{group.year}
 							</span>
-							{#if collapsedYears.has(group.year)}
-								<span class="text-xs text-50">
-									{i18n(I18nKey.postHistoryVersionCount).replace(
-										"{count}",
-										String(group.items.length),
-									)}
-								</span>
-							{/if}
+							<!-- 版本数量：折叠与展开都显示，不放在条件块里 -->
+							<span class="text-xs text-50">
+								{i18n(I18nKey.postHistoryVersionCount).replace(
+									"{count}",
+									String(group.items.length),
+								)}
+							</span>
 							<!-- 箭头紧跟计数，不再靠右（去掉 ml-auto） -->
 							<span
 								class="text-50 transition-transform"
