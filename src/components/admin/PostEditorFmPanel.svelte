@@ -12,6 +12,9 @@ const { state: editorState, actions } = getContext<{
 	actions: import("./postEditorContext").PostEditorContextValue["actions"];
 }>(POST_EDITOR_CONTEXT);
 
+/** 封面地址输入框：点缩略图时把焦点送进来，代替之前的「点图即删除」 */
+let coverInputEl = $state<HTMLInputElement | undefined>();
+
 /**
  * 分类 / 标签候选项：来自后台聚合接口（扫描所有文章 frontmatter + registry 登记）。
  */
@@ -331,15 +334,27 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 							<div class="cover-block">
 								{#if editorState.image}
 									<div class="cover-preview">
+										<!-- 点图片本身只聚焦地址输入框，不做任何删除。
+										     删除只由右下角那个独立按钮触发（见 .cover-clear），
+										     并弹确认——之前缩略图和删除按钮挨得太近，
+										     点图就清空引用，等于误删封面。 -->
 										<img
 											src={editorState.image}
 											alt={i18n(I18nKey.postCover)}
+											role="presentation"
+											onclick={() => coverInputEl?.focus()}
 										/>
 										<button
 											type="button"
 											class="cover-clear"
-											onclick={() => (editorState.image = "")}
+											onclick={(e) => {
+												e.stopPropagation();
+												if (window.confirm(i18n(I18nKey.postCoverClear))) {
+													editorState.image = "";
+												}
+											}}
 											aria-label={i18n(I18nKey.postCoverClear)}
+											title={i18n(I18nKey.postCoverClear)}
 										>
 											<Icon icon="material-symbols:close" />
 										</button>
@@ -352,6 +367,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 								{/if}
 								<input
 									type="text"
+									bind:this={coverInputEl}
 									bind:value={editorState.image}
 									placeholder={i18n(I18nKey.postCoverPlaceholder)}
 									class="ui-input"
@@ -736,6 +752,7 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 
 	.cover-clear {
 		position: absolute;
+		z-index: 1;
 		right: 0.5rem;
 		bottom: 0.5rem;
 		display: grid;
