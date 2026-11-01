@@ -17,8 +17,8 @@ import AdminPage from "./AdminPage.svelte";
 import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
 import OnboardingTour from "./OnboardingTour.svelte";
 import PostEditor from "./PostEditor.svelte";
-import PostList from "./PostList.svelte";
 import PostHistoryPage from "./PostHistoryPage.svelte";
+import PostList from "./PostList.svelte";
 import SecretManager from "./SecretManager.svelte";
 import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
@@ -240,14 +240,14 @@ const activePage = $derived<Page>(
 			: route.page === "history"
 				? "history"
 				: route.page === "settings"
-				? "settings"
-				: route.page === "env"
-					? "env"
-					: route.page === "categories-and-tags"
-						? "categories-and-tags"
-						: route.page === "sessions"
-							? "sessions"
-							: "posts",
+					? "settings"
+					: route.page === "env"
+						? "env"
+						: route.page === "categories-and-tags"
+							? "categories-and-tags"
+							: route.page === "sessions"
+								? "sessions"
+								: "posts",
 );
 
 const viewMode = $derived<ViewMode>(
@@ -1608,7 +1608,13 @@ function formatDate(dateStr: string | null): string {
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
 		>
 				{#if activePage === "history" && route.page === "history"}
-					<PostHistoryPage slug={route.slug} revisionId={route.revisionId} />
+					<!-- 注入 SPA 导航：历史页返回/恢复后跳编辑器必须走前端路由，
+					     用 location.href 会整页重载外壳，比列表页进编辑器慢一个量级 -->
+					<PostHistoryPage
+						slug={route.slug}
+						revisionId={route.revisionId}
+						onLeave={() => navigate(`posts/edit/${route.slug}/`)}
+					/>
 				{:else if activePage === "dashboard"}
 					{@render dashboardHome()}
 				{:else if activePage === "posts"}

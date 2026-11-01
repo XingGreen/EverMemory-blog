@@ -19,7 +19,16 @@ import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 
-let { slug, revisionId = "" }: { slug: string; revisionId?: string } = $props();
+let {
+	slug,
+	revisionId = "",
+	onLeave,
+}: {
+	slug: string;
+	revisionId?: string;
+	/** 回编辑器：由 AdminDashboard 注入 SPA 导航，避免整页重载 */
+	onLeave: () => void;
+} = $props();
 
 type Revision = {
 	id: string;
@@ -55,8 +64,10 @@ const errorText = $derived(
 				: "",
 );
 
-const editorUrl = `/admin/posts/edit/${encodeURIComponent(slug)}/`;
 const historyUrl = `/admin/posts/edit/${encodeURIComponent(slug)}/history/`;
+
+/** 详情请求可取消：切版本或离开页面时中断，避免旧请求占着连接拖慢下一次导航 */
+let detailAbort: AbortController | null = null;
 
 /* 正文限宽可拖拽，与编辑页共用同一个 localStorage 键，宽度偏好两处一致 */
 const WIDTH_KEY = "admin-editor-max-width";
@@ -150,14 +161,21 @@ async function loadList() {
 
 async function loadDetail(id: string) {
 	if (!id) {
+		detailAbort?.abort();
 		detailHtml = "";
 		return;
 	}
+	/* 连点多个版本时，先中断上一个请求——否则旧响应可能后到并覆盖新选中项，
+	   同时也会在导航时继续占着连接 */
+	detailAbort?.abort();
+	const ac = new AbortController();
+	detailAbort = ac;
 	detailLoading = true;
 	detailHtml = "";
 	try {
 		const res = await fetch(
 			`/api/admin/post-revisions/?slug=${encodeURIComponent(slug)}&id=${encodeURIComponent(id)}`,
+			{ signal: ac.signal },
 		);
 		const data = await res.json();
 		if (!data.success) return;
@@ -169,13 +187,15 @@ async function loadDetail(id: string) {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ content: body }),
+			signal: ac.signal,
 		});
 		const pdata = await pres.json();
-		detailHtml = pdata.success ? (pdata.html ?? "") : "";
+		if (!ac.signal.aborted)
+			detailHtml = pdata.success ? (pdata.html ?? "") : "";
 	} catch {
-		detailHtml = "";
+		if (!ac.signal.aborted) detailHtml = "";
 	} finally {
-		detailLoading = false;
+		if (!ac.signal.aborted) detailLoading = false;
 	}
 }
 
@@ -206,7 +226,10 @@ async function doRestore() {
 		});
 		const data = await res.json();
 		if (data.success) {
-			window.location.href = editorUrl;
+			/* 走 SPA 导航（onLeave），不要 window.location.href——
+			   后者会整页重载整个后台外壳，从历史页回编辑器要重新拉一遍所有资源，
+			   而列表页用的是前端路由，所以才会出现「一边极慢、一边极快」。 */
+			onLeave();
 			return;
 		}
 		// 对应参考的 getRestoreErrorMessage：404 分「文章没了」和「版本没了」
@@ -266,15 +289,22 @@ $effect(() => {
 $effect(() => {
 	if (currentId) void loadDetail(currentId);
 });
+
+/* 组件卸载（如返回编辑器）时中断在途请求，避免旧请求拖慢下一次页面初始化 */
+$effect(() => {
+	return () => {
+		detailAbort?.abort();
+	};
+});
 </script>
 
 <!-- 对应参考的 <div className="post-editor-workspace fuwari-card-base"> -->
 <div class="post-editor-workspace post-history-shell">
 	<header class="post-editor-header post-history-header">
-		<a class="post-editor-back" href={editorUrl}>
+		<button class="post-editor-back" type="button" onclick={onLeave}>
 			<Icon icon="material-symbols:arrow-back" />
 			{i18n(I18nKey.postHistoryBack)}
-		</a>
+		</button>
 
 		<div class="post-history-context">
 			<Icon icon="material-symbols:lock" />
@@ -516,11 +546,15 @@ $effect(() => {
 		align-items: center;
 		gap: 0.6rem;
 		padding: 0.5rem;
+		border: none;
 		border-radius: 0.5rem;
+		background: transparent;
+		font-family: inherit;
 		white-space: nowrap;
 		font-size: 0.875rem;
 		color: var(--content-meta);
 		text-decoration: none;
+		cursor: pointer;
 	}
 
 	.post-editor-back:hover {
