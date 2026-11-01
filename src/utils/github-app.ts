@@ -300,9 +300,14 @@ export async function getFileFromGitHub(
 /**
  * 列出 GitHub 仓库中指定目录下的文件
  */
+/**
+ * 列举目录内容。
+ * sha 是 Git 的 blob 哈希（与本地 gitBlobSha 同源），用于「只比对元数据、
+ * 不拉正文」的同步检查；目录项的 sha 是 tree 哈希，不用于内容比对。
+ */
 export async function listFilesFromGitHub(
 	directoryPath: string,
-): Promise<Array<{ name: string; path: string; type: string }>> {
+): Promise<Array<{ name: string; path: string; type: string; sha?: string }>> {
 	const token = await getInstallationToken();
 	const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${directoryPath}?ref=${GITHUB_BRANCH}`;
 
@@ -326,14 +331,41 @@ export async function listFilesFromGitHub(
 
 	if (!Array.isArray(data)) {
 		// 可能是单个文件
-		return [{ name: data.name, path: data.path, type: data.type }];
+		return [
+			{ name: data.name, path: data.path, type: data.type, sha: data.sha },
+		];
 	}
 
-	return data.map((item: { name: string; path: string; type: string }) => ({
-		name: item.name,
-		path: item.path,
-		type: item.type,
-	}));
+	return data.map(
+		(item: { name: string; path: string; type: string; sha?: string }) => ({
+			name: item.name,
+			path: item.path,
+			type: item.type,
+			sha: item.sha,
+		}),
+	);
+}
+
+/**
+ * 递归收集 markdown 文件及其 blob sha。
+ * 与 listAllMarkdownFiles 的区别：那个只返回路径，这个带上 sha，
+ * 供同步检查做内容比对——整个递归只拉目录元数据，不下载任何正文。
+ */
+export async function listMarkdownWithSha(
+	directoryPath: string,
+): Promise<Array<{ path: string; sha: string }>> {
+	const items = await listFilesFromGitHub(directoryPath);
+	const result: Array<{ path: string; sha: string }> = [];
+
+	for (const item of items) {
+		if (item.type === "file" && /\.mdx?$/.test(item.name) && item.sha) {
+			result.push({ path: item.path, sha: item.sha });
+		} else if (item.type === "dir") {
+			result.push(...(await listMarkdownWithSha(item.path)));
+		}
+	}
+
+	return result;
 }
 
 /**
