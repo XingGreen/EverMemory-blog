@@ -244,6 +244,20 @@ export async function POST({
 	/* 删除单个版本：对应参考 revisions.remove({ revisionIds: [id] })。
 	   返回 deletedIds，前端据此判断删掉的的是否为当前选中项。 */
 	if (body.action === "delete") {
+		/* 主路径：删 store 里的键（rev:<slug>:<ts>） */
+		let removedStore = false;
+		try {
+			const key = `rev:${slug}:${id}`;
+			const existed = await getStore().get(key);
+			if (existed) {
+				await getStore().del(key);
+				removedStore = true;
+			}
+		} catch {
+			removedStore = false;
+		}
+
+		/* 回退：老格式的 .revisions 文件与 GitHub 上的同路径文件 */
 		const revRel = `${revisionDirRel(slug)}/${id}`;
 		const revAbs = path.resolve(process.cwd(), revRel);
 		let removedLocal = false;
@@ -252,7 +266,7 @@ export async function POST({
 				rmSync(revAbs, { force: true });
 				removedLocal = true;
 			} catch {
-				return json({ success: false, message: "删除版本失败" }, 500);
+				// 只读文件系统：交给 GitHub 分支处理
 			}
 		}
 		let removedRemote = false;
@@ -265,20 +279,29 @@ export async function POST({
 		} catch {
 			removedRemote = false;
 		}
-		if (!removedLocal && !removedRemote)
+		if (!removedStore && !removedLocal && !removedRemote)
 			return json({ success: false, message: "REVISION_NOT_FOUND" }, 404);
 		return json({ success: true, deletedIds: [id] });
 	}
 
-	const revRel = `${revisionDirRel(slug)}/${id}`;
-	const revAbs = path.resolve(process.cwd(), revRel);
+	/* 目标版本：优先 store，回退老格式文件 / GitHub */
 	let target: string | null = null;
-	if (existsSync(revAbs)) target = readFileSync(revAbs, "utf-8");
-	else {
-		try {
-			target = await getFileFromGitHub(revRel);
-		} catch {
-			target = null;
+	try {
+		const rec = await getStore().get<{ content?: string }>(`rev:${slug}:${id}`);
+		target = typeof rec?.content === "string" ? rec.content : null;
+	} catch {
+		target = null;
+	}
+	if (target === null) {
+		const revRel = `${revisionDirRel(slug)}/${id}`;
+		const revAbs = path.resolve(process.cwd(), revRel);
+		if (existsSync(revAbs)) target = readFileSync(revAbs, "utf-8");
+		else {
+			try {
+				target = await getFileFromGitHub(revRel);
+			} catch {
+				target = null;
+			}
 		}
 	}
 	if (target === null)
@@ -286,19 +309,30 @@ export async function POST({
 
 	const postRel = postRelPath(slug);
 	const postAbs = path.resolve(process.cwd(), postRel);
-	if (!existsSync(postAbs)) {
-		return json({ success: false, message: "本地正文不存在" }, 404);
+	/* 当前正文：本地可读就用本地，否则从 GitHub 取。
+	   云端项目目录只读，existsSync 恒为 false，只认本地会直接 404。 */
+	let current: string | null = null;
+	if (existsSync(postAbs)) {
+		current = readFileSync(postAbs, "utf-8");
+	} else {
+		try {
+			current = await getFileFromGitHub(postRel);
+		} catch {
+			current = null;
+		}
+	}
+	if (current === null) {
+		return json({ success: false, message: "当前正文不存在" }, 404);
 	}
 
 	// 恢复前把当前正文备份成 restore_backup，保证恢复本身可回退
-	const current = readFileSync(postAbs, "utf-8");
-	const backupDir = path.resolve(process.cwd(), revisionDirRel(slug));
 	try {
-		mkdirSync(backupDir, { recursive: true });
-		saveFileLocally(
-			`${revisionDirRel(slug)}/${revisionFileName("restore_backup")}`,
-			current,
-		);
+		const backupAt = Date.now();
+		await getStore().set(`rev:${slug}:${backupAt}`, {
+			content: current,
+			reason: "restore_backup",
+			savedAt: backupAt,
+		});
 	} catch {
 		// 备份失败不阻断恢复，但会在响应里提示
 	}
