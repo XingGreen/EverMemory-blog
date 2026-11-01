@@ -208,6 +208,7 @@ const TOOLS: {
 				published={editorState.published}
 				category={editorState.category}
 				tags={editorState.tags}
+				image={editorState.image}
 			/>
 			{@html editorState.renderedHtml}
 		</div>

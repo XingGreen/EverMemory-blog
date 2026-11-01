@@ -14,11 +14,14 @@ let {
 	published = "",
 	category = "",
 	tags = [],
+	image = "",
 }: {
 	/** 接受 YYYY-MM-DD 或时间戳字符串 */
 	published?: string;
 	category?: string;
 	tags?: string[];
+	/** 封面图地址，对应 frontmatter 的 image */
+	image?: string;
 } = $props();
 
 function fmtDate(value: string): string {
@@ -61,6 +64,13 @@ function fmtDate(value: string): string {
 		{/if}
 	</div>
 </div>
+
+<!-- 封面图：对应前台文章页 CoverImage 的位置（元数据栏之后、正文之前）。
+     必须放在 .post-meta-root 之外——它是 flex 容器，img 放在里面会被当成
+     一个 flex item 参与横向排布，导致封面挤在标签旁边。 -->
+{#if image}
+	<img class="post-cover" src={image} alt="" loading="lazy" />
+{/if}
 
 <style>
 	/* 抄前台 PostMeta.astro + main.css 442-449 的 .meta-icon */
@@ -118,6 +128,16 @@ function fmtDate(value: string): string {
 		color: var(--line-divider);
 		white-space: nowrap;
 		flex-shrink: 0;
+	}
+
+	/* 封面：圆角横幅，与前台 .banner-container 的观感一致 */
+	.post-cover {
+		display: block;
+		width: 100%;
+		max-height: 22rem;
+		margin: 0 0 1.75rem;
+		border-radius: 0.75rem;
+		object-fit: cover;
 	}
 
 	@media (max-width: 900px) {

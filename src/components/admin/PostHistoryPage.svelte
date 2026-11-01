@@ -452,6 +452,7 @@ $effect(() => {
 						published={String(selected.savedAt)}
 						category={selected.category}
 						tags={selected.tags}
+						image={selected.image}
 					/>
 					<!-- 渲染容器与编辑页预览完全同一组 class：
 					     src/components/admin/PostEditorWritePanel.svelte:201
