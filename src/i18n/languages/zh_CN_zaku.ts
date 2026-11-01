@@ -555,6 +555,7 @@ export const zaku: Translation = {
 	[Key.authExpiredTitle]: "会话已过期",
 	[Key.authExpiredDesc]: "登录状态已失效，请重新登录后继续操作。",
 	[Key.authExpiredRelogin]: "重新登录",
+	[Key.postHistoryVersionCount]: "{count} 条版本记录",
 	[Key.postHistoryReasonAuto]: "自动保存",
 	[Key.postHistoryReasonPublish]: "发布",
 	[Key.postHistoryReasonRestore]: "还原前",

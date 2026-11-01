@@ -578,6 +578,7 @@ export const ru: Translation = {
 	[Key.authExpiredTitle]: "Сессия истекла",
 	[Key.authExpiredDesc]: "Срок действия сеанса истёк. Войдите снова.",
 	[Key.authExpiredRelogin]: "Войти снова",
+	[Key.postHistoryVersionCount]: "{count} версий",
 	[Key.postHistoryReasonAuto]: "Автоснимок",
 	[Key.postHistoryReasonPublish]: "Перед публикацией",
 	[Key.postHistoryReasonRestore]: "Перед восстановлением",

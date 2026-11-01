@@ -564,6 +564,8 @@ enum I18nKey {
 	authExpiredTitle = "authExpiredTitle",
 	authExpiredDesc = "authExpiredDesc",
 	authExpiredRelogin = "authExpiredRelogin",
+	/** 年份折叠时的条目计数，占位 {count} */
+	postHistoryVersionCount = "postHistoryVersionCount",
 	/** 版本产生原因（对齐参考的 getRevisionReasonLabel 三态） */
 	postHistoryReasonAuto = "postHistoryReasonAuto",
 	postHistoryReasonPublish = "postHistoryReasonPublish",

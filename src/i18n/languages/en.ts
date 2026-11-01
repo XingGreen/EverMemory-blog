@@ -578,6 +578,7 @@ export const en: Translation = {
 	[Key.authExpiredTitle]: "Session expired",
 	[Key.authExpiredDesc]: "Your session is no longer valid. Please sign in again.",
 	[Key.authExpiredRelogin]: "Sign in again",
+	[Key.postHistoryVersionCount]: "{count} versions",
 	[Key.postHistoryReasonAuto]: "Auto snapshot",
 	[Key.postHistoryReasonPublish]: "Before publish",
 	[Key.postHistoryReasonRestore]: "Before restore",

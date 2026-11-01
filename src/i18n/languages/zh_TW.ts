@@ -560,6 +560,7 @@ export const zh_TW: Translation = {
 	[Key.authExpiredTitle]: "工作階段已過期",
 	[Key.authExpiredDesc]: "登入狀態已失效，請重新登入後繼續操作。",
 	[Key.authExpiredRelogin]: "重新登入",
+	[Key.postHistoryVersionCount]: "{count} 條版本記錄",
 	[Key.postHistoryReasonAuto]: "自動快照",
 	[Key.postHistoryReasonPublish]: "發布前快照",
 	[Key.postHistoryReasonRestore]: "還原前備份",

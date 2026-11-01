@@ -574,6 +574,7 @@ export const ja: Translation = {
 	[Key.authExpiredTitle]: "セッションの有効期限が切れました",
 	[Key.authExpiredDesc]: "ログイン状態が無効になりました。再度ログインしてください。",
 	[Key.authExpiredRelogin]: "再ログイン",
+	[Key.postHistoryVersionCount]: "{count} 件のバージョン",
 	[Key.postHistoryReasonAuto]: "自動スナップショット",
 	[Key.postHistoryReasonPublish]: "公開前",
 	[Key.postHistoryReasonRestore]: "復元前",

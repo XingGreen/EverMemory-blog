@@ -137,6 +137,16 @@ const grouped = $derived.by<RevisionGroup[]>(() => {
 		.map(([year, items]) => ({ year, items }));
 });
 
+/** 已折叠的年份（默认全部展开） */
+let collapsedYears = $state<Set<number>>(new Set());
+
+function toggleYear(year: number) {
+	const next = new Set(collapsedYears);
+	if (next.has(year)) next.delete(year);
+	else next.add(year);
+	collapsedYears = next;
+}
+
 function fmtTime(ts: number): string {
 	if (!ts) return "";
 	const d = new Date(ts);
@@ -491,54 +501,82 @@ $effect(() => {
 					<p class="post-history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
 				{:else}
 					{#each grouped as group (group.year)}
-						<!-- 年份大节点：对应归档页的年份行（圆环 + 大字） -->
-						<div class="flex items-center gap-2 py-1.5">
+						<!-- 年份节点：可折叠。字号 text-xl，纵向 py-2 给节点高亮留出上下空间；
+						     折叠时在年份后显示「N 条版本记录」，展开时显示箭头 -->
+						<button
+							type="button"
+							class="group/yr flex w-full items-center gap-2 rounded-lg py-2 transition-colors
+							       hover:bg-(--btn-plain-bg-hover)"
+							onclick={() => toggleYear(group.year)}
+							aria-expanded={!collapsedYears.has(group.year)}
+						>
 							<div
-								class="dash-line relative w-5 shrink-0 flex items-center justify-center"
+								class="dash-line relative w-5 shrink-0 flex items-center justify-center py-1"
 							>
 								<div
 									class="z-10 w-3 h-3 rounded-full bg-(--card-bg)
 									       outline outline-3 outline-(--primary)"
 								></div>
 							</div>
-							<span class="text-base font-bold text-75">{group.year}</span>
-						</div>
-
-						{#each group.items as item (item.id)}
-							<!-- 普通节点：月-日 + 标题；hover 时节点拉长成刻度并转主色，
-							     选中态（is-active）常驻高亮，与 hover 区分 -->
-							<button
-								type="button"
-								class="group block! w-full rounded-lg text-left transition-colors
-								       hover:bg-(--btn-plain-bg-hover) hover:text-[initial]"
-								class:is-active={item.id === currentId}
-								onclick={() => selectRevision(item.id)}
+							<span
+								class="text-xl font-bold text-75 transition-colors
+								       group-hover/yr:text-(--primary)"
 							>
-								<div class="flex flex-row items-stretch">
-									<div
-										class="dash-line relative w-5 shrink-0 flex items-center justify-center"
-									>
+								{group.year}
+							</span>
+							{#if collapsedYears.has(group.year)}
+								<span class="text-xs text-50">
+									{i18n(I18nKey.postHistoryVersionCount).replace(
+										"{count}",
+										String(group.items.length),
+									)}
+								</span>
+							{/if}
+							<span
+								class="ml-auto text-50 transition-transform"
+								class:rotate-180={!collapsedYears.has(group.year)}
+							>
+								<Icon icon="material-symbols:expand-more" />
+							</span>
+						</button>
+
+						{#if !collapsedYears.has(group.year)}
+							{#each group.items as item (item.id)}
+								<!-- 普通节点：月-日 + 标题；hover 时节点拉长成刻度并转主色，
+								     选中态（is-active）常驻高亮，与 hover 区分 -->
+								<button
+									type="button"
+									class="group block! w-full rounded-lg text-left transition-colors
+									       hover:bg-(--btn-plain-bg-hover) hover:text-[initial]"
+									class:is-active={item.id === currentId}
+									onclick={() => selectRevision(item.id)}
+								>
+									<div class="flex flex-row items-stretch">
 										<div
-											class="node z-10 w-1 h-1 rounded transition-all
-											       bg-[oklch(0.5_0.05_var(--hue))] group-hover:h-5 group-hover:bg-(--primary)
-											       outline outline-4 outline-(--card-bg)
-											       group-hover:outline-(--btn-plain-bg-hover)"
-										></div>
-									</div>
-									<div class="flex min-w-0 flex-1 flex-col gap-1 py-2.5 pr-2">
-										<span class="text-xs text-50">
-											{fmtMonthDay(item.savedAt)} · {reasonLabel(item.reason)}
-										</span>
-										<span
-											class="truncate text-sm font-bold text-75 transition-all
-											       group-hover:translate-x-1 group-hover:text-(--primary)"
+											class="dash-line relative w-5 shrink-0 flex items-center justify-center py-1"
 										>
-											{item.title || "—"}
-										</span>
+											<div
+												class="node z-10 w-1 h-1 rounded transition-all
+												       bg-[oklch(0.5_0.05_var(--hue))] group-hover:h-5 group-hover:bg-(--primary)
+												       outline outline-4 outline-(--card-bg)
+												       group-hover:outline-(--btn-plain-bg-hover)"
+											></div>
+										</div>
+										<div class="flex min-w-0 flex-1 flex-col gap-1 py-3 pr-2">
+											<span class="text-xs text-50">
+												{fmtMonthDay(item.savedAt)} · {reasonLabel(item.reason)}
+											</span>
+											<span
+												class="truncate text-sm font-bold text-75 transition-all
+												       group-hover:translate-x-1 group-hover:text-(--primary)"
+											>
+												{item.title || "—"}
+											</span>
+										</div>
 									</div>
-								</div>
-							</button>
-						{/each}
+								</button>
+							{/each}
+						{/if}
 					{/each}
 				{/if}
 			</div>
