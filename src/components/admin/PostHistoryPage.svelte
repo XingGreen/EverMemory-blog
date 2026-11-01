@@ -118,6 +118,25 @@ function startResize(e: PointerEvent, side: "left" | "right") {
 
 const selected = $derived(revisions.find((r) => r.id === currentId) ?? null);
 
+/**
+ * 时间轴数据结构：按年份分组（新→旧）。
+ * 归档页也是这个形状（groups → posts），年份用大节点、条目用小节点。
+ */
+type RevisionGroup = { year: number; items: Revision[] };
+
+const grouped = $derived.by<RevisionGroup[]>(() => {
+	const map = new Map<number, Revision[]>();
+	for (const r of revisions) {
+		const year = new Date(r.savedAt).getFullYear();
+		const bucket = map.get(year);
+		if (bucket) bucket.push(r);
+		else map.set(year, [r]);
+	}
+	return [...map.entries()]
+		.sort((a, b) => b[0] - a[0])
+		.map(([year, items]) => ({ year, items }));
+});
+
 function fmtTime(ts: number): string {
 	if (!ts) return "";
 	const d = new Date(ts);
@@ -133,6 +152,15 @@ function fmtDate(ts: number): string {
 	if (!ts) return "";
 	const d = new Date(ts);
 	return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(
+		d.getDate(),
+	).padStart(2, "0")}`;
+}
+
+/** 月-日：年份已在分组节点上，普通节点只显示月和日 */
+function fmtMonthDay(ts: number): string {
+	if (!ts) return "";
+	const d = new Date(ts);
+	return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(
 		d.getDate(),
 	).padStart(2, "0")}`;
 }
@@ -462,45 +490,55 @@ $effect(() => {
 				{:else if revisions.length === 0}
 					<p class="post-history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
 				{:else}
-					{#each revisions as item (item.id)}
-						<!-- 纵向排布 + 时间轴连接线，参照前台归档页 ArchivePanel.svelte:249-295
-						     的文章行与 main.css:469-483 的 .dash-line：
-						     · 连接线用 .dash-line::before（2px dashed + translateY(-50%)），全局已有，直接复用
-						     · 节点是 w-1 h-1 的小方块，hover 拉长成 h-5，outline-4 用卡片底色挖空
-						     · 内容由横向三列改为上下两行（日期原因 / 标题），避免 320px 侧栏里挤成一团 -->
-						<button
-							type="button"
-							class="group block! w-full rounded-lg text-left transition-colors
-							       hover:bg-(--btn-plain-bg-hover) hover:text-[initial]"
-							class:is-active={item.id === currentId}
-							onclick={() => selectRevision(item.id)}
-						>
-							<div class="flex flex-row items-stretch">
-								<!-- 连接线 + 节点 -->
+					{#each grouped as group (group.year)}
+						<!-- 年份大节点：对应归档页的年份行（圆环 + 大字） -->
+						<div class="flex items-center gap-2 py-1.5">
+							<div
+								class="dash-line relative w-5 shrink-0 flex items-center justify-center"
+							>
 								<div
-									class="dash-line relative w-5 shrink-0 flex items-center justify-center"
-								>
-									<div
-										class="z-10 w-1 h-1 rounded transition-all
-										       bg-[oklch(0.5_0.05_var(--hue))] group-hover:h-5 group-hover:bg-(--primary)
-										       outline outline-4 outline-(--card-bg)
-										       group-hover:outline-(--btn-plain-bg-hover)"
-									></div>
-								</div>
-								<!-- 内容：上下两行 -->
-								<div class="flex min-w-0 flex-1 flex-col gap-1 py-2.5 pr-2">
-									<span class="text-xs text-50">
-										{fmtDate(item.savedAt)} · {reasonLabel(item.reason)}
-									</span>
-									<span
-										class="truncate text-sm font-bold text-75 transition-all
-										       group-hover:translate-x-1 group-hover:text-(--primary)"
-									>
-										{item.title || "—"}
-									</span>
-								</div>
+									class="z-10 w-3 h-3 rounded-full bg-(--card-bg)
+									       outline outline-3 outline-(--primary)"
+								></div>
 							</div>
-						</button>
+							<span class="text-base font-bold text-75">{group.year}</span>
+						</div>
+
+						{#each group.items as item (item.id)}
+							<!-- 普通节点：月-日 + 标题；hover 时节点拉长成刻度并转主色，
+							     选中态（is-active）常驻高亮，与 hover 区分 -->
+							<button
+								type="button"
+								class="group block! w-full rounded-lg text-left transition-colors
+								       hover:bg-(--btn-plain-bg-hover) hover:text-[initial]"
+								class:is-active={item.id === currentId}
+								onclick={() => selectRevision(item.id)}
+							>
+								<div class="flex flex-row items-stretch">
+									<div
+										class="dash-line relative w-5 shrink-0 flex items-center justify-center"
+									>
+										<div
+											class="node z-10 w-1 h-1 rounded transition-all
+											       bg-[oklch(0.5_0.05_var(--hue))] group-hover:h-5 group-hover:bg-(--primary)
+											       outline outline-4 outline-(--card-bg)
+											       group-hover:outline-(--btn-plain-bg-hover)"
+										></div>
+									</div>
+									<div class="flex min-w-0 flex-1 flex-col gap-1 py-2.5 pr-2">
+										<span class="text-xs text-50">
+											{fmtMonthDay(item.savedAt)} · {reasonLabel(item.reason)}
+										</span>
+										<span
+											class="truncate text-sm font-bold text-75 transition-all
+											       group-hover:translate-x-1 group-hover:text-(--primary)"
+										>
+											{item.title || "—"}
+										</span>
+									</div>
+								</div>
+							</button>
+						{/each}
 					{/each}
 				{/if}
 			</div>
@@ -891,11 +929,22 @@ $effect(() => {
 		padding: 0.5rem 0.75rem 1.5rem 0.75rem;
 	}
 
-	/* 列表项样式全部改用前台归档页的 Tailwind 类（见模板），
-	   这里只保留选中态：当前查看的那条，节点拉长并转主色 */
-	.is-active .dash-line > div {
+	/* 选中态：常驻高亮（底色 + 节点拉长 + 主色），与 hover 的临时底色区分开。
+	   hover 只给背景和文字变化，鼠标移开即消失；选中项无论鼠标在哪都保持 */
+	.is-active {
+		background: var(--btn-regular-bg);
+	}
+
+	.is-active .node {
 		height: 1.25rem;
 		background: var(--primary);
+		/* 与虚线交叉处仍用卡片底色挖空，避免被线穿过 */
+		outline-color: var(--btn-regular-bg);
+	}
+
+	.is-active .group-hover\:translate-x-1,
+	.is-active span:last-child {
+		color: var(--primary);
 	}
 
 	/* 参考 .post-history-delete */
