@@ -27,6 +27,7 @@ import {
 	saveFileLocally,
 	saveFileToGitHub,
 } from "@/utils/github-app";
+import { getStore } from "@/utils/persist-store";
 
 export const prerender = false;
 
@@ -98,71 +99,74 @@ function readFrontmatterMeta(content: string): {
 	return { title, category, tags, image, draft };
 }
 
-/** 列出某篇文章的版本（新→旧）；带标题，列表项与参考一样显示「时间 / 原因 / 标题」 */
-function listRevisions(slug: string): {
-	id: string;
-	reason: RevisionReason;
-	savedAt: number;
-	title: string;
-	category: string;
-	tags: string[];
-	image: string;
-	draft: boolean;
-}[] {
-	const abs = path.resolve(process.cwd(), revisionDirRel(slug));
-	if (!existsSync(abs)) return [];
+/**
+ * 列出某篇文章的版本（新→旧）。
+ * 存储介质是 persist-store（KV / file / db 由后端选择），不再是本地目录——
+ * 云端项目目录只读，写文件必然失败，历史版本在线上会是死的。
+ * 键形如 rev:<slug>:<epochMs>，值 { content, reason, savedAt }；
+ * 标题/分类/标签/草稿从 content 的 frontmatter 现场解析，与旧实现一致。
+ */
+async function listRevisions(slug: string): Promise<
+	{
+		id: string;
+		reason: RevisionReason;
+		savedAt: number;
+		title: string;
+		category: string;
+		tags: string[];
+		image: string;
+		draft: boolean;
+	}[]
+> {
+	const store = getStore();
+	if (!store.list) return [];
+	let keys: string[] = [];
 	try {
-		return readdirSync(abs)
-			.filter((f) => f.endsWith(".md"))
-			.map(
-				(
-					f,
-				): {
-					id: string;
-					reason: RevisionReason;
-					savedAt: number;
-					title: string;
-					category: string;
-					tags: string[];
-					image: string;
-					draft: boolean;
-				} => {
-					const [tsRaw, reasonRaw] = f.replace(/\.md$/, "").split("-");
-					const ts = Number(tsRaw);
-					const reason = (reasonRaw ?? "auto") as RevisionReason;
-					let meta = {
-						title: "",
-						category: "",
-						tags: [] as string[],
-						image: "",
-						draft: false,
-					};
-					try {
-						meta = readFrontmatterMeta(
-							readFileSync(path.join(abs, f), "utf-8"),
-						);
-					} catch {
-						// 快照损坏：留空，不影响列表展示
-					}
-					return {
-						id: f,
-						reason:
-							reason === "publish" || reason === "restore_backup"
-								? reason
-								: "auto",
-						savedAt: Number.isFinite(ts) ? ts : 0,
-						title: meta.title,
-						category: meta.category,
-						tags: meta.tags,
-						image: meta.image,
-						draft: meta.draft,
-					};
-				},
-			)
-			.sort((a, b) => b.savedAt - a.savedAt);
+		keys = await store.list(`rev:${slug}:`, 200);
 	} catch {
 		return [];
 	}
+	const items = await Promise.all(
+		keys.map(async (key) => {
+			const ts = Number(key.split(":").pop());
+			let rec: { content?: string; reason?: string; savedAt?: number } | null =
+				null;
+			try {
+				rec = await store.get(key);
+			} catch {
+				return null;
+			}
+			if (!rec || typeof rec.content !== "string") return null;
+			let meta = {
+				title: "",
+				category: "",
+				tags: [] as string[],
+				image: "",
+				draft: false,
+			};
+			try {
+				meta = readFrontmatterMeta(rec.content);
+			} catch {
+				// 快照损坏：留空，不影响列表
+			}
+			const reason = rec.reason ?? "auto";
+			return {
+				id: String(ts),
+				reason: (reason === "publish" || reason === "restore_backup"
+					? reason
+					: "auto") as RevisionReason,
+				savedAt: Number.isFinite(rec.savedAt) ? (rec.savedAt as number) : ts,
+				title: meta.title,
+				category: meta.category,
+				tags: meta.tags,
+				image: meta.image,
+				draft: meta.draft,
+			};
+		}),
+	);
+	return items
+		.filter((x): x is NonNullable<typeof x> => x !== null)
+		.sort((a, b) => b.savedAt - a.savedAt);
 }
 
 export async function GET({
@@ -179,23 +183,33 @@ export async function GET({
 	if (!slug) return json({ success: false, message: "缺少 slug" }, 400);
 
 	if (!id) {
-		return json({ success: true, revisions: listRevisions(slug) });
+		return json({ success: true, revisions: await listRevisions(slug) });
 	}
 
-	// 单条详情：本地有就直接读，线上回退到 GitHub（多机场景）
+	// 单条详情：从 store 读（键 rev:<slug>:<ts>）
 	if (id.includes("/") || id.includes("..")) {
 		return json({ success: false, message: "非法的版本 id" }, 400);
 	}
-	const rel = `${revisionDirRel(slug)}/${id}`;
-	const abs = path.resolve(process.cwd(), rel);
 	let content: string | null = null;
-	if (existsSync(abs)) {
-		content = readFileSync(abs, "utf-8");
-	} else {
-		try {
-			content = await getFileFromGitHub(rel);
-		} catch {
-			content = null;
+	try {
+		const rec = await getStore().get<{ content?: string }>(`rev:${slug}:${id}`);
+		content = typeof rec?.content === "string" ? rec.content : null;
+	} catch {
+		content = null;
+	}
+	/* 回退：老快照是 .revisions 目录里的 <ts>-<reason>.md，
+	   线上还从 GitHub 读过。这里保留这条路径，避免历史数据直接消失。 */
+	if (content === null) {
+		const rel = `${revisionDirRel(slug)}/${id}`;
+		const abs = path.resolve(process.cwd(), rel);
+		if (existsSync(abs)) {
+			content = readFileSync(abs, "utf-8");
+		} else {
+			try {
+				content = await getFileFromGitHub(rel);
+			} catch {
+				content = null;
+			}
 		}
 	}
 	if (content === null) {

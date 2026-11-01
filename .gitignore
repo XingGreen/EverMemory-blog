@@ -94,3 +94,6 @@ docs/todo/单管理员博客：初始化、会话与凭据安全设计.md
 
 # WorkBuddy 项目数据（记忆与本地状态，不进仓库）
 .workbuddy/
+
+# 文章历史快照（运行时数据，走 persist-store；本地开发也是派生数据）
+src/content/.revisions/

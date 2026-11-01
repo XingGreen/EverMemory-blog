@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
 import { IS_PROD_BUILD } from "@/utils/env";
@@ -8,6 +8,7 @@ import {
 	saveFileLocally,
 	saveFileToGitHub,
 } from "@/utils/github-app";
+import { getStore } from "@/utils/persist-store";
 
 export const prerender = false;
 
@@ -81,35 +82,29 @@ export async function POST({ request }) {
 
 		const fullContent = `---\n${frontmatter}\n---\n\n${content}`;
 
-		/* 0. 保存前快照旧版本——历史版本功能的数据来源。
-		      只在开发构建（本地可写）下做：生产目录只读，写不进磁盘；
+		/* 0. 保存快照——历史版本功能的数据来源。
+		      走 persist-store 而不是直接写文件：云端（Vercel / Workers）项目目录只读，
+		      fs.writeFile 必然失败，历史版本在线上就是死的。
+		      KV / file 由后端自己选，本地开发仍然落 .revisions 目录，行为不变。
 		      内容没变也不产生版本，避免重复保存堆出一串空记录。 */
-		if (!IS_PROD_BUILD) {
-			try {
-				const absPath = path.resolve(process.cwd(), filePath);
-				if (existsSync(absPath)) {
-					const previous = readFileSync(absPath, "utf-8");
-					if (previous !== fullContent) {
-						const dir = path.resolve(
-							process.cwd(),
-							`src/content/.revisions/${slug}`,
-						);
-						mkdirSync(dir, { recursive: true });
-						writeFileSync(
-							path.join(dir, `${Date.now()}-auto.md`),
-							/* 记录保存后的内容，而不是 previous。
-							   previous 是「这次保存之前」的样子，于是历史列表里永远
-							   看不到刚刚设置的封面/分类——最新一条反映的是旧状态，
-							   用户会以为封面没存进去。改成 fullContent 后，
-							   最新版本即当前文章状态，恢复语义不变（仍是完整快照）。 */
-							fullContent,
-							"utf-8",
-						);
-					}
-				}
-			} catch {
-				// 快照失败不影响正常保存
+		try {
+			const absPath = path.resolve(process.cwd(), filePath);
+			let previous: string | null = null;
+			if (existsSync(absPath)) previous = readFileSync(absPath, "utf-8");
+			if (previous !== fullContent) {
+				const savedAt = Date.now();
+				/* 存的是保存后的内容（不是 previous）。previous 是「这次保存之前」的
+				   样子，用它会让历史列表永远看不到刚设的封面/分类——最新一条反映的是
+				   旧状态，用户会以为封面没存进去。存 fullContent 后最新版本即当前状态，
+				   恢复语义不变（仍是完整快照）。 */
+				await getStore().set(`rev:${slug}:${savedAt}`, {
+					content: fullContent,
+					reason: "auto",
+					savedAt,
+				});
 			}
+		} catch {
+			// 快照失败不影响正常保存
 		}
 
 		const commitMessage = `update post: ${title || slug} via admin dashboard`;
