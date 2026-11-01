@@ -38,6 +38,17 @@ interface PlanItem {
 	title?: string;
 }
 
+/**
+ * slug 归一化。
+ * Astro 的 content collection 会把 `guide/index.md` 的 id 折叠成 `guide`，
+ * 而直接切路径得到的是 `guide/index`。不统一就会出现同一文件被判成
+ * 「本地有 guide」+「远端有 guide/index」两条，标成 local-only 与 remote-only，
+ * 但点开差异两边内容一模一样——正是这个不一致造成的自相矛盾。
+ */
+function normalizeSlug(slug: string): string {
+	return slug.replace(/\/index$/, "");
+}
+
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 	return Promise.race([
 		p,
@@ -92,7 +103,9 @@ export async function GET({
 
 	const remoteBySlug = new Map(
 		remote.map((f) => [
-			f.path.replace(/^src\/content\/posts\//, "").replace(/\.mdx?$/, ""),
+			normalizeSlug(
+				f.path.replace(/^src\/content\/posts\//, "").replace(/\.mdx?$/, ""),
+			),
 			f,
 		]),
 	);
@@ -105,12 +118,13 @@ export async function GET({
 			const fp = post.filePath;
 			if (!fp) continue;
 			const abs = path.resolve(process.cwd(), fp);
-			const remoteFile = remoteBySlug.get(post.id);
-			seen.add(post.id);
+			const slug = normalizeSlug(post.id);
+			const remoteFile = remoteBySlug.get(slug);
+			seen.add(slug);
 
 			if (!existsSync(abs)) {
 				items.push({
-					slug: post.id,
+					slug: slug,
 					path: remoteFile?.path ?? fp,
 					state: remoteFile ? "remote-only" : "local-only",
 					localSha: null,
@@ -137,7 +151,7 @@ export async function GET({
 			else state = "differs";
 
 			items.push({
-				slug: post.id,
+				slug: slug,
 				path: remoteFile?.path ?? fp,
 				state,
 				localSha,
@@ -190,8 +204,19 @@ export async function GET({
 			localAvailable,
 			localTotal: localPosts.length,
 			remoteTotal: remote.length,
-			counts,
-			items,
+			counts:
+				error === null
+					? counts
+					: {
+							same: 0,
+							differs: 0,
+							localOnly: 0,
+							remoteOnly: 0,
+							crlfSuspect: 0,
+						},
+			/* 远端清单没拿到就不下发条目：此时每个本地文件都会被算成 local-only，
+			   使用者会误以为全都没推送，进而一键全推——那才是最坏的结果。 */
+			items: error === null ? items : [],
 		}),
 		{ status: 200, headers: { "Content-Type": "application/json" } },
 	);

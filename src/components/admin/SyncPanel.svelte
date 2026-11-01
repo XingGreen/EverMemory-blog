@@ -300,8 +300,11 @@ $effect(() => {
 
 			{#if loading}
 				<p class="hint">正在比对…</p>
-			{:else if data?.error}
-				<pre class="sync-error">{data.error}</pre>
+			{:else if data?.error || !data?.connected}
+				<pre class="sync-error">{data?.error ?? "GitHub 不可达，无法比对"}</pre>
+				<p class="hint">
+					远端清单没拿到时不做任何判定——否则每个本地文件都会被标成「仅本地」，误导成未推送。
+				</p>
 			{:else if data}
 				<div class="sync-toolbar">
 					<span>
@@ -356,9 +359,11 @@ $effect(() => {
 										<button
 											class="text-btn"
 											type="button"
+											disabled={item.state !== "differs"}
+											title={item.state === "differs" ? "对比两边正文" : "只有一边存在文件，无内容可比"}
 											onclick={() => showDiff(item)}
 										>
-											{ diffSlug === item.slug ? "收起" : "差异" }
+											{diffSlug === item.slug ? "收起" : "差异"}
 										</button>
 										<button
 											class="text-btn"
@@ -574,7 +579,6 @@ $effect(() => {
 		display: flex;
 		flex-direction: column;
 		border-radius: 0.75rem;
-		background: var(--btn-regular-bg);
 		overflow: hidden;
 	}
 
@@ -614,12 +618,11 @@ $effect(() => {
 		gap: 0.625rem;
 		padding: 0.625rem 0.625rem;
 		border-radius: 0.625rem;
-		background: var(--card-bg);
 		transition: background 0.15s;
 	}
 
 	.sync-row:hover {
-		background: color-mix(in srgb, var(--primary) 6%, var(--card-bg));
+		background: var(--btn-plain-bg-hover);
 	}
 
 	.sync-row.same {
@@ -628,7 +631,7 @@ $effect(() => {
 
 	/* 失败的条目整行标红：底栏一行文字在长列表里太容易漏看 */
 	.sync-row.failed {
-		background: color-mix(in srgb, var(--destructive, #d33) 12%, var(--card-bg));
+		background: color-mix(in srgb, var(--destructive, #d33) 12%, transparent);
 	}
 
 	.row-check {
