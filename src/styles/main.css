@@ -796,3 +796,30 @@ html {
   }
 }
 
+
+/* expressive-code 主题变量兜底
+   预览与历史页走的是运行时 expressive-code 渲染，返回结果里只有对 --ec-* 的
+   引用（如 .expressive-code pre{background:var(--ec-codeBg)}），却没有主题变量
+   定义块——one-light / one-dark-pro 的 [data-theme='...'] {...} 没有被注入。
+   变量缺失时 background 声明失效，pre 回退成默认黑底，浅色模式下尤其明显。
+   这里按明暗补上必要变量，跟随 hue 与 .dark 类切换。 */
+.expressive-code {
+  --ec-codeBg: oklch(0.985 0.002 var(--hue));
+  --ec-codeFg: #383a42;
+  --ec-brdCol: color-mix(in srgb, currentColor 12%, transparent);
+  --ec-gutterBg: transparent;
+  --ec-inlineBg: color-mix(in srgb, currentColor 8%, transparent);
+  --ec-inlineFg: currentColor;
+  --ec-focusBrd: var(--primary);
+}
+
+.dark .expressive-code {
+  --ec-codeBg: oklch(0.205 0.015 var(--hue));
+  --ec-codeFg: #abb2bf;
+}
+
+/* 变量补上后再确保 pre/code 取到它（Shiki 未输出内联色时靠这条兜底） */
+.expressive-code pre,
+.expressive-code pre > code {
+  color: var(--ec-codeFg);
+}
