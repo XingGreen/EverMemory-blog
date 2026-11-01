@@ -149,9 +149,20 @@ async function loadList() {
 		const res = await fetch(
 			`/api/admin/post-revisions/?slug=${encodeURIComponent(slug)}`,
 		);
+		if (res.status === 401) {
+			revisions = [];
+			errorKind = "generic";
+			return;
+		}
 		const data = await res.json();
 		revisions = data.success ? (data.revisions ?? []) : [];
-		if (!currentId && revisions.length > 0) selectRevision(revisions[0].id);
+		/* 直接进入分栏：自动选中最新一条，省掉「先看列表页、再点一次」的步骤。
+		   URL 已带 revisionId 时则直接加载那一版（不再靠 $effect 监听）。 */
+		if (!currentId && revisions.length > 0) {
+			selectRevision(revisions[0].id);
+		} else if (currentId) {
+			void loadDetail(currentId);
+		}
 	} catch {
 		revisions = [];
 	} finally {
@@ -177,6 +188,11 @@ async function loadDetail(id: string) {
 			`/api/admin/post-revisions/?slug=${encodeURIComponent(slug)}&id=${encodeURIComponent(id)}`,
 			{ signal: ac.signal },
 		);
+		/* 401 = 会话过期。此前静默 return，界面只留一片空白，看起来像「内容丢了」 */
+		if (res.status === 401) {
+			errorKind = "generic";
+			return;
+		}
 		const data = await res.json();
 		if (!data.success) return;
 		const body = String(data.content ?? "").replace(
@@ -286,9 +302,10 @@ $effect(() => {
 	void loadList();
 });
 
-$effect(() => {
-	if (currentId) void loadDetail(currentId);
-});
+/* 不再用 $effect 监听 currentId 去加载详情：loadDetail 内部会写 detailHtml /
+   detailLoading，被 effect 追踪后形成「写→重跑→再写」的死循环，
+   表现为短时间内对所有版本各发一次请求，并因并发过高被拒（401/429）。
+   改为在 loadList / selectRevision 里显式触发。 */
 
 /* 组件卸载（如返回编辑器）时中断在途请求，避免旧请求拖慢下一次页面初始化 */
 $effect(() => {
