@@ -463,36 +463,42 @@ $effect(() => {
 					<p class="post-history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
 				{:else}
 					{#each revisions as item (item.id)}
-						<!-- 逐字复制自 src/components/controls/ArchivePanel.svelte:221-246
-						     的年份行：flex 三列 + 空心圆点，class 一字未改，
-						     仅把 {group.year} 换成本条快照的日期、{group.posts.length}
-						     换成原因与标题。 -->
+						<!-- 纵向排布 + 时间轴连接线，参照前台归档页 ArchivePanel.svelte:249-295
+						     的文章行与 main.css:469-483 的 .dash-line：
+						     · 连接线用 .dash-line::before（2px dashed + translateY(-50%)），全局已有，直接复用
+						     · 节点是 w-1 h-1 的小方块，hover 拉长成 h-5，outline-4 用卡片底色挖空
+						     · 内容由横向三列改为上下两行（日期原因 / 标题），避免 320px 侧栏里挤成一团 -->
 						<button
 							type="button"
-							class="flex flex-row w-full items-center h-15 cursor-pointer rounded-lg
-							       hover:bg-(--btn-plain-bg-hover) transition-colors group/yr"
+							class="group block! w-full rounded-lg text-left transition-colors
+							       hover:bg-(--btn-plain-bg-hover) hover:text-[initial]"
 							class:is-active={item.id === currentId}
 							onclick={() => selectRevision(item.id)}
 						>
-							<div
-								class="w-[15%] md:w-[10%] transition text-2xl font-bold text-right text-75
-								            group-hover/yr:text-(--primary)"
-							>
-								{fmtDate(item.savedAt)}
-							</div>
-							<div class="w-[15%] md:w-[10%]">
+							<div class="flex flex-row items-stretch">
+								<!-- 连接线 + 节点 -->
 								<div
-									class="h-3 w-3 bg-none rounded-full outline outline-(--primary) mx-auto
-                  -outline-offset-2 z-50 outline-3"
-									class:filled={item.id === currentId}
-								></div>
-							</div>
-							<div
-								class="w-[70%] md:w-[80%] transition text-left text-50 flex items-center gap-2
-								            group-hover/yr:text-(--primary)"
-							>
-								<span>{reasonLabel(item.reason)}</span>
-								<span class="truncate">{item.title || "—"}</span>
+									class="dash-line relative w-5 shrink-0 flex items-center justify-center"
+								>
+									<div
+										class="z-10 w-1 h-1 rounded transition-all
+										       bg-[oklch(0.5_0.05_var(--hue))] group-hover:h-5 group-hover:bg-(--primary)
+										       outline outline-4 outline-(--card-bg)
+										       group-hover:outline-(--btn-plain-bg-hover)"
+									></div>
+								</div>
+								<!-- 内容：上下两行 -->
+								<div class="flex min-w-0 flex-1 flex-col gap-1 py-2.5 pr-2">
+									<span class="text-xs text-50">
+										{fmtDate(item.savedAt)} · {reasonLabel(item.reason)}
+									</span>
+									<span
+										class="truncate text-sm font-bold text-75 transition-all
+										       group-hover:translate-x-1 group-hover:text-(--primary)"
+									>
+										{item.title || "—"}
+									</span>
+								</div>
 							</div>
 						</button>
 					{/each}
@@ -876,18 +882,19 @@ $effect(() => {
 		color: var(--content-meta);
 	}
 
-	/* 参考 .post-history-list */
+	/* 参考 .post-history-list；纵向排布后左内边距收窄，
+	   让连接线贴近侧栏左缘，整列看起来是一条连续的轴 */
 	.post-history-list {
 		flex: 1;
 		min-height: 0;
 		overflow-y: auto;
-		padding: 0.5rem 1.25rem 1.5rem 2rem;
+		padding: 0.5rem 0.75rem 1.5rem 0.75rem;
 	}
 
-	/* 列表项样式已全部改用前台归档页的 Tailwind 类（见模板），
-	   这里只保留一项：选中时圆点填充。归档页的选中态是折叠箭头，无对应，
-	   故用填充色区分当前查看的版本。 */
-	.is-active .rounded-full {
+	/* 列表项样式全部改用前台归档页的 Tailwind 类（见模板），
+	   这里只保留选中态：当前查看的那条，节点拉长并转主色 */
+	.is-active .dash-line > div {
+		height: 1.25rem;
 		background: var(--primary);
 	}
 
