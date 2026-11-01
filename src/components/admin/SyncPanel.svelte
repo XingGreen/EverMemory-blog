@@ -8,9 +8,11 @@ import { i18n } from "@/i18n/translation";
  *
  * 数据来自 GET /api/admin/sync/plan —— 只拉远端元数据（sha），
  * 本地算 Git blob 哈希比对，不下载任何正文。
+ * 正文只在用户点某一行的「差异」时才拉，走 GET /sync/filediff。
  *
- * 四种状态不含方向：sha 不同只说明内容不同，判断不出谁更新，
- * 所以 differs 的条目必须由使用者自己选方向，界面不预选。
+ * 四种状态不含方向：sha 不同只说明内容不同，判断不出谁更新。
+ * 所以两个方向按钮恒定显示，不可能的那个置灰——让用户看见「为什么不能」，
+ * 比直接隐藏更清楚。
  */
 let {
 	open = $bindable(false),
@@ -47,6 +49,13 @@ interface PlanPayload {
 	items: PlanItem[];
 }
 
+interface ApplyResult {
+	slug: string;
+	direction: "pull" | "push";
+	ok: boolean;
+	message?: string;
+}
+
 let loading = $state(false);
 let running = $state(false);
 let data = $state<PlanPayload | null>(null);
@@ -54,19 +63,40 @@ let runMessage = $state<string | null>(null);
 let runFailed = $state(false);
 let showSame = $state(false);
 
-/** 勾选集合（只存需要处理的条目） */
 let selected = $state<Set<string>>(new Set());
-/** 每条的方向偏好；differs 默认不设，逼使用者选 */
 let direction = $state<Record<string, "pull" | "push">>({});
+/** 执行失败的 slug，用于行内标红 */
+let failedSlugs = $state<Set<string>>(new Set());
+
+/** 差异面板：一次只看一条 */
+let diffSlug = $state<string | null>(null);
+let diffData = $state<{
+	localContent: string | null;
+	remoteContent: string | null;
+	localError: string | null;
+	remoteError: string | null;
+} | null>(null);
+let diffLoading = $state(false);
 
 const actionable = $derived(
 	(data?.items ?? []).filter((i) => i.state !== "same"),
 );
+const visibleItems = $derived(
+	(data?.items ?? []).filter((i) => i.state !== "same" || showSame),
+);
+const allSelected = $derived(
+	actionable.length > 0 && actionable.every((i) => selected.has(i.slug)),
+);
 
-function defaultDirection(item: PlanItem): "pull" | "push" | null {
+function canPull(item: PlanItem): boolean {
+	return item.state !== "local-only";
+}
+function canPush(item: PlanItem): boolean {
+	return item.state !== "remote-only";
+}
+function currentDir(item: PlanItem): "pull" | "push" | null {
 	const picked = direction[item.slug];
 	if (picked) return picked;
-	/* 仅一边存在时有唯一合理方向；differs 不猜 */
 	if (item.state === "remote-only") return "pull";
 	if (item.state === "local-only") return "push";
 	return null;
@@ -79,68 +109,88 @@ function toggle(slug: string) {
 	selected = next;
 }
 
-function setDirection(slug: string, dir: "pull" | "push") {
-	direction = { ...direction, [slug]: dir };
-	if (!selected.has(slug)) toggle(slug);
+function toggleAll() {
+	selected = allSelected ? new Set() : new Set(actionable.map((i) => i.slug));
 }
 
-function selectAll() {
-	selected = new Set(
-		actionable.filter((i) => defaultDirection(i) !== null).map((i) => i.slug),
-	);
-}
-
-function clearAll() {
-	selected = new Set();
+function pick(item: PlanItem, dir: "pull" | "push") {
+	/* 覆盖本地是破坏性的：本地未推送的改动会被直接替换且无回收站。
+		   这里必须拦一次，文案要具体到文件名，不能只问「确定吗」。 */
+	if (dir === "pull" && item.state === "differs") {
+		const ok = window.confirm(
+			`将用远端版本覆盖 ${item.slug}，本地未推送的改动会丢失。确定继续？`,
+		);
+		if (!ok) return;
+	}
+	direction = { ...direction, [item.slug]: dir };
+	if (!selected.has(item.slug)) toggle(item.slug);
 }
 
 async function load() {
 	loading = true;
 	runMessage = null;
+	failedSlugs = new Set();
+	diffSlug = null;
+	diffData = null;
 	try {
 		const res = await fetch("/api/admin/sync/plan/");
 		const payload = (await res.json().catch(() => null)) as PlanPayload | null;
 		if (!payload) {
-			data = {
-				success: false,
-				connected: false,
-				error: `HTTP ${res.status}`,
-				localAvailable: false,
-				localTotal: 0,
-				remoteTotal: 0,
-				counts: {
-					same: 0,
-					differs: 0,
-					localOnly: 0,
-					remoteOnly: 0,
-					crlfSuspect: 0,
-				},
-				items: [],
-			};
+			data = emptyPlan(`HTTP ${res.status}`);
 			return;
 		}
 		data = payload;
 		selected = new Set();
 		direction = {};
 	} catch (error) {
-		data = {
-			success: false,
-			connected: false,
-			error: error instanceof Error ? error.message : String(error),
-			localAvailable: false,
-			localTotal: 0,
-			remoteTotal: 0,
-			counts: {
-				same: 0,
-				differs: 0,
-				localOnly: 0,
-				remoteOnly: 0,
-				crlfSuspect: 0,
-			},
-			items: [],
-		};
+		data = emptyPlan(error instanceof Error ? error.message : String(error));
 	} finally {
 		loading = false;
+	}
+}
+
+function emptyPlan(error: string): PlanPayload {
+	return {
+		success: false,
+		connected: false,
+		error,
+		localAvailable: false,
+		localTotal: 0,
+		remoteTotal: 0,
+		counts: {
+			same: 0,
+			differs: 0,
+			localOnly: 0,
+			remoteOnly: 0,
+			crlfSuspect: 0,
+		},
+		items: [],
+	};
+}
+
+async function showDiff(item: PlanItem) {
+	if (diffSlug === item.slug) {
+		diffSlug = null;
+		diffData = null;
+		return;
+	}
+	diffSlug = item.slug;
+	diffData = null;
+	diffLoading = true;
+	try {
+		const res = await fetch(
+			`/api/admin/sync/filediff/?slug=${encodeURIComponent(item.slug)}&path=${encodeURIComponent(item.path)}`,
+		);
+		diffData = await res.json();
+	} catch (error) {
+		diffData = {
+			localContent: null,
+			remoteContent: null,
+			localError: error instanceof Error ? error.message : String(error),
+			remoteError: null,
+		};
+	} finally {
+		diffLoading = false;
 	}
 }
 
@@ -148,7 +198,7 @@ async function apply() {
 	const items = [...selected]
 		.map((slug) => {
 			const item = actionable.find((i) => i.slug === slug);
-			const dir = item ? defaultDirection(item) : null;
+			const dir = item ? currentDir(item) : null;
 			if (!item || !dir) return null;
 			return { slug: item.slug, path: item.path, direction: dir };
 		})
@@ -166,6 +216,7 @@ async function apply() {
 	running = true;
 	runMessage = null;
 	runFailed = false;
+	failedSlugs = new Set();
 	try {
 		const res = await fetch("/api/admin/sync/apply/", {
 			method: "POST",
@@ -175,14 +226,13 @@ async function apply() {
 		const payload = (await res.json().catch(() => null)) as {
 			success?: boolean;
 			message?: string;
-			results?: Array<{ slug: string; ok: boolean; message?: string }>;
+			results?: ApplyResult[];
 		} | null;
+
+		const failed = (payload?.results ?? []).filter((r) => !r.ok);
+		failedSlugs = new Set(failed.map((f) => f.slug));
 		runFailed = !res.ok || !payload?.success;
-		const failed = payload?.results?.filter((r) => !r.ok) ?? [];
 		runMessage = payload?.message ?? `HTTP ${res.status}`;
-		if (failed.length > 0) {
-			runMessage += `：${failed.map((f) => `${f.slug}(${f.message ?? "失败"})`).join("、")}`;
-		}
 		if (!runFailed) onSynced?.();
 		await load();
 	} catch (error) {
@@ -221,16 +271,19 @@ $effect(() => {
 	>
 		<div class="sync-panel">
 			<header class="sync-head">
-				<div>
-					<h3>{i18n(I18nKey.postSyncNow)}</h3>
+				<div class="head-text">
+					<h3>
+						<Icon icon="material-symbols:sync" class="head-icon" />
+						{i18n(I18nKey.postSyncNow)}
+					</h3>
 					{#if data}
 						<p class="sync-sub">
 							<span class="dot" class:ok={data.connected}></span>
-							{data.connected ? "GitHub" : "GitHub 不可达"}
+							{data.connected ? "GitHub 已连接" : "GitHub 不可达"}
 							<span class="sep">·</span>
-							本地 {data.localTotal} / 远端 {data.remoteTotal}
+							本地 {data.localTotal} 篇 / 远端 {data.remoteTotal} 篇
 							{#if !data.localAvailable}
-								<span class="warn">· 当前环境无法读取本地文件</span>
+								<span class="warn">· 当前环境读不到本地文件</span>
 							{/if}
 						</p>
 					{/if}
@@ -250,93 +303,129 @@ $effect(() => {
 			{:else if data?.error}
 				<pre class="sync-error">{data.error}</pre>
 			{:else if data}
-				{#if data.counts.crlfSuspect > 0}
-					<p class="hint warn">
-						{data.counts.crlfSuspect} 个本地文件含 CRLF，与 .gitattributes 的 eol=lf 不一致，哈希比对可能误报差异
-					</p>
-				{/if}
-
 				<div class="sync-toolbar">
-					<span class="muted">
-						需处理 {actionable.length} · 一致 {data.counts.same}
+					<span>
+						需处理 <b class="num-warn">{actionable.length}</b> 项 · 一致
+						<b class="num-ok">{data.counts.same}</b> 项
 					</span>
-					<div class="toolbar-actions">
-						<button class="link-btn" type="button" onclick={selectAll}>
-							全选可处理
-						</button>
-						<button class="link-btn" type="button" onclick={clearAll}>
-							清空
-						</button>
-						{#if data.counts.same > 0}
-							<button
-								class="link-btn"
-								type="button"
-								onclick={() => (showSame = !showSame)}
-							>
-								{showSame ? "隐藏一致" : "显示一致"}
-							</button>
-						{/if}
-					</div>
+					<button
+						class="link-btn"
+						type="button"
+						onclick={() => (showSame = !showSame)}
+						disabled={data.counts.same === 0}
+					>
+						{showSame ? "隐藏一致项" : "显示一致项"}
+					</button>
 				</div>
 
-				<ul class="sync-list">
-					{#each data.items as item (item.slug)}
-						{@const checked = selected.has(item.slug)}
-						{@const dir = defaultDirection(item)}
-						<li
-							class="sync-row"
-							class:dim={item.state === "same"}
-							class:hidden-same={item.state === "same" && !showSame}
-						>
-							<label class="row-check">
-								<input
-									type="checkbox"
-									disabled={item.state === "same"}
-									checked={checked}
-									onchange={() => toggle(item.slug)}
-								/>
-							</label>
-							<div class="row-main">
-								<span class="row-slug">{item.slug}</span>
-								<span class="row-state" data-state={item.state}>
-									{stateText(item.state)}
-								</span>
-							</div>
-							{#if item.state !== "same"}
-								<div class="row-dir">
-									<button
-										class="dir-btn"
-										type="button"
-										class:active={dir === "pull"}
-										onclick={() => setDirection(item.slug, "pull")}
-										title="用远端覆盖本地"
-									>
-										<Icon icon="material-symbols:cloud-download" />
-									</button>
-									<button
-										class="dir-btn"
-										type="button"
-										class:active={dir === "push"}
-										onclick={() => setDirection(item.slug, "push")}
-										title="用本地覆盖远端"
-									>
-										<Icon icon="material-symbols:cloud-upload" />
-									</button>
+				<div class="sync-list-wrap">
+					<!-- 表头：全选框负责批量选择，不再单设「清空」——再点一次即取消 -->
+					<div class="list-head">
+						<label class="head-check">
+							<input
+								type="checkbox"
+								checked={allSelected}
+								onchange={toggleAll}
+								aria-label="全选可处理项"
+							/>
+						</label>
+						<span class="head-label">全选可处理项</span>
+					</div>
+
+					<ul class="sync-list">
+						{#each visibleItems as item (item.slug)}
+							{@const isSame = item.state === "same"}
+							{@const picked = currentDir(item)}
+							<li class="sync-row" class:same={isSame} class:failed={failedSlugs.has(item.slug)}>
+								<label class="row-check">
+									<input
+										type="checkbox"
+										disabled={isSame}
+										checked={selected.has(item.slug)}
+										onchange={() => toggle(item.slug)}
+									/>
+								</label>
+								<div class="row-main">
+									<span class="row-slug">{item.slug}</span>
+									<span class="badge" data-state={item.state}>
+										{stateText(item.state)}
+									</span>
 								</div>
+								{#if !isSame}
+									<div class="row-actions">
+										<button
+											class="text-btn"
+											type="button"
+											onclick={() => showDiff(item)}
+										>
+											{ diffSlug === item.slug ? "收起" : "差异" }
+										</button>
+										<button
+											class="text-btn"
+											class:on={picked === "pull"}
+											class:danger={item.state === "differs"}
+											type="button"
+											disabled={!canPull(item)}
+											onclick={() => pick(item, "pull")}
+										>
+											拉取到本地
+										</button>
+										<button
+											class="text-btn"
+											class:on={picked === "push"}
+											type="button"
+											disabled={!canPush(item)}
+											onclick={() => pick(item, "push")}
+										>
+											推送到远端
+										</button>
+									</div>
+								{/if}
+							</li>
+
+							{#if diffSlug === item.slug}
+								<li class="diff-pane">
+									{#if diffLoading}
+										<p class="hint">正在加载正文…</p>
+									{:else if diffData}
+										<div class="diff-cols">
+											<div class="diff-col">
+												<span class="diff-title">
+													本地
+													{#if diffData.localError}
+														<span class="warn">· {diffData.localError}</span>
+													{/if}
+												</span>
+												<pre class="diff-body">{diffData.localContent ?? "（本地无此文件）"}</pre>
+											</div>
+											<div class="diff-col">
+												<span class="diff-title">
+													远端
+													{#if diffData.remoteError}
+														<span class="warn">· {diffData.remoteError}</span>
+													{/if}
+												</span>
+												<pre class="diff-body">{diffData.remoteContent ?? "（远端无此文件）"}</pre>
+											</div>
+										</div>
+									{/if}
+								</li>
 							{/if}
-						</li>
-					{/each}
-				</ul>
+						{/each}
+					</ul>
+				</div>
 
 				{#if runMessage}
 					<p class="run-msg" class:failed={runFailed}>{runMessage}</p>
 				{/if}
 
 				<footer class="sync-actions">
-					<span class="muted">已选 {selected.size} 项</span>
+					<span class="selected-tip">
+						已选 <b>{selected.size}</b> 项待同步
+					</span>
 					<div class="toolbar-actions">
 						<button
-							class="savebar-btn"
+							class="text-btn"
 							type="button"
 							onclick={load}
 							disabled={loading || running}
@@ -365,21 +454,21 @@ $effect(() => {
 		z-index: 60;
 		display: grid;
 		place-items: center;
-		background: rgb(0 0 0 / 0.45);
+		background: rgb(0 0 0 / 0.5);
 		backdrop-filter: blur(2px);
 	}
 
 	.sync-panel {
 		display: flex;
 		flex-direction: column;
-		width: min(44rem, 94vw);
-		max-height: 82vh;
-		padding: 1.25rem 1.375rem 1rem;
-		gap: 0.75rem;
-		border-radius: 0.875rem;
+		width: min(48rem, 94vw);
+		max-height: 84vh;
+		padding: 1.5rem 1.5rem 1rem;
+		gap: 1rem;
+		border-radius: 1rem;
 		border: 1px solid var(--line-divider);
 		background: var(--card-bg);
-		box-shadow: 0 20px 60px -12px rgb(0 0 0 / 0.45);
+		box-shadow: 0 24px 70px -14px rgb(0 0 0 / 0.5);
 	}
 
 	.sync-head {
@@ -389,19 +478,26 @@ $effect(() => {
 		gap: 0.75rem;
 	}
 
-	.sync-head h3 {
+	.head-text h3 {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
 		margin: 0;
-		font-size: 1.0625rem;
+		font-size: 1.125rem;
 		font-weight: 700;
 		color: var(--deep-text);
+	}
+
+	.head-icon {
+		color: var(--primary);
 	}
 
 	.sync-sub {
 		display: flex;
 		align-items: center;
 		gap: 0.375rem;
-		margin: 0.25rem 0 0;
-		font-size: 0.75rem;
+		margin: 0.5rem 0 0;
+		font-size: 0.8125rem;
 		color: var(--content-meta);
 	}
 
@@ -444,84 +540,95 @@ $effect(() => {
 
 	.sync-error {
 		margin: 0;
-		padding: 0.5rem 0.75rem;
+		padding: 0.625rem 0.875rem;
 		border-radius: 0.5rem;
 		background: color-mix(in srgb, var(--destructive, #d33) 12%, transparent);
 		font-size: 0.75rem;
-		line-height: 1.5;
+		line-height: 1.55;
 		white-space: pre-wrap;
 		word-break: break-word;
 		max-height: 7rem;
 		overflow: auto;
 	}
 
-	.sync-toolbar,
-	.sync-actions {
+	.sync-toolbar {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.75rem;
+		font-size: 0.875rem;
+		color: var(--deep-text);
 	}
 
-	.sync-actions {
-		padding-top: 0.75rem;
-		border-top: 1px solid var(--post-editor-rule);
+	.num-warn {
+		color: oklch(0.72 0.16 45);
 	}
 
-	.toolbar-actions {
+	.num-ok {
+		color: oklch(0.72 0.15 145);
+	}
+
+	.sync-list-wrap {
+		flex: 1;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+		border-radius: 0.75rem;
+		background: var(--btn-regular-bg);
+		overflow: hidden;
+	}
+
+	.list-head {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+		padding: 0.5rem 0.875rem;
+		border-bottom: 1px solid var(--line-divider);
 	}
 
-	.muted {
+	.head-check {
+		display: flex;
+		align-items: center;
+	}
+
+	.head-label {
 		font-size: 0.75rem;
 		color: var(--content-meta);
-	}
-
-	.link-btn {
-		border: none;
-		background: transparent;
-		font-size: 0.75rem;
-		color: var(--primary);
-		cursor: pointer;
-		padding: 0.125rem 0.25rem;
-	}
-
-	.link-btn:hover {
-		text-decoration: underline;
 	}
 
 	.sync-list {
 		flex: 1;
 		min-height: 0;
 		margin: 0;
-		padding: 0;
+		padding: 0.375rem;
 		list-style: none;
 		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
-		gap: 0.125rem;
+		gap: 0.25rem;
 	}
 
 	.sync-row {
 		display: flex;
 		align-items: center;
 		gap: 0.625rem;
-		padding: 0.4375rem 0.5rem;
-		border-radius: 0.5rem;
+		padding: 0.625rem 0.625rem;
+		border-radius: 0.625rem;
+		background: var(--card-bg);
+		transition: background 0.15s;
 	}
 
 	.sync-row:hover {
-		background: var(--btn-plain-bg-hover);
+		background: color-mix(in srgb, var(--primary) 6%, var(--card-bg));
 	}
 
-	.sync-row.dim {
-		opacity: 0.55;
+	.sync-row.same {
+		opacity: 0.6;
 	}
 
-	.hidden-same {
-		display: none;
+	/* 失败的条目整行标红：底栏一行文字在长列表里太容易漏看 */
+	.sync-row.failed {
+		background: color-mix(in srgb, var(--destructive, #d33) 12%, var(--card-bg));
 	}
 
 	.row-check {
@@ -538,64 +645,115 @@ $effect(() => {
 	}
 
 	.row-slug {
-		font-size: 0.8125rem;
+		font-size: 0.875rem;
 		color: var(--deep-text);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
-	.row-state {
+	.badge {
 		flex-shrink: 0;
-		padding: 0.0625rem 0.375rem;
-		border-radius: 0.25rem;
+		padding: 0.125rem 0.4375rem;
+		border-radius: 0.3125rem;
 		font-size: 0.6875rem;
+		font-weight: 500;
 		color: var(--content-meta);
-		background: var(--btn-regular-bg);
+		background: var(--btn-plain-bg-hover);
 	}
 
-	.row-state[data-state="differs"] {
-		color: oklch(0.7 0.16 40);
-		background: color-mix(in srgb, oklch(0.7 0.16 40) 15%, transparent);
+	.badge[data-state="differs"] {
+		color: oklch(0.72 0.16 45);
+		background: color-mix(in srgb, oklch(0.72 0.16 45) 16%, transparent);
 	}
 
-	.row-state[data-state="remote-only"] {
+	.badge[data-state="remote-only"] {
 		color: oklch(0.72 0.13 220);
-		background: color-mix(in srgb, oklch(0.72 0.13 220) 15%, transparent);
+		background: color-mix(in srgb, oklch(0.72 0.13 220) 16%, transparent);
 	}
 
-	.row-state[data-state="local-only"] {
+	.badge[data-state="local-only"] {
 		color: oklch(0.72 0.15 145);
-		background: color-mix(in srgb, oklch(0.72 0.15 145) 15%, transparent);
+		background: color-mix(in srgb, oklch(0.72 0.15 145) 16%, transparent);
 	}
 
-	.row-dir {
+	.row-actions {
 		display: flex;
-		gap: 0.25rem;
+		align-items: center;
+		gap: 0.375rem;
 		flex-shrink: 0;
 	}
 
-	.dir-btn {
-		display: grid;
-		place-items: center;
-		width: 1.75rem;
-		height: 1.75rem;
+	.text-btn {
+		padding: 0.3125rem 0.625rem;
 		border: 1px solid var(--line-divider);
-		border-radius: 0.375rem;
+		border-radius: 0.5rem;
 		background: transparent;
+		font-size: 0.75rem;
 		color: var(--content-meta);
 		cursor: pointer;
+		white-space: nowrap;
+		transition:
+			color 0.15s,
+			border-color 0.15s,
+			background 0.15s;
 	}
 
-	.dir-btn:hover {
+	.text-btn:hover:not(:disabled) {
 		color: var(--deep-text);
 		border-color: var(--primary);
 	}
 
-	.dir-btn.active {
+	.text-btn:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
+
+	.text-btn.on {
 		color: var(--primary-foreground, #fff);
 		background: var(--primary);
 		border-color: var(--primary);
+	}
+
+	/* 覆盖本地是破坏性操作，未选中时也保留警告色，让风险先被看见 */
+	.text-btn.danger:not(.on) {
+		color: oklch(0.72 0.16 45);
+		border-color: color-mix(in srgb, oklch(0.72 0.16 45) 45%, transparent);
+	}
+
+	.diff-pane {
+		padding: 0.5rem;
+	}
+
+	.diff-cols {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.5rem;
+	}
+
+	.diff-col {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		min-width: 0;
+	}
+
+	.diff-title {
+		font-size: 0.6875rem;
+		color: var(--content-meta);
+	}
+
+	.diff-body {
+		margin: 0;
+		max-height: 14rem;
+		overflow: auto;
+		padding: 0.5rem 0.625rem;
+		border-radius: 0.5rem;
+		background: var(--btn-regular-bg);
+		font-size: 0.6875rem;
+		line-height: 1.5;
+		white-space: pre-wrap;
+		word-break: break-word;
 	}
 
 	.run-msg {
@@ -606,5 +764,29 @@ $effect(() => {
 
 	.run-msg.failed {
 		color: var(--destructive, #d33);
+	}
+
+	.sync-actions {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding-top: 0.875rem;
+		border-top: 1px solid var(--post-editor-rule);
+	}
+
+	.selected-tip {
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+	}
+
+	.selected-tip b {
+		color: var(--deep-text);
+	}
+
+	.toolbar-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
 	}
 </style>
