@@ -1,5 +1,6 @@
 <script lang="ts">
 import { getContext } from "svelte";
+import PostMetaBar from "@/components/admin/PostMetaBar.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -200,6 +201,14 @@ const TOOLS: {
 			onscroll={actions.handlePreviewScroll}
 			class="prose dark:prose-invert prose-base max-w-none! content-preview custom-md"
 		>
+			<!-- 标题 + 元数据栏：与历史版本页共用 PostMetaBar，
+			     数据源绑定当前编辑器状态，随输入实时更新 -->
+			<h1 class="mb-3 text-3xl font-bold text-(--deep-text)">{editorState.title || "—"}</h1>
+			<PostMetaBar
+				published={editorState.published}
+				category={editorState.category}
+				tags={editorState.tags}
+			/>
 			{@html editorState.renderedHtml}
 		</div>
 	{/if}

@@ -15,6 +15,8 @@
  *      右 .post-history-sidebar（20rem 固定宽）
  *   3. 列表项是带描边的卡片块，::before 画左侧时间轴
  */
+
+import PostMetaBar from "@/components/admin/PostMetaBar.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -439,40 +441,14 @@ $effect(() => {
 						)}
 						· {reasonLabel(selected.reason)}
 					</p>
-					<!-- 元数据栏：结构与图标全部照搬前台 src/components/layout/PostMeta.astro
-					     日期（calendar-today-outline-rounded）/ 分类（book-2-outline-rounded）/
-					     标签（tag-rounded，用「/」分隔）。前台该栏没有封面项，故不渲染封面。 -->
-					<div class="post-meta-root">
-						<div class="post-meta-item">
-							<div class="meta-icon">
-								<Icon icon="material-symbols:calendar-today-outline-rounded" />
-							</div>
-							<span>{fmtDate(selected.savedAt)}</span>
-						</div>
-						<div class="post-meta-item">
-							<div class="meta-icon">
-								<Icon icon="material-symbols:book-2-outline-rounded" />
-							</div>
-							<span>
-								{selected.category || i18n(I18nKey.postCategoryPlaceholder)}
-							</span>
-						</div>
-						<div class="post-meta-item">
-							<div class="meta-icon">
-								<Icon icon="material-symbols:tag-rounded" />
-							</div>
-							{#if selected.tags.length > 0}
-								{#each selected.tags as tag, i (tag)}
-									{#if i > 0}
-										<span class="post-meta-divider">/</span>
-									{/if}
-									<span>{tag.trim()}</span>
-								{/each}
-							{:else}
-								<span>{i18n(I18nKey.postMetaTagsEmpty)}</span>
-							{/if}
-						</div>
-					</div>
+					<!-- 元数据栏：改用共用组件 PostMetaBar（内部结构与样式对应
+					     前台 PostMeta.astro + main.css 的 .meta-icon），
+					     编辑器预览区用的是同一个组件，两处外观天然一致 -->
+					<PostMetaBar
+						published={String(selected.savedAt)}
+						category={selected.category}
+						tags={selected.tags}
+					/>
 					<!-- 渲染容器与编辑页预览完全同一组 class：
 					     src/components/admin/PostEditorWritePanel.svelte:201
 					     "prose dark:prose-invert prose-base max-w-none! content-preview custom-md"
@@ -846,76 +822,7 @@ $effect(() => {
 		color: var(--content-meta);
 	}
 
-	/* 元数据栏：抄前台 PostMeta.astro + main.css 442-449 的 .meta-icon。
-	   分隔线挂在栏底（与正文隔开），并允许换行：窄屏挤不下时自动折行。 */
-	.post-meta-root {
-		display: flex;
-		flex-direction: row;
-		flex-wrap: wrap;
-		align-items: center;
-		justify-content: flex-start;
-		gap: 0.75rem 1.25rem;
-		margin: 0 0 1.5rem;
-		padding: 0 0 1.25rem;
-		border-bottom: 1px solid var(--post-editor-rule);
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--content-meta);
-	}
-
-	/* 窄屏收紧间距，尽量在折行前多放一项 */
-	@media (max-width: 900px) {
-		.post-meta-root {
-			gap: 0.5rem 0.875rem;
-		}
-	}
-
-	.post-meta-item {
-		display: flex;
-		flex-direction: row;
-		flex-wrap: wrap;
-		align-items: center;
-		/* 整项不参与压缩：空间不够时由外层 wrap 折行，而不是把内部文字挤成竖排 */
-		flex-shrink: 0;
-		flex-grow: 0;
-		max-width: 100%;
-	}
-
-	/* 标签/分类/日期文字一律不折行，也不被压缩 */
-	.post-meta-item > span,
-	.post-meta-item :global(a) {
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
-
-	.meta-icon {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 2rem;
-		height: 2rem;
-		margin-right: 0.5rem;
-		border-radius: 0.375rem;
-		background: var(--btn-regular-bg);
-		/* --btn-content 在本项目未定义时会回落到纯黑，深色主题下看不见图标 */
-		color: var(--btn-content, var(--deep-text));
-		transition: colors 0.15s;
-	}
-
-	.post-meta-item :global(svg) {
-		width: 1.25rem;
-		height: 1.25rem;
-		fill: currentcolor;
-	}
-
-	/* 标签之间的「/」分隔 */
-	.post-meta-divider {
-		margin-inline: 0.375rem;
-		color: var(--line-divider);
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
-
+	/* 元数据栏的样式已移入 PostMetaBar.svelte（scoped），此处不再保留副本 */
 	/* 正文：行高与段落间距由 prose / prose-base 负责（与编辑页预览同一组 class），
 	   这里只补颜色，避免深色主题下正文发暗。 */
 	.post-editor-body {
