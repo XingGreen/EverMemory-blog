@@ -978,8 +978,10 @@ function actionLabel(action: string, title: string): string {
 	</div>
 {/if}
 
-<!-- 同步面板：打开时先只读检查并展示差异与失败原因，用户确认后才真正执行同步 -->
-<SyncPanel bind:open={syncPanelOpen} onSynced={onSync} />
+<!-- 同步面板：打开时先只读检查并展示差异与失败原因，用户点面板内的按钮才真正执行。
+     onSynced 必须接「刷新列表」而不是 handleSync —— 后者自己就会 POST /sync，
+     挂上去会导致面板同步完再拉一遍。 -->
+<SyncPanel bind:open={syncPanelOpen} onSynced={onRefresh} />
 
 <style>
 	.md3-list-container {

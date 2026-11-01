@@ -23,6 +23,7 @@ import PostList from "./PostList.svelte";
 import SecretManager from "./SecretManager.svelte";
 import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
+import SyncPanel from "./SyncPanel.svelte";
 import TaxonomyManager from "./TaxonomyManager.svelte";
 
 type Post = {
@@ -138,6 +139,8 @@ let dirtyListOpen = $state(false);
 let leaveConfirmOpen = $state(false);
 /** 会话过期提示（由 auth-expired 的单例闸门保证只弹一次） */
 let authExpiredOpen = $state(false);
+/** 同步面板：所有「同步文章」入口统一打开它，不再直接触发拉取 */
+let adminSyncPanelOpen = $state(false);
 let pendingPath = $state("");
 let tourOpen = $state(false);
 let isSyncing = $state(false);
@@ -1400,7 +1403,7 @@ function formatDate(dateStr: string | null): string {
 				<Icon icon="material-symbols:settings" class="action-icon" />
 				<span>{i18n(I18nKey.adminSettings)}</span>
 			</button>
-			<button class="action-card tinted tone-wheat" onclick={handleSync} disabled={isSyncing}>
+			<button class="action-card tinted tone-wheat" onclick={() => (adminSyncPanelOpen = true)} disabled={isSyncing}>
 				<Icon icon="material-symbols:cloud" class={isSyncing ? "action-icon syncing" : "action-icon"} />
 				<span>{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}</span>
 			</button>
@@ -1654,7 +1657,7 @@ function formatDate(dateStr: string | null): string {
 							{#snippet actions()}
 								<button
 									class="ui-btn ui-btn-soft"
-									onclick={handleSync}
+									onclick={() => (adminSyncPanelOpen = true)}
 									disabled={isLoading || isSyncing}
 									aria-label={i18n(I18nKey.postSyncNow)}
 								>
@@ -1941,6 +1944,10 @@ function formatDate(dateStr: string | null): string {
 {/if}
 
 <!-- 站内切换页面时的未保存确认（对应参考项目 useBlocker 的 resolver 弹窗） -->
+<!-- 同步面板：仪表盘快捷操作与列表页的「同步文章」共用同一个面板，
+     点开只做只读检查，真正执行要再点面板里的按钮 -->
+<SyncPanel bind:open={adminSyncPanelOpen} onSynced={loadPosts} />
+
 {#if authExpiredOpen}
 	<div
 		class="modal-overlay"
