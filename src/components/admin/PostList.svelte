@@ -1,6 +1,7 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import PostRowMenu from "@/components/admin/PostRowMenu.svelte";
+import SyncPanel from "@/components/admin/SyncPanel.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -32,6 +33,9 @@ let {
 	 *  套进 AdminPage 时传 false，页头由外壳的 title/actions 承担。 */
 	heading?: boolean;
 } = $props();
+
+/** 同步面板开关：点「同步文章」打开专门的面板，不再直接触发同步 */
+let syncPanelOpen = $state(false);
 
 const showHeading = $derived(heading !== false);
 
@@ -509,7 +513,7 @@ function actionLabel(action: string, title: string): string {
 			{#if onSync}
 				<button
 					class="ui-btn ui-btn-soft"
-					onclick={onSync}
+					onclick={() => (syncPanelOpen = true)}
 					disabled={isLoading || isSyncing}
 					aria-label={i18n(I18nKey.postSyncNow)}
 				>
@@ -973,6 +977,9 @@ function actionLabel(action: string, title: string): string {
 		</div>
 	</div>
 {/if}
+
+<!-- 同步面板：打开时先只读检查并展示差异与失败原因，用户确认后才真正执行同步 -->
+<SyncPanel bind:open={syncPanelOpen} onSynced={onSync} />
 
 <style>
 	.md3-list-container {
