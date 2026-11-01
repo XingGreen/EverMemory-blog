@@ -463,15 +463,23 @@ $effect(() => {
 					<p class="post-history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
 				{:else}
 					{#each revisions as item (item.id)}
+						<!-- 结构照搬前台归档页 src/components/controls/ArchivePanel.svelte:220-246：
+						     三列（左侧日期右对齐 / 中间空心圆点 / 右侧内容），
+						     圆点是 h-3 w-3 的 outline 空心环，没有竖线 -->
 						<button
 							type="button"
-							class="post-history-version"
+							class="history-version"
 							class:is-active={item.id === currentId}
 							onclick={() => selectRevision(item.id)}
 						>
-							<time class="post-history-time">{fmtTime(item.savedAt)}</time>
-							<span class="post-history-reason">{reasonLabel(item.reason)}</span>
-							<span class="post-history-version-title">{item.title || "—"}</span>
+							<div class="history-version-date">{fmtDate(item.savedAt)}</div>
+							<div class="history-version-dot">
+								<div class="dot"></div>
+							</div>
+							<div class="history-version-body">
+								<span class="history-version-reason">{reasonLabel(item.reason)}</span>
+								<span class="history-version-title">{item.title || "—"}</span>
+							</div>
 						</button>
 					{/each}
 				{/if}
@@ -862,16 +870,18 @@ $effect(() => {
 		padding: 0.5rem 1.25rem 1.5rem 2rem;
 	}
 
-	/* 参考 .post-history-version：只有圆角 + 内边距 + 块间距 + 时间轴，
-	   没有描边、没有卡片底；选中态只改圆点颜色（见 .is-active::after） */
-	.post-history-version {
-		position: relative;
-		display: block;
+	/* 时间轴列表项：结构照搬前台归档页 ArchivePanel.svelte:220-246 ——
+	   三列布局（日期右对齐 / 空心圆点 / 内容），hover 时整行抬底并转主色，
+	   没有自绘的竖线与实心圆 */
+	.history-version {
+		display: flex;
+		flex-direction: row;
 		width: 100%;
-		padding: 1rem 1.125rem;
-		margin-bottom: 0.75rem;
+		align-items: center;
+		min-height: 3.75rem;
+		padding: 0.5rem 0.75rem;
 		border: none;
-		border-radius: 0.625rem;
+		border-radius: 0.5rem;
 		background: transparent;
 		font-family: inherit;
 		color: inherit;
@@ -882,59 +892,68 @@ $effect(() => {
 			color 0.15s;
 	}
 
-	/* 时间轴：竖线（::before）+ 节点圆点（::after），
-	   末项的竖线只画到节点处，不拖到底——三条规则都照参考 296-330 行 */
-	.post-history-version::before {
-		content: "";
-		position: absolute;
-		left: -0.625rem;
-		top: 0;
-		bottom: -0.75rem;
-		width: 1px;
-		background: var(--post-editor-rule);
+	.history-version:hover {
+		background: var(--btn-plain-bg-hover);
 	}
 
-	.post-history-version:last-child::before {
-		bottom: calc(100% - 2rem);
+	.history-version:hover .history-version-date,
+	.history-version:hover .history-version-body {
+		color: var(--primary);
 	}
 
-	.post-history-version::after {
-		content: "";
-		position: absolute;
-		left: calc(-0.625rem - 3px);
-		top: 1.625rem;
-		width: 7px;
-		height: 7px;
-		border-radius: 50%;
-		background: color-mix(in srgb, var(--deep-text) 30%, transparent);
+	.history-version-date {
+		width: 34%;
+		flex-shrink: 0;
+		text-align: right;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--content-meta);
+		transition: color 0.15s;
 	}
 
-	.post-history-version.is-active::after {
+	.history-version-dot {
+		width: 16%;
+		flex-shrink: 0;
+	}
+
+	/* 空心圆点：h-3 w-3 + outline 3px + outline-offset -2px（同归档页） */
+	.history-version-dot .dot {
+		width: 0.75rem;
+		height: 0.75rem;
+		margin-inline: auto;
+		border-radius: 9999px;
+		background: none;
+		outline: 3px solid var(--primary);
+		outline-offset: -2px;
+	}
+
+	.history-version.is-active .history-version-dot .dot {
 		background: var(--primary);
 	}
 
-	/* 选中态只改圆点（参考 .is-selected::after），不改文字颜色 */
-
-	.post-history-time {
-		display: block;
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--deep-text);
-	}
-
-	.post-history-reason {
-		display: block;
-		font-size: 0.875rem;
+	.history-version-body {
+		width: 50%;
+		flex-shrink: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		min-width: 0;
 		color: var(--content-meta);
+		transition: color 0.15s;
 	}
 
-	.post-history-version-title {
+	.history-version-reason {
+		font-size: 0.75rem;
+		color: inherit;
+	}
+
+	.history-version-title {
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 2;
 		overflow: hidden;
-		font-size: 0.875rem;
-		color: var(--content-meta);
+		font-size: 0.8125rem;
+		color: inherit;
 	}
 
 	/* 参考 .post-history-delete */
