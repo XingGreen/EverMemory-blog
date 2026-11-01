@@ -41,6 +41,7 @@ type Revision = {
 	category: string;
 	tags: string[];
 	image: string;
+	draft: boolean;
 };
 
 let revisions = $state<Revision[]>([]);
@@ -169,12 +170,15 @@ function fmtDate(ts: number): string {
 }
 
 /** 月-日：年份已在分组节点上，普通节点只显示月和日 */
+/** 月-日 时:分：年份已在分组节点上，普通节点精确到分钟 */
 function fmtMonthDay(ts: number): string {
 	if (!ts) return "";
 	const d = new Date(ts);
-	return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(
-		d.getDate(),
-	).padStart(2, "0")}`;
+	const mm = String(d.getMonth() + 1).padStart(2, "0");
+	const dd = String(d.getDate()).padStart(2, "0");
+	const hh = String(d.getHours()).padStart(2, "0");
+	const mi = String(d.getMinutes()).padStart(2, "0");
+	return `${mm}-${dd} ${hh}:${mi}`;
 }
 
 function reasonLabel(reason: string): string {
@@ -542,7 +546,9 @@ $effect(() => {
 										</div>
 										<div class="flex min-w-0 flex-1 flex-col gap-1 py-3 pr-2">
 											<span class="text-xs text-50">
-												{fmtMonthDay(item.savedAt)} · {reasonLabel(item.reason)}
+												{fmtMonthDay(item.savedAt)} · {item.draft
+													? i18n(I18nKey.taxonomyDraftBadge)
+													: i18n(I18nKey.taxonomyScopePublished)}
 											</span>
 											<span
 												class="truncate text-sm font-bold text-75 transition-all
