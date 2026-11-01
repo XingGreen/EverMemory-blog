@@ -8,10 +8,13 @@ export const prerender = false;
 /* 远端清单缓存：GitHub 的目录接口按层递归请求，列表页每打开一次就打一轮太浪费。
    serverless 实例复用时有效，冷启动重置，属于可接受的尽力缓存。 */
 const REMOTE_CACHE_TTL_MS = 60_000;
-let remoteCache: { at: number; slugs: Map<string, string> } | null = null;
+/** 失败结果单独缓存更短的时间：避免每次进列表页都白等一个超时 */
+const REMOTE_FAIL_CACHE_MS = 20_000;
+let remoteCache: { at: number; slugs: Map<string, string> | null } | null =
+	null;
 
 /** 单次远端清单的耗时上限。超时即降级：宁可没有徽章，也不让列表等下去。 */
-const REMOTE_TIMEOUT_MS = 4_000;
+const REMOTE_TIMEOUT_MS = 12_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 	return new Promise<T>((resolve, reject) => {
@@ -38,12 +41,16 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
  * 列表照常返回（同步状态是增强信息，不该拖垮主列表）。
  */
 async function getRemoteSlugs(): Promise<Map<string, string> | null> {
-	if (remoteCache && Date.now() - remoteCache.at < REMOTE_CACHE_TTL_MS) {
-		return remoteCache.slugs;
+	if (remoteCache) {
+		const ttl = remoteCache.slugs ? REMOTE_CACHE_TTL_MS : REMOTE_FAIL_CACHE_MS;
+		if (Date.now() - remoteCache.at < ttl) return remoteCache.slugs;
 	}
 	try {
-		/* 底层 fetchWithRetry 是 30s 超时 × 3 次重试，对列表页太长；这里整体限时，
-		   拿不到就降级不标状态，不能让同步标记来决定列表能不能打开。 */
+		/* 底层 fetchWithRetry 是 30s 超时 × 3 次重试，对列表页太长；这里整体限时。
+		   超时值从 4s 提到 12s：GitHub 要串行拉三个目录，首包 TTFB 加目录遍历
+		   经常超过 4s，原来几乎每次都以 timeout 收场，同步状态因此永远标不上，
+		   用户看到的就是「明明没网却显示已同步」。
+		   拿不到就降级为 null，不能让同步标记决定列表能不能打开。 */
 		const paths = await withTimeout(
 			listAllMarkdownFiles("src/content/posts"),
 			REMOTE_TIMEOUT_MS,
@@ -58,6 +65,9 @@ async function getRemoteSlugs(): Promise<Map<string, string> | null> {
 		remoteCache = { at: Date.now(), slugs };
 		return slugs;
 	} catch (error) {
+		/* 失败也写缓存，否则每次进列表页都要白等一个超时；
+		   TTL 用更短的 REMOTE_FAIL_CACHE_MS，让网络恢复后能较快重试。 */
+		remoteCache = { at: Date.now(), slugs: null };
 		console.warn(
 			"[Admin Posts] 远端清单获取失败，本次不标记同步状态：",
 			error instanceof Error ? error.message : error,

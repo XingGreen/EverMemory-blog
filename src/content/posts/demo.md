@@ -1,218 +1,186 @@
 ---
 title: "demo"
-published: 2026-08-02
-image: "https://t.alcy.cc/pc"
-tags: ["demo"]
-category: "demo"
-author: "demo"
-draft: false
-pinned: false
-comment: false
-password: "123"
-passwordHint: "123"
+published: 2026-10-11
+updated: 2026-10-30
+description: "fewwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww"
+tags: ["使用指南", "mmmm", "mmmmmm"]
+draft: true
+pinned: true
+comment: true
 ---
 
-# Markdown 语法测试文章
+# 后台安全管理计划 · 2026-10-13
 
-本文档旨在全面展示 Markdown 的常用语法，涵盖标题、文本格式、列表、链接、图片、代码、表格、引用、转义字符等核心元素，方便您进行渲染测试。
+来源：对 `docs/todo/单管理员博客：初始化、会话与凭据安全设计.md` 的多轮评估讨论。
 
----
-
-## 1. 标题（Headings）
-
-Markdown 支持 6 级标题，使用 `#` 符号表示：
-
-# H1 一级标题
-## H2 二级标题
-### H3 三级标题
-#### H4 四级标题
-##### H5 五级标题
-###### H6 六级标题
+**评估结论**：该文档约七成目标本项目已实现，且会话部分比文档更完整（文档设想"服务端不追踪会话"，本项目的会话表更强）。真正要新增的有三块：**双密码双空间（第二密码 → 控制面）**、**登录层 IP 封禁**、**平台层核按钮**。文档中假设的 Cloudflare Workers / `wrangler` / `admin.json` 与本项目现实不符，全部不采纳。
 
 ---
-
-## 2. 文本格式（Text Formatting）
-
-- **粗体**：使用 `**粗体**` 或 `__粗体__`
-- *斜体*：使用 `*斜体*` 或 `_斜体_`
-- ***粗斜体***：使用 `***粗斜体***`
-- ~~删除线~~：使用 `~~删除线~~`
-- <u>下划线</u>：使用 HTML 标签 `<u>`
-- `行内代码`：使用反引号 `` `代码` ``
+nnnnnnnmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+## 0. 威胁模型边界（讨论确定）nnnnnnnnn
+bbb
+- **范围内**：应用层凭据或会话失守。vubuhuyvuybubuuyuyuyuyuyyuyuuuuuuuuuuu
+  - 撞库成功（攻击者拿到主密码）；
+  - 会话 cookie 被窃（攻击者拿到有效会话）。mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+- **范围外**：**Vercel 平台账号**失守。攻击者能改平台 env、删部署、读全部 secret，项目代码无力阻止，不做任何处理。极端情况（RCE / 文件读取）同样不在范围内。
+- **推论 1**：项目侧不承担"对抗已入侵者"，只做"**保住控制权 + 争取时间的缓冲** + 日常运维"。
+- **推论 2**：真正的核按钮必须落在**攻击者够不着的地方**（平台 env / Vercel Firewall）。
+- **推论 3（已定，见 Q1）**：KV 凭据非人工输入、不经任何 API 回显，故既定威胁模型下攻击者拿不到 KV。**应用内 KV 黑名单与会话表因此可靠。**
 
 ---
 
-## 3. 段落与换行
+## 1. 核实
 
-这是第一段。
-这是第二段（中间空行）。
+### 1.1 已实现（不重做）
 
-这是第三段，末尾加两个空格  
-实现软换行。
+| 能力 | 位置 | 说明 |
+|---|---|---|
+| 签名 token + `tokenVersion` 全踢 | `auth.ts:30-36`、`:156-159` | payload 的 `ver` 比对 `ADMIN_TOKEN_VER`，改密即全部旧会话失效 |
+| 服务端会话表（设备/IP/时间） | `session-store.ts:22-38` | `AdminSession` 含 `ip`（**按 IP 踢会话的关键**）、`device`、`loginAt`、`lastSeenAt`、`exp` |
+| 列出 / 踢单个 / 踢其他全部 | `session-store.ts:117`、`:127`、`:179` | |
+| JWT 校验含会话存在性检查 | `auth.ts:161-165` | 无 `sid` 的旧令牌一律无效 |
+| 初始化向导 + 一次性安装令牌 | `setup.ts:34`、`:54`、`:94`、`:119` | 令牌打印到日志、用后焚毁；只读部署返回 403 |
+| scrypt 密码哈希 + 旧哈希自动迁移 | `auth.ts:247-282` | `N = 2^17` |
+| 存储后端自动选择 | `persist-store.ts:209-221` | 有 `KV_REST_API_URL/TOKEN` → Vercel KV；否则本机文件 |
+| 登录失败自动锁定 + 固定窗口频次 | `login-guard.ts:169`、`:227` | 自动、自过期（30 分钟封顶）、**只针对登录** |
+| Web 会话管理 / 密钥管理 | `sessions.ts`、`secrets.ts` + `SessionManager.svelte`、`SecretManager.svelte` | |
 
----
+### 1.2 线上可写性核实
 
-## 4. 列表（Lists）
+`isEnvFileWritable() = !import.meta.env.PROD`（`secret-io.ts:24-26`），所以**线上 `.env.local` 类写入全部关闭**：
 
-### 无序列表（Unordered List）
-- 项目 1
-- 项目 2
-  - 子项目 2.1
-  - 子项目 2.2
-- 项目 3
+- `secrets.ts` POST → 403（`:82-91`）；
+- `setup.ts` POST → 403（`:65-74`）；
+- `incrementTokenVersion()` 也失败（`secret-io.ts:312-321`）。
 
-### 有序列表（Ordered List）
-1. 第一步
-2. 第二步
-   1. 子步骤 2.1
-   2. 子步骤 2.2
-3. 第三步
+**结论 A**：线上没有任何应用内的"改凭据"或"让全部会话失效"手段，只有**平台 env + redeploy**一条路（对应用户做法：本地改 + 手动上传）。
 
-### 任务列表（Task List）
-- [x] 已完成任务
-- [ ] 未完成任务
-- [ ] 待办事项
+**结论 B**：线上仍能写以下持久状态，其中写 GitHub 最危险：
 
----
+| 端点 | 线上可写 | 危害 |
+|---|---|---|
+| `runtime-config/[key].ts` PUT | KV，即时生效 | 改站点运行时行为（并入控制面） |
+| `draft.ts` | KV | 覆盖云端草稿 |
+| `sessions.ts` DELETE | KV | 踢掉管理员（并入控制面） |
+| `configs/[key].ts` POST | GitHub 仓库（`:110-158`） | 借 GitHub App 凭据改仓库源码文件 |
+| `save.ts` / `delete.ts` / `sync.ts` | GitHub 仓库 | 发/删文章、推 commit |
 
-## 5. 链接（Links）
+**结论 C**：攻击者持会话的**最大破坏面不是"改密码"（线上做不到），而是"用 GitHub App 凭据写仓库"**，此路径不受"线上只读"影响。
 
-- [百度](https://www.baidu.com)
-- [带标题的链接](https://www.example.com "示例网站")
-- 自动链接：<https://www.github.com>
-- 引用式链接：[Google][1]
+### 1.3 关键代码约束（实现前必读）
 
-[1]: https://www.google.com
-
----
-
-## 6. 图片（Images）
-
-![示例图片](https://picsum.photos/200/150 "随机图片")
-
----
-
-## 7. 代码块（Code Blocks）
-
-### 行内代码
-使用 `console.log('Hello World')` 输出日志。
-
-### 围栏代码块（Fenced Code Block）
-```javascript
-// JavaScript 示例
-function greet(name) {
-  return `Hello, ${name}!`;
-}
-console.log(greet('Markdown'));
-```
-
-```python
-# Python 示例
-def greet(name):
-    return f"Hello, {name}!"
-print(greet("Markdown"))
-```
-
-```bash
-# Shell 命令
-echo "测试代码块"
-ls -la
-```
+| 约束 | 位置 | 含义 |
+|---|---|---|
+| `role !== "admin"` 硬检查 | `auth.ts:152-154` | **super 会话会被直接判无效**，必须先支持第二角色 |
+| 登录成功清零计数 | `verify.ts:135-136` | `clearFailures` / `clearAttempts` 按 clientKey，**双密码共用会造成第二密码可被无限探测** |
+| 两个校验无条件执行 | `verify.ts:131-132` | 现为防时序侧信道；加入第二密码后成本与顺序都要重新设计 |
+| 审计硬编码 `username: "admin"` | `sessions.ts:43`、`:106` 等 | 双空间操作在日志中无法区分，审计失真 |
+| `.env.local` 键白名单 | `secret-io.ts`（`readSecretStates` 遍历 `ENV_KEYS`） | 新键（第二密码哈希）需确认是否纳入 `ENV_KEYS`/`admin-secrets` 清单 |
 
 ---
 
-## 8. 表格（Tables）
+## 2. 现状缺口
 
-| 左对齐 | 居中对齐 | 右对齐 |
-|:-------|:--------:|-------:|
-| 苹果   | 红色     | 5.00   |
-| 香蕉   | 黄色     | 3.50   |
-| 葡萄   | 紫色     | 8.20   |
+| # | 缺口 | 落点 | 风险 / 动机 |
+|---|---|---|---|
+| **G1** | 登录层**没有 IP 黑名单**，只有自动锁定（自过期、不可点名、不可持久） | `login-guard.ts` + `verify.ts` | 无法主动、长期地挡已知攻击来源 |
+| **G2** | 无法**按 IP 踢会话**（只能按 `sid`） | `session-store.ts` | 封 IP 只挡新登录，挡不住攻击者**已有**的会话 |
+| **G3** | 控制面操作**无独立授权**——踢人/封禁/改运行时配置与日常操作同权 | 待建 | 攻击者持（主）会话即可踢掉管理员、夺走控制权 |
+| **G4** | **无终端核按钮**（全踢 / 封 IP 的带外包装） | `scripts/` + 运维手册 | 危急时刻 Web 进不去，没有自救入口 |
 
----
-
-## 9. 引用（Blockquotes）
-
-> 这是一级引用。
-> > 这是二级引用（嵌套）。
-> > > 这是三级引用。
->
-> 引用可以包含 **粗体** 或 *斜体*。
+（原 G4"GITHUB_PRIVATE_KEY 无二次验证"在线上不可利用——见结论 A；本地开发环境威胁低，降级为可选加固，见 P2。）
 
 ---
 
-## 10. 分隔线（Horizontal Rules）
+## 3. 计划
 
-使用三个或更多 `---`、`***` 或 `___`：
+### P0 · 双密码双空间（核心）
 
----
+**设计**（参考手机"分身空间"）：
 
-***
+- **同一登录界面，看不出区别**：不新增任何入口、按钮或提示。
+- **按密码分流**：
+  - 输入**主密码** → 进入**主空间**（`role: admin`）：现有后台全部功能；
+  - 输入**第二密码** → 进入**第二空间**（`role: super`，即"应急控制台"）：**主空间能力 + 控制面**（超集）；该会话有效期 1 小时、不提供"记住我"（Q8）。
+- **登录接口返回 `{ space: "admin" | "super" }`** 供前端分流（只有密码正确才返回，不向攻击者泄露）。
+- **不做数据隔离**：两空间共用同一份数据，差异**只在权限位**。不要另做一套后台。
+- **控制面（仅第二空间可见/可调）**：踢会话（含 `allOther`）、封/解 IP、改运行时配置（`runtime-config`）。普通文章编辑、看会话列表不要求 super。
+- **闭合收益**：踢人权只在控制面 → 攻击者（主空间）**踢不了你、封不了你**，你则以第二密码进第二空间把他踢掉。控制权攻守反转，且不依赖封 IP。
+- **安全边界**：前端不渲染只是 UX；**服务端必须按 role 校验**，控制面 API 无 super 一律 403。
 
-___
+**必须解决的实现问题**：
 
----
+1. **失败计数按"密码种类"独立**（致命）：否则攻击者用正确主密码登录一次即可 `clearFailures`（`verify.ts:135-136`），把猜第二密码的失败计数清掉，从而**无限探测第二密码**。第二密码的失败必须单独计数、单独锁定，主密码成功不清零它。
+2. **时序侧信道**：三类校验（用户名 / 主密码 / 第二密码）的成本与顺序要控制，避免用响应时间区分是"主密码对"还是"第二密码对"。代价是每次登录可能跑 2 次 scrypt（约 1s），可接受。
+3. **角色支持**：`auth.ts:152-154` 的 `role !== "admin"` 硬检查要改为接受 `admin`/`super`；需梳理所有 `requireAuth` 使用点，新增控制面专用的 super 校验。
+4. **审计区分空间**：修掉硬编码的 `username: "admin"`（`sessions.ts:43`、`:106` 等），并新增 super 空间相关审计事件。
+5. **存储与配置**：第二密码哈希用独立 env key（如 `ADMIN_SUPER_PASSWORD`）＋独立验证函数；确认是否纳入 `ENV_KEYS`/`admin-secrets` 清单。本地 `.env.local` 生成 → 手动上传平台 env；**"不走 Web 修改"天然满足**（线上本来就不可写）。
 
-## 11. 转义字符（Escaping Characters）
+**局限（写进文档，避免误解）**：第二密码**不阻止破坏**，只保证你**保有夺回的能力**。攻击者仍可用 `save.ts` / `configs` / `sync.ts` 写仓库，所以仍需尽快踢他 + 平台层失效凭据。
 
-使用反斜杠 `\` 转义特殊字符：
-\* 星号 \` 反引号 \_ 下划线 \{ \} 大括号 \[ \] 中括号 \( \) 小括号 \# 井号 \+ 加号 \- 减号 \. 点号 \! 感叹号
+### P0.5 · 登录层 IP 封禁（归属控制面）
 
----
+**动作 = 加入黑名单（挡新登录） ＋ 踢掉该 IP 的现有会话（挡当前会话）**——两者一起做，才实现"他有密码也没办法"。
 
-## 12. HTML 标签支持（部分）
+- `src/utils/login-guard.ts`：新增 `isIpBanned(ip)` / `banIp(ip, opts)` / `unbanIp(ip)` / `listBanned()`，复用既有 `getClientIp`、`getStore`、`writeAuditLog`；新增审计事件 `ip_banned` / `ip_unbanned`（`login-guard.ts:290-301` 联合类型）。KV 黑名单可靠性已由 Q1 确认。
+- `src/utils/session-store.ts`：新增 `revokeSessionsByIp(ip)`，复用 `ip` 字段（`session-store.ts:28`）与 `verifyDeleted` 竞态处理。
+- `src/pages/api/admin/verify.ts`：在 `clientKey`（`:46`）之后、闸门（`:88`）之前加黑名单拦截，返回 403（与锁定用 429 区分）。
+- 封禁入口：第二空间控制面 + CLI 兜底。
+- 测试：`tests/login-guard.test.ts`、`tests/session-store.test.ts` 补用例；**必须做变异测试**确认断言有效。
 
-Markdown 允许内联 HTML：
-<span style="color: red;">红色文字</span>
-<br>
-<kbd>Ctrl</kbd> + <kbd>C</kbd> 复制
-<details>
-<summary>点击展开详情</summary>
-这里是折叠内容。
-</details>
+### P1 · 平台层核按钮（写成运维手册，非代码）
 
----
+在 Vercel 上没有服务器终端，应急动作全部落在平台层：
 
-## 13. 脚注（Footnotes）[^1]
+| 动作 | 操作 | 效果 |
+|---|---|---|
+| 轮换 `ADMIN_JWT_SECRET` | 平台 env 改值 + redeploy | 全部旧 JWT 立即失效（即使 KV 被篡改也没用，验签失败） |
+| 重设 `ADMIN_PASSWORD` | 平台 env 改值 + redeploy | 攻击者掌握的密码作废 |
+| 封 IP | **Vercel Firewall**（付费计划） | 不占应用 KV，攻击者解不了 |
 
-[^1]: 这是一个脚注示例。
+可选：本机 CLI（`scripts/admin-*.ts`，用项目已有的 `tsx` 跑）把上述步骤 + `admin:revoke-all` / `admin:ban` / `admin:unban` 包装成命令；线上操作需先 `vercel env pull` 拿 KV 凭据。
 
-脚注可以放在文末[^2]。
-[^2]: 另一个脚注。
+### P2 · 顺手加固（可选）
 
----
+- 登录成功加**带外告警**（邮件/Webhook），攻击者一登录即知。
+- 第二密码校验**必须复用 `login-guard` 的频次/锁定**（或独立计数器），否则控制面成了新的爆破点。
+- 本地开发环境下给 `secrets.ts` 的破坏性密钥（`GITHUB_PRIVATE_KEY` 等）加二次验证（线上不可利用，优先级低）。
 
-## 14. 定义列表（Definition Lists）
+### 明确不做
 
-*[HTML]: HyperText Markup Language
-*[CSS]: Cascading Style Sheets
-
----
-
-## 15. 特殊字符与表情
-
-- 版权：&copy; 2026
-- 商标：&trade; &reg;
-- 表情（GFM 支持）：:smile: :rocket: :+1:
-
----
-
-## 16. 嵌套混合示例
-
-> ### 引用中的标题
-> - 引用中的列表项
-> - 包含 `代码` 和 **粗体**
->
-> ```
-> 引用中的代码块
-> ```
+- 迁移 Cloudflare Workers（`CLAUDE.md` 已实测否决：scrypt 峰值 189MiB > 128MB、CPU 484ms、无 KV adapter）。
+- 引入 `admin.json`（现状 `.env.local` + 平台 env 已满足，且被测试锁住）。
+- 拆掉 Web 的会话/密钥管理页（控制面在其之上加授权层）。
+- 用第二密码保护日常写仓库操作（会烦，且不阻止破坏）。
+- 把"对抗已入侵者"塞进应用内 KV（见推论 2/3）。
 
 ---
 
-## 17. 长文本与折行
+## 4. 决策记录与开放问题
 
-这是一个很长的段落，用来测试文本在浏览器中的自动换行效果。Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+### 已定
+
+- **Q1（KV 是否会被攻击者获取）**：否。KV 凭据非人工输入、不经 API 回显 → KV 黑名单/会话表可靠。
+- **Q2（解封通道）**：本地 CLI `admin:unban <ip>`，或平台层解除。
+- **进入方式**：同一登录界面看不出区别；主密码 → 主空间，第二密码 → 第二空间（**参考手机分身空间**）。
+- **第二空间范围**：主空间能力 **+ 控制面**（超集），不做数据隔离。
+- **分流**：登录接口返回 `{ space: "admin" | "super" }`。
+- **控制面范围**：踢会话（含 `allOther`）、封/解 IP、改运行时配置。
+- **第二密码修改路径**：只能本地/平台层，不开放 Web。
+- **授权形态**：由超集空间的 **super 会话**直接承载（不再需要额外短期票据，故原 Q3/Q7 消解）。
+- **Q4 命名**：第二空间/控制面称 **"应急控制台"**；主空间天然无入口，无需额外隐藏机制。
+- **Q5 忘记恢复**：平台层重设一份新哈希 + redeploy（与"第二密码只存平台 env"一致）。
+- **Q6 初始设置**：强制第二密码 ≠ 主密码；初始化向导新增**可选**一步设置（也可用 CLI 后补）；**未配置第二密码时降级为"主密码二次验证 + 提示建议设置"**，以便分批上线。
+- **Q8 super 会话有效期**：短于主会话——**1 小时**，不提供"记住我"。
+
+### 待定
+
+（本轮议题已全部收敛；实现过程中若出现新问题再追加到此处。）
 
 ---
 
-**测试结束。** 以上内容覆盖了 Markdown 绝大多数常用语法，可用于验证渲染器的兼容性与样式表现。
+## 5. 参考
+
+- 设计文档（评估对象）：`docs/todo/单管理员博客：初始化、会话与凭据安全设计.md`
+- 既有待办：`docs/todo/2026-10-06.md`
+- 关键代码：`src/utils/{auth,session-store,login-guard,persist-store,secret-io,setup}.ts`、`src/pages/api/admin/{verify,sessions,secrets,setup,runtime-config,configs,save,delete,sync}.ts`
