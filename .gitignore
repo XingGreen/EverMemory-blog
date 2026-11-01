@@ -80,3 +80,17 @@ docs/todo/单管理员博客：初始化、会话与凭据安全设计.md
 .tmp*
 
 .examples/
+.vercel
+.env*
+
+# 浏览器调试配置（Chrome 用户数据目录，单个就有 13MB）
+.proof-chrome-profile/
+.tmp-chrome-profile/
+
+# AI / 工具本地缓存
+.ai/
+.dsh/
+.opencode/
+
+# WorkBuddy 项目数据（记忆与本地状态，不进仓库）
+.workbuddy/

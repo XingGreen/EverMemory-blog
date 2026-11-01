@@ -40,6 +40,11 @@ export interface KVStore {
 	set(key: string, value: unknown, ttlSeconds?: number): Promise<void>;
 	/** 删除；键不存在时静默成功 */
 	del(key: string): Promise<void>;
+	/**
+	 * 按前缀列出键（倒序），用于审计日志这类「按命名约定取最近 N 条」的场景。
+	 * 可选实现：不支持时调用方需自行降级。
+	 */
+	list?(prefix: string, limit?: number): Promise<string[]>;
 }
 
 function assertSafeKey(key: string): void {
@@ -94,6 +99,20 @@ const fileStore: KVStore = {
 			await fs.unlink(path.join(FILE_PERSIST_DIR, `${key}.json`));
 		} catch {
 			// 文件不存在时静默成功
+		}
+	},
+
+	async list(prefix: string, limit = 200): Promise<string[]> {
+		try {
+			const names = await fs.readdir(FILE_PERSIST_DIR);
+			return names
+				.filter((n) => n.endsWith(".json") && n.startsWith(prefix))
+				.map((n) => n.slice(0, -".json".length))
+				.sort()
+				.reverse()
+				.slice(0, limit);
+		} catch {
+			return [];
 		}
 	},
 };
@@ -286,6 +305,28 @@ const kvStore: KVStore = {
 		if (!res.ok) {
 			recordKvFailure(new Error(`KV DEL ${res.status}`));
 			throw new Error(`[PersistStore] KV DEL 失败: ${res.status}`);
+		}
+	},
+
+	async list(prefix: string, limit = 200): Promise<string[]> {
+		/* Upstash 的 KEYS 命令：GET /keys/{pattern} → {"result": [...]}
+		   用 KEYS 而不是 SCAN，因为这里的量级只有几百条，
+		   SCAN 需要游标循环多轮请求，反而更麻烦。 */
+		try {
+			const { url, token } = kvConfigRequired();
+			const res = await kvFetch(
+				`${url}/keys/${encodeURIComponent(`${prefix}*`)}`,
+				{
+					headers: { Authorization: `Bearer ${token}` },
+				},
+			);
+			if (!res.ok) return [];
+			const data = (await res.json()) as { result?: string[] };
+			const keys = Array.isArray(data.result) ? data.result : [];
+			return keys.sort().reverse().slice(0, limit);
+		} catch {
+			// 列表失败不影响主流程：审计面板显示「暂无记录」即可
+			return [];
 		}
 	},
 };
