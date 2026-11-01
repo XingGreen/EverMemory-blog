@@ -218,6 +218,24 @@ async function loadDetail(id: string) {
 	}
 }
 
+/**
+ * 正文内锚点：拦掉默认的改 hash 行为。
+ * 点击标题锚点会让浏览器把地址改成 #xxx，进而触发 hashchange、浏览器默认跳转、
+ * 焦点落到 <a> 上显示 outline（视觉上就是顶部闪过一条横线）。
+ * 这里改成 preventDefault + scrollIntoView：只滚动，不改 URL、不触发全局监听。
+ */
+function onContentClick(e: MouseEvent) {
+	const target = e.target as HTMLElement | null;
+	const link = target?.closest?.('a[href^="#"]') as HTMLAnchorElement | null;
+	if (!link) return;
+	e.preventDefault();
+	const raw = link.getAttribute("href") ?? "";
+	const id = decodeURIComponent(raw.slice(1));
+	if (!id) return;
+	const el = document.getElementById(id);
+	el?.scrollIntoView({ block: "start" });
+}
+
 function selectRevision(id: string) {
 	currentId = id;
 	try {
@@ -421,8 +439,12 @@ $effect(() => {
 					     src/components/admin/PostEditorWritePanel.svelte:201
 					     "prose dark:prose-invert prose-base max-w-none! content-preview custom-md"
 					     prose / prose-base 负责行高与段落间距，此前漏了它们才显得挤。 -->
+					<!-- 点击委托：拦掉锚点改 hash（见 onContentClick）。
+					     键盘用户走 <a> 自身的焦点与回车，故此处不需 keydown。 -->
+					<!-- biome-ignore lint/a11y/noStaticElementInteractions: 事件委托，非交互元件 -->
 					<div
 						class="prose dark:prose-invert prose-base max-w-none post-editor-body custom-md"
+						onclick={onContentClick}
 					>
 						{@html detailHtml}
 					</div>
@@ -792,6 +814,21 @@ $effect(() => {
 	   这里只补颜色，避免深色主题下正文发暗。 */
 	.post-editor-body {
 		color: var(--deep-text);
+	}
+
+	/* 标题锚点聚焦时不显示轮廓——点击锚点会把焦点落在 <a> 上，
+	   默认 outline 是一条横贯的细线，看起来像顶部闪过的伪进度条 */
+	.post-editor-body :global(.anchor:focus),
+	.post-editor-body :global(.anchor:focus-visible) {
+		outline: none;
+	}
+
+	/* 滚动到锚点时不被上方内容压住 */
+	.post-editor-body :global(h1),
+	.post-editor-body :global(h2),
+	.post-editor-body :global(h3),
+	.post-editor-body :global(h4) {
+		scroll-margin-top: 1rem;
 	}
 
 	/* 参考 .post-history-sidebar */
