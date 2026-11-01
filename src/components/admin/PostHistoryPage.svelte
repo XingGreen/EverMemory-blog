@@ -691,10 +691,19 @@ $effect(() => {
 	.post-meta-item {
 		display: flex;
 		flex-direction: row;
+		flex-wrap: wrap;
 		align-items: center;
+		/* 整项不参与压缩：空间不够时由外层 wrap 折行，而不是把内部文字挤成竖排 */
 		flex-shrink: 0;
+		flex-grow: 0;
 		max-width: 100%;
-		min-width: 0;
+	}
+
+	/* 标签/分类/日期文字一律不折行，也不被压缩 */
+	.post-meta-item > span,
+	.post-meta-item :global(a) {
+		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	.meta-icon {
@@ -721,6 +730,8 @@ $effect(() => {
 	.post-meta-divider {
 		margin-inline: 0.375rem;
 		color: var(--line-divider);
+		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	/* 正文：行高与段落间距由 prose / prose-base 负责（与编辑页预览同一组 class），
