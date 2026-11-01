@@ -513,9 +513,11 @@ $effect(() => {
 							<div
 								class="dash-line relative w-5 shrink-0 flex items-center justify-center py-1"
 							>
+								<!-- 年份圆环：尺寸与描边照抄前台 ArchivePanel 年份行
+								     h-3 w-3 + outline-3 + -outline-offset-2（内缩，看着更小） -->
 								<div
-									class="z-10 w-3 h-3 rounded-full bg-(--card-bg)
-									       outline outline-3 outline-(--primary)"
+									class="z-10 h-3 w-3 bg-none rounded-full outline outline-3
+									       -outline-offset-2 outline-(--primary)"
 								></div>
 							</div>
 							<span
@@ -532,8 +534,9 @@ $effect(() => {
 									)}
 								</span>
 							{/if}
+							<!-- 箭头紧跟计数，不再靠右（去掉 ml-auto） -->
 							<span
-								class="ml-auto text-50 transition-transform"
+								class="text-50 transition-transform"
 								class:rotate-180={!collapsedYears.has(group.year)}
 							>
 								<Icon icon="material-symbols:expand-more" />
