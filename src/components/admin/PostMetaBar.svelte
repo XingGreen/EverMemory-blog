@@ -130,14 +130,16 @@ function fmtDate(value: string): string {
 		flex-shrink: 0;
 	}
 
-	/* 封面：圆角横幅，与前台 .banner-container 的观感一致 */
+	/* 封面：只约束宽度，高度交给图片自身比例。
+	   之前写了 max-height: 22rem + object-fit: cover，高图会被上下裁掉一截；
+	   现在 height: auto + object-fit: contain，保证整张图完整可见。 */
 	.post-cover {
 		display: block;
 		width: 100%;
-		max-height: 22rem;
+		height: auto;
 		margin: 0 0 1.75rem;
 		border-radius: 0.75rem;
-		object-fit: cover;
+		object-fit: contain;
 	}
 
 	@media (max-width: 900px) {
