@@ -12,6 +12,7 @@ import {
 	getConfigItem,
 	getConfigLabelKey,
 } from "@/utils/admin-settings";
+import { installAuthGuard, onAuthExpired, relogin } from "@/utils/auth-expired";
 import { isTourDone, resetTour } from "@/utils/onboarding";
 import AdminPage from "./AdminPage.svelte";
 import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
@@ -135,6 +136,8 @@ let dirtyListOpen = $state(false);
 // pendingPath 记录确认后要跳转的目标路径。
 // 注意不要用「函数作 $state」——Svelte 对函数值不会触发重渲染。
 let leaveConfirmOpen = $state(false);
+/** 会话过期提示（由 auth-expired 的单例闸门保证只弹一次） */
+let authExpiredOpen = $state(false);
 let pendingPath = $state("");
 let tourOpen = $state(false);
 let isSyncing = $state(false);
@@ -453,6 +456,19 @@ function startAdmin() {
 		tourOpen = true;
 	}
 }
+
+/* 401 全局兜底：包一层 fetch 旁路观察，任意后台接口 401 时弹一次会话过期提示。
+   必须是同步 onMount —— 下面那个 onMount 是 async，返回值不会被当作清理函数。 */
+onMount(() => {
+	const uninstall = installAuthGuard();
+	const off = onAuthExpired(() => {
+		authExpiredOpen = true;
+	});
+	return () => {
+		off();
+		uninstall();
+	};
+});
 
 onMount(async () => {
 	// 同步当前主题状态（深浅切换按钮图标）
@@ -1925,6 +1941,33 @@ function formatDate(dateStr: string | null): string {
 {/if}
 
 <!-- 站内切换页面时的未保存确认（对应参考项目 useBlocker 的 resolver 弹窗） -->
+{#if authExpiredOpen}
+	<div
+		class="modal-overlay"
+		role="dialog"
+		aria-modal="true"
+		aria-label={i18n(I18nKey.authExpiredTitle)}
+		tabindex="-1"
+		onkeydown={(e) => {
+			if (e.key === "Enter") relogin();
+		}}
+	>
+		<div class="modal-card card-base">
+			<div class="modal-head">
+				<h3>
+					<span>{i18n(I18nKey.authExpiredTitle)}</span>
+				</h3>
+			</div>
+			<p class="modal-desc">{i18n(I18nKey.authExpiredDesc)}</p>
+			<div class="modal-actions">
+				<button class="savebar-btn primary" type="button" onclick={relogin}>
+					{i18n(I18nKey.authExpiredRelogin)}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
 {#if leaveConfirmOpen}
 	<div
 		class="modal-overlay"

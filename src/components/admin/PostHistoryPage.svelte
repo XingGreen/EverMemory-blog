@@ -18,6 +18,7 @@
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import { notifyAuthExpired } from "@/utils/auth-expired";
 
 let {
 	slug,
@@ -152,6 +153,7 @@ async function loadList() {
 		if (res.status === 401) {
 			revisions = [];
 			errorKind = "generic";
+			notifyAuthExpired();
 			return;
 		}
 		const data = await res.json();
@@ -191,6 +193,7 @@ async function loadDetail(id: string) {
 		/* 401 = 会话过期。此前静默 return，界面只留一片空白，看起来像「内容丢了」 */
 		if (res.status === 401) {
 			errorKind = "generic";
+			notifyAuthExpired();
 			return;
 		}
 		const data = await res.json();

@@ -560,6 +560,10 @@ enum I18nKey {
 	postMetaTagsEmpty = "postMetaTagsEmpty",
 	postMetaCover = "postMetaCover",
 	postMetaCoverEmpty = "postMetaCoverEmpty",
+	/** 会话过期（401）提示 */
+	authExpiredTitle = "authExpiredTitle",
+	authExpiredDesc = "authExpiredDesc",
+	authExpiredRelogin = "authExpiredRelogin",
 	/** 版本产生原因（对齐参考的 getRevisionReasonLabel 三态） */
 	postHistoryReasonAuto = "postHistoryReasonAuto",
 	postHistoryReasonPublish = "postHistoryReasonPublish",
