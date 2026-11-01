@@ -870,7 +870,12 @@ const DASHBOARD_PATH = "/admin/";
 
 function navigate(path: string) {
 	isSidebarOpen = false;
-	if (window.location.pathname === path) {
+	/* 防护：pushState 会把相对路径基于当前 URL 解析，得到错乱地址后 applyRoute
+	   解析不到页面，表现为「闪一下但没跳过去」且没有任何报错。统一补成绝对路径。 */
+	const target = path.startsWith("/")
+		? path
+		: `${DASHBOARD_PATH}${path.replace(/^\/+/, "")}`;
+	if (window.location.pathname === target) {
 		applyRoute();
 		return;
 	}
@@ -878,13 +883,13 @@ function navigate(path: string) {
 	// 留在环境变量页内（同 path）不拦，与参考项目 shouldBlockFn 一致。
 	const hasDirty = (secretSaveState?.changedCount ?? 0) > 0;
 	const leavingEnv =
-		activePage === "env" && !path.startsWith(`${DASHBOARD_PATH}env`);
+		activePage === "env" && !target.startsWith(`${DASHBOARD_PATH}env`);
 	if (hasDirty && leavingEnv) {
-		pendingPath = path;
+		pendingPath = target;
 		leaveConfirmOpen = true;
 		return;
 	}
-	history.pushState({}, "", path);
+	history.pushState({}, "", target);
 	applyRoute();
 }
 
@@ -1609,11 +1614,15 @@ function formatDate(dateStr: string | null): string {
 		>
 				{#if activePage === "history" && route.page === "history"}
 					<!-- 注入 SPA 导航：历史页返回/恢复后跳编辑器必须走前端路由，
-					     用 location.href 会整页重载外壳，比列表页进编辑器慢一个量级 -->
+					     用 location.href 会整页重载外壳，比列表页进编辑器慢一个量级。
+					     注意必须是绝对路径（带 DASHBOARD_PATH）——navigate() 内部直接把它
+					     交给 history.pushState，相对路径会基于当前 URL 解析，得到
+					     /admin/posts/edit/x/history/posts/edit/x/ 这种错乱地址，
+					     applyRoute 解析不到就只剩一次「闪一下」。 -->
 					<PostHistoryPage
 						slug={route.slug}
 						revisionId={route.revisionId}
-						onLeave={() => navigate(`posts/edit/${route.slug}/`)}
+						onLeave={() => navigate(`${DASHBOARD_PATH}posts/edit/${route.slug}/`)}
 					/>
 				{:else if activePage === "dashboard"}
 					{@render dashboardHome()}
