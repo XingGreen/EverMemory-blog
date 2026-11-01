@@ -55,6 +55,38 @@ function assertSafeKey(key: string): void {
 
 /* ---------------- 文件后端 ---------------- */
 
+/**
+ * 键 → 文件名。
+ * Windows 的文件名不允许冒号，而业务键广泛用冒号做层级分隔
+ * （audit:<ts>:<rand>、rev:<slug>:<ts>），直接落盘会 writeFile ENOENT，
+ * 真实原因是非法字符而不是目录缺失。这里统一把冒号编码成 %3A，
+ * 读写与 list 全部走同一套转换，对外仍是原始键。
+ */
+function keyToFileName(key: string): string {
+	return `${key.replace(/:/g, "%3A")}.json`;
+}
+
+function fileNameToKey(name: string): string {
+	return name.slice(0, -".json".length).replace(/%3A/g, ":");
+}
+
+/** 目录就绪的共享 Promise：并发写入时只 mkdir 一次 */
+let persistDirReady: Promise<void> | null = null;
+
+function ensurePersistDir(): Promise<void> {
+	if (!persistDirReady) {
+		persistDirReady = fs.mkdir(FILE_PERSIST_DIR, { recursive: true }).then(
+			() => undefined,
+			(err) => {
+				// 建目录失败不要缓存失败结果，否则后续写入全被拖死
+				persistDirReady = null;
+				throw err;
+			},
+		);
+	}
+	return persistDirReady;
+}
+
 interface FileEnvelope {
 	v: unknown;
 	e?: number; // 过期时间戳（ms），缺省为永不过期
@@ -65,7 +97,7 @@ const fileStore: KVStore = {
 		assertSafeKey(key);
 		try {
 			const raw = await fs.readFile(
-				path.join(FILE_PERSIST_DIR, `${key}.json`),
+				path.join(FILE_PERSIST_DIR, keyToFileName(key)),
 				"utf-8",
 			);
 			const env = JSON.parse(raw) as FileEnvelope;
@@ -81,22 +113,38 @@ const fileStore: KVStore = {
 
 	async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
 		assertSafeKey(key);
-		await fs.mkdir(FILE_PERSIST_DIR, { recursive: true });
 		const env: FileEnvelope = { v: value };
 		if (ttlSeconds && ttlSeconds > 0) {
 			env.e = Date.now() + ttlSeconds * 1000;
 		}
-		await fs.writeFile(
-			path.join(FILE_PERSIST_DIR, `${key}.json`),
-			JSON.stringify(env),
-			"utf-8",
-		);
+		const target = path.join(FILE_PERSIST_DIR, keyToFileName(key));
+		const payload = JSON.stringify(env);
+
+		/* 目录就绪用共享 Promise 缓存：同一时刻可能有十几个并发写入
+		   （一次保存会连带写日志、快照、配置），各自 mkdir 是浪费，
+		   更重要的是 mkdir 与 writeFile 交错时会出现「目录刚建好又被判定不存在」
+		   的竞态。缓存后只建一次，后续写入直接复用。 */
+		await ensurePersistDir();
+		try {
+			await fs.writeFile(target, payload, "utf-8");
+		} catch (err) {
+			/* 目录被外部删除（清理脚本、git clean、容器重启）时缓存会失效，
+			   这里清掉缓存重试一次；仍失败就把原始错误抛出去，
+			   不吞掉——调用方需要知道写入失败。 */
+			if ((err as NodeJS.ErrnoException)?.code === "ENOENT") {
+				persistDirReady = null;
+				await ensurePersistDir();
+				await fs.writeFile(target, payload, "utf-8");
+				return;
+			}
+			throw err;
+		}
 	},
 
 	async del(key: string): Promise<void> {
 		assertSafeKey(key);
 		try {
-			await fs.unlink(path.join(FILE_PERSIST_DIR, `${key}.json`));
+			await fs.unlink(path.join(FILE_PERSIST_DIR, keyToFileName(key)));
 		} catch {
 			// 文件不存在时静默成功
 		}
@@ -106,8 +154,10 @@ const fileStore: KVStore = {
 		try {
 			const names = await fs.readdir(FILE_PERSIST_DIR);
 			return names
-				.filter((n) => n.endsWith(".json") && n.startsWith(prefix))
-				.map((n) => n.slice(0, -".json".length))
+				.filter(
+					(n) => n.endsWith(".json") && fileNameToKey(n).startsWith(prefix),
+				)
+				.map((n) => fileNameToKey(n))
 				.sort()
 				.reverse()
 				.slice(0, limit);

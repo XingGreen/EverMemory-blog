@@ -175,7 +175,7 @@ async function getInstallationTokenFromGitHub(
 		);
 	}
 
-	console.log("[GitHub Token] Successfully obtained installation token");
+	console.debug("[GitHub Token] Successfully obtained installation token");
 	const data = await response.json();
 	// GitHub 返回 expires_at 为 ISO 字符串，转为时间戳
 	const expiresAt = data.expires_at
@@ -190,18 +190,20 @@ export async function getInstallationToken(): Promise<string> {
 		tokenCache &&
 		Date.now() < tokenCache.expiresAt - TOKEN_SAFETY_MARGIN_MS
 	) {
-		console.log(
+		console.debug(
 			`[GitHub Token] Using cached token, expires in ${Math.round((tokenCache.expiresAt - Date.now()) / 1000)}s`,
 		);
 		return tokenCache.token;
 	}
 
 	try {
-		console.log("[GitHub Token] Initializing token request...");
+		console.debug("[GitHub Token] Initializing token request...");
 		const privateKey = getPrivateKey();
-		console.log("[GitHub Token] Private key loaded, creating JWT...");
+		console.debug("[GitHub Token] Private key loaded, creating JWT...");
 		const jwt = createJwt(privateKey, GITHUB_APP_ID);
-		console.log("[GitHub Token] JWT created, requesting installation token...");
+		console.debug(
+			"[GitHub Token] JWT created, requesting installation token...",
+		);
 		const result = await getInstallationTokenFromGitHub(
 			jwt,
 			GITHUB_INSTALLATION_ID,
@@ -240,26 +242,32 @@ async function fetchWithRetry(
 
 			clearTimeout(timeoutId);
 
-			console.log(
+			/* 正常路径不打印：一次列表要拉十几个目录，每次都打一行会把
+			   dev 终端刷满，真正需要的信息反而被埋掉。 */
+			console.debug(
 				`[GitHub Fetch] Attempt ${attempt} SUCCESS: status=${response.status}`,
 			);
 			return response;
 		} catch (error) {
 			lastError = error instanceof Error ? error : new Error(String(error));
-			console.log(
+			/* 中间重试失败只记 debug：网络抖动时 3 次重试 × 多个并发请求
+			   会瞬间刷出几十行，其中绝大多数是会被下一次重试救回来的。
+			   只有最终失败（下面那句）才值得 warn。 */
+			console.debug(
 				`[GitHub Fetch] Attempt ${attempt} FAILED: ${lastError.message}`,
 			);
-			console.log(`[GitHub Fetch] Error stack: ${lastError.stack}`);
 
 			if (attempt < maxRetries) {
 				const delay = attempt * 2000;
-				console.log(`[GitHub Fetch] Retrying in ${delay}ms...`);
+				console.debug(`[GitHub Fetch] Retrying in ${delay}ms...`);
 				await new Promise((resolve) => setTimeout(resolve, delay));
 			}
 		}
 	}
 
-	console.log(`[GitHub Fetch] All ${maxRetries} attempts failed`);
+	console.warn(
+		`[GitHub Fetch] All ${maxRetries} attempts failed: ${lastError?.message ?? "unknown"}`,
+	);
 	throw lastError || new Error("Unknown fetch error");
 }
 
@@ -298,7 +306,7 @@ export async function listFilesFromGitHub(
 	const token = await getInstallationToken();
 	const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${directoryPath}?ref=${GITHUB_BRANCH}`;
 
-	console.log(`[GitHub List] Listing: ${directoryPath}`);
+	console.debug(`[GitHub List] Listing: ${directoryPath}`);
 
 	const response = await fetchWithRetry(url, {
 		headers: {
