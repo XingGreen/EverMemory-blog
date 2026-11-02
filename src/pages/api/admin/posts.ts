@@ -40,6 +40,15 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
  * 未配置 GitHub、凭证失效或调用失败时返回 null：调用方跳过同步标记，
  * 列表照常返回（同步状态是增强信息，不该拖垮主列表）。
  */
+/**
+ * slug 归一化：Astro 的 content collection 把 guide/index.md 的 id 折叠成 guide，
+ * 直接切路径得到的是 guide/index。两边不统一，同一个文件会被判成「本地有 guide」
+ * + 「远端有 guide/index」，列表里因此多出一篇并不存在的文章。
+ */
+function normalizeSlug(slug: string): string {
+	return slug.replace(/\/index$/, "");
+}
+
 async function getRemoteSlugs(): Promise<Map<string, string> | null> {
 	if (remoteCache) {
 		const ttl = remoteCache.slugs ? REMOTE_CACHE_TTL_MS : REMOTE_FAIL_CACHE_MS;
@@ -57,9 +66,9 @@ async function getRemoteSlugs(): Promise<Map<string, string> | null> {
 		);
 		const slugs = new Map<string, string>();
 		for (const filePath of paths) {
-			const slug = filePath
-				.replace(/^src\/content\/posts\//, "")
-				.replace(/\.mdx?$/, "");
+			const slug = normalizeSlug(
+				filePath.replace(/^src\/content\/posts\//, "").replace(/\.mdx?$/, ""),
+			);
 			slugs.set(slug, filePath);
 		}
 		remoteCache = { at: Date.now(), slugs };
@@ -137,7 +146,7 @@ export async function GET({ request }) {
 			getCollection("posts"),
 			getRemoteSlugs(),
 		]);
-		const localSlugs = new Set(posts.map((post) => post.id));
+		const localSlugs = new Set(posts.map((post) => normalizeSlug(post.id)));
 
 		const localData = posts.map((post) => ({
 			id: post.id,
@@ -164,7 +173,7 @@ export async function GET({ request }) {
 
 		if (remoteSlugs) {
 			for (const item of localData) {
-				item.syncState = remoteSlugs.has(item.slug)
+				item.syncState = remoteSlugs.has(normalizeSlug(item.slug))
 					? "deployed"
 					: "not-on-github";
 			}
