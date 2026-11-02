@@ -28,7 +28,11 @@ export function writeAuditLog(entry: {
 		| "secrets_exported"
 		| "sessions_listed"
 		| "session_revoked"
-		| "draft_saved";
+		| "draft_saved"
+		/** 同步操作台执行了一次同步（detail 里记成功/失败条数） */
+		| "sync_applied"
+		/** 同步检查：只读比对，用于记录「什么时候查过、结果如何」 */
+		| "sync_checked";
 	client: string;
 	username: string;
 	detail?: string;

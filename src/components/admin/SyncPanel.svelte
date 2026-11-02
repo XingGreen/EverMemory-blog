@@ -1,4 +1,5 @@
 <script lang="ts">
+import SyncHistory from "@/components/admin/SyncHistory.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -62,6 +63,8 @@ let data = $state<PlanPayload | null>(null);
 let runMessage = $state<string | null>(null);
 let runFailed = $state(false);
 let showSame = $state(false);
+/** 同步记录：与操作台分离的只读视图 */
+let historyOpen = $state(false);
 
 let selected = $state<Set<string>>(new Set());
 let direction = $state<Record<string, "pull" | "push">>({});
@@ -425,6 +428,13 @@ $effect(() => {
 					<span class="selected-tip">
 						已选 <b>{selected.size}</b> 项待同步
 					</span>
+					<button
+						class="text-btn"
+						type="button"
+						onclick={() => (historyOpen = true)}
+					>
+						查看记录
+					</button>
 					<div class="toolbar-actions">
 						<button
 							class="text-btn"
@@ -447,6 +457,8 @@ $effect(() => {
 			{/if}
 		</div>
 	</div>
+
+	<SyncHistory bind:open={historyOpen} />
 {/if}
 
 <style>

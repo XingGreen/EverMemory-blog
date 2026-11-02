@@ -142,7 +142,7 @@ export async function POST({
 	const failCount = results.length - okCount;
 
 	writeAuditLog({
-		event: "draft_saved",
+		event: "sync_applied",
 		client: "sync-panel",
 		username: String(auth.payload?.username ?? "admin"),
 		detail: `同步执行：成功 ${okCount} / 失败 ${failCount}`,
