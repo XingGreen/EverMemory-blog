@@ -19,6 +19,7 @@ import path from "node:path";
 import { requireAuth } from "@/utils/auth";
 import { gitBlobSha, hasCrlf } from "@/utils/git-blob";
 import { listMarkdownWithSha } from "@/utils/github-app";
+import { normalizeSlug, slugFromPath } from "@/utils/post-slug";
 
 export const prerender = false;
 
@@ -36,17 +37,6 @@ interface PlanItem {
 	crlf?: boolean;
 	draft?: boolean;
 	title?: string;
-}
-
-/**
- * slug 归一化。
- * Astro 的 content collection 会把 `guide/index.md` 的 id 折叠成 `guide`，
- * 而直接切路径得到的是 `guide/index`。不统一就会出现同一文件被判成
- * 「本地有 guide」+「远端有 guide/index」两条，标成 local-only 与 remote-only，
- * 但点开差异两边内容一模一样——正是这个不一致造成的自相矛盾。
- */
-function normalizeSlug(slug: string): string {
-	return slug.replace(/\/index$/, "");
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -101,14 +91,7 @@ export async function GET({
 		localAvailable = false;
 	}
 
-	const remoteBySlug = new Map(
-		remote.map((f) => [
-			normalizeSlug(
-				f.path.replace(/^src\/content\/posts\//, "").replace(/\.mdx?$/, ""),
-			),
-			f,
-		]),
-	);
+	const remoteBySlug = new Map(remote.map((f) => [slugFromPath(f.path), f]));
 
 	const items: PlanItem[] = [];
 	const seen = new Set<string>();
