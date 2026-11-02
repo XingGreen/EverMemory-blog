@@ -281,7 +281,7 @@ $effect(() => {
 							<span class="dot" class:ok={data.connected}></span>
 							{data.connected ? "GitHub 已连接" : "GitHub 不可达"}
 							<span class="sep">·</span>
-							本地 {data.localTotal} 篇 / 远端 {data.remoteTotal} 篇
+							本地 {data.localTotal} 篇 / 远端 {data.connected ? `${data.remoteTotal} 篇` : "-- 篇"}
 							{#if !data.localAvailable}
 								<span class="warn">· 当前环境读不到本地文件</span>
 							{/if}
@@ -302,9 +302,6 @@ $effect(() => {
 				<p class="hint">正在比对…</p>
 			{:else if data?.error || !data?.connected}
 				<pre class="sync-error">{data?.error ?? "GitHub 不可达，无法比对"}</pre>
-				<p class="hint">
-					远端清单没拿到时不做任何判定——否则每个本地文件都会被标成「仅本地」，误导成未推送。
-				</p>
 			{:else if data}
 				<div class="sync-toolbar">
 					<span>
@@ -468,12 +465,18 @@ $effect(() => {
 		flex-direction: column;
 		width: min(48rem, 94vw);
 		max-height: 84vh;
+		/* 面板挂在 body 下，不再继承后台内容区的文字色。
+		   这里显式取主题变量，明暗切换时跟着主题走而不是跟着某层父级走 */
+		color: var(--deep-text);
 		padding: 1.5rem 1.5rem 1rem;
 		gap: 1rem;
 		border-radius: 1rem;
 		border: 1px solid var(--line-divider);
 		background: var(--card-bg);
 		box-shadow: 0 24px 70px -14px rgb(0 0 0 / 0.5);
+		/* 显式指定前景色：后台只引 admin.css，面板若依赖 :root 之外的继承链，
+		   深浅主题切换时文字色会跟着父级走而不是跟着主题走 */
+		color: var(--deep-text);
 	}
 
 	.sync-head {
