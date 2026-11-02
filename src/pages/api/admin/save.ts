@@ -6,7 +6,6 @@ import {
 	isValidPostSlug,
 	resolvePostPath,
 	saveFileLocally,
-	saveFileToGitHub,
 } from "@/utils/github-app";
 import { getStore } from "@/utils/persist-store";
 
@@ -107,35 +106,25 @@ export async function POST({ request }) {
 			// 快照失败不影响正常保存
 		}
 
-		const commitMessage = `update post: ${title || slug} via admin dashboard`;
+		/* 保存只写本地，不推 GitHub。
+		   ————————————————————————————————————————————————
+		   原来这里无条件调用 saveFileToGitHub，导致「新建/编辑即上线」：
+		   文章刚存完就已经在远端，同步面板比对时是 same，看起来像「找不到这篇」。
+		   推送权收归同步面板——那里能看到差异、能逐条选方向、能被二次确认拦住。
 
-		/* 1. 本地文件系统只在开发构建下可写：Vercel / Cloudflare Workers 的项目
-		      目录只读，写必然失败。旧代码靠 saveFileLocally 内部的 try/catch
-		      吞掉异常，功能上没错，但每次保存都白跑一次 mkdir + writeFile，
-		      而且「本地失败」会混进下面的成功判定里。语义与 secret-io 的
-		      isEnvFileWritable 保持一致：生产即只读。 */
+		   代价：生产环境（项目目录只读）无法保存。这是有意的取舍：
+		   写文章应该在本地做，云端只负责看和同步。 */
 		const localSuccess = IS_PROD_BUILD
 			? false
 			: saveFileLocally(filePath, fullContent);
 
-		// 2. 再保存到 GitHub
-		const githubSuccess = await saveFileToGitHub(
-			filePath,
-			fullContent,
-			commitMessage,
-		);
-
-		if (localSuccess || githubSuccess) {
+		if (localSuccess) {
 			return new Response(
 				JSON.stringify({
 					success: true,
-					/* 两条通道分开回传：生产环境 local 恒为 false，调用方据此
-					   区分「已同步」与「仅本地」，不必去解析 message 文案 */
-					local: localSuccess,
-					remote: githubSuccess,
-					message: githubSuccess
-						? "保存成功（已同步到 GitHub）"
-						: "保存成功（仅本地保存）",
+					local: true,
+					remote: false,
+					message: "已保存到本地，推送请用同步面板",
 					filePath,
 				}),
 				{ status: 200, headers: { "Content-Type": "application/json" } },
@@ -147,9 +136,14 @@ export async function POST({ request }) {
 				success: false,
 				local: false,
 				remote: false,
-				message: "保存失败（本地和 GitHub 均失败）",
+				message: IS_PROD_BUILD
+					? "当前部署环境为只读，无法写入文章。请在本地开发环境编辑并保存"
+					: "保存失败：写入本地文件出错",
 			}),
-			{ status: 500, headers: { "Content-Type": "application/json" } },
+			{
+				status: IS_PROD_BUILD ? 403 : 500,
+				headers: { "Content-Type": "application/json" },
+			},
 		);
 	} catch (error) {
 		console.error(
