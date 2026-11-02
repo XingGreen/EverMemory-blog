@@ -253,9 +253,12 @@ function stateText(state: PlanState): string {
 	return "仅本地";
 }
 
-$effect(() => {
-	if (open && !data && !loading) void load();
-});
+	/* 每次打开都重新比对，不复用上一次的结果。
+	   之前是 `!data` 才加载，于是「新建文章 → 再打开面板」看到的还是旧列表，
+	   新文章永远不出现——这是排查不到新文章的根因。 */
+	$effect(() => {
+		if (open) void load();
+	});
 </script>
 
 {#if open}
@@ -349,7 +352,17 @@ $effect(() => {
 									/>
 								</label>
 								<div class="row-main">
-									<span class="row-slug">{item.slug}</span>
+									<!-- 标题为主、文件名为辅：使用者认的是文章名，不是 slug。
+									     远端独有项拿不到 frontmatter（那要拉正文），
+									     此时退回显示 slug，而不是谎称「无标题文章」。 -->
+									<div class="row-text">
+										<span class="row-title">
+											{item.state === "remote-only"
+												? item.slug
+												: item.title?.trim() || "无标题文章"}
+										</span>
+										<span class="row-sub">{item.slug}</span>
+									</div>
 									<span class="badge" data-state={item.state}>
 										{stateText(item.state)}
 									</span>
@@ -662,9 +675,28 @@ $effect(() => {
 		min-width: 0;
 	}
 
-	.row-slug {
-		font-size: 0.875rem;
+	.row-text {
+		display: flex;
+		flex-direction: column;
+		gap: 0.0625rem;
+		min-width: 0;
+		flex: 1;
+	}
+
+	/* 标题为主：大字号、常规字重 */
+	.row-title {
+		font-size: 0.9375rem;
+		font-weight: 600;
 		color: var(--deep-text);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* slug 为辅：小字号、次级色，方便对照文件名但不抢注意力 */
+	.row-sub {
+		font-size: 0.6875rem;
+		color: var(--content-meta);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;

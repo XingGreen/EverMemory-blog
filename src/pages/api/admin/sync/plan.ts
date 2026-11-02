@@ -13,13 +13,12 @@
  * 那会退化成 N 次请求。所以界面上不自带方向，交给使用者决定。
  */
 
-import { getCollection } from "astro:content";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
 import { gitBlobSha, hasCrlf } from "@/utils/git-blob";
 import { listMarkdownWithSha } from "@/utils/github-app";
-import { normalizeSlug, slugFromPath } from "@/utils/post-slug";
+import { slugFromPath } from "@/utils/post-slug";
 
 export const prerender = false;
 
@@ -37,6 +36,28 @@ interface PlanItem {
 	crlf?: boolean;
 	draft?: boolean;
 	title?: string;
+}
+
+/** 递归收集 src/content/posts 下的 markdown 相对路径 */
+function walkPostFiles(rootDir: string): string[] {
+	const out: string[] = [];
+	const walk = (dir: string) => {
+		let entries: import("node:fs").Dirent[] = [];
+		try {
+			entries = readdirSync(dir, { withFileTypes: true });
+		} catch {
+			return;
+		}
+		for (const e of entries) {
+			const abs = path.join(dir, e.name);
+			if (e.isDirectory()) walk(abs);
+			else if (/\.mdx?$/.test(e.name)) {
+				out.push(path.relative(process.cwd(), abs).split(path.sep).join("/"));
+			}
+		}
+	};
+	walk(rootDir);
+	return out.sort();
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -73,23 +94,42 @@ export async function GET({
 	/* 2. 本地：内容集合给 slug 与 frontmatter，文件系统给字节用于算 sha。
 	   云端构建产物不含 src/content，existsSync 为 false —— 此时无法算本地哈希，
 	   如实报 localAvailable=false，而不是假装一致。 */
-	let localPosts: Array<{
-		id: string;
-		filePath?: string;
-		data: { title?: string; draft?: boolean };
-	}> = [];
-	let localAvailable = false;
-	try {
-		localPosts = await getCollection("posts");
-		localAvailable = localPosts.some((p) => {
-			const fp = p.filePath;
-			return (
-				Boolean(fp) && existsSync(path.resolve(process.cwd(), fp as string))
-			);
-		});
-	} catch {
-		localAvailable = false;
-	}
+	/* 本地文章：直接扫文件系统，不依赖 getCollection。
+	   原因：getCollection 在 dev 下是模块级缓存，新建文章后要等 HMR 重载才出现，
+	   于是「刚建的文章在同步面板里查不到」。扫盘能立刻看到新文件，
+	   代价是要自己读 frontmatter 取标题与草稿标记。 */
+	const localFiles = walkPostFiles(
+		path.resolve(process.cwd(), "src/content/posts"),
+	);
+	let localAvailable = localFiles.length > 0;
+
+	const localPosts: Array<{
+		slug: string;
+		filePath: string;
+		title: string;
+		draft: boolean;
+	}> = localFiles.map((rel) => {
+		const abs = path.resolve(process.cwd(), rel);
+		let title = "";
+		let draft = false;
+		try {
+			const head = readFileSync(abs, "utf-8").slice(0, 2000);
+			const t = head.match(/^title:\s*(.+)$/m);
+			if (t) {
+				title = t[1]
+					.trim()
+					.replace(/^["'](.*)["']$/, "$1")
+					.trim();
+			}
+			const d = head.match(/^draft:\s*(.+)$/m);
+			if (d) draft = /^(true|yes)$/i.test(d[1].trim());
+			// 没写 draft 的文章默认视为已发布（与 content schema 的缺省一致）
+		} catch {
+			// 读失败就留空，不影响该条目出现在列表里
+		}
+		return { slug: slugFromPath(rel), filePath: rel, title, draft };
+	});
+	if (localPosts.length === 0) localAvailable = false;
 
 	const remoteBySlug = new Map(remote.map((f) => [slugFromPath(f.path), f]));
 
@@ -99,9 +139,8 @@ export async function GET({
 	if (localAvailable) {
 		for (const post of localPosts) {
 			const fp = post.filePath;
-			if (!fp) continue;
 			const abs = path.resolve(process.cwd(), fp);
-			const slug = normalizeSlug(post.id);
+			const slug = post.slug;
 			const remoteFile = remoteBySlug.get(slug);
 			seen.add(slug);
 
@@ -112,8 +151,8 @@ export async function GET({
 					state: remoteFile ? "remote-only" : "local-only",
 					localSha: null,
 					remoteSha: remoteFile?.sha ?? null,
-					draft: post.data.draft,
-					title: post.data.title,
+					draft: post.draft,
+					title: post.title,
 				});
 				continue;
 			}
@@ -140,8 +179,8 @@ export async function GET({
 				localSha,
 				remoteSha: remoteFile?.sha ?? null,
 				crlf,
-				draft: post.data.draft,
-				title: post.data.title,
+				draft: post.draft,
+				title: post.title,
 			});
 		}
 	}
