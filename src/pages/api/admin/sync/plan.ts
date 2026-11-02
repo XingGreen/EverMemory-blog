@@ -24,7 +24,9 @@ export const prerender = false;
 
 const REMOTE_TIMEOUT_MS = 15_000;
 
-type PlanState = "same" | "differs" | "local-only" | "remote-only";
+/** unknown：远端不可达，只能列出本地文件，无法判定
+	   与远端的关系。单独一个状态是为了避免把它误标成 local-only。 */
+type PlanState = "same" | "differs" | "local-only" | "remote-only" | "unknown";
 
 interface PlanItem {
 	slug: string;
@@ -201,7 +203,8 @@ export async function GET({
 		differs: 0,
 		"remote-only": 1,
 		"local-only": 2,
-		same: 3,
+		unknown: 3,
+		same: 4,
 	};
 	items.sort((a, b) => {
 		if (order[a.state] !== order[b.state])
@@ -236,9 +239,22 @@ export async function GET({
 							remoteOnly: 0,
 							crlfSuspect: 0,
 						},
-			/* 远端清单没拿到就不下发条目：此时每个本地文件都会被算成 local-only，
-			   使用者会误以为全都没推送，进而一键全推——那才是最坏的结果。 */
-			items: error === null ? items : [],
+			/* 远端不可达时仍然列出本地文件，但状态一律标 unknown。
+			   之前这里是直接清空，结果是网络抖一下整张列表就空了，
+			   使用者以为文件丢了。空列表和「读不到远端」是两件事，不能混。
+			   标 unknown 也避免了把它们误判成 local-only 而一键全推。 */
+			items:
+				error === null
+					? items
+					: localPosts.map((p) => ({
+							slug: p.slug,
+							path: p.filePath,
+							state: "unknown" as PlanState,
+							localSha: null,
+							remoteSha: null,
+							title: p.title,
+							draft: p.draft,
+						})),
 		}),
 		{ status: 200, headers: { "Content-Type": "application/json" } },
 	);

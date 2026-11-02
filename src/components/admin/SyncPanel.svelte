@@ -20,7 +20,7 @@ let {
 	onSynced,
 }: { open?: boolean; onSynced?: () => void } = $props();
 
-type PlanState = "same" | "differs" | "local-only" | "remote-only";
+type PlanState = "same" | "differs" | "local-only" | "remote-only" | "unknown";
 
 interface PlanItem {
 	slug: string;
@@ -82,7 +82,9 @@ let diffData = $state<{
 let diffLoading = $state(false);
 
 const actionable = $derived(
-	(data?.items ?? []).filter((i) => i.state !== "same"),
+	(data?.items ?? []).filter(
+		(i) => i.state !== "same" && i.state !== "unknown",
+	),
 );
 const visibleItems = $derived(
 	(data?.items ?? []).filter((i) => i.state !== "same" || showSame),
@@ -253,12 +255,12 @@ function stateText(state: PlanState): string {
 	return "仅本地";
 }
 
-	/* 每次打开都重新比对，不复用上一次的结果。
+/* 每次打开都重新比对，不复用上一次的结果。
 	   之前是 `!data` 才加载，于是「新建文章 → 再打开面板」看到的还是旧列表，
 	   新文章永远不出现——这是排查不到新文章的根因。 */
-	$effect(() => {
-		if (open) void load();
-	});
+$effect(() => {
+	if (open) void load();
+});
 </script>
 
 {#if open}
@@ -342,7 +344,7 @@ function stateText(state: PlanState): string {
 						{#each visibleItems as item (item.slug)}
 							{@const isSame = item.state === "same"}
 							{@const picked = currentDir(item)}
-							<li class="sync-row" class:same={isSame} class:failed={failedSlugs.has(item.slug)}>
+							<li class="sync-row" class:same={isSame || item.state === "unknown"} class:failed={failedSlugs.has(item.slug)}>
 								<label class="row-check">
 									<input
 										type="checkbox"
