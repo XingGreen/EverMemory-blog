@@ -963,9 +963,9 @@ function handleEditPost(post: Post) {
 	goEditPost(post);
 }
 
-function handleSaveSuccess() {
+function handleSaveSuccess(message?: string) {
 	loadPosts();
-	showToast("保存成功", "success");
+	showToast(message ?? "保存成功", "success");
 	goPostList();
 }
 

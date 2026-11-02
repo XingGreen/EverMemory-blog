@@ -26,7 +26,8 @@ let {
 }: {
 	post: any;
 	mode: "edit" | "create";
-	onSave: () => void;
+	/** 传参时展示后端返回的文案，用于区分「仅本地保存」与「已同步」 */
+	onSave: (message?: string) => void;
 	onCancel: () => void;
 	onError: (msg: string) => void;
 } = $props();
@@ -1095,7 +1096,7 @@ async function handleSave() {
 			cloudSavedAt = null;
 			cloudSync = "idle";
 			dirty = false;
-			onSave();
+			onSave(data.message);
 		} else {
 			console.error("[Editor] 保存失败:", data.message);
 			onError(data.message || i18n(I18nKey.postSaveFailed));
