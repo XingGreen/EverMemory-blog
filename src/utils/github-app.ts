@@ -316,6 +316,71 @@ async function fetchWithRetry(
 	throw new Error(reason, { cause: lastError ?? undefined });
 }
 
+export type RemoteReadResult =
+	| { ok: true; content: string }
+	| {
+			ok: false;
+			/** 404 才是「文件不存在」；其余都是读取失败，不能混为一谈 */
+			reason: "not-found" | "auth" | "server" | "network";
+			status?: number;
+			message: string;
+	  };
+
+/**
+ * 读远端文件，并把失败原因分清楚。
+ *
+ * getFileFromGitHub 把所有失败都收敛成 null——404、500、断网看起来一模一样，
+ * 上层只能报「远端不存在该文件」。断网时这么说，等于让用户去仓库里找
+ * 一个本来就存在的文件。
+ */
+export async function readFileFromGitHub(
+	filePath: string,
+): Promise<RemoteReadResult> {
+	try {
+		const token = await getInstallationToken();
+		const response = await fetch(
+			`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}?ref=${GITHUB_BRANCH}`,
+			{
+				headers: {
+					Authorization: `Bearer ${token}`,
+					Accept: "application/vnd.github.v3.raw",
+					"User-Agent": "Firefly-Blog",
+				},
+				signal: AbortSignal.timeout(15_000),
+			},
+		);
+		if (response.ok) return { ok: true, content: await response.text() };
+		if (response.status === 404) {
+			return {
+				ok: false,
+				reason: "not-found",
+				status: 404,
+				message: "远端不存在该文件",
+			};
+		}
+		if (response.status === 401 || response.status === 403) {
+			return {
+				ok: false,
+				reason: "auth",
+				status: response.status,
+				message: `GitHub 认证失败（${response.status}）：检查 App 凭据或权限`,
+			};
+		}
+		return {
+			ok: false,
+			reason: "server",
+			status: response.status,
+			message: `GitHub 返回 HTTP ${response.status}，请稍后重试`,
+		};
+	} catch (error) {
+		return {
+			ok: false,
+			reason: "network",
+			message: `读取远端失败：${describeFetchError(error)}`,
+		};
+	}
+}
+
 export async function getFileFromGitHub(
 	filePath: string,
 ): Promise<string | null> {

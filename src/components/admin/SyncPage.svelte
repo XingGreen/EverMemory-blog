@@ -8,6 +8,7 @@ import {
 	type DiffLine,
 	diffLines,
 } from "@/utils/line-diff";
+import Checkbox from "./Checkbox.svelte";
 import ConfirmDialog from "./ConfirmDialog.svelte";
 import SyncHistory from "./SyncHistory.svelte";
 
@@ -422,15 +423,14 @@ $effect(() => {
 					</button>
 				</div>
 
-				<label class="side-check">
-					<input
-						type="checkbox"
+				<div class="side-check">
+					<Checkbox
 						checked={allSelected}
 						onchange={toggleAll}
-						aria-label="全选可处理项"
+						label="全选可处理项"
 					/>
 					<span>全选</span>
-				</label>
+				</div>
 
 				<ul class="side-list">
 					{#each visibleItems as item (item.slug)}
@@ -441,12 +441,11 @@ $effect(() => {
 							class:active={isActive}
 							class:dim={isSame || item.state === "unknown"}
 						>
-							<input
-								type="checkbox"
-								disabled={isSame || item.state === "unknown"}
+							<Checkbox
 								checked={selected.has(item.slug)}
+								disabled={isSame || item.state === "unknown"}
 								onchange={() => toggle(item.slug)}
-								aria-label={`勾选 ${item.slug}`}
+								label={`勾选 ${item.slug}`}
 							/>
 							<button
 								class="row-open"
@@ -460,7 +459,7 @@ $effect(() => {
 								</span>
 								<span class="row-sub">{item.slug}</span>
 							</button>
-							<span class="badge" class:on={badgeClass(item.state)}>
+							<span class="badge {badgeClass(item.state)}">
 								{stateText(item.state)}
 							</span>
 						</li>
@@ -503,16 +502,20 @@ $effect(() => {
 				<div class="detail-head">
 					<h2>{activeItem?.title?.trim() || slug}</h2>
 					<div class="detail-meta">
-						<span class="badge" class:on={badgeClass(activeItem?.state ?? "unknown")}>
+						<span class="badge {badgeClass(activeItem?.state ?? "unknown")}">
 							{activeItem ? stateText(activeItem.state) : "状态未知"}
 						</span>
 						{#if activeItem?.state === "differs"}
 							<span class="stat-add">+{diffStats().added}</span>
 							<span class="stat-del">-{diffStats().removed}</span>
-							<label class="toggle">
-								<input type="checkbox" bind:checked={hideUnchanged} />
-								折叠未变更
-							</label>
+							<div class="toggle">
+								<Checkbox
+									checked={hideUnchanged}
+									onchange={() => (hideUnchanged = !hideUnchanged)}
+									label="折叠未变更的行"
+								/>
+								<span>折叠未变更</span>
+							</div>
 						{/if}
 					</div>
 				</div>
@@ -529,13 +532,12 @@ $effect(() => {
 						{#each diffRows() as line, idx (idx)}
 							{#if line.kind === "gap"}
 								<div class="diff-row gap">
-									<span class="lno"></span><span class="rno"></span>
+									<span class="lno"></span>
 									<span class="code">⋯ 跳过 {line.count} 行未变更</span>
 								</div>
 							{:else}
 								<div class="diff-row {line.kind}">
-									<span class="lno">{line.left ?? ""}</span>
-									<span class="rno">{line.right ?? ""}</span>
+									<span class="lno">{line.left ?? line.right ?? ""}</span>
 									<span class="code">
 										<span class="marker">{line.kind === "add" ? "+" : line.kind === "del" ? "-" : " "}</span><span class="text">{line.text || " "}</span>
 									</span>
@@ -765,19 +767,27 @@ $effect(() => {
 		color: var(--content-meta);
 	}
 
-	.badge.on {
-		background: color-mix(in srgb, oklch(0.72 0.16 45) 15%, transparent);
+	/* 两侧存在的差异 */
+	.badge.differs {
+		background: color-mix(in srgb, var(--primary) 16%, transparent);
+		color: var(--primary);
+	}
+
+	/* 只有一边：橙，表示需要决定 */
+	.badge.one-side {
+		background: color-mix(in srgb, oklch(0.72 0.16 45) 16%, transparent);
 		color: oklch(0.72 0.16 45);
+	}
+
+	/* 读不到远端：灰，不下判断 */
+	.badge.unknown {
+		background: var(--btn-regular-bg);
+		color: var(--content-meta);
 	}
 
 	.badge.same {
 		background: color-mix(in srgb, oklch(0.72 0.15 145) 15%, transparent);
 		color: oklch(0.72 0.15 145);
-	}
-
-	.badge.differs {
-		background: color-mix(in srgb, var(--primary) 15%, transparent);
-		color: var(--primary);
 	}
 
 	.run-msg {
@@ -805,8 +815,10 @@ $effect(() => {
 	}
 
 	.sync-main {
+		display: flex;
+		flex-direction: column;
 		min-height: 0;
-		overflow: auto;
+		overflow: hidden;
 		padding: 1.25rem 1.5rem;
 	}
 
@@ -816,7 +828,7 @@ $effect(() => {
 		align-items: center;
 		justify-content: center;
 		gap: 0.625rem;
-		height: 100%;
+		flex: 1;
 		text-align: center;
 		padding: 2rem;
 	}
@@ -912,6 +924,8 @@ $effect(() => {
 	}
 
 	.diff-body {
+		flex: 1;
+		min-height: 0;
 		border-radius: 0.5rem;
 		overflow: auto;
 		background: var(--btn-regular-bg);
@@ -922,32 +936,34 @@ $effect(() => {
 
 	.diff-row {
 		display: flex;
-		align-items: stretch;
-		min-width: max-content;
+		/* 顶部对齐：代码软换行后行号仍与首行齐平，不会被垂直居中带偏 */
+		align-items: flex-start;
 	}
 
-	.diff-row .lno,
-	.diff-row .rno {
+	.diff-row .lno {
 		flex-shrink: 0;
 		width: 3.25rem;
 		padding: 0 0.5rem;
 		text-align: right;
 		color: var(--content-meta);
 		background: var(--float-panel-bg);
+		border-right: 1px solid var(--line-divider);
 		font-variant-numeric: tabular-nums;
 		user-select: none;
-	}
-
-	.diff-row .rno {
-		border-right: 1px solid var(--line-divider);
+		/* 行号自身不换行，宽度固定，换行只发生在代码侧 */
+		white-space: nowrap;
 	}
 
 	.diff-row .code {
 		display: flex;
 		gap: 0.5rem;
 		padding: 0 0.75rem 0 0.5rem;
-		white-space: pre;
+		min-width: 0;
 		color: var(--deep-text);
+		/* 长行软换行：不新增行号、不产生横向滚动条 */
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		word-break: break-word;
 	}
 
 	.diff-row .marker {
@@ -981,6 +997,8 @@ $effect(() => {
 	.single-body {
 		margin: 0;
 		padding: 0.75rem;
+		flex: 1;
+		min-height: 0;
 		border-radius: 0.5rem;
 		background: var(--btn-regular-bg);
 		font-family: var(--font-mono, ui-monospace, monospace);
@@ -988,8 +1006,8 @@ $effect(() => {
 		line-height: 1.65;
 		color: var(--deep-text);
 		white-space: pre-wrap;
+		overflow-wrap: anywhere;
 		word-break: break-word;
-		max-height: 60vh;
 		overflow: auto;
 	}
 
@@ -998,6 +1016,7 @@ $effect(() => {
 		justify-content: flex-end;
 		gap: 0.5rem;
 		margin-top: 0.875rem;
+		flex-shrink: 0;
 	}
 
 	@media (width < 900px) {
