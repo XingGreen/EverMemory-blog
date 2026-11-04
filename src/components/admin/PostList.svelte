@@ -1,7 +1,6 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import PostRowMenu from "@/components/admin/PostRowMenu.svelte";
-import SyncPanel from "@/components/admin/SyncPanel.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -41,7 +40,6 @@ let {
 } = $props();
 
 /** 同步面板开关：点「同步文章」打开专门的面板，不再直接触发同步 */
-let syncPanelOpen = $state(false);
 
 const showHeading = $derived(heading !== false);
 
@@ -987,7 +985,6 @@ function actionLabel(action: string, title: string): string {
 <!-- 同步面板：打开时先只读检查并展示差异与失败原因，用户点面板内的按钮才真正执行。
      onSynced 必须接「刷新列表」而不是 handleSync —— 后者自己就会 POST /sync，
      挂上去会导致面板同步完再拉一遍。 -->
-<SyncPanel bind:open={syncPanelOpen} onSynced={onRefresh} onOpenDiff={onOpenDiff} />
 
 <style>
 	.md3-list-container {

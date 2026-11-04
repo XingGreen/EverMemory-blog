@@ -23,9 +23,7 @@ import PostList from "./PostList.svelte";
 import SecretManager from "./SecretManager.svelte";
 import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
-import SyncDiffPage from "./SyncDiffPage.svelte";
 import SyncPage from "./SyncPage.svelte";
-import SyncPanel from "./SyncPanel.svelte";
 import TaxonomyManager from "./TaxonomyManager.svelte";
 
 type Post = {
@@ -50,8 +48,6 @@ type Page =
 	| "posts"
 	/** 文章历史版本（独立 URL，见 Route.page === "history"） */
 	| "history"
-	/** 同步差异查看（独立 URL，见 Route.page === "sync-diff"） */
-	| "sync-diff"
 	/** 同步工作台（/admin/sync/，左列表右详情） */
 	| "sync"
 	| "categories-and-tags"
@@ -80,8 +76,6 @@ type Route =
 	| { page: "edit"; slug: string }
 	/** 历史版本：/admin/posts/edit/:slug/history/[:revisionId]/ */
 	| { page: "history"; slug: string; revisionId: string }
-	/** 同步差异：/admin/sync/diff/:slug/ */
-	| { page: "sync-diff"; slug: string }
 	/** 同步工作台：/admin/sync/ 与 /admin/sync/:slug/ */
 	| { page: "sync"; slug: string }
 	| { page: "categories-and-tags" }
@@ -150,7 +144,6 @@ let leaveConfirmOpen = $state(false);
 /** 会话过期提示（由 auth-expired 的单例闸门保证只弹一次） */
 let authExpiredOpen = $state(false);
 /** 同步面板：所有「同步文章」入口统一打开它，不再直接触发拉取 */
-let adminSyncPanelOpen = $state(false);
 let pendingPath = $state("");
 let tourOpen = $state(false);
 let isSyncing = $state(false);
@@ -255,8 +248,6 @@ const activePage = $derived<Page>(
 			? "dashboard"
 			: route.page === "history"
 				? "history"
-				: route.page === "sync-diff"
-					? "sync-diff"
 					: route.page === "sync"
 						? "sync"
 						: route.page === "settings"
@@ -1654,7 +1645,6 @@ function formatDate(dateStr: string | null): string {
 			class:content-fixed={activePage === "settings" ||
 				activePage === "env" ||
 				activePage === "history" ||
-				activePage === "sync-diff" ||
 				activePage === "sync" ||
 				activePage === "categories-and-tags"}
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
@@ -1664,13 +1654,6 @@ function formatDate(dateStr: string | null): string {
 						slug={route.slug}
 						onOpen={(s) => navigate(`${DASHBOARD_PATH}sync/${s}/`)}
 						onBack={() => navigate(`${DASHBOARD_PATH}posts/`)}
-					/>
-				{:else if activePage === "sync-diff" && route.page === "sync-diff"}
-					<!-- 返回时带 ?sync=1，让列表页重新打开同步面板并恢复勾选：
-					     看完 diff 一般要回去继续选，回到一张空白列表等于把进度丢了。 -->
-					<SyncDiffPage
-						slug={route.slug}
-						onBack={() => navigate(`${DASHBOARD_PATH}posts/?sync=1`)}
 					/>
 				{:else if activePage === "history" && route.page === "history"}
 					<!-- 注入 SPA 导航：历史页返回/恢复后跳编辑器必须走前端路由，
@@ -1989,11 +1972,6 @@ function formatDate(dateStr: string | null): string {
 <!-- 站内切换页面时的未保存确认（对应参考项目 useBlocker 的 resolver 弹窗） -->
 <!-- 同步面板：仪表盘快捷操作与列表页的「同步文章」共用同一个面板，
      点开只做只读检查，真正执行要再点面板里的按钮 -->
-<SyncPanel
-	bind:open={adminSyncPanelOpen}
-	onSynced={loadPosts}
-	onOpenDiff={(slug) => navigate(`${DASHBOARD_PATH}sync/diff/${slug}/`)}
-/>
 
 {#if authExpiredOpen}
 	<div
