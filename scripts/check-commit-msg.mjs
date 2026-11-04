@@ -69,6 +69,8 @@ const subject = lines[0] ?? "";
 const body = lines.slice(1).join("\n");
 
 const errors = [];
+/** 针对性的改法建议：光说「格式不符」用户还得自己猜 */
+const hints = [];
 
 /* 1. 格式：type(scope): subject —— scope 可省略 */
 const re = new RegExp(`^(${TYPES.join("|")})(\\([a-z0-9-]+\\))?: .+`);
@@ -76,6 +78,20 @@ if (!re.test(subject)) {
 	errors.push(
 		`标题格式不符，应为「type(scope): 描述」，type 取 ${TYPES.join(" / ")}`,
 	);
+	if (/^[\u4e00-\u9fa5]/.test(subject)) {
+		/* 中文开头时不要再提「缺冒号」，那会把人带偏 */
+		hints.push(
+			"标题以中文开头了，需要先用英文 type 打头，例如 fix(sync): 修复同步面板",
+		);
+	} else if (/[：]/.test(subject)) {
+		hints.push("用了全角冒号「：」，应改成半角「: 」并空一格再写描述");
+	} else if (!/^[a-z]+(\([^)]*\))?:/.test(subject)) {
+		hints.push("type 后面缺冒号，正确写法是 fix(sync): 描述（冒号后半角空格）");
+	}
+	const typeGuess = subject.match(/^([a-zA-Z]+)/)?.[1]?.toLowerCase();
+	if (typeGuess && !TYPES.includes(typeGuess)) {
+		hints.push(`「${typeGuess}」不在允许的 type 里，最近的一项是 chore / docs / fix`);
+	}
 }
 
 /* 2. 标题长度 */
@@ -102,7 +118,14 @@ if (!subject.trim()) {
 
 if (errors.length > 0) {
 	console.error("\n[commit-msg] 提交信息被拒绝：\n");
+	/* 回显被拒的标题：不显示的话，用户只能对着规则猜自己哪里写错了 */
+	console.error(`  你写的标题：「${subject || "（空）"}」`);
+	console.error(`  长度 ${subject.length} 字符，上限 ${MAX_SUBJECT}\n`);
 	for (const e of errors) console.error("  × " + e);
+	if (hints.length > 0) {
+		console.error("\n  改法：");
+		for (const h of hints) console.error("  → " + h);
+	}
 	console.error("\n参考格式：");
 	console.error("  fix(sync): 远端不可达时保留条目并标记 unknown");
 	console.error("");

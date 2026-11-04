@@ -100,5 +100,5 @@
 		"quality": 70,
 		"noReferrerDomains": ["*.hdslb.com", "*.bilibili.com"]
 	},
-	"lang": "zh_CN"
+	"lang": "en"
 }

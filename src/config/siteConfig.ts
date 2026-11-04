@@ -2,7 +2,7 @@ import type { SiteConfig } from "@/types/siteConfig";
 
 // 定义站点语言
 // 语言代码，例如：'zh_CN', 'zh_TW', 'en', 'ja', 'ru'。
-const SITE_LANG = "zh_CN";
+const SITE_LANG = "en";
 
 export const siteConfig: SiteConfig = {
 	// 站点标题
@@ -40,9 +40,9 @@ export const siteConfig: SiteConfig = {
 	// 网站Card样式配置
 	card: {
 		// 是否开启卡片边框和阴影，开启后让网站更有立体感
-		border: true,
+		border: false,
 		// 是否让卡片风格跟随主题色相
-		followTheme: true,
+		followTheme:true,
 	},
 	// Favicon 配置
 	favicon: [

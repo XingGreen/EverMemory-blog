@@ -1,3 +1,4 @@
+*本项目由AI生成
 <img src="./docs/images/Forget-me-not.png" width = "350" height = "500" alt="Forget-me-not" align=right />
 
 <div align="center">
