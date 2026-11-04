@@ -24,6 +24,7 @@ import SecretManager from "./SecretManager.svelte";
 import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
 import SyncDiffPage from "./SyncDiffPage.svelte";
+import SyncPage from "./SyncPage.svelte";
 import SyncPanel from "./SyncPanel.svelte";
 import TaxonomyManager from "./TaxonomyManager.svelte";
 
@@ -51,6 +52,8 @@ type Page =
 	| "history"
 	/** 同步差异查看（独立 URL，见 Route.page === "sync-diff"） */
 	| "sync-diff"
+	/** 同步工作台（/admin/sync/，左列表右详情） */
+	| "sync"
 	| "categories-and-tags"
 	| "settings"
 	| "env"
@@ -79,6 +82,8 @@ type Route =
 	| { page: "history"; slug: string; revisionId: string }
 	/** 同步差异：/admin/sync/diff/:slug/ */
 	| { page: "sync-diff"; slug: string }
+	/** 同步工作台：/admin/sync/ 与 /admin/sync/:slug/ */
+	| { page: "sync"; slug: string }
 	| { page: "categories-and-tags" }
 	| { page: "settings"; section?: string }
 	| { page: "env" }
@@ -252,15 +257,17 @@ const activePage = $derived<Page>(
 				? "history"
 				: route.page === "sync-diff"
 					? "sync-diff"
-					: route.page === "settings"
-						? "settings"
-						: route.page === "env"
-							? "env"
-							: route.page === "categories-and-tags"
-								? "categories-and-tags"
-								: route.page === "sessions"
-									? "sessions"
-									: "posts",
+					: route.page === "sync"
+						? "sync"
+						: route.page === "settings"
+							? "settings"
+							: route.page === "env"
+								? "env"
+								: route.page === "categories-and-tags"
+									? "categories-and-tags"
+									: route.page === "sessions"
+										? "sessions"
+										: "posts",
 );
 
 const viewMode = $derived<ViewMode>(
@@ -355,13 +362,17 @@ function parseRoute(pathname: string): Route {
 		case undefined:
 			return { page: "dashboard" };
 		case "sync":
-			/* 差异查看页：/admin/sync/diff/:slug/
-			   独立路由是为了让代码 diff 拿到视口级宽度——模态宽 704px，
-			   两栏分下来每行只剩 48 字符，普通代码行必然横向滚动。 */
+			/* 同步工作台，左列表右详情：
+			   /admin/sync/         右栏显示概览
+			   /admin/sync/:slug/   右栏显示该文件的差异
+			   旧地址 /admin/sync/diff/:slug/ 仍可访问，直接映射到新结构。 */
 			if (segments[1] === "diff" && segments[2]) {
-				return { page: "sync-diff", slug: segments[2] };
+				return { page: "sync", slug: segments[2] };
 			}
-			return { page: "404" };
+			if (!segments[1]) return { page: "sync", slug: "" };
+			return segments.length === 2
+				? { page: "sync", slug: segments[1] }
+				: { page: "404" };
 		case "posts":
 			if (segments[1] === "new") return { page: "create" };
 			if (segments[1] === "edit" && segments[2]) {
@@ -462,14 +473,6 @@ function applyRoute() {
 			"",
 			`${DASHBOARD_PATH}settings/${next.section}/`,
 		);
-	}
-	/* 从差异页返回时带 ?sync=1：重新打开同步面板。
-	   面板自己会从 sessionStorage 恢复勾选，所以这里只负责「开」。 */
-	if (
-		(route.page === "posts" || route.page === "dashboard") &&
-		new URLSearchParams(window.location.search).get("sync") === "1"
-	) {
-		adminSyncPanelOpen = true;
 	}
 }
 
@@ -1426,7 +1429,7 @@ function formatDate(dateStr: string | null): string {
 				<Icon icon="material-symbols:settings" class="action-icon" />
 				<span>{i18n(I18nKey.adminSettings)}</span>
 			</button>
-			<button class="action-card tinted tone-wheat" onclick={() => (adminSyncPanelOpen = true)} disabled={isSyncing}>
+			<button class="action-card tinted tone-wheat" onclick={() => navigate(`${DASHBOARD_PATH}sync/`)} disabled={isSyncing}>
 				<Icon icon="material-symbols:cloud" class={isSyncing ? "action-icon syncing" : "action-icon"} />
 				<span>{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}</span>
 			</button>
@@ -1652,10 +1655,17 @@ function formatDate(dateStr: string | null): string {
 				activePage === "env" ||
 				activePage === "history" ||
 				activePage === "sync-diff" ||
+				activePage === "sync" ||
 				activePage === "categories-and-tags"}
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
 		>
-				{#if activePage === "sync-diff" && route.page === "sync-diff"}
+				{#if activePage === "sync" && route.page === "sync"}
+					<SyncPage
+						slug={route.slug}
+						onOpen={(s) => navigate(`${DASHBOARD_PATH}sync/${s}/`)}
+						onBack={() => navigate(`${DASHBOARD_PATH}posts/`)}
+					/>
+				{:else if activePage === "sync-diff" && route.page === "sync-diff"}
 					<!-- 返回时带 ?sync=1，让列表页重新打开同步面板并恢复勾选：
 					     看完 diff 一般要回去继续选，回到一张空白列表等于把进度丢了。 -->
 					<SyncDiffPage
@@ -1688,7 +1698,7 @@ function formatDate(dateStr: string | null): string {
 							{#snippet actions()}
 								<button
 									class="ui-btn ui-btn-soft"
-									onclick={() => (adminSyncPanelOpen = true)}
+									onclick={() => navigate(`${DASHBOARD_PATH}sync/`)}
 									disabled={isLoading || isSyncing}
 									aria-label={i18n(I18nKey.postSyncNow)}
 								>
@@ -1709,7 +1719,8 @@ function formatDate(dateStr: string | null): string {
 								onRefresh={loadPosts}
 								onCreate={goCreatePost}
 								onSync={handleSync}
-								onOpenDiff={(slug) => navigate(`${DASHBOARD_PATH}sync/diff/${slug}/`)}
+								onOpenDiff={(slug) => navigate(`${DASHBOARD_PATH}sync/${slug}/`)}
+								onOpenSync={() => navigate(`${DASHBOARD_PATH}sync/`)}
 								{isSyncing}
 								heading={false}
 							/>

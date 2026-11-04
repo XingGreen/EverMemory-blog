@@ -18,6 +18,7 @@ let {
 	onCreate,
 	onSync,
 	onOpenDiff,
+	onOpenSync,
 	isSyncing = false,
 	heading,
 }: {
@@ -31,6 +32,8 @@ let {
 	onSync?: () => void;
 	/** 跳转到独立差异页，由上层注入路由 */
 	onOpenDiff?: (slug: string) => void;
+	/** 打开同步工作台 */
+	onOpenSync?: () => void;
 	isSyncing?: boolean;
 	/** 是否渲染自带页头。默认 true（独立使用）；
 	 *  套进 AdminPage 时传 false，页头由外壳的 title/actions 承担。 */
@@ -516,7 +519,7 @@ function actionLabel(action: string, title: string): string {
 			{#if onSync}
 				<button
 					class="ui-btn ui-btn-soft"
-					onclick={() => (syncPanelOpen = true)}
+					onclick={() => onOpenSync?.()}
 					disabled={isLoading || isSyncing}
 					aria-label={i18n(I18nKey.postSyncNow)}
 				>
