@@ -593,8 +593,7 @@ $effect(() => {
 		gap: 1rem;
 		flex-wrap: wrap;
 		padding: 1.25rem 1.5rem;
-		/* --line-divider 是 8% 透明度，在这里太淡；用文字色压到 12% 才看得出是一条线 */
-		border-bottom: 1px solid color-mix(in srgb, var(--deep-text) 12%, transparent);
+		border-bottom: 1px solid var(--line-divider);
 		flex-shrink: 0;
 	}
 
@@ -878,7 +877,10 @@ $effect(() => {
 		justify-content: space-between;
 		gap: 0.75rem;
 		flex-wrap: wrap;
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid color-mix(in srgb, var(--deep-text) 16%, transparent);
 		margin-bottom: 0.75rem;
+		flex-shrink: 0;
 	}
 
 	.detail-head h2 {
@@ -953,6 +955,7 @@ $effect(() => {
 
 	.diff-row .code {
 		display: flex;
+		flex: 1;
 		gap: 0.5rem;
 		padding: 0 0.75rem 0 0.5rem;
 		min-width: 0;
@@ -970,7 +973,8 @@ $effect(() => {
 		user-select: none;
 	}
 
-	.diff-row.add {
+	/* 背景只染代码区：整行染色会把行号槽一起盖掉，行号就看不清了 */
+	.diff-row.add .code {
 		background: color-mix(in srgb, oklch(0.7 0.15 145) 14%, transparent);
 	}
 
@@ -978,7 +982,7 @@ $effect(() => {
 		color: oklch(0.7 0.15 145);
 	}
 
-	.diff-row.del {
+	.diff-row.del .code {
 		background: color-mix(in srgb, var(--destructive, #d33) 13%, transparent);
 	}
 
