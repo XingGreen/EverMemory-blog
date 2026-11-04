@@ -3,6 +3,7 @@ import { getContext, onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import ConfirmDialog from "./ConfirmDialog.svelte";
 import DatePicker from "./DatePicker.svelte";
 import { type FormGroup, POST_EDITOR_CONTEXT } from "./postEditorContext";
 import Select from "./Select.svelte";
@@ -171,6 +172,28 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 		hint: I18nKey.postSectionAdvancedHint,
 	},
 ];
+/** 清除封面前的确认 */
+let confirmState = $state<{
+	title: string;
+	body: string;
+	confirmText: string;
+	cancelText: string;
+} | null>(null);
+let confirmResolve: ((ok: boolean) => void) | null = null;
+
+function askConfirm(info: NonNullable<typeof confirmState>): Promise<boolean> {
+	confirmState = info;
+	return new Promise<boolean>((resolve) => {
+		confirmResolve = resolve;
+	});
+}
+
+function answerConfirm(ok: boolean) {
+	confirmState = null;
+	const resolve = confirmResolve;
+	confirmResolve = null;
+	resolve?.(ok);
+}
 </script>
 
 <svelte:window onclick={handleDocClick} />
@@ -347,11 +370,15 @@ const GROUPS: { key: FormGroup; title: I18nKey; hint: I18nKey }[] = [
 										<button
 											type="button"
 											class="cover-clear"
-											onclick={(e) => {
+											onclick={async (e) => {
 												e.stopPropagation();
-												if (window.confirm(i18n(I18nKey.postCoverClear))) {
-													editorState.image = "";
-												}
+												const ok = await askConfirm({
+													title: i18n(I18nKey.postCoverClear),
+													body: "封面图会从这篇文章移除，图片文件本身不受影响，之后可以重新填地址。",
+													confirmText: "清除封面",
+													cancelText: "保留",
+												});
+												if (ok) editorState.image = "";
 											}}
 											aria-label={i18n(I18nKey.postCoverClear)}
 											title={i18n(I18nKey.postCoverClear)}

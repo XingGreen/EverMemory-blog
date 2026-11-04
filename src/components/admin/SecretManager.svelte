@@ -4,6 +4,7 @@ import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import { type AdminSecretItem, SECRET_GROUPS } from "@/utils/admin-secrets";
+import ConfirmDialog from "./ConfirmDialog.svelte";
 
 type SecretItemDTO = AdminSecretItem & {
 	configured: boolean;
@@ -541,9 +542,14 @@ async function copyVercelCommands() {
 
 async function rotate(item: SecretItemDTO) {
 	if (rotating) return;
-	const confirmed = window.confirm(
-		i18n(I18nKey.secretsRotateConfirm).replace("{label}", item.label),
-	);
+	const confirmed = await askConfirm({
+		title: `轮换密钥「${item.label}」？`,
+		body: i18n(I18nKey.secretsRotateConfirm).replace("{label}", item.label),
+		hint: "旧密钥会立即失效，正在使用它的服务和脚本都要同步更新。",
+		confirmText: "轮换",
+		cancelText: "取消",
+		tone: "danger",
+	});
 	if (!confirmed) return;
 
 	rotating = item.key;
@@ -586,7 +592,43 @@ onMount(() => {
 	successDismissed = readSuccessDismissed();
 	load();
 });
+/** 轮换密钥前的确认 */
+let confirmState = $state<{
+	title: string;
+	body: string;
+	hint?: string;
+	confirmText: string;
+	cancelText: string;
+	tone: "default" | "danger";
+} | null>(null);
+let confirmResolve: ((ok: boolean) => void) | null = null;
+
+function askConfirm(info: NonNullable<typeof confirmState>): Promise<boolean> {
+	confirmState = info;
+	return new Promise<boolean>((resolve) => {
+		confirmResolve = resolve;
+	});
+}
+
+function answerConfirm(ok: boolean) {
+	confirmState = null;
+	const resolve = confirmResolve;
+	confirmResolve = null;
+	resolve?.(ok);
+}
 </script>
+
+<ConfirmDialog
+	open={confirmState !== null}
+	title={confirmState?.title ?? ""}
+	body={confirmState?.body ?? ""}
+	hint={confirmState?.hint ?? ""}
+	confirmText={confirmState?.confirmText ?? "确定"}
+	cancelText={confirmState?.cancelText ?? "取消"}
+	tone={confirmState?.tone ?? "default"}
+	onConfirm={() => answerConfirm(true)}
+	onCancel={() => answerConfirm(false)}
+/>
 
 <svelte:window
 	onbeforeunload={onBeforeUnload}
