@@ -576,16 +576,14 @@ $effect(() => {
 </div>
 
 <style>
-	/* 与视口留白，再由 card-base 提供圆角、裁切与卡片底色 */
+	/* 圆角与裁切由 card-base 提供；高度取项目变量，不自己加减 */
 	.sync-page {
 		display: flex;
 		flex-direction: column;
-		width: auto;
-		margin: 0.75rem;
-		height: calc(var(--admin-viewport-h, calc(100vh - 3rem)) - 1.5rem);
+		width: 100%;
+		height: var(--admin-viewport-h, calc(100vh - 3rem));
 		min-height: 0;
 		overflow: hidden;
-		border-radius: var(--radius-large);
 	}
 
 	.sync-head {
@@ -594,15 +592,16 @@ $effect(() => {
 		justify-content: space-between;
 		gap: 1rem;
 		flex-wrap: wrap;
-		padding: 1.25rem 1.5rem;
+		padding: 1.75rem 1.75rem 1.625rem;
 		border-bottom: 1px solid var(--line-divider);
 		flex-shrink: 0;
 	}
 
 	.head-text h1 {
 		margin: 0;
-		font-size: 1.5rem;
+		font-size: 1.75rem;
 		font-weight: 650;
+		line-height: 1.4;
 		color: var(--deep-text);
 	}
 
@@ -612,6 +611,7 @@ $effect(() => {
 		gap: 0.5rem;
 		margin: 0.375rem 0 0;
 		font-size: 0.8125rem;
+		line-height: 1.7;
 		color: var(--content-meta);
 		flex-wrap: wrap;
 	}
@@ -657,7 +657,7 @@ $effect(() => {
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
-		padding: 0.75rem 1rem 0.5rem;
+		padding: 0.75rem 1.25rem 0.5rem;
 		font-size: 0.75rem;
 		color: var(--content-meta);
 		flex-shrink: 0;
@@ -689,7 +689,7 @@ $effect(() => {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		padding: 0 1rem 0.5rem;
+		padding: 0 1.25rem 0.5rem;
 		font-size: 0.75rem;
 		color: var(--content-meta);
 		cursor: pointer;
@@ -709,7 +709,7 @@ $effect(() => {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		padding: 0.625rem 1rem;
+		padding: 0.625rem 1.25rem;
 		border-left: 2px solid transparent;
 	}
 
@@ -808,7 +808,7 @@ $effect(() => {
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
-		padding: 0.75rem 1rem;
+		padding: 0.75rem 1.25rem;
 		border-top: 1px solid var(--line-divider);
 		font-size: 0.75rem;
 		color: var(--content-meta);
@@ -820,7 +820,7 @@ $effect(() => {
 		flex-direction: column;
 		min-height: 0;
 		overflow: hidden;
-		padding: 1rem 1.25rem;
+		padding: 1.25rem 1.75rem 1.75rem;
 	}
 
 	.main-empty {
