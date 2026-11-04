@@ -149,7 +149,9 @@ export async function GET({ request }) {
 			comment: post.data.comment !== false,
 			image: post.data.image || "",
 			pinned: post.data.pinned || false,
-			filePath: `src/content/posts/${post.id}.md`,
+			/* 扩展名必须取自真实文件：硬编码 .md 会让 .mdx 文章
+			   在列表里冒充 .md，保存时还会把它写成 .md。 */
+			filePath: `src/content/posts/${(post.filePath ?? `${post.id}.md`).replace(/^.*content\/posts\//, "")}`,
 			/* 由下方远端比对填充；远端不可用时保持 null，前端不显示徽章 */
 			syncState: null as "deployed" | "not-on-github" | null,
 		}));
