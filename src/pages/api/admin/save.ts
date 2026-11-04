@@ -3,6 +3,7 @@ import path from "node:path";
 import { requireAuth } from "@/utils/auth";
 import { IS_PROD_BUILD } from "@/utils/env";
 import {
+	deleteFileLocally,
 	isValidPostSlug,
 	resolvePostPath,
 	saveFileLocally,
@@ -21,6 +22,8 @@ export async function POST({ request }) {
 		const body = await request.json();
 		const {
 			slug,
+			/* 编辑页的原始 slug：与 slug 不同即为「改了标识」，需要清理旧文件 */
+			originalSlug,
 			content,
 			title,
 			author,
@@ -119,13 +122,39 @@ export async function POST({ request }) {
 			: saveFileLocally(filePath, fullContent);
 
 		if (localSuccess) {
+			/* 改了 slug：先写新文件、再删旧文件，顺序不能反——
+			   先删后写的话，写失败就两头都没有。
+			   远端不在这里删：保存只负责本地，远端留给同步面板处理。 */
+			let renamedFrom: string | null = null;
+			if (
+				typeof originalSlug === "string" &&
+				originalSlug &&
+				originalSlug !== slug &&
+				isValidPostSlug(originalSlug)
+			) {
+				const oldPath =
+					(await resolvePostPath(originalSlug)) ??
+					`src/content/posts/${originalSlug}.md`;
+				// 路径相同说明解析到了同一文件，不能删
+				if (oldPath !== filePath) {
+					try {
+						if (deleteFileLocally(oldPath)) renamedFrom = originalSlug;
+					} catch (err) {
+						console.warn("[Admin Save] 清理旧 slug 文件失败:", err);
+					}
+				}
+			}
+
 			return new Response(
 				JSON.stringify({
 					success: true,
 					local: true,
 					remote: false,
-					message: "已保存到本地，推送请用同步面板",
+					message: renamedFrom
+						? `已保存为 ${slug}，旧文件 ${renamedFrom} 已移除（远端需在同步面板处理）`
+						: "已保存到本地，推送请用同步面板",
 					filePath,
+					renamedFrom,
 				}),
 				{ status: 200, headers: { "Content-Type": "application/json" } },
 			);

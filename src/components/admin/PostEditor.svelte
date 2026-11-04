@@ -7,6 +7,7 @@ import { editorConfig } from "@/config/editorConfig";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import type { AdminWriteResponse } from "@/types/adminApi";
+import DraftRestoreDialog from "./DraftRestoreDialog.svelte";
 import PostEditorFmPanel from "./PostEditorFmPanel.svelte";
 import PostEditorTocPanel from "./PostEditorTocPanel.svelte";
 import PostEditorWritePanel from "./PostEditorWritePanel.svelte";
@@ -708,6 +709,7 @@ function currentDraft(): DraftFields {
 		sourceLink: editorState.sourceLink,
 		enableComment: editorState.enableComment,
 		tags: editorState.tags,
+		device: describeDevice(),
 	};
 }
 
@@ -727,6 +729,85 @@ function persistLocalDraft(draft: DraftFields): boolean {
 		// 隐私模式 / 配额不足：写不进去，由调用方按「未保存」处理
 		return false;
 	}
+}
+
+/**
+ * 当前浏览器与系统，形如「Chrome · Windows」「Safari · iOS」。
+ *
+ * 只取这两项：用户认的是「我在手机上写的」还是「在电脑上写的」，
+ * 完整的 UA 字符串对判断没有帮助，反而更难读。
+ */
+function describeDevice(): string {
+	if (typeof navigator === "undefined") return "未知设备";
+	const ua = navigator.userAgent;
+
+	const browser = /Edg\//.test(ua)
+		? "Edge"
+		: /OPR\//.test(ua)
+			? "Opera"
+			: /Firefox\//.test(ua)
+				? "Firefox"
+				: /Chrome\//.test(ua)
+					? "Chrome"
+					: /Safari\//.test(ua)
+						? "Safari"
+						: "浏览器";
+
+	/* iPadOS 13+ 的 UA 伪装成 macOS，靠触摸点数区分 */
+	const isIPad = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+	const os =
+		/iPhone|iPad|iPod/.test(ua) || isIPad
+			? "iOS"
+			: /Android/.test(ua)
+				? "Android"
+				: /Mac OS X/.test(ua)
+					? "macOS"
+					: /Windows/.test(ua)
+						? "Windows"
+						: /Linux/.test(ua)
+							? "Linux"
+							: "未知系统";
+
+	return `${browser} · ${os}`;
+}
+
+/**
+ * 把时间戳说成人话。
+ * 「2026/11/4 19:20:00」要读两遍才知道是多久以前，「19 分钟前」一眼就懂——
+ * 这个数字直接决定用户敢不敢恢复。
+ */
+function humanAgo(ts: number): string {
+	const minutes = Math.floor((Date.now() - ts) / 60000);
+	if (minutes < 1) return "刚刚";
+	if (minutes < 60) return `${minutes} 分钟前`;
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return `${hours} 小时前`;
+	const days = Math.floor(hours / 24);
+	if (days < 30) return `${days} 天前`;
+	return new Date(ts).toLocaleDateString();
+}
+
+/**
+ * 按草稿内容里记录的 slug 反查槽位。
+ *
+ * 场景：在 A 文章的编辑页把 slug 改成 B（B 文件已存在），草稿仍写在 A 的槽里，
+ * 但内容里 slug 记的是 B。之后从 /edit/B/ 进来，按 B 的槽查是空的。
+ * 遍历一遍所有编辑槽即可命中——槽位数是「同时编辑过的文章数」，几十个以内。
+ */
+function findDraftBySlug(
+	slug: string,
+): { key: string; blob: DraftBlob } | null {
+	for (let i = 0; i < localStorage.length; i++) {
+		const key = localStorage.key(i);
+		if (!key?.startsWith("admin-post-draft-edit-")) continue;
+		try {
+			const blob = JSON.parse(localStorage.getItem(key) ?? "") as DraftBlob;
+			if (blob?.slug === slug) return { key, blob };
+		} catch {
+			// 单条损坏不影响其它槽
+		}
+	}
+	return null;
 }
 
 $effect(() => {
@@ -877,6 +958,8 @@ interface DraftFields {
 	sourceLink: string;
 	enableComment: boolean;
 	tags: string[];
+	/** 写入这份草稿的浏览器与系统，恢复时用来告诉用户「哪台设备上的改动」 */
+	device?: string;
 }
 
 interface DraftBlob extends DraftFields {
@@ -907,30 +990,66 @@ function applyDraft(data: Partial<DraftBlob>) {
 	dirty = true;
 }
 
+/** 草稿恢复确认弹窗的内容；null 表示未打开 */
+let restorePrompt = $state<{
+	ago: string;
+	device: string;
+	fromCloud: boolean;
+} | null>(null);
+let restoreResolve: ((take: boolean) => void) | null = null;
+
+/** 打开弹窗并等待用户选择。调用方 await 它，流程与 confirm 一致。 */
+function askRestore(info: {
+	ago: string;
+	device: string;
+	fromCloud: boolean;
+}): Promise<boolean> {
+	restorePrompt = info;
+	return new Promise<boolean>((resolve) => {
+		restoreResolve = resolve;
+	});
+}
+
+function answerRestore(take: boolean) {
+	restorePrompt = null;
+	const resolve = restoreResolve;
+	restoreResolve = null;
+	resolve?.(take);
+}
+
 /** 重新进入新建页时，恢复草稿：本地 localStorage 与云端各取较新者 */
 async function restoreCreateDraft() {
 	let local: DraftBlob | null = null;
+	let localKey = DRAFT_KEY;
 	try {
 		const raw = localStorage.getItem(DRAFT_KEY);
 		if (raw) local = JSON.parse(raw) as DraftBlob;
 	} catch {
 		// 备份损坏：忽略
 	}
-	let cloud: DraftBlob | null = null;
-	/* 云端草稿只对新建页兜底：编辑页正文本身就在服务端，再叠加一层云端草稿
-	   容易把「历史遗留草稿」当成正文恢复，风险大于收益。 */
-	if (mode === "create") {
-		try {
-			const res = await fetch(
-				`/api/admin/draft/?slug=${encodeURIComponent(post?.slug ?? "")}`,
-			);
-			const data = await res.json();
-			if (res.ok && data.success && data.draft) {
-				cloud = data.draft as DraftBlob;
-			}
-		} catch {
-			// 云端不可达：仅使用本地草稿
+	/* 按当前槽读不到时反查其它槽：改过 slug 但没保存的草稿会落在旧槽里 */
+	if (!local && mode === "edit" && post?.slug) {
+		const found = findDraftBySlug(post.slug);
+		if (found) {
+			local = found.blob;
+			localKey = found.key;
 		}
+	}
+	let cloud: DraftBlob | null = null;
+	/* 云端草稿对编辑页同样拉取。
+	   本地 localStorage 换台机器就没了，跨设备继续写只有云端能覆盖。
+	   风险靠下面的「与正文相同则跳过」控制：只有确实存在未保存改动才会恢复，
+	   内容一致时直接清掉冗余草稿，不会把历史遗留的草稿当成正文。 */
+	try {
+		const res = await fetch(
+			`/api/admin/draft/?slug=${encodeURIComponent(post?.slug ?? "")}`,
+		);
+		const data = await res.json();
+		if (res.ok && data.success && data.draft) {
+			cloud = data.draft as DraftBlob;
+		}
+	} catch {
+		// 云端不可达：仅使用本地草稿
 	}
 	const localTs = local?.savedAt || 0;
 	const cloudTs = cloud?.savedAt || 0;
@@ -953,10 +1072,37 @@ async function restoreCreateDraft() {
 			}
 			return;
 		}
+		/* 内容不同 → 确实有未保存的改动，但用户可能已经忘了这份草稿的存在。
+		   直接覆盖表单会让人以为「正文被改了」，所以问一次，而不是自作主张。
+		   用项目自己的弹窗而非 window.confirm：原生弹窗拿不到主题，
+		   也没法把「哪台设备、多久之前」排成可读的样子。 */
+		/* 来源不同，含义完全不同：本地是「我在这台机器上改过」，
+		   云端是「可能在手机或另一台电脑上写的」。 */
+		const fromCloud = cloud !== null && (local === null || cloudTs > localTs);
+		const take = await askRestore({
+			ago: source.savedAt ? humanAgo(source.savedAt) : "之前",
+			device: source.device ?? "未知设备",
+			fromCloud,
+		});
+		if (!take) return;
 	}
 
 	applyDraft(source);
 	resetHistory();
+	/* 草稿来自别的槽（改过 slug 未保存）：搬到当前槽。
+	   不搬的话下次还要再遍历一遍，而且用户恢复后不再改动就关闭时，
+	   草稿会一直停在旧槽里，始终靠反查才能找到。 */
+	if (localKey !== DRAFT_KEY) {
+		try {
+			localStorage.setItem(
+				DRAFT_KEY,
+				JSON.stringify({ ...source, savedAt: source.savedAt ?? Date.now() }),
+			);
+			localStorage.removeItem(localKey);
+		} catch {
+			// 迁移失败不影响本次恢复
+		}
+	}
 	cloudSavedAt = cloudTs || null;
 	if (cloudTs) cloudSync = "local-only";
 	/* 恢复后的内容就是当前基线：不更新的话会被当成「用户刚改动」，
@@ -1058,6 +1204,9 @@ async function handleSave() {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
 				slug: editorState.slug,
+				/* 编辑页的原始标识：与当前 slug 不同时由服务端清理旧文件。
+				   新建页没有「旧文件」，不传。 */
+				originalSlug: mode === "edit" ? post?.slug : undefined,
 				title: editorState.title,
 				author: editorState.author,
 				category: editorState.category,
@@ -1176,6 +1325,15 @@ $effect(() => {
 	else handleEditorScroll();
 });
 </script>
+
+<DraftRestoreDialog
+	open={restorePrompt !== null}
+	ago={restorePrompt?.ago ?? ""}
+	device={restorePrompt?.device ?? ""}
+	fromCloud={restorePrompt?.fromCloud ?? false}
+	onRestore={() => answerRestore(true)}
+	onKeep={() => answerRestore(false)}
+/>
 
 <div class="editor-shell">
 	<header class="editor-header">
