@@ -582,9 +582,8 @@ $effect(() => {
 		height: var(--admin-viewport-h, calc(100vh - 3rem));
 		min-height: 0;
 		overflow: hidden;
+		width: 100%;
 		background: var(--float-panel-bg);
-		border-radius: var(--radius-large);
-		box-shadow: var(--shadow-card);
 	}
 
 	.sync-head {
@@ -594,7 +593,8 @@ $effect(() => {
 		gap: 1rem;
 		flex-wrap: wrap;
 		padding: 1.25rem 1.5rem;
-		border-bottom: 1px solid var(--line-divider);
+		/* --line-divider 是 8% 透明度，在这里太淡；用文字色压到 12% 才看得出是一条线 */
+		border-bottom: 1px solid color-mix(in srgb, var(--deep-text) 12%, transparent);
 		flex-shrink: 0;
 	}
 
@@ -819,7 +819,7 @@ $effect(() => {
 		flex-direction: column;
 		min-height: 0;
 		overflow: hidden;
-		padding: 1.25rem 1.5rem;
+		padding: 1rem 1.25rem;
 	}
 
 	.main-empty {
@@ -926,9 +926,7 @@ $effect(() => {
 	.diff-body {
 		flex: 1;
 		min-height: 0;
-		border-radius: 0.5rem;
 		overflow: auto;
-		background: var(--btn-regular-bg);
 		font-family: var(--font-mono, ui-monospace, monospace);
 		font-size: 0.75rem;
 		line-height: 1.65;
@@ -942,12 +940,11 @@ $effect(() => {
 
 	.diff-row .lno {
 		flex-shrink: 0;
-		width: 3.25rem;
-		padding: 0 0.5rem;
+		width: 2.5rem;
+		padding: 0 0.375rem 0 0.125rem;
 		text-align: right;
 		color: var(--content-meta);
-		background: var(--float-panel-bg);
-		border-right: 1px solid var(--line-divider);
+		border-right: 1px solid color-mix(in srgb, var(--deep-text) 10%, transparent);
 		font-variant-numeric: tabular-nums;
 		user-select: none;
 		/* 行号自身不换行，宽度固定，换行只发生在代码侧 */
@@ -999,8 +996,6 @@ $effect(() => {
 		padding: 0.75rem;
 		flex: 1;
 		min-height: 0;
-		border-radius: 0.5rem;
-		background: var(--btn-regular-bg);
 		font-family: var(--font-mono, ui-monospace, monospace);
 		font-size: 0.75rem;
 		line-height: 1.65;
