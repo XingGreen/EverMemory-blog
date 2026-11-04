@@ -361,7 +361,7 @@ $effect(() => {
 
 <SyncHistory bind:open={historyOpen} />
 
-<div class="sync-page">
+<div class="card-base sync-page">
 	<header class="sync-head">
 		<div class="head-text">
 			<h1>{i18n(I18nKey.postSyncNow)}</h1>
@@ -576,14 +576,16 @@ $effect(() => {
 </div>
 
 <style>
+	/* 与视口留白，再由 card-base 提供圆角、裁切与卡片底色 */
 	.sync-page {
 		display: flex;
 		flex-direction: column;
-		height: var(--admin-viewport-h, calc(100vh - 3rem));
+		width: auto;
+		margin: 0.75rem;
+		height: calc(var(--admin-viewport-h, calc(100vh - 3rem)) - 1.5rem);
 		min-height: 0;
 		overflow: hidden;
-		width: 100%;
-		background: var(--float-panel-bg);
+		border-radius: var(--radius-large);
 	}
 
 	.sync-head {
