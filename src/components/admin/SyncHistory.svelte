@@ -78,10 +78,7 @@ $effect(() => {
 	>
 		<div class="history-panel">
 			<header class="history-head">
-				<h3>
-					<Icon icon="material-symbols:history" class="head-icon" />
-					同步记录
-				</h3>
+				<h2>同步记录</h2>
 				<button
 					class="icon-btn"
 					type="button"
@@ -114,7 +111,7 @@ $effect(() => {
 
 			<footer class="history-actions">
 				<span class="hint">保留最近 90 天</span>
-				<button class="text-btn" type="button" onclick={load} disabled={loading}>
+				<button class="ui-btn ui-btn-soft" type="button" onclick={load} disabled={loading}>
 					刷新
 				</button>
 			</footer>
@@ -126,24 +123,28 @@ $effect(() => {
 	.history-overlay {
 		position: fixed;
 		inset: 0;
-		z-index: 61;
-		display: grid;
-		place-items: center;
-		background: rgb(0 0 0 / 0.45);
-		backdrop-filter: blur(2px);
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		background: rgb(0 0 0 / 0.25);
+		-webkit-backdrop-filter: blur(4px);
+		backdrop-filter: blur(4px);
 	}
 
 	.history-panel {
 		display: flex;
 		flex-direction: column;
-		width: min(40rem, 92vw);
+		width: 100%;
+		max-width: 40rem;
 		max-height: 76vh;
-		padding: 1.25rem 1.375rem 1rem;
+		padding: 1.5rem;
 		gap: 0.75rem;
-		border-radius: 0.875rem;
-		border: 1px solid var(--line-divider);
-		background: var(--card-bg);
-		box-shadow: 0 20px 60px -12px rgb(0 0 0 / 0.45);
+		overflow: hidden;
+		background: var(--float-panel-bg);
+		box-shadow: var(--shadow-card);
+		border-radius: var(--radius-large);
 		color: var(--deep-text);
 	}
 
@@ -153,17 +154,13 @@ $effect(() => {
 		justify-content: space-between;
 	}
 
-	.history-head h3 {
+	.history-head h2 {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		margin: 0;
 		font-size: 1.0625rem;
 		font-weight: 700;
-	}
-
-	.head-icon {
-		color: var(--primary);
 	}
 
 	.icon-btn {

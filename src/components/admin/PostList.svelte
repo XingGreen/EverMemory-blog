@@ -17,6 +17,7 @@ let {
 	onRefresh,
 	onCreate,
 	onSync,
+	onOpenDiff,
 	isSyncing = false,
 	heading,
 }: {
@@ -28,6 +29,8 @@ let {
 	onRefresh: () => void;
 	onCreate: () => void;
 	onSync?: () => void;
+	/** 跳转到独立差异页，由上层注入路由 */
+	onOpenDiff?: (slug: string) => void;
 	isSyncing?: boolean;
 	/** 是否渲染自带页头。默认 true（独立使用）；
 	 *  套进 AdminPage 时传 false，页头由外壳的 title/actions 承担。 */
@@ -981,7 +984,7 @@ function actionLabel(action: string, title: string): string {
 <!-- 同步面板：打开时先只读检查并展示差异与失败原因，用户点面板内的按钮才真正执行。
      onSynced 必须接「刷新列表」而不是 handleSync —— 后者自己就会 POST /sync，
      挂上去会导致面板同步完再拉一遍。 -->
-<SyncPanel bind:open={syncPanelOpen} onSynced={onRefresh} />
+<SyncPanel bind:open={syncPanelOpen} onSynced={onRefresh} onOpenDiff={onOpenDiff} />
 
 <style>
 	.md3-list-container {

@@ -3,6 +3,7 @@ import SyncHistory from "@/components/admin/SyncHistory.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import ConfirmDialog from "./ConfirmDialog.svelte";
 
 /**
  * 同步操作台。
@@ -18,7 +19,13 @@ import { i18n } from "@/i18n/translation";
 let {
 	open = $bindable(false),
 	onSynced,
-}: { open?: boolean; onSynced?: () => void } = $props();
+	onOpenDiff,
+}: {
+	open?: boolean;
+	onSynced?: () => void;
+	/** 跳转到独立差异页；由调用方负责路由，面板不关心路径前缀 */
+	onOpenDiff?: (slug: string, path: string) => void;
+} = $props();
 
 type PlanState = "same" | "differs" | "local-only" | "remote-only" | "unknown";
 
@@ -68,18 +75,33 @@ let historyOpen = $state(false);
 
 let selected = $state<Set<string>>(new Set());
 let direction = $state<Record<string, "pull" | "push">>({});
+/** 覆盖本地前的确认；null 表示未打开 */
+let confirmState = $state<{
+	title: string;
+	body: string;
+	hint?: string;
+	confirmText: string;
+	cancelText: string;
+	tone: "default" | "danger";
+} | null>(null);
+let confirmResolve: ((ok: boolean) => void) | null = null;
+
+function askConfirm(info: NonNullable<typeof confirmState>): Promise<boolean> {
+	confirmState = info;
+	return new Promise<boolean>((resolve) => {
+		confirmResolve = resolve;
+	});
+}
+
+function answerConfirm(ok: boolean) {
+	confirmState = null;
+	const resolve = confirmResolve;
+	confirmResolve = null;
+	resolve?.(ok);
+}
+
 /** 执行失败的 slug，用于行内标红 */
 let failedSlugs = $state<Set<string>>(new Set());
-
-/** 差异面板：一次只看一条 */
-let diffSlug = $state<string | null>(null);
-let diffData = $state<{
-	localContent: string | null;
-	remoteContent: string | null;
-	localError: string | null;
-	remoteError: string | null;
-} | null>(null);
-let diffLoading = $state(false);
 
 const actionable = $derived(
 	(data?.items ?? []).filter(
@@ -118,39 +140,79 @@ function toggleAll() {
 	selected = allSelected ? new Set() : new Set(actionable.map((i) => i.slug));
 }
 
-function pick(item: PlanItem, dir: "pull" | "push") {
+async function pick(item: PlanItem, dir: "pull" | "push") {
 	/* 覆盖本地是破坏性的：本地未推送的改动会被直接替换且无回收站。
-		   这里必须拦一次，文案要具体到文件名，不能只问「确定吗」。 */
+	   这里必须拦一次，文案要具体到文件名，不能只问「确定吗」。 */
 	if (dir === "pull" && item.state === "differs") {
-		const ok = window.confirm(
-			`将用远端版本覆盖 ${item.slug}，本地未推送的改动会丢失。确定继续？`,
-		);
+		const ok = await askConfirm({
+			title: `用远端版本覆盖 ${item.slug}？`,
+			body: "本地这一份会被远端内容整体替换，未推送的改动不会保留，也没有回收站。",
+			hint: "如果只是想看差异，先点「差异」确认内容再决定。",
+			confirmText: "覆盖本地",
+			cancelText: "再看看",
+			tone: "danger",
+		});
 		if (!ok) return;
 	}
 	direction = { ...direction, [item.slug]: dir };
 	if (!selected.has(item.slug)) toggle(item.slug);
 }
 
+/** 请求序号：连续开关面板会产生并发的 load，只认最后一次的结果 */
+let loadToken = 0;
+
+/**
+ * 从 sessionStorage 恢复勾选。
+ * 看完 diff 返回时不该丢掉已经选好的条目；
+ * 但 plan 可能已经变化（同步过或远端更新），所以要按当前条目过滤，
+ * 避免留下已经消失的 slug 导致执行时报「远端不存在」。
+ */
+function restoreSelection(plan: PlanPayload) {
+	let saved: {
+		selected?: string[];
+		direction?: Record<string, "pull" | "push">;
+	} | null = null;
+	try {
+		const raw = sessionStorage.getItem("sync:pending");
+		if (raw) saved = JSON.parse(raw);
+	} catch {
+		saved = null;
+	}
+	if (!saved) {
+		selected = new Set();
+		direction = {};
+		return;
+	}
+	const valid = new Set(plan.items.map((i) => i.slug));
+	selected = new Set((saved.selected ?? []).filter((s) => valid.has(s)));
+	direction = Object.fromEntries(
+		Object.entries(saved.direction ?? {}).filter(([k]) => valid.has(k)),
+	);
+}
+
 async function load() {
+	const token = ++loadToken;
 	loading = true;
 	runMessage = null;
 	failedSlugs = new Set();
-	diffSlug = null;
-	diffData = null;
 	try {
-		const res = await fetch("/api/admin/sync/plan/");
+		/* no-store 必须显式加：GET 请求默认走浏览器缓存，
+		   快速开关面板时会拿到上一次的响应。 */
+		const res = await fetch("/api/admin/sync/plan/", { cache: "no-store" });
 		const payload = (await res.json().catch(() => null)) as PlanPayload | null;
+		/* 后发先至的响应丢弃：期间用户可能已经重新打开了面板 */
+		if (token !== loadToken) return;
 		if (!payload) {
 			data = emptyPlan(`HTTP ${res.status}`);
 			return;
 		}
 		data = payload;
-		selected = new Set();
-		direction = {};
+		restoreSelection(payload);
 	} catch (error) {
+		if (token !== loadToken) return;
 		data = emptyPlan(error instanceof Error ? error.message : String(error));
 	} finally {
-		loading = false;
+		if (token === loadToken) loading = false;
 	}
 }
 
@@ -173,30 +235,29 @@ function emptyPlan(error: string): PlanPayload {
 	};
 }
 
-async function showDiff(item: PlanItem) {
-	if (diffSlug === item.slug) {
-		diffSlug = null;
-		diffData = null;
-		return;
-	}
-	diffSlug = item.slug;
-	diffData = null;
-	diffLoading = true;
+/**
+ * 打开独立差异页。
+ * 目标路径不放进 URL：slug 抹掉了 /index，靠它猜不出真实路径，
+ * 所以连同 slug 一起写进 sessionStorage 交给差异页取。
+ * 同时把当前勾选与方向存下来——看完 diff 回来还要接着选。
+ */
+function openDiff(item: PlanItem) {
 	try {
-		const res = await fetch(
-			`/api/admin/sync/filediff/?slug=${encodeURIComponent(item.slug)}&path=${encodeURIComponent(item.path)}`,
+		sessionStorage.setItem(
+			"sync:diff-target",
+			JSON.stringify({ slug: item.slug, path: item.path }),
 		);
-		diffData = await res.json();
-	} catch (error) {
-		diffData = {
-			localContent: null,
-			remoteContent: null,
-			localError: error instanceof Error ? error.message : String(error),
-			remoteError: null,
-		};
-	} finally {
-		diffLoading = false;
+		sessionStorage.setItem(
+			"sync:pending",
+			JSON.stringify({
+				selected: [...selected],
+				direction,
+			}),
+		);
+	} catch {
+		// sessionStorage 不可用时仍然允许跳转，只是回来会丢勾选
 	}
+	onOpenDiff?.(item.slug, item.path);
 }
 
 async function apply() {
@@ -238,7 +299,17 @@ async function apply() {
 		failedSlugs = new Set(failed.map((f) => f.slug));
 		runFailed = !res.ok || !payload?.success;
 		runMessage = payload?.message ?? `HTTP ${res.status}`;
-		if (!runFailed) onSynced?.();
+		if (!runFailed) {
+			/* 同步成功后清掉暂存：这一轮的选择已经执行完，
+			   留着会让下次打开面板时「凭空」恢复一批旧勾选。 */
+			try {
+				sessionStorage.removeItem("sync:pending");
+				sessionStorage.removeItem("sync:diff-target");
+			} catch {
+				// sessionStorage 不可用，忽略
+			}
+			onSynced?.();
+		}
 		await load();
 	} catch (error) {
 		runFailed = true;
@@ -263,6 +334,18 @@ $effect(() => {
 });
 </script>
 
+<ConfirmDialog
+	open={confirmState !== null}
+	title={confirmState?.title ?? ""}
+	body={confirmState?.body ?? ""}
+	hint={confirmState?.hint ?? ""}
+	confirmText={confirmState?.confirmText ?? "确定"}
+	cancelText={confirmState?.cancelText ?? "取消"}
+	tone={confirmState?.tone ?? "default"}
+	onConfirm={() => answerConfirm(true)}
+	onCancel={() => answerConfirm(false)}
+/>
+
 {#if open}
 	<div
 		class="sync-overlay"
@@ -280,14 +363,11 @@ $effect(() => {
 		<div class="sync-panel">
 			<header class="sync-head">
 				<div class="head-text">
-					<h3>
-						<Icon icon="material-symbols:sync" class="head-icon" />
-						{i18n(I18nKey.postSyncNow)}
-					</h3>
+					<h2>{i18n(I18nKey.postSyncNow)}</h2>
 					{#if data}
 						<p class="sync-sub">
 							<span class="dot" class:ok={data.connected}></span>
-							{data.connected ? "GitHub 已连接" : "GitHub 不可达"}
+							{data.connected ? "GitHub 已连接" : "读取远端失败"}
 							<span class="sep">·</span>
 							本地 {data.localTotal} 篇 / 远端 {data.connected ? `${data.remoteTotal} 篇` : "-- 篇"}
 							{#if !data.localAvailable}
@@ -307,27 +387,12 @@ $effect(() => {
 			</header>
 
 			{#if loading}
-				<p class="hint">正在比对…</p>
+				<p class="hint sync-state">正在比对…</p>
 			{:else if data?.error || !data?.connected}
-				<pre class="sync-error">{data?.error ?? "GitHub 不可达，无法比对"}</pre>
+				<pre class="sync-error sync-state">{data?.error ?? "读取远端失败，原因未知"}</pre>
 			{:else if data}
-				<div class="sync-toolbar">
-					<span>
-						需处理 <b class="num-warn">{actionable.length}</b> 项 · 一致
-						<b class="num-ok">{data.counts.same}</b> 项
-					</span>
-					<button
-						class="link-btn"
-						type="button"
-						onclick={() => (showSame = !showSame)}
-						disabled={data.counts.same === 0}
-					>
-						{showSame ? "隐藏一致项" : "显示一致项"}
-					</button>
-				</div>
-
 				<div class="sync-list-wrap">
-					<!-- 表头：全选框负责批量选择，不再单设「清空」——再点一次即取消 -->
+					<!-- 表头工具栏：全选、统计、显示一致项合并成一行，省掉一层堆叠 -->
 					<div class="list-head">
 						<label class="head-check">
 							<input
@@ -336,8 +401,22 @@ $effect(() => {
 								onchange={toggleAll}
 								aria-label="全选可处理项"
 							/>
+							<span class="head-label">全选</span>
 						</label>
-						<span class="head-label">全选可处理项</span>
+						<div class="head-stats">
+							<span>
+								需处理 <b class="num-warn">{actionable.length}</b> 项 · 一致
+								<b class="num-ok">{data.counts.same}</b> 项
+							</span>
+							<button
+								class="link-btn"
+								type="button"
+								onclick={() => (showSame = !showSame)}
+								disabled={data.counts.same === 0}
+							>
+								{showSame ? "隐藏一致项" : "显示一致项"}
+							</button>
+						</div>
 					</div>
 
 					<ul class="sync-list">
@@ -372,17 +451,17 @@ $effect(() => {
 								{#if !isSame}
 									<div class="row-actions">
 										<button
-											class="text-btn"
+											class="act-btn"
 											type="button"
 											disabled={item.state !== "differs"}
-											title={item.state === "differs" ? "对比两边正文" : "只有一边存在文件，无内容可比"}
-											onclick={() => showDiff(item)}
+											title={item.state === "differs" ? "在独立页面查看行级差异" : "只有一边存在文件，无内容可比"}
+											onclick={() => openDiff(item)}
 										>
-											{diffSlug === item.slug ? "收起" : "差异"}
+											差异
 										</button>
 										<button
-											class="text-btn"
-											class:on={picked === "pull"}
+											class="act-btn"
+											class:primary={picked === "pull" || (canPull(item) && !canPush(item))}
 											class:danger={item.state === "differs"}
 											type="button"
 											disabled={!canPull(item)}
@@ -391,8 +470,8 @@ $effect(() => {
 											拉取到本地
 										</button>
 										<button
-											class="text-btn"
-											class:on={picked === "push"}
+											class="act-btn"
+											class:primary={picked === "push" || (canPush(item) && !canPull(item))}
 											type="button"
 											disabled={!canPush(item)}
 											onclick={() => pick(item, "push")}
@@ -403,34 +482,6 @@ $effect(() => {
 								{/if}
 							</li>
 
-							{#if diffSlug === item.slug}
-								<li class="diff-pane">
-									{#if diffLoading}
-										<p class="hint">正在加载正文…</p>
-									{:else if diffData}
-										<div class="diff-cols">
-											<div class="diff-col">
-												<span class="diff-title">
-													本地
-													{#if diffData.localError}
-														<span class="warn">· {diffData.localError}</span>
-													{/if}
-												</span>
-												<pre class="diff-body">{diffData.localContent ?? "（本地无此文件）"}</pre>
-											</div>
-											<div class="diff-col">
-												<span class="diff-title">
-													远端
-													{#if diffData.remoteError}
-														<span class="warn">· {diffData.remoteError}</span>
-													{/if}
-												</span>
-												<pre class="diff-body">{diffData.remoteContent ?? "（远端无此文件）"}</pre>
-											</div>
-										</div>
-									{/if}
-								</li>
-							{/if}
 						{/each}
 					</ul>
 				</div>
@@ -443,16 +494,16 @@ $effect(() => {
 					<span class="selected-tip">
 						已选 <b>{selected.size}</b> 项待同步
 					</span>
-					<button
-						class="text-btn"
-						type="button"
-						onclick={() => (historyOpen = true)}
-					>
-						查看记录
-					</button>
 					<div class="toolbar-actions">
 						<button
-							class="text-btn"
+							class="ui-btn ui-btn-soft"
+							type="button"
+							onclick={() => (historyOpen = true)}
+						>
+							查看记录
+						</button>
+						<button
+							class="ui-btn ui-btn-soft"
 							type="button"
 							onclick={load}
 							disabled={loading || running}
@@ -460,7 +511,7 @@ $effect(() => {
 							重新检查
 						</button>
 						<button
-							class="savebar-btn primary"
+							class="ui-btn ui-btn-primary"
 							type="button"
 							onclick={apply}
 							disabled={running || selected.size === 0}
@@ -480,30 +531,28 @@ $effect(() => {
 	.sync-overlay {
 		position: fixed;
 		inset: 0;
-		z-index: 60;
-		display: grid;
-		place-items: center;
-		background: rgb(0 0 0 / 0.5);
-		backdrop-filter: blur(2px);
+		z-index: 10000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgb(0 0 0 / 0.25);
+		-webkit-backdrop-filter: blur(4px);
+		backdrop-filter: blur(4px);
+		animation: fadeIn 0.2s ease-out;
 	}
 
 	.sync-panel {
 		display: flex;
 		flex-direction: column;
-		width: min(48rem, 94vw);
+		width: 90%;
+		max-width: 44rem;
 		max-height: 84vh;
-		/* 面板挂在 body 下，不再继承后台内容区的文字色。
-		   这里显式取主题变量，明暗切换时跟着主题走而不是跟着某层父级走 */
+		overflow: hidden;
+		background: var(--float-panel-bg);
+		border-radius: var(--radius-large);
+		box-shadow: var(--shadow-card-hover);
 		color: var(--deep-text);
-		padding: 1.5rem 1.5rem 1rem;
-		gap: 1rem;
-		border-radius: 1rem;
-		border: 1px solid var(--line-divider);
-		background: var(--card-bg);
-		box-shadow: 0 24px 70px -14px rgb(0 0 0 / 0.5);
-		/* 显式指定前景色：后台只引 admin.css，面板若依赖 :root 之外的继承链，
-		   深浅主题切换时文字色会跟着父级走而不是跟着主题走 */
-		color: var(--deep-text);
+		animation: slideIn 0.3s ease-out;
 	}
 
 	.sync-head {
@@ -511,9 +560,10 @@ $effect(() => {
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: 0.75rem;
+		padding: 1.25rem 1.5rem 1rem;
 	}
 
-	.head-text h3 {
+	.head-text h2 {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
@@ -521,10 +571,6 @@ $effect(() => {
 		font-size: 1.125rem;
 		font-weight: 700;
 		color: var(--deep-text);
-	}
-
-	.head-icon {
-		color: var(--primary);
 	}
 
 	.sync-sub {
@@ -586,13 +632,8 @@ $effect(() => {
 		overflow: auto;
 	}
 
-	.sync-toolbar {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		font-size: 0.875rem;
-		color: var(--deep-text);
+	.sync-state {
+		margin: 0 1.5rem 1rem;
 	}
 
 	.num-warn {
@@ -608,21 +649,32 @@ $effect(() => {
 		min-height: 0;
 		display: flex;
 		flex-direction: column;
-		border-radius: 0.75rem;
 		overflow: hidden;
 	}
 
 	.list-head {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 0.875rem;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.75rem 1.5rem;
+		border-top: 1px solid var(--line-divider);
 		border-bottom: 1px solid var(--line-divider);
 	}
 
 	.head-check {
 		display: flex;
 		align-items: center;
+		gap: 0.5rem;
+		cursor: pointer;
+	}
+
+	.head-stats {
+		display: flex;
+		align-items: center;
+		gap: 0.875rem;
+		font-size: 0.75rem;
+		color: var(--content-meta);
 	}
 
 	.head-label {
@@ -634,20 +686,19 @@ $effect(() => {
 		flex: 1;
 		min-height: 0;
 		margin: 0;
-		padding: 0.375rem;
+		padding: 0;
 		list-style: none;
 		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
 	}
 
 	.sync-row {
 		display: flex;
 		align-items: center;
-		gap: 0.625rem;
-		padding: 0.625rem 0.625rem;
-		border-radius: 0.625rem;
+		gap: 0.75rem;
+		padding: 1rem 1.5rem;
+		border-bottom: 1px solid var(--line-divider);
 		transition: background 0.15s;
 	}
 
@@ -736,9 +787,10 @@ $effect(() => {
 		flex-shrink: 0;
 	}
 
-	.text-btn {
-		padding: 0.3125rem 0.625rem;
-		border: 1px solid var(--line-divider);
+	/* 行内动作：无边框文字按钮，hover 才浮现；主动作实底形成主次 */
+	.act-btn {
+		padding: 0.375rem 0.75rem;
+		border: none;
 		border-radius: 0.5rem;
 		background: transparent;
 		font-size: 0.75rem;
@@ -747,69 +799,37 @@ $effect(() => {
 		white-space: nowrap;
 		transition:
 			color 0.15s,
-			border-color 0.15s,
 			background 0.15s;
 	}
 
-	.text-btn:hover:not(:disabled) {
+	.act-btn:hover:not(:disabled) {
+		background: var(--btn-plain-bg-hover);
 		color: var(--deep-text);
-		border-color: var(--primary);
 	}
 
-	.text-btn:disabled {
+	.act-btn:disabled {
 		opacity: 0.35;
 		cursor: not-allowed;
 	}
 
-	.text-btn.on {
-		color: var(--primary-foreground, #fff);
-		background: var(--primary);
-		border-color: var(--primary);
-	}
-
-	/* 覆盖本地是破坏性操作，未选中时也保留警告色，让风险先被看见 */
-	.text-btn.danger:not(.on) {
-		color: oklch(0.72 0.16 45);
-		border-color: color-mix(in srgb, oklch(0.72 0.16 45) 45%, transparent);
-	}
-
-	.diff-pane {
-		padding: 0.5rem;
-	}
-
-	.diff-cols {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 0.5rem;
-	}
-
-	.diff-col {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		min-width: 0;
-	}
-
-	.diff-title {
-		font-size: 0.6875rem;
-		color: var(--content-meta);
-	}
-
-	.diff-body {
-		margin: 0;
-		max-height: 14rem;
-		overflow: auto;
-		padding: 0.5rem 0.625rem;
-		border-radius: 0.5rem;
+	/* 该行只有一个可行方向时，它是主动作，给实底 */
+	.act-btn.primary {
 		background: var(--btn-regular-bg);
-		font-size: 0.6875rem;
-		line-height: 1.5;
-		white-space: pre-wrap;
-		word-break: break-word;
+		color: var(--deep-text);
+	}
+
+	.act-btn.primary:hover:not(:disabled) {
+		background: var(--btn-plain-bg-hover);
+	}
+
+	/* 覆盖本地是破坏性操作，未选中时也保留警告色 */
+	.act-btn.danger:not(.primary) {
+		color: oklch(0.72 0.16 45);
 	}
 
 	.run-msg {
 		margin: 0;
+		padding: 0 1.5rem 0.75rem;
 		font-size: 0.8125rem;
 		color: var(--deep-text);
 	}
@@ -823,8 +843,8 @@ $effect(() => {
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.75rem;
-		padding-top: 0.875rem;
-		border-top: 1px solid var(--post-editor-rule);
+		padding: 1rem 1.5rem;
+		border-top: 1px solid var(--line-divider);
 	}
 
 	.selected-tip {

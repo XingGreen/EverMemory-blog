@@ -17,7 +17,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
 import { gitBlobSha, hasCrlf } from "@/utils/git-blob";
-import { listMarkdownWithSha } from "@/utils/github-app";
+import { describeFetchError, listMarkdownWithSha } from "@/utils/github-app";
 import { slugFromPath } from "@/utils/post-slug";
 
 export const prerender = false;
@@ -38,6 +38,33 @@ interface PlanItem {
 	crlf?: boolean;
 	draft?: boolean;
 	title?: string;
+}
+
+/**
+ * 把失败原因分成「认证 / 限流 / 找不到 / 服务端 / 网络」几类。
+ *
+ * 之前这里直接把错误消息透出去，前端又统一显示「GitHub 不可达」，
+ * 于是 401、429、超时全都被说成「断网」——用户网络明明正常，
+ * 却看到一句让人无从下手的结论。
+ */
+function classifyGitHubError(err: unknown): string {
+	const raw = err instanceof Error ? err.message : String(err);
+	const status = raw.match(/HTTP (\d{3})/)?.[1];
+
+	if (status) {
+		if (status === "401")
+			return "GitHub 认证失败（401）：App 凭据无效或已过期，检查 GITHUB_APP_ID / 私钥 / INSTALLATION_ID";
+		if (status === "403")
+			return "GitHub 拒绝访问（403）：可能是 App 权限不足，或触发了 API 限流";
+		if (status === "404")
+			return "GitHub 找不到仓库或分支（404）：检查 GITHUB_OWNER / GITHUB_REPO / GITHUB_BRANCH";
+		if (status === "429") return "GitHub 请求过于频繁（429）：等几分钟再试";
+		if (status.startsWith("5"))
+			return `GitHub 服务端错误（${status}）：稍后重试`;
+		return `GitHub 返回 HTTP ${status}`;
+	}
+
+	return describeFetchError(err);
 }
 
 /** 递归收集 src/content/posts 下的 markdown 相对路径 */
@@ -90,7 +117,7 @@ export async function GET({
 			REMOTE_TIMEOUT_MS,
 		);
 	} catch (err) {
-		error = err instanceof Error ? err.message : String(err);
+		error = classifyGitHubError(err);
 	}
 
 	/* 2. 本地：内容集合给 slug 与 frontmatter，文件系统给字节用于算 sha。

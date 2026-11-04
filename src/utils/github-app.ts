@@ -219,6 +219,49 @@ export async function getInstallationToken(): Promise<string> {
 	}
 }
 
+/**
+ * 把 fetch 的异常翻译成人能看懂的原因。
+ *
+ * undici 在连接层失败时只抛 `TypeError: fetch failed`，
+ * 真正的信息在 `error.cause.code` 里（超时 / DNS / 连接重置 / TLS）。
+ * 不取出来就只能显示「不可达」，把超时、认证失败、DNS 问题混成同一句话。
+ */
+export function describeFetchError(error: unknown): string {
+	const err = error as {
+		name?: string;
+		message?: string;
+		cause?: { code?: string; errno?: string; message?: string };
+	};
+	const cause = err?.cause;
+	const code = String(cause?.code ?? cause?.errno ?? "");
+	const causeMsg = cause?.message ?? "";
+
+	if (code === "UND_ERR_CONNECT_TIMEOUT") return "连接 GitHub 超时";
+	if (code === "UND_ERR_HEADERS_TIMEOUT") return "等待 GitHub 响应超时";
+	if (code === "UND_ERR_BODY_TIMEOUT") return "读取 GitHub 响应超时";
+	if (code === "UND_ERR_SOCKET") return "与 GitHub 的连接被中断";
+	if (code === "ENOTFOUND" || code === "EAI_AGAIN")
+		return `GitHub 域名解析失败（${code}）`;
+	if (code === "ECONNREFUSED") return "连接 GitHub 被拒绝";
+	if (code === "ECONNRESET") return "连接 GitHub 被重置";
+	/* 证书链类错误的 code 五花八门，能确认的是「中间有人在动 TLS」 */
+	if (
+		code.startsWith("CERT_") ||
+		code.includes("SSL") ||
+		code.includes("TLS") ||
+		code.includes("SELF_SIGNED") ||
+		code.includes("UNABLE_TO_VERIFY")
+	) {
+		return `TLS 证书校验失败（${code}）：通常是系统代理或安全软件在做 HTTPS 拦截。请让本机代理的根证书进入信任链，或在启动开发服务器前清空 HTTP_PROXY / HTTPS_PROXY`;
+	}
+	if (err?.name === "AbortError" || err?.name === "TimeoutError")
+		return "请求超时被中断";
+
+	if (code) return `请求 GitHub 失败（${code}）`;
+	if (causeMsg) return `请求 GitHub 失败：${causeMsg}`;
+	return err?.message || "请求 GitHub 失败";
+}
+
 async function fetchWithRetry(
 	url: string,
 	options: RequestInit,
@@ -265,10 +308,12 @@ async function fetchWithRetry(
 		}
 	}
 
+	const reason = describeFetchError(lastError);
 	console.warn(
-		`[GitHub Fetch] All ${maxRetries} attempts failed: ${lastError?.message ?? "unknown"}`,
+		`[GitHub Fetch] All ${maxRetries} attempts failed: ${reason}（原始：${lastError?.message ?? "unknown"}）`,
 	);
-	throw lastError || new Error("Unknown fetch error");
+	// 抛出分类后的文案，并保留原始错误作为 cause 供排查
+	throw new Error(reason, { cause: lastError ?? undefined });
 }
 
 export async function getFileFromGitHub(
@@ -692,4 +737,125 @@ export async function testGitHubConnection(): Promise<number> {
 	}
 
 	return Date.now() - started;
+}
+
+/**
+ * 把 UTF-8 字符串编成 base64。
+ *
+ * 不用 Buffer：Cloudflare Workers 运行时只有 nodejs_compat 才给 Buffer，
+ * 而这个函数在两条部署线都要跑。TextEncoder + btoa 两边都有。
+ */
+function toBase64(text: string): string {
+	const bytes = new TextEncoder().encode(text);
+	let binary = "";
+	for (const byte of bytes) binary += String.fromCharCode(byte);
+	return btoa(binary);
+}
+
+/**
+ * 一次提交多个文件（GraphQL createCommitOnBranch）。
+ *
+ * 为什么不是循环调 saveFileToGitHub：每次调用产生一个 commit，
+ * 每个 commit 都会触发一次部署。推 5 篇就是 5 次构建——这正是
+ * 「改完要等半天才上线」的来源。
+ *
+ * expectedHeadOid 顺带提供乐观锁：期间远端被推过，整个提交失败而不是静默覆盖。
+ *
+ * @param files content 为 null 表示删除该文件
+ */
+export async function commitFiles(
+	files: Array<{ path: string; content: string | null }>,
+	message: { headline: string; body?: string },
+): Promise<{ ok: boolean; commitOid?: string; message?: string }> {
+	if (files.length === 0) return { ok: true };
+
+	let token: string;
+	try {
+		token = await getInstallationToken();
+	} catch (error) {
+		return {
+			ok: false,
+			message: error instanceof Error ? error.message : String(error),
+		};
+	}
+
+	// 1. 当前 HEAD 作为 expectedHeadOid
+	const refRes = await fetch(
+		`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/ref/heads/${GITHUB_BRANCH}`,
+		{
+			headers: {
+				Authorization: `Bearer ${token}`,
+				Accept: "application/vnd.github+json",
+			},
+		},
+	);
+	if (!refRes.ok) {
+		return { ok: false, message: `读取分支失败：HTTP ${refRes.status}` };
+	}
+	const ref = (await refRes.json()) as { object?: { sha?: string } };
+	const expectedHeadOid = ref.object?.sha;
+	if (!expectedHeadOid) return { ok: false, message: "无法读取分支 HEAD" };
+
+	/* 2. 组装变更。
+	   注意 additions / deletions 在 schema 里都是 [X!]!（非空列表），
+	   所以两个字段都必须出现，没有内容时传空数组，而不是省略。 */
+	const additions = files
+		.filter((f) => f.content !== null)
+		.map((f) => ({
+			path: f.path,
+			contents: toBase64(f.content as string),
+		}));
+	const deletions = files
+		.filter((f) => f.content === null)
+		.map((f) => ({ path: f.path }));
+	if (additions.length === 0 && deletions.length === 0) return { ok: true };
+	const fileChanges = { additions, deletions };
+
+	// 3. 一次提交
+	const res = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		body: JSON.stringify({
+			query: `mutation ($input: CreateCommitOnBranchInput!) {
+				createCommitOnBranch(input: $input) {
+					commit { oid }
+				}
+			}`,
+			variables: {
+				input: {
+					branch: {
+						repositoryNameWithOwner: `${GITHUB_OWNER}/${GITHUB_REPO}`,
+						branchName: GITHUB_BRANCH,
+					},
+					expectedHeadOid,
+					message: message.body
+						? { headline: message.headline, body: message.body }
+						: { headline: message.headline },
+					fileChanges,
+				},
+			},
+		}),
+	});
+
+	const payload = (await res.json().catch(() => null)) as {
+		data?: { createCommitOnBranch?: { commit?: { oid?: string } } };
+		errors?: Array<{ message?: string }>;
+	} | null;
+
+	if (!res.ok || payload?.errors?.length) {
+		const detail =
+			payload?.errors
+				?.map((e) => e.message)
+				.filter(Boolean)
+				.join("; ") ?? `HTTP ${res.status}`;
+		return { ok: false, message: detail };
+	}
+
+	const oid = payload?.data?.createCommitOnBranch?.commit?.oid;
+	if (!oid) return { ok: false, message: "提交未返回 commit oid" };
+	return { ok: true, commitOid: oid };
 }

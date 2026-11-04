@@ -23,6 +23,7 @@ import PostList from "./PostList.svelte";
 import SecretManager from "./SecretManager.svelte";
 import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
+import SyncDiffPage from "./SyncDiffPage.svelte";
 import SyncPanel from "./SyncPanel.svelte";
 import TaxonomyManager from "./TaxonomyManager.svelte";
 
@@ -48,6 +49,8 @@ type Page =
 	| "posts"
 	/** 文章历史版本（独立 URL，见 Route.page === "history"） */
 	| "history"
+	/** 同步差异查看（独立 URL，见 Route.page === "sync-diff"） */
+	| "sync-diff"
 	| "categories-and-tags"
 	| "settings"
 	| "env"
@@ -74,6 +77,8 @@ type Route =
 	| { page: "edit"; slug: string }
 	/** 历史版本：/admin/posts/edit/:slug/history/[:revisionId]/ */
 	| { page: "history"; slug: string; revisionId: string }
+	/** 同步差异：/admin/sync/diff/:slug/ */
+	| { page: "sync-diff"; slug: string }
 	| { page: "categories-and-tags" }
 	| { page: "settings"; section?: string }
 	| { page: "env" }
@@ -245,15 +250,17 @@ const activePage = $derived<Page>(
 			? "dashboard"
 			: route.page === "history"
 				? "history"
-				: route.page === "settings"
-					? "settings"
-					: route.page === "env"
-						? "env"
-						: route.page === "categories-and-tags"
-							? "categories-and-tags"
-							: route.page === "sessions"
-								? "sessions"
-								: "posts",
+				: route.page === "sync-diff"
+					? "sync-diff"
+					: route.page === "settings"
+						? "settings"
+						: route.page === "env"
+							? "env"
+							: route.page === "categories-and-tags"
+								? "categories-and-tags"
+								: route.page === "sessions"
+									? "sessions"
+									: "posts",
 );
 
 const viewMode = $derived<ViewMode>(
@@ -347,6 +354,14 @@ function parseRoute(pathname: string): Route {
 	switch (segments[0]) {
 		case undefined:
 			return { page: "dashboard" };
+		case "sync":
+			/* 差异查看页：/admin/sync/diff/:slug/
+			   独立路由是为了让代码 diff 拿到视口级宽度——模态宽 704px，
+			   两栏分下来每行只剩 48 字符，普通代码行必然横向滚动。 */
+			if (segments[1] === "diff" && segments[2]) {
+				return { page: "sync-diff", slug: segments[2] };
+			}
+			return { page: "404" };
 		case "posts":
 			if (segments[1] === "new") return { page: "create" };
 			if (segments[1] === "edit" && segments[2]) {
@@ -447,6 +462,14 @@ function applyRoute() {
 			"",
 			`${DASHBOARD_PATH}settings/${next.section}/`,
 		);
+	}
+	/* 从差异页返回时带 ?sync=1：重新打开同步面板。
+	   面板自己会从 sessionStorage 恢复勾选，所以这里只负责「开」。 */
+	if (
+		(route.page === "posts" || route.page === "dashboard") &&
+		new URLSearchParams(window.location.search).get("sync") === "1"
+	) {
+		adminSyncPanelOpen = true;
 	}
 }
 
@@ -1628,10 +1651,18 @@ function formatDate(dateStr: string | null): string {
 			class:content-fixed={activePage === "settings" ||
 				activePage === "env" ||
 				activePage === "history" ||
+				activePage === "sync-diff" ||
 				activePage === "categories-and-tags"}
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
 		>
-				{#if activePage === "history" && route.page === "history"}
+				{#if activePage === "sync-diff" && route.page === "sync-diff"}
+					<!-- 返回时带 ?sync=1，让列表页重新打开同步面板并恢复勾选：
+					     看完 diff 一般要回去继续选，回到一张空白列表等于把进度丢了。 -->
+					<SyncDiffPage
+						slug={route.slug}
+						onBack={() => navigate(`${DASHBOARD_PATH}posts/?sync=1`)}
+					/>
+				{:else if activePage === "history" && route.page === "history"}
 					<!-- 注入 SPA 导航：历史页返回/恢复后跳编辑器必须走前端路由，
 					     用 location.href 会整页重载外壳，比列表页进编辑器慢一个量级。
 					     注意必须是绝对路径（带 DASHBOARD_PATH）——navigate() 内部直接把它
@@ -1678,6 +1709,7 @@ function formatDate(dateStr: string | null): string {
 								onRefresh={loadPosts}
 								onCreate={goCreatePost}
 								onSync={handleSync}
+								onOpenDiff={(slug) => navigate(`${DASHBOARD_PATH}sync/diff/${slug}/`)}
 								{isSyncing}
 								heading={false}
 							/>
@@ -1946,7 +1978,11 @@ function formatDate(dateStr: string | null): string {
 <!-- 站内切换页面时的未保存确认（对应参考项目 useBlocker 的 resolver 弹窗） -->
 <!-- 同步面板：仪表盘快捷操作与列表页的「同步文章」共用同一个面板，
      点开只做只读检查，真正执行要再点面板里的按钮 -->
-<SyncPanel bind:open={adminSyncPanelOpen} onSynced={loadPosts} />
+<SyncPanel
+	bind:open={adminSyncPanelOpen}
+	onSynced={loadPosts}
+	onOpenDiff={(slug) => navigate(`${DASHBOARD_PATH}sync/diff/${slug}/`)}
+/>
 
 {#if authExpiredOpen}
 	<div

@@ -4,7 +4,8 @@
  * 只处理调用方明确指定的条目，不做「全量兜底」——同步面板的价值就在于
  * 使用者能看见并选择每一条，静默扩大范围等于绕过了这个确认。
  *
- * 推送走现有 saveFileToGitHub（内部先 GET 拿 sha 再 PUT），
+ * 推送走 commitFiles：一次 GraphQL 提交多个文件，只产生一个 commit，
+ * 因而只触发一次部署（逐条 PUT 会是 N 个 commit / N 次构建）。
  * 拉取先写本地再推一次远端，保证两端一致。
  */
 import { existsSync, readFileSync } from "node:fs";
@@ -12,6 +13,7 @@ import path from "node:path";
 import { writeAuditLog } from "@/utils/audit-log";
 import { requireAuth } from "@/utils/auth";
 import {
+	commitFiles,
 	getFileFromGitHub,
 	saveFileLocally,
 	saveFileToGitHub,
@@ -65,78 +67,132 @@ export async function POST({
 
 	const results: ApplyResult[] = [];
 
-	for (const item of items) {
-		const abs = path.resolve(process.cwd(), item.path);
+	/* 1. 拉取：只写本地。
+	   原来的 pull 分支里还调了一次 saveFileToGitHub，把远端内容原样写回远端，
+	   幂等但会凭空多出一个 commit，等于多触发一次部署。 */
+	for (const item of items.filter((i) => i.direction === "pull")) {
 		try {
-			if (item.direction === "pull") {
-				const remote = await getFileFromGitHub(item.path);
-				if (remote === null) {
-					results.push({
-						slug: item.slug,
-						direction: "pull",
-						ok: false,
-						message: "远端不存在该文件",
-					});
-					continue;
-				}
-				/* 先落本地（开发环境），再推远端——两步都成功才算 ok。
-				   云端文件系统只读，saveFileLocally 会失败，此时仍允许推远端，
-				   因为它只是「把远端内容再写回远端」的幂等操作，不做也不影响结果。 */
-				const savedLocal = saveFileLocally(item.path, remote);
-				const pushed = await saveFileToGitHub(
-					item.path,
-					remote,
-					`chore(sync): pull ${item.slug} from remote`,
-				);
-				if (!savedLocal && !pushed) {
-					results.push({
-						slug: item.slug,
-						direction: "pull",
-						ok: false,
-						message: "本地与远端都写入失败",
-					});
-					continue;
-				}
+			const remote = await getFileFromGitHub(item.path);
+			if (remote === null) {
 				results.push({
 					slug: item.slug,
 					direction: "pull",
-					ok: true,
-					message: savedLocal ? undefined : "远端已就绪，本地只读未写入",
-				});
-				continue;
-			}
-
-			/* push */
-			if (!existsSync(abs)) {
-				results.push({
-					slug: item.slug,
-					direction: "push",
 					ok: false,
-					message: "本地文件不存在",
+					message: "远端不存在该文件",
 				});
 				continue;
 			}
-			const content = readFileSync(abs, "utf-8");
-			const ok = await saveFileToGitHub(
-				item.path,
-				content,
-				`chore(sync): push ${item.slug} to remote`,
-			);
+			const savedLocal = saveFileLocally(item.path, remote);
 			results.push({
 				slug: item.slug,
-				direction: "push",
-				ok,
-				message: ok ? undefined : "推送到 GitHub 失败",
+				direction: "pull",
+				ok: savedLocal,
+				message: savedLocal ? undefined : "当前环境本地只读，无法拉取",
 			});
 		} catch (error) {
 			results.push({
 				slug: item.slug,
-				direction: item.direction,
+				direction: "pull",
 				ok: false,
 				message: error instanceof Error ? error.message : String(error),
 			});
 		}
 	}
+
+	/* 2. 推送：先收集全部内容，再一次性提交。
+	   逐条推 N 篇 = N 个 commit = N 次部署，这是「改完要等半天」的主要来源。
+	   一次提交后只有一个 commit，只触发一次构建。 */
+	const pushes = items.filter((i) => i.direction === "push");
+	const pending: Array<{ path: string; content: string; slug: string }> = [];
+	const skipped = new Map<string, string>();
+
+	for (const item of pushes) {
+		const abs = path.resolve(process.cwd(), item.path);
+		if (!existsSync(abs)) {
+			skipped.set(item.slug, "本地文件不存在");
+			continue;
+		}
+		pending.push({
+			path: item.path,
+			content: readFileSync(abs, "utf-8"),
+			slug: item.slug,
+		});
+	}
+
+	if (pending.length > 0) {
+		const headline =
+			pending.length === 1
+				? `chore(sync): push ${pending[0].slug} to remote`
+				: `chore(sync): push ${pending.length} posts to remote`;
+		const body = pending
+			.map((f) => `- ${f.path.replace(/^src\/content\/posts\//, "")}`)
+			.join("\n");
+		const commit = await commitFiles(
+			pending.map((f) => ({ path: f.path, content: f.content })),
+			{ headline, body },
+		);
+
+		if (commit.ok) {
+			for (const file of pending) {
+				results.push({
+					slug: file.slug,
+					direction: "push",
+					ok: true,
+				});
+			}
+		} else {
+			/* 批量路径失败时退回逐条推送。
+			   逐条会重新变成 N 个 commit / N 次构建，但至少内容能上去——
+			   宁可多触发一次构建，也不能让「推送」这个核心动作失效。 */
+			console.warn(
+				"[sync/apply] 批量提交失败，逐条重试：",
+				commit.message ?? "未知错误",
+			);
+			for (const file of pending) {
+				let ok = false;
+				let message: string | undefined;
+				try {
+					ok = await saveFileToGitHub(
+						file.path,
+						file.content,
+						`chore(sync): push ${file.slug} to remote`,
+					);
+					if (!ok) message = "推送到 GitHub 失败";
+				} catch (error) {
+					message = error instanceof Error ? error.message : String(error);
+				}
+				results.push({
+					slug: file.slug,
+					direction: "push",
+					ok,
+					message,
+				});
+			}
+		}
+	}
+
+	for (const item of pushes) {
+		const reason = skipped.get(item.slug);
+		if (reason) {
+			results.push({
+				slug: item.slug,
+				direction: "push",
+				ok: false,
+				message: reason,
+			});
+		}
+	}
+
+	/* 结果按请求顺序返回：前端按 slug 取值，顺序不影响正确性，
+	   但稳定的顺序便于对着面板排查 */
+	const order = new Map(
+		items.map((item, idx) => [`${item.slug}:${item.direction}`, idx]),
+	);
+	results.sort(
+		(a, b) =>
+			(order.get(`${a.slug}:${a.direction}`) ?? 0) -
+			(order.get(`${b.slug}:${b.direction}`) ?? 0),
+	);
 
 	const okCount = results.filter((r) => r.ok).length;
 	const failCount = results.length - okCount;
