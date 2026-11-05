@@ -15,7 +15,9 @@ import {
 import { installAuthGuard, onAuthExpired, relogin } from "@/utils/auth-expired";
 import { isTourDone, resetTour } from "@/utils/onboarding";
 import AdminPage from "./AdminPage.svelte";
+import ConfirmDialog from "./ConfirmDialog.svelte";
 import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
+import LinksPage from "./LinksPage.svelte";
 import OnboardingTour from "./OnboardingTour.svelte";
 import PostEditor from "./PostEditor.svelte";
 import PostHistoryPage from "./PostHistoryPage.svelte";
@@ -23,7 +25,6 @@ import PostList from "./PostList.svelte";
 import SecretManager from "./SecretManager.svelte";
 import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
-import LinksPage from "./LinksPage.svelte";
 import SyncPage from "./SyncPage.svelte";
 import TaxonomyManager from "./TaxonomyManager.svelte";
 
@@ -253,10 +254,10 @@ const activePage = $derived<Page>(
 			? "dashboard"
 			: route.page === "history"
 				? "history"
-					: route.page === "sync"
-						? "sync"
-						: route.page === "links"
-							? "links"
+				: route.page === "sync"
+					? "sync"
+					: route.page === "links"
+						? "links"
 						: route.page === "settings"
 							? "settings"
 							: route.page === "env"
@@ -2066,42 +2067,16 @@ function formatDate(dateStr: string | null): string {
 
 <!-- 退出登录二次确认：退出会清掉服务端会话 Cookie，误触代价是重新登录一次，
      所以加一层确认。复用与「未保存确认」相同的 modal 结构。 -->
-{#if logoutConfirmOpen}
-	<div
-		class="modal-overlay"
-		role="dialog"
-		aria-modal="true"
-		aria-label={i18n(I18nKey.adminLogout)}
-		tabindex="-1"
-		onclick={(e) => {
-			if (e.target === e.currentTarget) logoutConfirmOpen = false;
-		}}
-		onkeydown={(e) => {
-			if (e.key === "Escape") logoutConfirmOpen = false;
-		}}
-	>
-		<div class="modal-card confirm-card">
-			<div class="modal-head">
-				<h3>
-					<span>{i18n(I18nKey.adminLogout)}</span>
-				</h3>
-			</div>
-			<p class="confirm-message">{i18n(I18nKey.adminLogoutConfirmMessage)}</p>
-			<div class="modal-actions">
-				<button
-					class="savebar-btn"
-					type="button"
-					onclick={() => (logoutConfirmOpen = false)}
-				>
-					{i18n(I18nKey.taxonomyCancel)}
-				</button>
-				<button class="savebar-btn primary" type="button" onclick={performLogout}>
-					{i18n(I18nKey.taxonomyConfirm)}
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
+<ConfirmDialog
+	open={logoutConfirmOpen}
+	title={i18n(I18nKey.adminLogout)}
+	body={i18n(I18nKey.adminLogoutConfirmMessage)}
+	confirmText={i18n(I18nKey.taxonomyConfirm)}
+	cancelText={i18n(I18nKey.taxonomyCancel)}
+	tone="danger"
+	onConfirm={performLogout}
+	onCancel={() => (logoutConfirmOpen = false)}
+/>
 
 <style>
 	/* 后台统一视口高度：给 zoom 容器内部的卡片用。
@@ -2368,6 +2343,12 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	/* 一级导航项选中：主色调高亮（底色 + 文字都取 --primary 系列） */
+	/* 退出登录：hover 时整行泛红，和普通导航区分开 */
+	.nav-item.is-danger:hover {
+		background: color-mix(in srgb, var(--destructive, #d33) 12%, transparent);
+		color: var(--destructive, #d33);
+	}
+
 	.nav-item.active {
 		background: color-mix(in oklab, var(--primary) 18%, transparent);
 		color: var(--primary);
@@ -2961,19 +2942,6 @@ function formatDate(dateStr: string | null): string {
 
 	/* 保存栏按钮：与 SecretManager 的 sec-btn 同规格。
 	   因 scoped 样式不跨组件，这里需要独立定义一份。 */
-	/* 登出确认：按参考 fuwari-confirmation 的 h2 + 说明 + 双按钮结构，
-	   宽度取参考的 clamp(420px, 30vw, 520px)；确认按钮用危险色，退出不可逆 */
-	.confirm-card {
-		width: min(clamp(420px, 30vw, 520px), 92vw);
-	}
-
-	.confirm-message {
-		margin: 0 0 1rem;
-		font-size: 0.875rem;
-		line-height: 1.6;
-		color: var(--content-meta);
-	}
-
 	.savebar-btn {
 		display: inline-flex;
 		align-items: center;
