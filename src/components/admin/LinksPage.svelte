@@ -30,8 +30,8 @@ let saving = $state(false);
 let writable = $state(true);
 let error = $state<string | null>(null);
 let message = $state<string | null>(null);
-/** 弹窗内的校验提示：渲染在弹窗底部，页面底部那条会被弹窗挡住 */
-let dialogError = $state<string | null>(null);
+/** 按字段的校验提示：显示在对应输入框正下方 */
+let fieldErrors = $state<Record<string, string>>({});
 let dirty = $state(false);
 
 /** 弹窗编辑中的副本；null 表示未打开 */
@@ -85,9 +85,27 @@ async function load() {
 const DRAFT_KEY = "admin-links-draft";
 
 interface StoredDraft {
-	index: number;
+	/** "new" 或该条友链的 id */
+	key: string;
 	draft: FriendLink;
 	tags: string;
+}
+
+/**
+ * 补全协议：已带协议的原样保留，没有的补 https://。
+ * 任何 schema: 形式都算「已带协议」，javascript: 之类会被后面的白名单挡掉。
+ */
+function normalizeUrl(value: string): string {
+	const t = value.trim();
+	if (!t) return "";
+	if (/^[a-z][a-z0-9+.-]*:/i.test(t)) return t;
+	return `https://${t}`;
+}
+
+/** 草稿键：新增独立一槽，编辑按 id 区分，删条目不会让草稿串位 */
+function draftKeyOf(index: number): string {
+	if (index < 0) return "new";
+	return links[index]?.id ?? "gone";
 }
 
 /** 草稿提示：恢复时告诉用户「内容不是你刚填的」 */
@@ -117,7 +135,7 @@ function saveDraftToStorage() {
 		sessionStorage.setItem(
 			DRAFT_KEY,
 			JSON.stringify({
-				index: editing.index,
+				key: draftKeyOf(editing.index),
 				draft: editing.draft,
 				tags: editing.tags,
 			} satisfies StoredDraft),
@@ -180,7 +198,7 @@ async function requestClose() {
 	if (!editing) return;
 	if (!isDraftDirty()) {
 		editing = null;
-		dialogError = null;
+		fieldErrors = {};
 		dialogNotice = null;
 		return;
 	}
@@ -189,21 +207,21 @@ async function requestClose() {
 	if (choice === "save") saveDraftToStorage();
 	else clearStoredDraft();
 	editing = null;
-	dialogError = null;
+	fieldErrors = {};
 	dialogNotice = null;
 }
 
 /** 取出与目标位对应的草稿，取到即清，避免下次重复恢复 */
-function takeStoredDraft(expected: number): StoredDraft | null {
+function takeStoredDraft(expected: string): StoredDraft | null {
 	const stored = readStoredDraft();
-	if (!stored || stored.index !== expected) return null;
+	if (!stored || stored.key !== expected) return null;
 	clearStoredDraft();
 	return stored;
 }
 
 function openNew() {
-	dialogError = null;
-	const stored = takeStoredDraft(-1);
+	fieldErrors = {};
+	const stored = takeStoredDraft("new");
 	if (stored) {
 		editing = { index: -1, draft: stored.draft, tags: stored.tags };
 		dialogNotice = "已恢复上次未保存的草稿";
@@ -213,6 +231,7 @@ function openNew() {
 	editing = {
 		index: -1,
 		draft: {
+			id: crypto.randomUUID().slice(0, 8),
 			title: "",
 			imgurl: "",
 			desc: "",
@@ -228,8 +247,8 @@ function openNew() {
 function openEdit(index: number) {
 	const link = links[index];
 	if (!link) return;
-	dialogError = null;
-	const stored = takeStoredDraft(index);
+	fieldErrors = {};
+	const stored = takeStoredDraft(draftKeyOf(index));
 	if (stored) {
 		editing = { index, draft: stored.draft, tags: stored.tags };
 		dialogNotice = "已恢复上次未保存的草稿";
@@ -246,11 +265,25 @@ function openEdit(index: number) {
 function commitEdit() {
 	if (!editing) return;
 	const { index, draft, tags } = editing;
+	const errors: Record<string, string> = {};
+	const title = draft.title.trim();
+	if (!title) errors.title = "请填写名称";
+
+	const siteurl = normalizeUrl(draft.siteurl);
+	if (!siteurl) {
+		errors.siteurl = "请填写站点地址";
+	} else if (!/^https?:\/\/\S+/i.test(siteurl)) {
+		errors.siteurl = "只支持 http 或 https 地址";
+	}
+
+	fieldErrors = errors;
+	if (Object.keys(errors).length > 0) return;
+
 	const next: FriendLink = {
 		...draft,
-		title: draft.title.trim(),
-		siteurl: draft.siteurl.trim(),
-		imgurl: draft.imgurl.trim(),
+		title,
+		siteurl,
+		imgurl: normalizeUrl(draft.imgurl),
 		desc: draft.desc.trim(),
 		weight: Number.isFinite(draft.weight) ? draft.weight : 0,
 		tags: tags
@@ -258,21 +291,13 @@ function commitEdit() {
 			.map((t) => t.trim())
 			.filter(Boolean),
 	};
-	if (!next.title) {
-		dialogError = "名称不能为空";
-		return;
-	}
-	if (!/^https?:\/\/\S+$/.test(next.siteurl)) {
-		dialogError = "站点地址需以 http(s):// 开头";
-		return;
-	}
 
 	links =
 		index < 0
 			? [...links, next]
 			: links.map((l, i) => (i === index ? next : l));
 	editing = null;
-	dialogError = null;
+	fieldErrors = {};
 	dialogNotice = null;
 	clearStoredDraft();
 	dirty = true;
@@ -540,51 +565,49 @@ $effect(() => {
 					<input
 						type="text"
 						bind:value={editing.draft.title}
-						oninput={() => (dialogError = null)}
+						oninput={() => (fieldErrors.title = "")}
+						class:invalid={fieldErrors.title}
 					/>
+					{#if fieldErrors.title}
+						<span class="field-error">{fieldErrors.title}</span>
+					{/if}
 				</label>
 				<label class="field">
 					<span>站点地址</span>
 					<input
 						type="url"
 						bind:value={editing.draft.siteurl}
-						oninput={() => (dialogError = null)}
-						placeholder="https://"
+						oninput={() => (fieldErrors.siteurl = "")}
+						class:invalid={fieldErrors.siteurl}
+						placeholder="example.com"
 					/>
+					{#if fieldErrors.siteurl}
+						<span class="field-error">{fieldErrors.siteurl}</span>
+					{:else}
+						<span class="field-hint">不写协议也可以，会按 https 补全</span>
+					{/if}
 				</label>
 				<label class="field">
 					<span>头像地址</span>
 					<input
 						type="url"
 						bind:value={editing.draft.imgurl}
-						oninput={() => (dialogError = null)}
-						placeholder="https://"
+						oninput={() => (fieldErrors.imgurl = "")}
+						placeholder="example.com/avatar.png"
 					/>
 				</label>
 				<label class="field">
 					<span>描述</span>
-					<input
-						type="text"
-						bind:value={editing.draft.desc}
-						oninput={() => (dialogError = null)}
-					/>
+					<input type="text" bind:value={editing.draft.desc} />
 				</label>
 				<label class="field">
 					<span>标签（逗号分隔）</span>
-					<input
-						type="text"
-						bind:value={editing.tags}
-						oninput={() => (dialogError = null)}
-					/>
+					<input type="text" bind:value={editing.tags} />
 				</label>
 				<div class="field-row">
 					<label class="field compact">
 						<span>权重</span>
-						<input
-							type="number"
-							bind:value={editing.draft.weight}
-							oninput={() => (dialogError = null)}
-						/>
+						<input type="number" bind:value={editing.draft.weight} />
 					</label>
 					<div class="field toggle-field">
 						<Checkbox
@@ -603,10 +626,6 @@ $effect(() => {
 					</div>
 				</div>
 			</div>
-
-			{#if dialogError}
-				<p class="dialog-error" role="alert">{dialogError}</p>
-			{/if}
 
 			<div class="modal-actions">
 				<button class="ui-btn ui-btn-soft" type="button" onclick={() => void requestClose()}>
@@ -958,13 +977,21 @@ $effect(() => {
 		flex-shrink: 0;
 	}
 
-	.dialog-error {
-		margin: 0;
-		padding: 0 1.5rem 0.75rem;
-		font-size: 0.75rem;
+	/* 字段级提示：贴在对应输入框正下方，用户不用在弹窗里找 */
+	.field-error {
+		font-size: 0.6875rem;
 		line-height: 1.5;
 		color: var(--destructive, #d33);
-		flex-shrink: 0;
+	}
+
+	.field-hint {
+		font-size: 0.6875rem;
+		line-height: 1.5;
+		color: var(--content-meta);
+	}
+
+	.field input.invalid {
+		border-color: var(--destructive, #d33);
 	}
 
 	.modal-actions {

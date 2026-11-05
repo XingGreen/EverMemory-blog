@@ -1,5 +1,7 @@
 // 友链配置
 export type FriendLink = {
+	/** 稳定标识：改动名称或地址后仍能对上同一条，草稿与排序都靠它 */
+	id: string;
 	title: string; // 友链标题
 	imgurl: string; // 头像图片URL
 	desc: string; // 友链描述

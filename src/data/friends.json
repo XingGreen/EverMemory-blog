@@ -8,7 +8,8 @@
 			"Blog"
 		],
 		"weight": 4,
-		"enabled": true
+		"enabled": true,
+		"id": "ad988c91"
 	},
 	{
 		"title": "夏夜流萤",
@@ -19,7 +20,8 @@
 			"Blog"
 		],
 		"weight": 3,
-		"enabled": true
+		"enabled": true,
+		"id": "2da0ddbb"
 	},
 	{
 		"title": "Firefly Docs",
@@ -30,7 +32,8 @@
 			"Docs"
 		],
 		"weight": 2,
-		"enabled": true
+		"enabled": true,
+		"id": "61a695d6"
 	},
 	{
 		"title": "Astro",
@@ -41,6 +44,7 @@
 			"Framework"
 		],
 		"weight": 1,
-		"enabled": true
+		"enabled": true,
+		"id": "a749103f"
 	}
 ]
