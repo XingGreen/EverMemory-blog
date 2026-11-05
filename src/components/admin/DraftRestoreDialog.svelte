@@ -93,7 +93,8 @@ function handleKeydown(e: KeyboardEvent) {
 		left: 0;
 		right: 0;
 		bottom: 0;
-		z-index: 10000;
+		/* 与 ConfirmDialog 同层：都是压住内容弹窗的询问框 */
+		z-index: 12000;
 		display: flex;
 		align-items: center;
 		justify-content: center;

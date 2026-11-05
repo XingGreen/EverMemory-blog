@@ -110,7 +110,8 @@ function handleKeydown(e: KeyboardEvent) {
 		left: 0;
 		right: 0;
 		bottom: 0;
-		z-index: 10000;
+		/* 高于内容编辑弹窗（10000）：确认框是被它触发的，必须盖在它上面 */
+		z-index: 12000;
 		display: flex;
 		align-items: center;
 		justify-content: center;
