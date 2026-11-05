@@ -30,6 +30,8 @@ let saving = $state(false);
 let writable = $state(true);
 let error = $state<string | null>(null);
 let message = $state<string | null>(null);
+/** 弹窗内的校验提示：渲染在弹窗底部，页面底部那条会被弹窗挡住 */
+let dialogError = $state<string | null>(null);
 let dirty = $state(false);
 
 /** 弹窗编辑中的副本；null 表示未打开 */
@@ -80,7 +82,58 @@ async function load() {
 	}
 }
 
+/** 弹窗里的内容是否与打开时不同 */
+function isDraftDirty(): boolean {
+	if (!editing) return false;
+	const d = editing.draft;
+	if (editing.index < 0) {
+		return Boolean(
+			d.title.trim() ||
+				d.siteurl.trim() ||
+				d.imgurl.trim() ||
+				d.desc.trim() ||
+				editing.tags.trim(),
+		);
+	}
+	const original = links[editing.index];
+	if (!original) return true;
+	return (
+		d.title !== original.title ||
+		d.siteurl !== original.siteurl ||
+		d.imgurl !== original.imgurl ||
+		d.desc !== original.desc ||
+		d.weight !== original.weight ||
+		d.enabled !== original.enabled ||
+		editing.tags !== (original.tags ?? []).join(", ")
+	);
+}
+
+/**
+ * 关闭弹窗的唯一入口。
+ * 有未确定的改动时先问一次——直接关掉会让人以为「刚才填的还在」。
+ */
+async function requestClose() {
+	if (!editing) return;
+	if (!isDraftDirty()) {
+		editing = null;
+		dialogError = null;
+		return;
+	}
+	const ok = await askConfirm({
+		title: "放弃这次编辑？",
+		body: "表单里的内容还没有确定，关闭后不会保留。",
+		confirmText: "放弃修改",
+		cancelText: "继续编辑",
+		tone: "danger",
+	});
+	if (ok) {
+		editing = null;
+		dialogError = null;
+	}
+}
+
 function openNew() {
+	dialogError = null;
 	editing = {
 		index: -1,
 		draft: {
@@ -99,6 +152,7 @@ function openNew() {
 function openEdit(index: number) {
 	const link = links[index];
 	if (!link) return;
+	dialogError = null;
 	editing = {
 		index,
 		draft: { ...link, tags: [...(link.tags ?? [])] },
@@ -122,11 +176,11 @@ function commitEdit() {
 			.filter(Boolean),
 	};
 	if (!next.title) {
-		message = "名称不能为空";
+		dialogError = "名称不能为空";
 		return;
 	}
 	if (!/^https?:\/\/\S+$/.test(next.siteurl)) {
-		message = "站点地址需以 http(s):// 开头";
+		dialogError = "站点地址需以 http(s):// 开头";
 		return;
 	}
 
@@ -135,6 +189,7 @@ function commitEdit() {
 			? [...links, next]
 			: links.map((l, i) => (i === index ? next : l));
 	editing = null;
+	dialogError = null;
 	dirty = true;
 	message = null;
 }
@@ -349,7 +404,7 @@ $effect(() => {
 		class="modal-overlay"
 		role="presentation"
 		onclick={(e) => {
-			if (e.target === e.currentTarget) editing = null;
+			if (e.target === e.currentTarget) void requestClose();
 		}}
 	>
 		<div
@@ -361,7 +416,7 @@ $effect(() => {
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => {
 				e.stopPropagation();
-				if (e.key === "Escape") editing = null;
+				if (e.key === "Escape") void requestClose();
 			}}
 		>
 			<div class="modal-head">
@@ -371,7 +426,7 @@ $effect(() => {
 				<button
 					class="icon-btn"
 					type="button"
-					onclick={() => (editing = null)}
+					onclick={() => void requestClose()}
 					aria-label="关闭"
 				>
 					<Icon icon="material-symbols:close" />
@@ -381,13 +436,18 @@ $effect(() => {
 			<div class="modal-body">
 				<label class="field">
 					<span>名称</span>
-					<input type="text" bind:value={editing.draft.title} />
+					<input
+						type="text"
+						bind:value={editing.draft.title}
+						oninput={() => (dialogError = null)}
+					/>
 				</label>
 				<label class="field">
 					<span>站点地址</span>
 					<input
 						type="url"
 						bind:value={editing.draft.siteurl}
+						oninput={() => (dialogError = null)}
 						placeholder="https://"
 					/>
 				</label>
@@ -396,21 +456,34 @@ $effect(() => {
 					<input
 						type="url"
 						bind:value={editing.draft.imgurl}
+						oninput={() => (dialogError = null)}
 						placeholder="https://"
 					/>
 				</label>
 				<label class="field">
 					<span>描述</span>
-					<input type="text" bind:value={editing.draft.desc} />
+					<input
+						type="text"
+						bind:value={editing.draft.desc}
+						oninput={() => (dialogError = null)}
+					/>
 				</label>
 				<label class="field">
 					<span>标签（逗号分隔）</span>
-					<input type="text" bind:value={editing.tags} />
+					<input
+						type="text"
+						bind:value={editing.tags}
+						oninput={() => (dialogError = null)}
+					/>
 				</label>
 				<div class="field-row">
 					<label class="field compact">
 						<span>权重</span>
-						<input type="number" bind:value={editing.draft.weight} />
+						<input
+							type="number"
+							bind:value={editing.draft.weight}
+							oninput={() => (dialogError = null)}
+						/>
 					</label>
 					<div class="field toggle-field">
 						<Checkbox
@@ -430,8 +503,12 @@ $effect(() => {
 				</div>
 			</div>
 
+			{#if dialogError}
+				<p class="dialog-error" role="alert">{dialogError}</p>
+			{/if}
+
 			<div class="modal-actions">
-				<button class="ui-btn ui-btn-soft" type="button" onclick={() => (editing = null)}>
+				<button class="ui-btn ui-btn-soft" type="button" onclick={() => void requestClose()}>
 					取消
 				</button>
 				<button class="ui-btn ui-btn-primary" type="button" onclick={commitEdit}>
@@ -769,6 +846,15 @@ $effect(() => {
 		font-size: 0.75rem;
 		color: var(--content-meta);
 		padding-bottom: 0.5rem;
+	}
+
+	.dialog-error {
+		margin: 0;
+		padding: 0 1.5rem 0.75rem;
+		font-size: 0.75rem;
+		line-height: 1.5;
+		color: var(--destructive, #d33);
+		flex-shrink: 0;
 	}
 
 	.modal-actions {
