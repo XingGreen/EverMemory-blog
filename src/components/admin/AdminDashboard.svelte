@@ -23,6 +23,7 @@ import PostList from "./PostList.svelte";
 import SecretManager from "./SecretManager.svelte";
 import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
+import LinksPage from "./LinksPage.svelte";
 import SyncPage from "./SyncPage.svelte";
 import TaxonomyManager from "./TaxonomyManager.svelte";
 
@@ -50,6 +51,8 @@ type Page =
 	| "history"
 	/** 同步工作台（/admin/sync/，左列表右详情） */
 	| "sync"
+	/** 友链管理（/admin/links/） */
+	| "links"
 	| "categories-and-tags"
 	| "settings"
 	| "env"
@@ -78,6 +81,8 @@ type Route =
 	| { page: "history"; slug: string; revisionId: string }
 	/** 同步工作台：/admin/sync/ 与 /admin/sync/:slug/ */
 	| { page: "sync"; slug: string }
+	/** 友链管理：/admin/links/ */
+	| { page: "links" }
 	| { page: "categories-and-tags" }
 	| { page: "settings"; section?: string }
 	| { page: "env" }
@@ -250,6 +255,8 @@ const activePage = $derived<Page>(
 				? "history"
 					: route.page === "sync"
 						? "sync"
+						: route.page === "links"
+							? "links"
 						: route.page === "settings"
 							? "settings"
 							: route.page === "env"
@@ -352,6 +359,8 @@ function parseRoute(pathname: string): Route {
 	switch (segments[0]) {
 		case undefined:
 			return { page: "dashboard" };
+		case "links":
+			return segments.length === 1 ? { page: "links" } : { page: "404" };
 		case "sync":
 			/* 同步工作台，左列表右详情：
 			   /admin/sync/         右栏显示概览
@@ -1568,6 +1577,16 @@ function formatDate(dateStr: string | null): string {
 					<span>{i18n(I18nKey.adminEnvVars)}</span>
 				</button>
 
+				<!-- 友链管理：数据存在 src/data/friends.json -->
+				<button
+					class="nav-item"
+					class:active={activePage === "links"}
+					onclick={() => navigate(`${DASHBOARD_PATH}links/`)}
+				>
+					<Icon icon="material-symbols:link" />
+					<span>友链管理</span>
+				</button>
+
 				<!-- 会话管理：原本埋在设置页里，独立成侧栏入口 -->
 				<button
 					class="nav-item"
@@ -1646,6 +1665,7 @@ function formatDate(dateStr: string | null): string {
 				activePage === "env" ||
 				activePage === "history" ||
 				activePage === "sync" ||
+				activePage === "links" ||
 				activePage === "categories-and-tags"}
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
 		>
@@ -1667,6 +1687,8 @@ function formatDate(dateStr: string | null): string {
 						revisionId={route.revisionId}
 						onLeave={() => navigate(`${DASHBOARD_PATH}posts/edit/${route.slug}/`)}
 					/>
+				{:else if activePage === "links"}
+					<LinksPage />
 				{:else if activePage === "dashboard"}
 					{@render dashboardHome()}
 				{:else if activePage === "posts"}

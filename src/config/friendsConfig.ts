@@ -1,3 +1,4 @@
+import links from "../data/friends.json";
 import type { FriendLink, FriendsPageConfig } from "../types/friendsConfig";
 
 // 可以在src/content/spec/friends.md中编写友链页面下方的自定义内容
@@ -21,45 +22,10 @@ export const friendsPageConfig: FriendsPageConfig = {
 };
 
 // 友链配置
-export const friendsConfig: FriendLink[] = [
-	{
-		title: "Vahiru's Blog",
-		imgurl: "https://q1.qlogo.cn/g?b=qq&nk=3781278106&s=640",
-		desc: "猫猫的自留地，藏着岁月里的随笔与 Tech 碎念，在迷茫中慢慢生长",
-		siteurl: "https://vahiru.is-cute.cat/",
-		tags: ["Blog"],
-		weight: 4,
-		enabled: true,
-	},
-	{
-		title: "夏夜流萤",
-		imgurl:
-			"https://weavatar.com/avatar/d252655d40d6874417a720bad0a6c5f77f8f6a1fd2f882f8f338402dc37e4190?s=640",
-		desc: "飞萤之火自无梦的长夜亮起，绽放在终竟的明天。",
-		siteurl: "https://blog.cuteleaf.cn",
-		tags: ["Blog"],
-		weight: 3, // 权重，数字越大排序越靠前
-		enabled: true, // 是否启用
-	},
-	{
-		title: "Firefly Docs",
-		imgurl: "https://docs-firefly.cuteleaf.cn/logo.png",
-		desc: "Firefly主题模板文档",
-		siteurl: "https://docs-firefly.cuteleaf.cn",
-		tags: ["Docs"],
-		weight: 2,
-		enabled: true,
-	},
-	{
-		title: "Astro",
-		imgurl: "https://avatars.githubusercontent.com/u/44914786?v=4&s=640",
-		desc: "The web framework for content-driven websites. ⭐️ Star to support our work!",
-		siteurl: "https://github.com/withastro/astro",
-		tags: ["Framework"],
-		weight: 1,
-		enabled: true,
-	},
-];
+/* 友链数据存在 src/data/friends.json：后台管理页需要可写的 JSON，
+   而 TS 源码带注释与手写格式，往返生成必然有损。这里只做转发，
+   前后台引用的导出名与路径都保持不变。 */
+export const friendsConfig = links satisfies FriendLink[];
 
 // 获取启用的友链并进行排序
 export const getEnabledFriends = (): FriendLink[] => {
