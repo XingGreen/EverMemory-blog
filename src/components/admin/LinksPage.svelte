@@ -205,31 +205,43 @@ $effect(() => {
 
 <AdminPage
 	title="友链管理"
-	intro={`共 ${links.length} 条 · ${links.filter((l) => l.enabled).length} 条启用${writable ? "" : " · 当前环境只读"}`}
+	intro="管理友链页展示的站点，保存后写入 src/data/friends.json"
 >
-	{#snippet actions()}
-		<button
-			class="ui-btn ui-btn-soft"
-			type="button"
-			onclick={openNew}
-			disabled={!writable}
-		>
-			<Icon icon="material-symbols:add" class="btn-icon" />
-			新增友链
-		</button>
-		<button
-			class="ui-btn ui-btn-primary"
-			type="button"
-			onclick={save}
-			disabled={saving || !writable || !dirty}
-		>
-			{saving ? "保存中…" : dirty ? "保存更改" : "已保存"}
-		</button>
-	{/snippet}
 
-	{#if message}
-		<p class="notice">{message}</p>
-	{/if}
+	{#snippet footer()}
+		<div class="savebar">
+			<span class="savebar-text">
+				共 {links.length} 条 · {links.filter((l) => l.enabled).length} 条启用
+				{#if dirty}
+					<b class="savebar-dirty">有未保存的改动</b>
+				{:else if message}
+					<b class="savebar-done">{message}</b>
+				{/if}
+				{#if !writable}
+					<b class="savebar-warn">当前环境只读</b>
+				{/if}
+			</span>
+			<div class="savebar-actions">
+				<button
+					class="ui-btn ui-btn-soft"
+					type="button"
+					onclick={openNew}
+					disabled={!writable}
+				>
+					<Icon icon="material-symbols:add" class="btn-icon" />
+					新增友链
+				</button>
+				<button
+					class="ui-btn ui-btn-primary"
+					type="button"
+					onclick={save}
+					disabled={saving || !writable || !dirty}
+				>
+					{saving ? "保存中…" : dirty ? "保存更改" : "已保存"}
+				</button>
+			</div>
+		</div>
+	{/snippet}
 
 	{#if loading}
 		<p class="state">正在加载…</p>
@@ -406,9 +418,14 @@ $effect(() => {
 							onchange={() => {
 								if (editing) editing.draft.enabled = !editing.draft.enabled;
 							}}
-							label="是否启用"
+							label="在前台显示此友链"
 						/>
-						<span>启用</span>
+						<div class="toggle-copy">
+							<span class="toggle-label">在前台显示此友链</span>
+							<span class="toggle-hint">
+								关闭后仍保留在列表里，只是友链页不再展示它
+							</span>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -426,6 +443,62 @@ $effect(() => {
 {/if}
 
 <style>
+	/* 底部操作栏：参数与设置页的 .savebar 一致 */
+	.savebar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1.25rem;
+		flex-wrap: wrap;
+		padding: 0.875rem 1.5rem;
+		border-top: 1px solid var(--line-divider);
+		background: var(--card-bg);
+	}
+
+	.savebar-text {
+		font-size: 0.8125rem;
+		color: var(--content-meta);
+	}
+
+	.savebar-dirty {
+		margin-left: 0.5rem;
+		color: oklch(0.72 0.16 45);
+	}
+
+	.savebar-done {
+		margin-left: 0.5rem;
+		color: oklch(0.7 0.15 145);
+	}
+
+	.savebar-warn {
+		margin-left: 0.5rem;
+		color: oklch(0.72 0.15 70);
+	}
+
+	.savebar-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-shrink: 0;
+	}
+
+	.toggle-copy {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+	}
+
+	.toggle-label {
+		font-size: 0.8125rem;
+		color: var(--deep-text);
+	}
+
+	.toggle-hint {
+		font-size: 0.6875rem;
+		line-height: 1.5;
+		color: var(--content-meta);
+	}
+
 	.notice {
 		margin: 0;
 		font-size: 0.8125rem;
@@ -691,8 +764,8 @@ $effect(() => {
 
 	.toggle-field {
 		flex-direction: row;
-		align-items: center;
-		gap: 0.375rem;
+		align-items: flex-start;
+		gap: 0.5rem;
 		font-size: 0.75rem;
 		color: var(--content-meta);
 		padding-bottom: 0.5rem;
