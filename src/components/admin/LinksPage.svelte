@@ -1,5 +1,6 @@
 <script lang="ts">
 import Icon from "@/components/common/Icon.svelte";
+import AdminPage from "./AdminPage.svelte";
 import Checkbox from "./Checkbox.svelte";
 import ConfirmDialog from "./ConfirmDialog.svelte";
 
@@ -9,8 +10,8 @@ import ConfirmDialog from "./ConfirmDialog.svelte";
  * 数据源是 src/data/friends.json（不是 TS 源码）：后台需要写入结构化数据，
  * 而 .ts 里的注释和手写格式无法无损往返。
  *
- * 保存是整份覆盖，不是逐条提交——友链总量只有几十条，
- * 一次写盘比逐条打补丁更能保证文件结构稳定。
+ * 版式对齐项目原生列表页：AdminPage 外壳 + 表头/行 grid + 弹窗编辑。
+ * 不做行内表单——字段有七个，塞进一行会把列宽挤散。
  */
 
 interface FriendLink {
@@ -31,8 +32,10 @@ let error = $state<string | null>(null);
 let message = $state<string | null>(null);
 let dirty = $state(false);
 
-/** 标签在 UI 上是逗号分隔的文本，编辑时单独存，提交前再拆回数组 */
-let tagText = $state<string[]>([]);
+/** 弹窗编辑中的副本；null 表示未打开 */
+let editing = $state<{ index: number; draft: FriendLink; tags: string } | null>(
+	null,
+);
 
 let confirmState = $state<{
 	title: string;
@@ -68,7 +71,6 @@ async function load() {
 			return;
 		}
 		links = (data.links ?? []).map((l: FriendLink) => ({ ...l }));
-		tagText = links.map((l) => (l.tags ?? []).join(", "));
 		writable = data.writable !== false;
 		dirty = false;
 	} catch (err) {
@@ -78,15 +80,10 @@ async function load() {
 	}
 }
 
-function markDirty() {
-	dirty = true;
-	message = null;
-}
-
-function addLink() {
-	links = [
-		...links,
-		{
+function openNew() {
+	editing = {
+		index: -1,
+		draft: {
 			title: "",
 			imgurl: "",
 			desc: "",
@@ -95,9 +92,51 @@ function addLink() {
 			weight: 0,
 			enabled: true,
 		},
-	];
-	tagText = [...tagText, ""];
-	markDirty();
+		tags: "",
+	};
+}
+
+function openEdit(index: number) {
+	const link = links[index];
+	if (!link) return;
+	editing = {
+		index,
+		draft: { ...link, tags: [...(link.tags ?? [])] },
+		tags: (link.tags ?? []).join(", "),
+	};
+}
+
+function commitEdit() {
+	if (!editing) return;
+	const { index, draft, tags } = editing;
+	const next: FriendLink = {
+		...draft,
+		title: draft.title.trim(),
+		siteurl: draft.siteurl.trim(),
+		imgurl: draft.imgurl.trim(),
+		desc: draft.desc.trim(),
+		weight: Number.isFinite(draft.weight) ? draft.weight : 0,
+		tags: tags
+			.split(",")
+			.map((t) => t.trim())
+			.filter(Boolean),
+	};
+	if (!next.title) {
+		message = "名称不能为空";
+		return;
+	}
+	if (!/^https?:\/\/\S+$/.test(next.siteurl)) {
+		message = "站点地址需以 http(s):// 开头";
+		return;
+	}
+
+	links =
+		index < 0
+			? [...links, next]
+			: links.map((l, i) => (i === index ? next : l));
+	editing = null;
+	dirty = true;
+	message = null;
 }
 
 async function removeLink(index: number) {
@@ -111,20 +150,16 @@ async function removeLink(index: number) {
 	});
 	if (!ok) return;
 	links = links.filter((_, i) => i !== index);
-	tagText = tagText.filter((_, i) => i !== index);
-	markDirty();
+	dirty = true;
 }
 
 function move(index: number, delta: number) {
 	const target = index + delta;
 	if (target < 0 || target >= links.length) return;
 	const next = [...links];
-	const t = [...tagText];
 	[next[index], next[target]] = [next[target], next[index]];
-	[t[index], t[target]] = [t[target], t[index]];
 	links = next;
-	tagText = t;
-	markDirty();
+	dirty = true;
 }
 
 async function save() {
@@ -132,17 +167,10 @@ async function save() {
 	saving = true;
 	message = null;
 	try {
-		const payload = links.map((l, i) => ({
-			...l,
-			tags: (tagText[i] ?? "")
-				.split(",")
-				.map((t) => t.trim())
-				.filter(Boolean),
-		}));
 		const res = await fetch("/api/admin/links/", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ links: payload }),
+			body: JSON.stringify({ links }),
 		});
 		const data = await res.json();
 		if (!res.ok || !data.success) {
@@ -175,224 +203,233 @@ $effect(() => {
 	onCancel={() => answerConfirm(false)}
 />
 
-<div class="card-base links-page">
-	<header class="links-head">
-		<div class="head-text">
-			<h1>友链管理</h1>
-			<p class="head-meta">
-				共 {links.length} 条 · {links.filter((l) => l.enabled).length} 条启用
-				{#if !writable}
-					<span class="warn">· 当前部署环境只读，需在本地修改</span>
-				{/if}
-			</p>
-		</div>
-		<div class="head-actions">
-			<button
-				class="ui-btn ui-btn-soft"
-				type="button"
-				onclick={addLink}
-				disabled={!writable}
-			>
-				<Icon icon="material-symbols:add" />
-				新增
-			</button>
-			<button
-				class="ui-btn ui-btn-primary"
-				type="button"
-				onclick={save}
-				disabled={saving || !writable || !dirty}
-			>
-				{saving ? "保存中…" : dirty ? "保存" : "已保存"}
-			</button>
-		</div>
-	</header>
+<AdminPage
+	title="友链管理"
+	intro={`共 ${links.length} 条 · ${links.filter((l) => l.enabled).length} 条启用${writable ? "" : " · 当前环境只读"}`}
+>
+	{#snippet actions()}
+		<button
+			class="ui-btn ui-btn-soft"
+			type="button"
+			onclick={openNew}
+			disabled={!writable}
+		>
+			<Icon icon="material-symbols:add" class="btn-icon" />
+			新增友链
+		</button>
+		<button
+			class="ui-btn ui-btn-primary"
+			type="button"
+			onclick={save}
+			disabled={saving || !writable || !dirty}
+		>
+			{saving ? "保存中…" : dirty ? "保存更改" : "已保存"}
+		</button>
+	{/snippet}
 
-	<div class="links-body">
-		{#if loading}
-			<p class="state">正在加载…</p>
-		{:else if error}
-			<p class="state error">{error}</p>
-		{:else}
-			{#if message}
-				<p class="state tip">{message}</p>
-			{/if}
+	{#if message}
+		<p class="notice">{message}</p>
+	{/if}
+
+	{#if loading}
+		<p class="state">正在加载…</p>
+	{:else if error}
+		<p class="state error">{error}</p>
+	{:else if links.length === 0}
+		<p class="state">还没有友链，点右上角「新增友链」添加。</p>
+	{:else}
+		<div class="table" role="table" aria-label="友链列表">
+			<div class="table-head" role="row">
+				<span class="c-name">名称</span>
+				<span class="c-site">站点</span>
+				<span class="c-tags">标签</span>
+				<span class="c-weight">权重</span>
+				<span class="c-status">状态</span>
+				<span class="c-actions"></span>
+			</div>
 
 			{#each links as link, i (i)}
-				<section class="link-card">
-					<header class="card-head">
-						<span class="card-index">{i + 1}</span>
-						<span class="card-title">{link.title.trim() || "未命名"}</span>
-						<div class="card-actions">
-							<button
-								class="icon-btn"
-								type="button"
-								title="上移"
-								disabled={i === 0 || !writable}
-								onclick={() => move(i, -1)}
-							>
-								<Icon icon="material-symbols:arrow-upward" />
-							</button>
-							<button
-								class="icon-btn"
-								type="button"
-								title="下移"
-								disabled={i === links.length - 1 || !writable}
-								onclick={() => move(i, 1)}
-							>
-								<Icon icon="material-symbols:arrow-downward" />
-							</button>
-							<button
-								class="icon-btn danger"
-								type="button"
-								title="删除"
-								disabled={!writable}
-								onclick={() => removeLink(i)}
-							>
-								<Icon icon="material-symbols:delete-outline" />
-							</button>
-						</div>
-					</header>
-
-					<div class="fields">
-						<label class="field">
-							<span>名称</span>
-							<input
-								type="text"
-								bind:value={link.title}
-								oninput={markDirty}
-								disabled={!writable}
-							/>
-						</label>
-						<label class="field">
-							<span>站点地址</span>
-							<input
-								type="url"
-								bind:value={link.siteurl}
-								oninput={markDirty}
-								disabled={!writable}
-								placeholder="https://"
-							/>
-						</label>
-						<label class="field">
-							<span>头像地址</span>
-							<input
-								type="url"
-								bind:value={link.imgurl}
-								oninput={markDirty}
-								disabled={!writable}
-								placeholder="https://"
-							/>
-						</label>
-						<label class="field">
-							<span>标签</span>
-							<input
-								type="text"
-								bind:value={tagText[i]}
-								oninput={markDirty}
-								disabled={!writable}
-								placeholder="用逗号分隔"
-							/>
-						</label>
-						<label class="field wide">
-							<span>描述</span>
-							<input
-								type="text"
-								bind:value={link.desc}
-								oninput={markDirty}
-								disabled={!writable}
-							/>
-						</label>
-						<label class="field narrow">
-							<span>权重</span>
-							<input
-								type="number"
-								bind:value={link.weight}
-								oninput={markDirty}
-								disabled={!writable}
-							/>
-						</label>
-						<div class="field toggle-field">
-							<Checkbox
-								checked={link.enabled}
-								disabled={!writable}
-								onchange={() => {
-									link.enabled = !link.enabled;
-									markDirty();
-								}}
-								label="是否启用"
-							/>
-							<span>启用</span>
+				<div class="table-row" role="row">
+					<div class="c-name" role="cell">
+						{#if link.imgurl}
+							<img class="avatar" src={link.imgurl} alt="" loading="lazy" />
+						{:else}
+							<span class="avatar placeholder"></span>
+						{/if}
+						<div class="name-text">
+							<span class="name">{link.title || "未命名"}</span>
+							{#if link.desc}
+								<span class="desc">{link.desc}</span>
+							{/if}
 						</div>
 					</div>
-				</section>
-			{/each}
 
-			{#if links.length === 0}
-				<p class="state">还没有友链，点右上角「新增」添加。</p>
-			{/if}
-		{/if}
+					<div class="c-site" role="cell">
+						<a href={link.siteurl} target="_blank" rel="noopener noreferrer">
+							{link.siteurl.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+						</a>
+					</div>
+
+					<div class="c-tags" role="cell">
+						{#if link.tags?.length}
+							{#each link.tags as tag (tag)}
+								<span class="tag">{tag}</span>
+							{/each}
+						{:else}
+							<span class="muted">—</span>
+						{/if}
+					</div>
+
+					<div class="c-weight" role="cell">{link.weight}</div>
+
+					<div class="c-status" role="cell">
+						<span class="status" class:on={link.enabled}>
+							{link.enabled ? "启用" : "停用"}
+						</span>
+					</div>
+
+					<div class="c-actions" role="cell">
+						<button
+							class="icon-btn"
+							type="button"
+							title="上移"
+							disabled={i === 0 || !writable}
+							onclick={() => move(i, -1)}
+						>
+							<Icon icon="material-symbols:arrow-upward" />
+						</button>
+						<button
+							class="icon-btn"
+							type="button"
+							title="下移"
+							disabled={i === links.length - 1 || !writable}
+							onclick={() => move(i, 1)}
+						>
+							<Icon icon="material-symbols:arrow-downward" />
+						</button>
+						<button
+							class="icon-btn"
+							type="button"
+							title="编辑"
+							disabled={!writable}
+							onclick={() => openEdit(i)}
+						>
+							<Icon icon="material-symbols:edit-outline" />
+						</button>
+						<button
+							class="icon-btn danger"
+							type="button"
+							title="删除"
+							disabled={!writable}
+							onclick={() => removeLink(i)}
+						>
+							<Icon icon="material-symbols:delete-outline" />
+						</button>
+					</div>
+				</div>
+			{/each}
+		</div>
+	{/if}
+</AdminPage>
+
+{#if editing}
+	<div
+		class="modal-overlay"
+		role="presentation"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) editing = null;
+		}}
+	>
+		<div
+			class="modal-card card-base"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="link-edit-title"
+			tabindex="-1"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => {
+				e.stopPropagation();
+				if (e.key === "Escape") editing = null;
+			}}
+		>
+			<div class="modal-head">
+				<h2 id="link-edit-title">
+					{editing.index < 0 ? "新增友链" : "编辑友链"}
+				</h2>
+				<button
+					class="icon-btn"
+					type="button"
+					onclick={() => (editing = null)}
+					aria-label="关闭"
+				>
+					<Icon icon="material-symbols:close" />
+				</button>
+			</div>
+
+			<div class="modal-body">
+				<label class="field">
+					<span>名称</span>
+					<input type="text" bind:value={editing.draft.title} />
+				</label>
+				<label class="field">
+					<span>站点地址</span>
+					<input
+						type="url"
+						bind:value={editing.draft.siteurl}
+						placeholder="https://"
+					/>
+				</label>
+				<label class="field">
+					<span>头像地址</span>
+					<input
+						type="url"
+						bind:value={editing.draft.imgurl}
+						placeholder="https://"
+					/>
+				</label>
+				<label class="field">
+					<span>描述</span>
+					<input type="text" bind:value={editing.draft.desc} />
+				</label>
+				<label class="field">
+					<span>标签（逗号分隔）</span>
+					<input type="text" bind:value={editing.tags} />
+				</label>
+				<div class="field-row">
+					<label class="field compact">
+						<span>权重</span>
+						<input type="number" bind:value={editing.draft.weight} />
+					</label>
+					<div class="field toggle-field">
+						<Checkbox
+							checked={editing.draft.enabled}
+							onchange={() => {
+								if (editing) editing.draft.enabled = !editing.draft.enabled;
+							}}
+							label="是否启用"
+						/>
+						<span>启用</span>
+					</div>
+				</div>
+			</div>
+
+			<div class="modal-actions">
+				<button class="ui-btn ui-btn-soft" type="button" onclick={() => (editing = null)}>
+					取消
+				</button>
+				<button class="ui-btn ui-btn-primary" type="button" onclick={commitEdit}>
+					确定
+				</button>
+			</div>
+		</div>
 	</div>
-</div>
+{/if}
 
 <style>
-	.links-page {
-		display: flex;
-		flex-direction: column;
-		width: 100%;
-		height: var(--admin-viewport-h, calc(100vh - 3rem));
-		min-height: 0;
-		overflow: hidden;
-	}
-
-	.links-head {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 1rem;
-		flex-wrap: wrap;
-		padding: 1.75rem 1.75rem 1.625rem;
-		border-bottom: 1px solid var(--line-divider);
-		flex-shrink: 0;
-	}
-
-	.head-text h1 {
+	.notice {
 		margin: 0;
-		font-size: 1.75rem;
-		font-weight: 650;
-		line-height: 1.4;
-		color: var(--deep-text);
-	}
-
-	.head-meta {
-		margin: 0.375rem 0 0;
 		font-size: 0.8125rem;
-		line-height: 1.7;
-		color: var(--content-meta);
-	}
-
-	.warn {
-		color: oklch(0.72 0.15 70);
-	}
-
-	.head-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-shrink: 0;
-	}
-
-	.head-actions :global(svg) {
-		font-size: 1rem;
-	}
-
-	.links-body {
-		flex: 1;
-		min-height: 0;
-		overflow-y: auto;
-		padding: 1.25rem 1.75rem 1.75rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.875rem;
+		color: oklch(0.7 0.15 145);
 	}
 
 	.state {
@@ -405,39 +442,66 @@ $effect(() => {
 		color: var(--destructive, #d33);
 	}
 
-	.state.tip {
-		color: oklch(0.7 0.15 145);
-	}
-
-	.link-card {
-		border-radius: 0.75rem;
-		background: var(--btn-regular-bg);
-		overflow: hidden;
-	}
-
-	.card-head {
+	.table {
 		display: flex;
+		flex-direction: column;
+	}
+
+	/* 列宽与表头共用一套，靠 grid 保证逐列对齐 */
+	.table-head,
+	.table-row {
+		display: grid;
+		grid-template-columns:
+			minmax(10rem, 1.6fr) minmax(9rem, 1.2fr) minmax(5rem, 0.8fr)
+			3.5rem 4rem 8.5rem;
+		gap: 1rem;
 		align-items: center;
-		gap: 0.625rem;
-		padding: 0.625rem 0.875rem;
+	}
+
+	.table-head {
+		padding: 0 0.75rem 0.625rem;
+		border-bottom: 1px solid var(--line-divider);
+		font-size: 0.75rem;
+		color: var(--content-meta);
+	}
+
+	.table-row {
+		padding: 0.625rem 0.75rem;
 		border-bottom: 1px solid var(--line-divider);
 	}
 
-	.card-index {
-		display: grid;
-		place-items: center;
-		width: 1.375rem;
-		height: 1.375rem;
-		border-radius: 9999px;
-		background: var(--float-panel-bg);
-		font-size: 0.6875rem;
-		color: var(--content-meta);
+	.table-row:hover {
+		background: var(--btn-plain-bg-hover);
+	}
+
+	.c-name {
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		min-width: 0;
+	}
+
+	.avatar {
+		width: 2rem;
+		height: 2rem;
+		border-radius: 0.5rem;
+		object-fit: cover;
 		flex-shrink: 0;
 	}
 
-	.card-title {
-		flex: 1;
+	.avatar.placeholder {
+		display: block;
+		background: var(--btn-regular-bg);
+	}
+
+	.name-text {
+		display: flex;
+		flex-direction: column;
+		gap: 0.0625rem;
 		min-width: 0;
+	}
+
+	.name {
 		font-size: 0.8125rem;
 		font-weight: 600;
 		color: var(--deep-text);
@@ -446,11 +510,72 @@ $effect(() => {
 		white-space: nowrap;
 	}
 
-	.card-actions {
+	.desc {
+		font-size: 0.6875rem;
+		color: var(--content-meta);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.c-site a {
+		font-size: 0.75rem;
+		color: var(--primary);
+		text-decoration: none;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		display: block;
+	}
+
+	.c-site a:hover {
+		text-decoration: underline;
+	}
+
+	.c-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+	}
+
+	.tag {
+		padding: 0.0625rem 0.375rem;
+		border-radius: 0.25rem;
+		background: var(--btn-regular-bg);
+		font-size: 0.6875rem;
+		color: var(--content-meta);
+	}
+
+	.muted {
+		font-size: 0.75rem;
+		color: var(--content-meta);
+	}
+
+	.c-weight {
+		font-size: 0.75rem;
+		color: var(--content-meta);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.status {
+		display: inline-block;
+		padding: 0.0625rem 0.4375rem;
+		border-radius: 0.25rem;
+		font-size: 0.6875rem;
+		background: var(--btn-regular-bg);
+		color: var(--content-meta);
+	}
+
+	.status.on {
+		background: color-mix(in srgb, oklch(0.72 0.15 145) 16%, transparent);
+		color: oklch(0.7 0.15 145);
+	}
+
+	.c-actions {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
-		flex-shrink: 0;
+		justify-content: flex-end;
+		gap: 0.125rem;
 	}
 
 	.icon-btn {
@@ -475,15 +600,56 @@ $effect(() => {
 	}
 
 	.icon-btn:disabled {
-		opacity: 0.35;
+		opacity: 0.3;
 		cursor: not-allowed;
 	}
 
-	.fields {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 0.75rem 1rem;
-		padding: 0.875rem;
+	/* ── 编辑弹窗：结构照 SecretManager 的 modal ── */
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 10000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		background: rgb(0 0 0 / 0.25);
+		-webkit-backdrop-filter: blur(4px);
+		backdrop-filter: blur(4px);
+	}
+
+	.modal-card {
+		width: 90%;
+		max-width: 32rem;
+		max-height: 86vh;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+
+	.modal-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 1.25rem 1.5rem 0.75rem;
+	}
+
+	.modal-head h2 {
+		margin: 0;
+		font-size: 1.0625rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.modal-body {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 0 1.5rem 1rem;
 	}
 
 	.field {
@@ -493,22 +659,14 @@ $effect(() => {
 		min-width: 0;
 	}
 
-	.field.wide {
-		grid-column: 1 / -1;
-	}
-
-	.field.narrow {
-		max-width: 8rem;
-	}
-
 	.field > span {
-		font-size: 0.6875rem;
+		font-size: 0.75rem;
 		color: var(--content-meta);
 	}
 
 	.field input {
 		width: 100%;
-		padding: 0.375rem 0.5rem;
+		padding: 0.4375rem 0.625rem;
 		border: 1px solid var(--line-divider);
 		border-radius: 0.375rem;
 		background: var(--float-panel-bg);
@@ -521,9 +679,14 @@ $effect(() => {
 		border-color: var(--primary);
 	}
 
-	.field input:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
+	.field-row {
+		display: flex;
+		align-items: flex-end;
+		gap: 1.5rem;
+	}
+
+	.field.compact {
+		max-width: 7rem;
 	}
 
 	.toggle-field {
@@ -532,13 +695,31 @@ $effect(() => {
 		gap: 0.375rem;
 		font-size: 0.75rem;
 		color: var(--content-meta);
-		align-self: end;
-		padding-bottom: 0.4375rem;
+		padding-bottom: 0.5rem;
 	}
 
-	@media (width < 720px) {
-		.fields {
-			grid-template-columns: 1fr;
+	.modal-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+		padding: 0 1.5rem 1.5rem;
+	}
+
+	@media (width < 900px) {
+		.table-head {
+			display: none;
+		}
+
+		.table-row {
+			grid-template-columns: 1fr auto;
+			gap: 0.5rem;
+		}
+
+		.c-site,
+		.c-tags,
+		.c-weight,
+		.c-status {
+			grid-column: 1 / -1;
 		}
 	}
 </style>
