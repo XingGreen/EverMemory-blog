@@ -82,6 +82,68 @@ async function load() {
 	}
 }
 
+const DRAFT_KEY = "admin-links-draft";
+
+interface StoredDraft {
+	index: number;
+	draft: FriendLink;
+	tags: string;
+}
+
+/** 草稿提示：恢复时告诉用户「内容不是你刚填的」 */
+let dialogNotice = $state<string | null>(null);
+
+/** 关闭弹窗时的三选一 */
+let closePrompt = $state(false);
+let closeResolve: ((choice: "save" | "discard" | "keep") => void) | null = null;
+
+function askClose(): Promise<"save" | "discard" | "keep"> {
+	closePrompt = true;
+	return new Promise((resolve) => {
+		closeResolve = resolve;
+	});
+}
+
+function answerClose(choice: "save" | "discard" | "keep") {
+	closePrompt = false;
+	const resolve = closeResolve;
+	closeResolve = null;
+	resolve?.(choice);
+}
+
+function saveDraftToStorage() {
+	if (!editing) return;
+	try {
+		sessionStorage.setItem(
+			DRAFT_KEY,
+			JSON.stringify({
+				index: editing.index,
+				draft: editing.draft,
+				tags: editing.tags,
+			} satisfies StoredDraft),
+		);
+	} catch {
+		// 隐私模式 / 配额不足：关掉就当放弃，至少不会卡住流程
+	}
+}
+
+function readStoredDraft(): StoredDraft | null {
+	try {
+		const raw = sessionStorage.getItem(DRAFT_KEY);
+		return raw ? (JSON.parse(raw) as StoredDraft) : null;
+	} catch {
+		return null;
+	}
+}
+
+function clearStoredDraft() {
+	try {
+		sessionStorage.removeItem(DRAFT_KEY);
+	} catch {
+		// 忽略
+	}
+}
+
 /** 弹窗里的内容是否与打开时不同 */
 function isDraftDirty(): boolean {
 	if (!editing) return false;
@@ -110,30 +172,44 @@ function isDraftDirty(): boolean {
 
 /**
  * 关闭弹窗的唯一入口。
- * 有未确定的改动时先问一次——直接关掉会让人以为「刚才填的还在」。
+ *
+ * 有未确定的改动时给三个出口，而不是「丢弃 / 取消」二选一：
+ * 用户常常只是想先放一放，不是要放弃——所以要有「保存草稿」。
  */
 async function requestClose() {
 	if (!editing) return;
 	if (!isDraftDirty()) {
 		editing = null;
 		dialogError = null;
+		dialogNotice = null;
 		return;
 	}
-	const ok = await askConfirm({
-		title: "放弃这次编辑？",
-		body: "表单里的内容还没有确定，关闭后不会保留。",
-		confirmText: "放弃修改",
-		cancelText: "继续编辑",
-		tone: "danger",
-	});
-	if (ok) {
-		editing = null;
-		dialogError = null;
-	}
+	const choice = await askClose();
+	if (choice === "keep") return;
+	if (choice === "save") saveDraftToStorage();
+	else clearStoredDraft();
+	editing = null;
+	dialogError = null;
+	dialogNotice = null;
+}
+
+/** 取出与目标位对应的草稿，取到即清，避免下次重复恢复 */
+function takeStoredDraft(expected: number): StoredDraft | null {
+	const stored = readStoredDraft();
+	if (!stored || stored.index !== expected) return null;
+	clearStoredDraft();
+	return stored;
 }
 
 function openNew() {
 	dialogError = null;
+	const stored = takeStoredDraft(-1);
+	if (stored) {
+		editing = { index: -1, draft: stored.draft, tags: stored.tags };
+		dialogNotice = "已恢复上次未保存的草稿";
+		return;
+	}
+	dialogNotice = null;
 	editing = {
 		index: -1,
 		draft: {
@@ -153,6 +229,13 @@ function openEdit(index: number) {
 	const link = links[index];
 	if (!link) return;
 	dialogError = null;
+	const stored = takeStoredDraft(index);
+	if (stored) {
+		editing = { index, draft: stored.draft, tags: stored.tags };
+		dialogNotice = "已恢复上次未保存的草稿";
+		return;
+	}
+	dialogNotice = null;
 	editing = {
 		index,
 		draft: { ...link, tags: [...(link.tags ?? [])] },
@@ -190,6 +273,8 @@ function commitEdit() {
 			: links.map((l, i) => (i === index ? next : l));
 	editing = null;
 	dialogError = null;
+	dialogNotice = null;
+	clearStoredDraft();
 	dirty = true;
 	message = null;
 }
@@ -256,6 +341,18 @@ $effect(() => {
 	tone={confirmState?.tone ?? "default"}
 	onConfirm={() => answerConfirm(true)}
 	onCancel={() => answerConfirm(false)}
+/>
+
+<ConfirmDialog
+	open={closePrompt}
+	title="保存这次编辑吗？"
+	body="表单里有还没确定的内容。保存草稿后，下次打开这一条会自动带出来。"
+	confirmText="保存草稿并关闭"
+	cancelText="不保存并关闭"
+	tertiaryText="继续编辑"
+	onConfirm={() => answerClose("save")}
+	onCancel={() => answerClose("discard")}
+	onTertiary={() => answerClose("keep")}
 />
 
 <AdminPage
@@ -432,6 +529,10 @@ $effect(() => {
 					<Icon icon="material-symbols:close" />
 				</button>
 			</div>
+
+			{#if dialogNotice}
+				<p class="dialog-notice">{dialogNotice}</p>
+			{/if}
 
 			<div class="modal-body">
 				<label class="field">
@@ -846,6 +947,15 @@ $effect(() => {
 		font-size: 0.75rem;
 		color: var(--content-meta);
 		padding-bottom: 0.5rem;
+	}
+
+	.dialog-notice {
+		margin: 0;
+		padding: 0 1.5rem 0.75rem;
+		font-size: 0.75rem;
+		line-height: 1.5;
+		color: var(--content-meta);
+		flex-shrink: 0;
 	}
 
 	.dialog-error {

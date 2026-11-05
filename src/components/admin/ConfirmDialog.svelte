@@ -15,9 +15,12 @@ let {
 	hint = "",
 	confirmText = "确定",
 	cancelText = "取消",
+	/** 可选的第三个按钮：既不是确定也不是取消的第三条路，如「继续编辑」 */
+	tertiaryText = "",
 	tone = "default",
 	onConfirm,
 	onCancel,
+	onTertiary,
 }: {
 	open: boolean;
 	title: string;
@@ -25,14 +28,26 @@ let {
 	hint?: string;
 	confirmText?: string;
 	cancelText?: string;
+	tertiaryText?: string;
 	/** danger 时主按钮用破坏色，用于不可撤销、会丢数据的操作 */
 	tone?: "default" | "danger";
 	onConfirm: () => void;
 	onCancel: () => void;
+	onTertiary?: () => void;
 } = $props();
 
+/**
+ * 点遮罩或按 Esc 的默认动作。
+ * 有第三个按钮时走它——那种场景下「取消 / 不保存」通常不可逆，
+ * 顺手点一下就丢数据太容易了。
+ */
+function handleDismiss() {
+	if (onTertiary) onTertiary();
+	else onCancel();
+}
+
 function handleKeydown(e: KeyboardEvent) {
-	if (open && e.key === "Escape") onCancel();
+	if (open && e.key === "Escape") handleDismiss();
 }
 </script>
 
@@ -43,7 +58,7 @@ function handleKeydown(e: KeyboardEvent) {
 		class="modal-overlay"
 		role="presentation"
 		onclick={(e) => {
-			if (e.target === e.currentTarget) onCancel();
+			if (e.target === e.currentTarget) handleDismiss();
 		}}
 	>
 		<div
@@ -67,6 +82,11 @@ function handleKeydown(e: KeyboardEvent) {
 			</div>
 
 			<div class="modal-footer">
+				{#if tertiaryText && onTertiary}
+					<button class="ui-btn ui-btn-ghost" type="button" onclick={onTertiary}>
+						{tertiaryText}
+					</button>
+				{/if}
 				<button class="ui-btn ui-btn-soft" type="button" onclick={onCancel}>
 					{cancelText}
 				</button>
