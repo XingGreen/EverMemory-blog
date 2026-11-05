@@ -59,7 +59,15 @@ function validate(
 			? raw.tags.filter((t): t is string => typeof t === "string" && !!t.trim())
 			: [];
 
+		/* id 由前端生成并随表单带回；万一缺失就补一个，
+		   保证每条都有稳定标识（草稿与排序都依赖它）。 */
+		const id =
+			typeof raw.id === "string" && raw.id.trim()
+				? raw.id.trim()
+				: crypto.randomUUID().slice(0, 8);
+
 		links.push({
+			id,
 			title,
 			siteurl,
 			imgurl,

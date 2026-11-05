@@ -1,4 +1,6 @@
 <script lang="ts">
+import Icon from "@/components/common/Icon.svelte";
+
 /**
  * 通用确认弹窗。
  *
@@ -72,6 +74,16 @@ function handleKeydown(e: KeyboardEvent) {
 		>
 			<div class="modal-header">
 				<h2 id="confirm-dialog-title">{title}</h2>
+				{#if onTertiary}
+					<button
+						class="close-btn"
+						type="button"
+						onclick={onTertiary}
+						aria-label="关闭"
+					>
+						<Icon icon="material-symbols:close" />
+					</button>
+				{/if}
 			</div>
 
 			<div class="modal-body">
@@ -153,7 +165,30 @@ function handleKeydown(e: KeyboardEvent) {
 	}
 
 	.modal-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
 		padding: 1.25rem 1.5rem 0.75rem;
+	}
+
+	.close-btn {
+		display: grid;
+		place-items: center;
+		width: 1.75rem;
+		height: 1.75rem;
+		margin: -0.25rem -0.25rem 0 0;
+		border: none;
+		border-radius: 0.375rem;
+		background: transparent;
+		color: var(--content-meta);
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+
+	.close-btn:hover {
+		background: var(--btn-plain-bg-hover);
+		color: var(--deep-text);
 	}
 
 	.modal-header h2 {
