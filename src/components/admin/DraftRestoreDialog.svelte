@@ -41,6 +41,22 @@ let shown = false;
  */
 let closingByProgram = false;
 
+/**
+ * 挂到 body 上。
+ *
+ * md-dialog 用 position: fixed 且尺寸是 max-width: min(560px, 100% - 48px)，
+ * 这个 100% 按包含块算。后台的 .admin-content 带 zoom，
+ * 留在里面会被缩放容器约束，表现为弹窗缩在左上角、遮罩也铺不满。
+ */
+$effect(() => {
+	const el = dialogEl;
+	if (!el || el.parentElement === document.body) return;
+	document.body.appendChild(el);
+	return () => {
+		el.remove();
+	};
+});
+
 $effect(() => {
 	const el = dialogEl;
 	// 自定义元素尚未升级时没有 show/close，等它就绪
