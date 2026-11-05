@@ -371,7 +371,7 @@ $effect(() => {
 <ConfirmDialog
 	open={closePrompt}
 	title="保存这次编辑吗？"
-	body="表单里有还没确定的内容。保存草稿后，下次打开这一条会自动带出来；点右上角 × 或遮罩可以留下来继续改。"
+	body=""
 	confirmText="保存草稿并退出"
 	cancelText="不保存并退出"
 	onConfirm={() => answerClose("save")}

@@ -86,12 +86,16 @@ function handleKeydown(e: KeyboardEvent) {
 				{/if}
 			</div>
 
-			<div class="modal-body">
-				<p class="lead">{body}</p>
-				{#if hint}
-					<p class="hint">{hint}</p>
-				{/if}
-			</div>
+			{#if body || hint}
+				<div class="modal-body">
+					{#if body}
+						<p class="lead">{body}</p>
+					{/if}
+					{#if hint}
+						<p class="hint">{hint}</p>
+					{/if}
+				</div>
+			{/if}
 
 			<div class="modal-footer">
 				{#if tertiaryText && onTertiary}
