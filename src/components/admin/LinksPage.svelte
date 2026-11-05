@@ -583,8 +583,6 @@ $effect(() => {
 					/>
 					{#if fieldErrors.siteurl}
 						<span class="field-error">{fieldErrors.siteurl}</span>
-					{:else}
-						<span class="field-hint">不写协议也可以，会按 https 补全</span>
 					{/if}
 				</label>
 				<label class="field">
@@ -929,7 +927,8 @@ $effect(() => {
 		min-width: 0;
 	}
 
-	.field > span {
+	/* 只给字段标签上灰：不排除提示类的话，.field > span 的特异性会压过 .field-error */
+	.field > span:not(.field-error):not(.field-hint) {
 		font-size: 0.75rem;
 		color: var(--content-meta);
 	}
@@ -977,8 +976,9 @@ $effect(() => {
 		flex-shrink: 0;
 	}
 
-	/* 字段级提示：贴在对应输入框正下方，用户不用在弹窗里找 */
-	.field-error {
+	/* 字段级提示：贴在对应输入框正下方，用户不用在弹窗里找。
+	   用 .field > 前缀压过 .field > span 的灰色。 */
+	.field > .field-error {
 		font-size: 0.6875rem;
 		line-height: 1.5;
 		color: var(--destructive, #d33);
