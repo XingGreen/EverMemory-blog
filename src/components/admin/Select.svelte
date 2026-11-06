@@ -105,20 +105,20 @@ function handleOutside(e: PointerEvent) {
 	</button>
 
 	{#if open}
-		<ul class="select-panel" role="listbox" tabindex="-1">
+		<ul class="ui-menu" role="listbox" tabindex="-1">
 			{#each options as opt, i (opt.value)}
 				<li>
 					<button
 						type="button"
-						class="select-option"
-						class:is-active={i === activeIndex}
+						class="ui-menu-item"
+						data-active={i === activeIndex}
 						aria-selected={opt.value === value}
 						onclick={() => pick(opt.value)}
 						onmouseenter={() => (activeIndex = i)}
 					>
-						<span class="select-option-label">{opt.label}</span>
+						<span class="ui-menu-item-label">{opt.label}</span>
 						{#if opt.value === value}
-							<Icon icon="material-symbols:check" class="select-check" />
+							<Icon icon="material-symbols:check" class="ui-menu-item-check" />
 						{/if}
 					</button>
 				</li>
@@ -168,62 +168,5 @@ function handleOutside(e: PointerEvent) {
 	}
 
 	/* 浮层：absolute top-full mt-1 w-full rounded-xl bg-card ring-1 */
-	.select-panel {
-		position: absolute;
-		top: 100%;
-		left: 0;
-		z-index: 50;
-		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
-		width: 100%;
-		max-height: 15rem;
-		margin: 0.25rem 0 0;
-		padding: 0.25rem;
-		overflow-y: auto;
-		border-radius: 0.75rem;
-		background: var(--card-bg);
-		box-shadow:
-			0 0 0 1px var(--input-border),
-			0 8px 24px rgb(0 0 0 / 0.18);
-		list-style: none;
-		overscroll-behavior: contain;
-	}
-
-	.select-option {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		width: 100%;
-		padding: 0.5rem 0.75rem;
-		border: none;
-		border-radius: 0.5rem;
-		background: transparent;
-		color: var(--content-meta);
-		font-family: inherit;
-		font-size: 0.875rem;
-		text-align: left;
-		cursor: pointer;
-	}
-
-	.select-option.is-active {
-		background: var(--btn-plain-bg-hover);
-		color: var(--deep-text);
-	}
-
-	.select-option[aria-selected="true"] {
-		color: var(--primary);
-	}
-
-	.select-option-label {
-		flex: 1;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.select-check {
-		flex-shrink: 0;
-		font-size: 14px;
-	}
+	/* 浮层与选项的外观已并入 ui-base 的 .ui-menu / .ui-menu-item */
 </style>

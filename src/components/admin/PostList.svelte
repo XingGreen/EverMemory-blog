@@ -1,8 +1,7 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import PostRowMenu from "@/components/admin/PostRowMenu.svelte";
-import DropdownItem from "@/components/common/DropdownItem.svelte";
-import DropdownPanel from "@/components/common/DropdownPanel.svelte";
+import Dropdown from "@/components/common/Dropdown.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -110,17 +109,6 @@ let hiddenCols = $state<Record<HideableCol, boolean>>({
 	status: false,
 });
 let colsPanelOpen = $state(false);
-let colsWrapEl = $state<HTMLElement | null>(null);
-
-/* 点空白处收起面板：mousedown 而非 click，才能在拖选文本时也正确关闭 */
-$effect(() => {
-	if (!colsPanelOpen) return;
-	const onPointerDown = (e: MouseEvent) => {
-		if (!colsWrapEl?.contains(e.target as Node)) colsPanelOpen = false;
-	};
-	document.addEventListener("mousedown", onPointerDown);
-	return () => document.removeEventListener("mousedown", onPointerDown);
-});
 
 function toggleCol(key: HideableCol) {
 	hiddenCols = { ...hiddenCols, [key]: !hiddenCols[key] };
@@ -653,10 +641,10 @@ function actionLabel(action: string, title: string): string {
 				/>
 			</label>
 
-			<!-- 列显示设置：复用项目的 DropdownPanel 与 DropdownItem -->
+			<!-- 列显示设置：公共 Dropdown 外壳 + 统一样式的菜单项 -->
 			<div class="toolbar-field cols-field">
 				<span class="field-label">{i18n(I18nKey.postColSettings)}</span>
-				<div class="cols-wrap" bind:this={colsWrapEl}>
+				<Dropdown bind:open={colsPanelOpen} align="end">
 					<button
 						class="ui-select cols-trigger"
 						type="button"
@@ -668,47 +656,54 @@ function actionLabel(action: string, title: string): string {
 					</button>
 
 					{#if colsPanelOpen}
-						<DropdownPanel class="cols-panel">
-							<DropdownItem
-								isActive={!hiddenCols.category}
+						<div class="ui-menu">
+							<button
+								class="ui-menu-item"
+								type="button"
+								aria-selected={!hiddenCols.category}
 								onclick={() => toggleCol("category")}
 							>
-								<span class="cols-label">{i18n(I18nKey.postColCategory)}</span>
+								<span class="ui-menu-item-label">{i18n(I18nKey.postColCategory)}</span>
 								{#if !hiddenCols.category}
-									<Icon icon="material-symbols:check" class="cols-check" />
+									<Icon icon="material-symbols:check" class="ui-menu-item-check" />
 								{/if}
-							</DropdownItem>
-							<DropdownItem
-								isActive={!hiddenCols.filetype}
+							</button>
+							<button
+								class="ui-menu-item"
+								type="button"
+								aria-selected={!hiddenCols.filetype}
 								onclick={() => toggleCol("filetype")}
 							>
-								<span class="cols-label">{i18n(I18nKey.postColFileType)}</span>
+								<span class="ui-menu-item-label">{i18n(I18nKey.postColFileType)}</span>
 								{#if !hiddenCols.filetype}
-									<Icon icon="material-symbols:check" class="cols-check" />
+									<Icon icon="material-symbols:check" class="ui-menu-item-check" />
 								{/if}
-							</DropdownItem>
-							<DropdownItem
-								isActive={!hiddenCols.date}
+							</button>
+							<button
+								class="ui-menu-item"
+								type="button"
+								aria-selected={!hiddenCols.date}
 								onclick={() => toggleCol("date")}
 							>
-								<span class="cols-label">{dateColLabel}</span>
+								<span class="ui-menu-item-label">{dateColLabel}</span>
 								{#if !hiddenCols.date}
-									<Icon icon="material-symbols:check" class="cols-check" />
+									<Icon icon="material-symbols:check" class="ui-menu-item-check" />
 								{/if}
-							</DropdownItem>
-							<DropdownItem
-								isActive={!hiddenCols.status}
-								isLast
+							</button>
+							<button
+								class="ui-menu-item"
+								type="button"
+								aria-selected={!hiddenCols.status}
 								onclick={() => toggleCol("status")}
 							>
-								<span class="cols-label">{i18n(I18nKey.postColStatus)}</span>
+								<span class="ui-menu-item-label">{i18n(I18nKey.postColStatus)}</span>
 								{#if !hiddenCols.status}
-									<Icon icon="material-symbols:check" class="cols-check" />
+									<Icon icon="material-symbols:check" class="ui-menu-item-check" />
 								{/if}
-							</DropdownItem>
-						</DropdownPanel>
+							</button>
+						</div>
 					{/if}
-				</div>
+				</Dropdown>
 			</div>
 		</div>
 	</div>
@@ -1614,27 +1609,6 @@ function actionLabel(action: string, title: string): string {
 		min-width: 130px;
 		cursor: pointer;
 		background-image: none;
-	}
-
-	/* DropdownPanel 是子组件，scoped 样式不穿透；这里只管定位，
-	   外观（底色、圆角、阴影、内边距）全部由 float-panel 负责 */
-	.cols-wrap :global(.cols-panel) {
-		position: absolute;
-		top: calc(100% + 0.375rem);
-		right: 0;
-		z-index: 20;
-		min-width: 11rem;
-	}
-
-	.cols-label {
-		flex: 1;
-		text-align: left;
-	}
-
-	.cols-wrap :global(.cols-check) {
-		margin-left: auto;
-		font-size: 1rem;
-		color: var(--primary);
 	}
 
 	/* 文件类型列：等宽字体 + 低饱和底，避免和「状态」列的两个徽章抢视觉权重 */
