@@ -133,6 +133,7 @@ const gridCols = $derived(
 		.join(" "),
 );
 
+let categoryFilter = $state("");
 let tagFilter = $state("");
 /* 默认按最近修改排：草稿没有 published，按发布时间排会全部沉底，
    「我刚写到哪」永远翻不到。 */
