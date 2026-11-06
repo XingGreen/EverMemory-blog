@@ -5,6 +5,7 @@ import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import type { AdminPostSummary } from "@/types/adminApi";
+import Checkbox from "./Checkbox.svelte";
 import Select from "./Select.svelte";
 
 let {
@@ -654,38 +655,38 @@ function actionLabel(action: string, title: string): string {
 					</button>
 					{#if colsPanelOpen}
 						<div class="cols-panel">
-							<label class="cols-item">
-								<input
-									type="checkbox"
+							<div class="cols-item">
+								<Checkbox
 									checked={!hiddenCols.category}
 									onchange={() => toggleCol("category")}
+									label={i18n(I18nKey.postColCategory)}
 								/>
 								<span>{i18n(I18nKey.postColCategory)}</span>
-							</label>
-							<label class="cols-item">
-								<input
-									type="checkbox"
+							</div>
+							<div class="cols-item">
+								<Checkbox
 									checked={!hiddenCols.filetype}
 									onchange={() => toggleCol("filetype")}
+									label={i18n(I18nKey.postColFileType)}
 								/>
 								<span>{i18n(I18nKey.postColFileType)}</span>
-							</label>
-							<label class="cols-item">
-								<input
-									type="checkbox"
+							</div>
+							<div class="cols-item">
+								<Checkbox
 									checked={!hiddenCols.date}
 									onchange={() => toggleCol("date")}
+									label={dateColLabel}
 								/>
 								<span>{dateColLabel}</span>
-							</label>
-							<label class="cols-item">
-								<input
-									type="checkbox"
+							</div>
+							<div class="cols-item">
+								<Checkbox
 									checked={!hiddenCols.status}
 									onchange={() => toggleCol("status")}
+									label={i18n(I18nKey.postColStatus)}
 								/>
 								<span>{i18n(I18nKey.postColStatus)}</span>
-							</label>
+							</div>
 						</div>
 					{/if}
 				</div>
@@ -1436,6 +1437,11 @@ function actionLabel(action: string, title: string): string {
 		min-width: 0;
 	}
 
+	/* 行内标题前面有 20px 的置顶占位，表头不补同样的缩进就会左移一截 */
+	.header-row .col-title {
+		padding-left: 20px;
+	}
+
 	/* 状态列：内容状态与同步状态可能同时存在，纵向堆叠避免挤成一行 */
 	.col-status {
 		display: flex;
@@ -1580,13 +1586,15 @@ function actionLabel(action: string, title: string): string {
 		align-items: center;
 	}
 
+	/* 与同排的 Select 保持一致的宽高与圆角，只是内容换成图标 */
 	.cols-trigger {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		width: auto;
-		min-width: 2.25rem;
+		min-width: 130px;
 		cursor: pointer;
+		background-image: none;
 	}
 
 	.cols-panel {
