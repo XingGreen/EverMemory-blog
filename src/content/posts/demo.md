@@ -3,7 +3,7 @@ title: "demo"
 published: 2026-10-11
 updated: 2026-10-30
 description: "fewwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww"
-tags: ["使用指南", "mmmm", "mmmmmm"]
+tags: [使用指南]
 draft: true
 pinned: true
 comment: true
