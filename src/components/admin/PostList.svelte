@@ -1,11 +1,12 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import PostRowMenu from "@/components/admin/PostRowMenu.svelte";
+import DropdownItem from "@/components/common/DropdownItem.svelte";
+import DropdownPanel from "@/components/common/DropdownPanel.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import type { AdminPostSummary } from "@/types/adminApi";
-import Checkbox from "./Checkbox.svelte";
 import Select from "./Select.svelte";
 
 let {
@@ -109,6 +110,17 @@ let hiddenCols = $state<Record<HideableCol, boolean>>({
 	status: false,
 });
 let colsPanelOpen = $state(false);
+let colsWrapEl = $state<HTMLElement | null>(null);
+
+/* 点空白处收起面板：mousedown 而非 click，才能在拖选文本时也正确关闭 */
+$effect(() => {
+	if (!colsPanelOpen) return;
+	const onPointerDown = (e: MouseEvent) => {
+		if (!colsWrapEl?.contains(e.target as Node)) colsPanelOpen = false;
+	};
+	document.addEventListener("mousedown", onPointerDown);
+	return () => document.removeEventListener("mousedown", onPointerDown);
+});
 
 function toggleCol(key: HideableCol) {
 	hiddenCols = { ...hiddenCols, [key]: !hiddenCols[key] };
@@ -641,53 +653,60 @@ function actionLabel(action: string, title: string): string {
 				/>
 			</label>
 
-			<!-- 列显示设置：内置在列表工具栏，勾选即时生效并写入 localStorage -->
+			<!-- 列显示设置：复用项目的 DropdownPanel 与 DropdownItem -->
 			<div class="toolbar-field cols-field">
 				<span class="field-label">{i18n(I18nKey.postColSettings)}</span>
-				<div class="cols-wrap">
+				<div class="cols-wrap" bind:this={colsWrapEl}>
 					<button
 						class="ui-select cols-trigger"
 						type="button"
 						aria-expanded={colsPanelOpen}
+						aria-haspopup="true"
 						onclick={() => (colsPanelOpen = !colsPanelOpen)}
 					>
 						<Icon icon="material-symbols:view-list-outline" class="text-sm" />
 					</button>
+
 					{#if colsPanelOpen}
-						<div class="cols-panel">
-							<div class="cols-item">
-								<Checkbox
-									checked={!hiddenCols.category}
-									onchange={() => toggleCol("category")}
-									label={i18n(I18nKey.postColCategory)}
-								/>
-								<span>{i18n(I18nKey.postColCategory)}</span>
-							</div>
-							<div class="cols-item">
-								<Checkbox
-									checked={!hiddenCols.filetype}
-									onchange={() => toggleCol("filetype")}
-									label={i18n(I18nKey.postColFileType)}
-								/>
-								<span>{i18n(I18nKey.postColFileType)}</span>
-							</div>
-							<div class="cols-item">
-								<Checkbox
-									checked={!hiddenCols.date}
-									onchange={() => toggleCol("date")}
-									label={dateColLabel}
-								/>
-								<span>{dateColLabel}</span>
-							</div>
-							<div class="cols-item">
-								<Checkbox
-									checked={!hiddenCols.status}
-									onchange={() => toggleCol("status")}
-									label={i18n(I18nKey.postColStatus)}
-								/>
-								<span>{i18n(I18nKey.postColStatus)}</span>
-							</div>
-						</div>
+						<DropdownPanel class="cols-panel">
+							<DropdownItem
+								isActive={!hiddenCols.category}
+								onclick={() => toggleCol("category")}
+							>
+								<span class="cols-label">{i18n(I18nKey.postColCategory)}</span>
+								{#if !hiddenCols.category}
+									<Icon icon="material-symbols:check" class="cols-check" />
+								{/if}
+							</DropdownItem>
+							<DropdownItem
+								isActive={!hiddenCols.filetype}
+								onclick={() => toggleCol("filetype")}
+							>
+								<span class="cols-label">{i18n(I18nKey.postColFileType)}</span>
+								{#if !hiddenCols.filetype}
+									<Icon icon="material-symbols:check" class="cols-check" />
+								{/if}
+							</DropdownItem>
+							<DropdownItem
+								isActive={!hiddenCols.date}
+								onclick={() => toggleCol("date")}
+							>
+								<span class="cols-label">{dateColLabel}</span>
+								{#if !hiddenCols.date}
+									<Icon icon="material-symbols:check" class="cols-check" />
+								{/if}
+							</DropdownItem>
+							<DropdownItem
+								isActive={!hiddenCols.status}
+								isLast
+								onclick={() => toggleCol("status")}
+							>
+								<span class="cols-label">{i18n(I18nKey.postColStatus)}</span>
+								{#if !hiddenCols.status}
+									<Icon icon="material-symbols:check" class="cols-check" />
+								{/if}
+							</DropdownItem>
+						</DropdownPanel>
 					{/if}
 				</div>
 			</div>
@@ -1586,7 +1605,7 @@ function actionLabel(action: string, title: string): string {
 		align-items: center;
 	}
 
-	/* 与同排的 Select 保持一致的宽高与圆角，只是内容换成图标 */
+	/* 与同排的 Select 保持一致的宽高，只是内容换成图标 */
 	.cols-trigger {
 		display: inline-flex;
 		align-items: center;
@@ -1597,35 +1616,25 @@ function actionLabel(action: string, title: string): string {
 		background-image: none;
 	}
 
-	.cols-panel {
+	/* DropdownPanel 是子组件，scoped 样式不穿透；这里只管定位，
+	   外观（底色、圆角、阴影、内边距）全部由 float-panel 负责 */
+	.cols-wrap :global(.cols-panel) {
 		position: absolute;
 		top: calc(100% + 0.375rem);
 		right: 0;
 		z-index: 20;
-		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
-		min-width: 10rem;
-		padding: 0.5rem;
-		border: 1px solid var(--line-divider);
-		border-radius: 0.625rem;
-		background: var(--card-bg);
-		box-shadow: var(--shadow-md, 0 8px 24px rgb(0 0 0 / 0.18));
+		min-width: 11rem;
 	}
 
-	.cols-item {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.3rem 0.375rem;
-		border-radius: 0.375rem;
-		font-size: 0.8125rem;
-		color: var(--deep-text);
-		cursor: pointer;
+	.cols-label {
+		flex: 1;
+		text-align: left;
 	}
 
-	.cols-item:hover {
-		background: var(--btn-plain-bg-hover);
+	.cols-wrap :global(.cols-check) {
+		margin-left: auto;
+		font-size: 1rem;
+		color: var(--primary);
 	}
 
 	/* 文件类型列：等宽字体 + 低饱和底，避免和「状态」列的两个徽章抢视觉权重 */
