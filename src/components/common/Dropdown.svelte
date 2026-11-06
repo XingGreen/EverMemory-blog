@@ -54,11 +54,6 @@ $effect(() => {
 		display: inline-flex;
 	}
 
-	/* 浮层贴住触发器下方 */
-	.dropdown > :global(.ui-menu) {
-		top: calc(100% + 0.5rem);
-	}
-
 	.dropdown[data-align="start"] > :global(.ui-menu) {
 		left: 0;
 	}

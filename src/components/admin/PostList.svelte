@@ -108,6 +108,11 @@ let hiddenCols = $state<Record<HideableCol, boolean>>({
 	date: false,
 	status: false,
 });
+/** 当前可见列数：按钮上显示它，与 Select 显示当前值的位置对应 */
+const visibleCols = $derived(
+	4 - Object.values(hiddenCols).filter(Boolean).length,
+);
+
 let colsPanelOpen = $state(false);
 
 function toggleCol(key: HideableCol) {
@@ -652,7 +657,8 @@ function actionLabel(action: string, title: string): string {
 						aria-haspopup="true"
 						onclick={() => (colsPanelOpen = !colsPanelOpen)}
 					>
-						<Icon icon="material-symbols:view-list-outline" class="text-sm" />
+						<span>{visibleCols} 列</span>
+						<Icon icon="material-symbols:expand-more" class="text-sm" />
 					</button>
 
 					{#if colsPanelOpen}

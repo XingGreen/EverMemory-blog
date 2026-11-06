@@ -277,6 +277,8 @@ textarea.ui-input {
 /* 浮层：贴住触发器，圆角与阴影跟后台其它浮层一致 */
 .ui-menu {
 	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
 	z-index: 20;
 	min-width: 11rem;
 	padding: 0.375rem;
