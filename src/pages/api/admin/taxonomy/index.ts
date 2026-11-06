@@ -122,6 +122,10 @@ export async function GET({ request }) {
 	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 
+
+	/* 分类/标签是随时会被改的数据，不能进浏览器缓存 */
+	const noStore = { "Cache-Control": "no-store, must-revalidate" };
+
 	try {
 		const { entries, uncategorizedCount, uncategorizedPublishedCount } =
 			await collect();

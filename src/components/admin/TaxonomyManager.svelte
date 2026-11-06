@@ -190,7 +190,8 @@ async function load() {
 	loading = true;
 	loadError = "";
 	try {
-		const res = await fetch("/api/admin/taxonomy/");
+		/* 不带 no-store 的话，浏览器会拿删除前的缓存，表现为「删了但列表没变」 */
+		const res = await fetch("/api/admin/taxonomy/", { cache: "no-store" });
 		const data = await res.json();
 		if (!data.success) throw new Error(data.message || "load failed");
 		entries = data.entries ?? [];
@@ -332,6 +333,9 @@ async function confirmDelete() {
 			return;
 		}
 		onNotify(i18n(I18nKey.taxonomyDeleted), "success");
+		/* 先从本地数组移除：不等网络往返，列表立刻消失。
+		   随后的 load() 只做校准，即使它失败也不会让条目「复活」。 */
+		entries = entries.filter((e) => e.name !== name);
 		/* 只在删掉的正是当前选中项时清空右侧；否则会把无关的选择一起清掉，
 		   看起来像是整页刷新了。 */
 		if (selectedName === name) selectedName = "";
