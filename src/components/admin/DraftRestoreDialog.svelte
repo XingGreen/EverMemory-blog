@@ -1,16 +1,12 @@
 <script lang="ts">
-import "@material/web/button/filled-button.js";
-import "@material/web/button/text-button.js";
-import "@material/web/dialog/dialog.js";
-
 /**
  * 草稿恢复确认。
  *
- * 用 MD3 的 md-dialog 替代自建 overlay：
- *   - 打开/关闭是命令式 API（show() / close()），不是属性绑定，所以要用 $effect 同步
- *   - 遮罩点击与 Esc 由组件自己处理，关闭后抛 closed 事件，据此回传「保留当前正文」
+ * 不用 window.confirm：原生弹窗拿不到项目主题，也无法呈现「哪台设备、多久之前」
+ * 这种需要排版的细节。结构和视觉参数对齐 DeleteConfirmModal。
  *
- * 主题通过 --md-sys-color-* 映射到项目变量，避免出现第二套配色。
+ * 两边的按钮文案写的是「后果」而不是「确定 / 取消」——
+ * 这个动作会替换正文，用户需要知道每个选择之后会发生什么。
  */
 let {
 	open,
@@ -21,111 +17,137 @@ let {
 	onKeep,
 }: {
 	open: boolean;
+	/** 相对时间，如「19 分钟前」 */
 	ago: string;
+	/** 设备描述，如「Chrome · Windows」 */
 	device: string;
+	/** 草稿来自云端（可能写在别的设备上） */
 	fromCloud: boolean;
 	onRestore: () => void;
 	onKeep: () => void;
 } = $props();
 
-/** md-dialog 的实例：bind:this 的目标必须是 $state 才是响应式的 */
-let dialogEl = $state<(HTMLElement & { show(): void; close(): void }) | null>(
-	null,
-);
-/** 上一次同步过去的开关状态，避免重复调用 show/close */
-let shown = false;
-/**
- * 本次关闭是否由代码发起。
- * md-dialog 的 close() 同样会抛 closed 事件，而那时「用户选了什么」已经由
- * onRestore / onKeep 传回去了；不区分的话，close() 的 closed 会把结果覆写成「保留」。
- */
-let closingByProgram = false;
-
-/**
- * 挂到 body 上。
- *
- * md-dialog 用 position: fixed 且尺寸是 max-width: min(560px, 100% - 48px)，
- * 这个 100% 按包含块算。后台的 .admin-content 带 zoom，
- * 留在里面会被缩放容器约束，表现为弹窗缩在左上角、遮罩也铺不满。
- */
-$effect(() => {
-	const el = dialogEl;
-	if (!el || el.parentElement === document.body) return;
-	document.body.appendChild(el);
-	return () => {
-		el.remove();
-	};
-});
-
-$effect(() => {
-	const el = dialogEl;
-	// 自定义元素尚未升级时没有 show/close，等它就绪
-	if (!el || typeof el.show !== "function") return;
-	if (open && !shown) {
-		el.show();
-		shown = true;
-	} else if (!open && shown) {
-		shown = false;
-		closingByProgram = true;
-		el.close();
-	}
-});
-
-$effect(() => {
-	const el = dialogEl;
-	if (!el) return;
-	const handleClosed = () => {
-		shown = false;
-		// 代码关的：结果已经回传过，这里只负责清标记
-		if (closingByProgram) {
-			closingByProgram = false;
-			return;
-		}
-		// 用户关的（遮罩 / Esc）：等同于「保留当前正文」
-		onKeep();
-	};
-	el.addEventListener("closed", handleClosed);
-	return () => el.removeEventListener("closed", handleClosed);
-});
+function handleKeydown(e: KeyboardEvent) {
+	if (e.key === "Escape") onKeep();
+}
 </script>
 
-<md-dialog bind:this={dialogEl} class="draft-dialog">
-	<div slot="headline">恢复未保存的修改？</div>
+<svelte:window onkeydown={handleKeydown} />
 
-	<div slot="content">
-		<p class="lead">
-			<span class="when">{ago}</span>
-			在 <code>{device}</code> 上改过这篇文章，但没有保存。
-		</p>
-		{#if fromCloud}
-			<p class="detail">这份草稿存在云端，可能是你在另一台设备上写的。</p>
-		{:else}
-			<p class="detail">这份草稿存在这台设备的浏览器里。</p>
-		{/if}
-		<ul class="outcomes">
-			<li><b>恢复</b>：用草稿内容替换当前正文，之后可继续编辑</li>
-			<li><b>保留</b>：当前正文不动，草稿继续留着，下次还能恢复</li>
-		</ul>
-	</div>
+{#if open}
+	<div
+		class="modal-overlay"
+		role="presentation"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) onKeep();
+		}}
+	>
+		<div
+			class="modal-content"
+			role="alertdialog"
+			aria-modal="true"
+			aria-labelledby="draft-restore-title"
+			tabindex="-1"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+		>
+			<div class="modal-header">
+				<h2 id="draft-restore-title">恢复未保存的修改？</h2>
+			</div>
 
-	<div slot="actions">
-		<md-text-button onclick={onKeep}>保留当前正文</md-text-button>
-		<md-filled-button onclick={onRestore}>恢复草稿</md-filled-button>
+			<div class="modal-body">
+				<p class="lead">
+					<span class="when">{ago}</span>
+					<span class="where">在 <code>{device}</code> 上</span>
+					改过这篇文章，但没有保存。
+				</p>
+				{#if fromCloud}
+					<p class="detail">
+						这份草稿存在云端，可能是你在另一台设备上写的。
+					</p>
+				{:else}
+					<p class="detail">这份草稿存在这台设备的浏览器里。</p>
+				{/if}
+				<ul class="outcomes">
+					<li><b>恢复</b>：用草稿内容替换当前正文，之后可继续编辑</li>
+					<li><b>保留</b>：当前正文不动，草稿继续留着，下次还能恢复</li>
+				</ul>
+			</div>
+
+			<div class="modal-footer">
+				<button class="ui-btn ui-btn-soft" type="button" onclick={onKeep}>
+					保留当前正文
+				</button>
+				<button class="ui-btn ui-btn-primary" type="button" onclick={onRestore}>
+					恢复草稿
+				</button>
+			</div>
+		</div>
 	</div>
-</md-dialog>
+{/if}
 
 <style>
-	/* MD3 配色变量映射到项目变量：不映射就会冒出 Material 默认的紫色 */
-	.draft-dialog {
-		--md-sys-color-surface: var(--float-panel-bg);
-		--md-sys-color-surface-container-high: var(--float-panel-bg);
-		--md-sys-color-on-surface: var(--deep-text);
-		--md-sys-color-on-surface-variant: var(--content-meta);
-		--md-sys-color-primary: var(--primary);
-		--md-sys-color-on-primary: #fff;
-		--md-sys-color-secondary-container: var(--btn-regular-bg);
-		--md-sys-color-on-secondary-container: var(--deep-text);
-		--md-sys-shape-corner-extra-large: var(--radius-large);
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		/* 与 ConfirmDialog 同层：都是压住内容弹窗的询问框 */
+		z-index: 12000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		background: rgb(0 0 0 / 0.25);
+		-webkit-backdrop-filter: blur(4px);
+		backdrop-filter: blur(4px);
+		animation: fadeIn 0.2s ease-out;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
+	.modal-content {
+		width: 90%;
+		max-width: 460px;
+		background: var(--float-panel-bg);
+		border-radius: var(--radius-large);
+		box-shadow: var(--shadow-card-hover);
+		overflow: hidden;
+		animation: slideIn 0.3s ease-out;
+	}
+
+	@keyframes slideIn {
+		from {
+			opacity: 0;
+			transform: translateY(-20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.modal-header {
+		padding: 1.25rem 1.5rem 0.75rem;
+	}
+
+	.modal-header h2 {
+		margin: 0;
+		font-size: 1.0625rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.modal-body {
+		padding: 0 1.5rem 1rem;
 	}
 
 	.lead {
@@ -139,7 +161,7 @@ $effect(() => {
 		font-weight: 600;
 	}
 
-	.lead code {
+	.where code {
 		padding: 0.0625rem 0.3125rem;
 		border-radius: 0.25rem;
 		background: var(--btn-regular-bg);
@@ -166,5 +188,12 @@ $effect(() => {
 
 	.outcomes b {
 		color: var(--deep-text);
+	}
+
+	.modal-footer {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+		padding: 0 1.5rem 1.5rem;
 	}
 </style>
