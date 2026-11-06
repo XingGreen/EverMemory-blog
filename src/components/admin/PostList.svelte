@@ -133,68 +133,6 @@ const gridCols = $derived(
 		.join(" "),
 );
 
-/* ── 本地 / 线上冲突 ──
-   检测是懒触发的：点某一行的「同步检查」才去比对，避免列表加载时对每篇都打一次
-   GitHub 请求。冲突时给出两个方向的覆盖操作，二选一，不做自动合并。 */
-type ConflictState =
-	| "conflict"
-	| "in-sync"
-	| "not-on-remote"
-	| "unknown"
-	| "error";
-
-let conflictDialog = $state<{
-	slug: string;
-	state: ConflictState;
-	busy: boolean;
-	message?: string;
-} | null>(null);
-
-async function checkConflict(slug: string) {
-	conflictDialog = { slug, state: "unknown", busy: true };
-	try {
-		const res = await fetch(
-			`/api/admin/post-conflict/?slug=${encodeURIComponent(slug)}`,
-		);
-		const data = await res.json();
-		conflictDialog = {
-			slug,
-			state: (data.state ?? "error") as ConflictState,
-			busy: false,
-			message: data.message,
-		};
-	} catch {
-		conflictDialog = { slug, state: "error", busy: false };
-	}
-}
-
-async function resolveConflict(how: "local" | "remote") {
-	if (!conflictDialog) return;
-	const slug = conflictDialog.slug;
-	conflictDialog = { ...conflictDialog, busy: true };
-	try {
-		const res = await fetch("/api/admin/post-conflict/", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ slug, resolution: how }),
-		});
-		const data = await res.json();
-		if (data.success) {
-			conflictDialog = null;
-			// 覆盖会改动文件内容，重新拉一次列表让标题/摘要跟上
-			onRefresh?.();
-		} else {
-			conflictDialog = {
-				...conflictDialog,
-				busy: false,
-				message: data.message,
-			};
-		}
-	} catch {
-		conflictDialog = { ...conflictDialog, busy: false, message: "请求失败" };
-	}
-}
-let categoryFilter = $state("");
 let tagFilter = $state("");
 /* 默认按最近修改排：草稿没有 published，按发布时间排会全部沉底，
    「我刚写到哪」永远翻不到。 */
@@ -879,15 +817,6 @@ function actionLabel(action: string, title: string): string {
 						<!-- 操作（图标按钮） -->
 						<div class="col col-actions" role="cell" data-label={i18n(I18nKey.postColActions)}>
 							<div class="icon-actions">
-								<button
-									class="icon-action"
-									type="button"
-									onclick={() => checkConflict(post.slug)}
-									aria-label={i18n(I18nKey.conflictCheck)}
-									title={i18n(I18nKey.conflictCheck)}
-								>
-									<Icon icon="material-symbols:sync-rounded" class="action-icon" />
-								</button>
 								<a
 									class="icon-action view"
 									href={`/posts/${post.slug}`}
@@ -946,60 +875,6 @@ function actionLabel(action: string, title: string): string {
 </div>
 
 <!-- 冲突检查结果：显示状态；真冲突时给出两个方向的覆盖按钮，不做自动合并 -->
-{#if conflictDialog}
-	<div
-		class="conflict-overlay"
-		role="dialog"
-		aria-modal="true"
-		tabindex="-1"
-		onclick={(e) => {
-			if (e.target === e.currentTarget) conflictDialog = null;
-		}}
-		onkeydown={(e) => {
-			if (e.key === "Escape") conflictDialog = null;
-		}}
-	>
-		<div class="conflict-card">
-			<div class="conflict-head">
-				<h3>{i18n(I18nKey.conflictCheck)}</h3>
-				<button
-					class="conflict-close"
-					type="button"
-					aria-label={i18n(I18nKey.postColActions)}
-					onclick={() => (conflictDialog = null)}
-				>
-					<Icon icon="material-symbols:close" />
-				</button>
-			</div>
-			<code class="conflict-slug">{conflictDialog.slug}</code>
-			{#if conflictDialog.busy}
-				<p class="conflict-note">…</p>
-			{:else if conflictDialog.state === "conflict"}
-				<p class="conflict-note">{conflictDialog.message ?? ""}</p>
-				<div class="conflict-actions">
-					<button class="btn" type="button" onclick={() => resolveConflict("remote")}>
-						{i18n(I18nKey.conflictRemoteWins)}
-					</button>
-					<button
-						class="btn primary"
-						type="button"
-						onclick={() => resolveConflict("local")}
-					>
-						{i18n(I18nKey.conflictLocalWins)}
-					</button>
-				</div>
-			{:else}
-				<p class="conflict-note">
-					{conflictDialog.state === "in-sync"
-						? i18n(I18nKey.conflictInSync)
-						: conflictDialog.state === "not-on-remote"
-							? i18n(I18nKey.conflictNotOnRemote)
-							: (conflictDialog.message ?? "")}
-				</p>
-			{/if}
-		</div>
-	</div>
-{/if}
 
 <!-- 同步面板：打开时先只读检查并展示差异与失败原因，用户点面板内的按钮才真正执行。
      onSynced 必须接「刷新列表」而不是 handleSync —— 后者自己就会 POST /sync，
@@ -1913,92 +1788,6 @@ function actionLabel(action: string, title: string): string {
 			white-space: normal;
 			overflow-wrap: anywhere;
 		}
-	}
-	/* 冲突检查弹窗：自带样式，不依赖 AdminDashboard 的 scoped modal 类 */
-	.conflict-overlay {
-		position: fixed;
-		inset: 0;
-		z-index: 9999;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 1rem;
-		background: rgb(0 0 0 / 0.35);
-	}
-
-	.conflict-card {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		width: 100%;
-		max-width: 22rem;
-		padding: 1.25rem;
-		border-radius: var(--radius-large);
-		background: var(--card-bg);
-		box-shadow: var(--shadow-md, 0 16px 40px rgb(0 0 0 / 0.3));
-	}
-
-	.conflict-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.conflict-head h3 {
-		margin: 0;
-		font-size: 1rem;
-		font-weight: 600;
-		color: var(--deep-text);
-	}
-
-	.conflict-close {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.75rem;
-		height: 1.75rem;
-		padding: 0;
-		border: none;
-		border-radius: 0.375rem;
-		background: transparent;
-		color: var(--content-meta);
-		cursor: pointer;
-	}
-
-	.conflict-slug {
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: 0.8125rem;
-		color: var(--content-meta);
-	}
-
-	.conflict-note {
-		margin: 0;
-		font-size: 0.8125rem;
-		line-height: 1.6;
-		color: var(--content-meta);
-	}
-
-	.conflict-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.5rem;
-	}
-
-	.conflict-actions button {
-		padding: 0.4rem 0.75rem;
-		border: 1px solid var(--line-divider);
-		border-radius: 0.5rem;
-		background: transparent;
-		color: var(--deep-text);
-		font-family: inherit;
-		font-size: 0.8125rem;
-		cursor: pointer;
-	}
-
-	.conflict-actions button.primary {
-		border-color: transparent;
-		background: var(--primary);
-		color: var(--primary-foreground);
 	}
 </style>
 
