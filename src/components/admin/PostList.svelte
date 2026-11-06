@@ -108,11 +108,6 @@ let hiddenCols = $state<Record<HideableCol, boolean>>({
 	date: false,
 	status: false,
 });
-/** 当前可见列数：按钮上显示它，与 Select 显示当前值的位置对应 */
-const visibleCols = $derived(
-	4 - Object.values(hiddenCols).filter(Boolean).length,
-);
-
 let colsPanelOpen = $state(false);
 
 function toggleCol(key: HideableCol) {
@@ -646,21 +641,45 @@ function actionLabel(action: string, title: string): string {
 				/>
 			</label>
 
-			<!-- 列显示设置：公共 Dropdown 外壳 + 统一样式的菜单项 -->
-			<div class="toolbar-field cols-field">
-				<span class="field-label">{i18n(I18nKey.postColSettings)}</span>
+
+		</div>
+	</div>
+
+	<!-- 分类栏（表头） -->
+	{#snippet headerRow()}
+		<div class="header-row" role="rowgroup">
+			<div class="col col-title" role="columnheader" aria-sort={ariaSortFor("title")}>
+				{i18n(I18nKey.postColTitle)}
+			</div>
+			{#if !hiddenCols.category}
+				<div class="col col-category" role="columnheader">{i18n(I18nKey.postColCategory)}</div>
+			{/if}
+			{#if !hiddenCols.filetype}
+				<div class="col col-filetype" role="columnheader">
+					{i18n(I18nKey.postColFileType)}
+				</div>
+			{/if}
+			{#if !hiddenCols.date}
+				<div class="col col-date" role="columnheader" aria-sort={ariaSortFor("date")}>
+					{dateColLabel}
+				</div>
+			{/if}
+			{#if !hiddenCols.status}
+				<div class="col col-status" role="columnheader">{i18n(I18nKey.postColStatus)}</div>
+			{/if}
+			<div class="col col-actions" role="columnheader">
+				<span class="actions-label">{i18n(I18nKey.postColActions)}</span>
 				<Dropdown bind:open={colsPanelOpen} align="end">
 					<button
-						class="ui-btn ui-btn-soft cols-trigger"
+						class="cols-trigger"
 						type="button"
+						aria-label={i18n(I18nKey.postColSettings)}
 						aria-expanded={colsPanelOpen}
 						aria-haspopup="true"
 						onclick={() => (colsPanelOpen = !colsPanelOpen)}
 					>
-						<span>{visibleCols} 列</span>
-						<Icon icon="material-symbols:expand-more" class="text-sm" />
+						<Icon icon="material-symbols:view-list-outline" />
 					</button>
-
 					{#if colsPanelOpen}
 						<div class="ui-menu">
 							<button
@@ -711,32 +730,6 @@ function actionLabel(action: string, title: string): string {
 					{/if}
 				</Dropdown>
 			</div>
-		</div>
-	</div>
-
-	<!-- 分类栏（表头） -->
-	{#snippet headerRow()}
-		<div class="header-row" role="rowgroup">
-			<div class="col col-title" role="columnheader" aria-sort={ariaSortFor("title")}>
-				{i18n(I18nKey.postColTitle)}
-			</div>
-			{#if !hiddenCols.category}
-				<div class="col col-category" role="columnheader">{i18n(I18nKey.postColCategory)}</div>
-			{/if}
-			{#if !hiddenCols.filetype}
-				<div class="col col-filetype" role="columnheader">
-					{i18n(I18nKey.postColFileType)}
-				</div>
-			{/if}
-			{#if !hiddenCols.date}
-				<div class="col col-date" role="columnheader" aria-sort={ariaSortFor("date")}>
-					{dateColLabel}
-				</div>
-			{/if}
-			{#if !hiddenCols.status}
-				<div class="col col-status" role="columnheader">{i18n(I18nKey.postColStatus)}</div>
-			{/if}
-			<div class="col col-actions" role="columnheader">{i18n(I18nKey.postColActions)}</div>
 		</div>
 	{/snippet}
 
@@ -1473,11 +1466,20 @@ function actionLabel(action: string, title: string): string {
 
 	/* 操作列额外右内边距：仅靠 .list-item 的 1rem 容器留白时，
 	   图标组仍显得贴边，这里补一档并让按钮在该列内居中。 */
+	/* 表头操作列：左边是列名，右边挂列显示入口 */
 	.col-actions {
 		display: flex;
 		align-items: center;
-		justify-content: center;
+		justify-content: space-between;
+		gap: 0.5rem;
 		padding-right: 0.75rem;
+	}
+
+	.col-actions .actions-label {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.title-cell {
@@ -1606,10 +1608,27 @@ function actionLabel(action: string, title: string): string {
 		align-items: center;
 	}
 
-	/* 项目标准按钮（ui-btn + ui-btn-soft），宽度与同排 Select 对齐 */
+	/* 列显示入口：表头里的小图标按钮，不再是和 Select 并排的大控件 */
 	.cols-trigger {
-		justify-content: center;
-		min-width: 130px;
+		display: grid;
+		place-items: center;
+		width: 28px;
+		height: 28px;
+		flex-shrink: 0;
+		border: none;
+		border-radius: 0.375rem;
+		background: transparent;
+		font-size: 1.125rem;
+		color: var(--content-meta);
+		cursor: pointer;
+		transition:
+			background 0.12s ease,
+			color 0.12s ease;
+	}
+
+	.cols-trigger:hover {
+		background: var(--btn-plain-bg-hover);
+		color: var(--deep-text);
 	}
 
 	/* 文件类型列：等宽字体 + 低饱和底，避免和「状态」列的两个徽章抢视觉权重 */
