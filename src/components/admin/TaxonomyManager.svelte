@@ -290,13 +290,20 @@ function openEdit(name: string) {
 
 /* 删除确认独立成叠加弹窗：原来的做法是把 dialogMode 改成 "delete"，
    等于把重命名/新建弹窗替换掉；用户要求保留原弹窗、确认框叠在上面。 */
-let deleteTarget = $state<string | null>(null);
+let deleteTarget = $state<{ name: string; count: number } | null>(null);
 let deleteBusy = $state(false);
 let deleteError = $state("");
 
 function openDelete(name: string) {
-	if (name === UNCATEGORIZED) return;
-	deleteTarget = name;
+	/* 静默返回会让人以为按钮坏了：这是默认项，本来就删不掉，得说一声 */
+	if (name === UNCATEGORIZED) {
+		onNotify("「未分类」是默认项，不能删除", "error");
+		return;
+	}
+	deleteTarget = {
+		name,
+		count: entries.find((e) => e.name === name)?.count ?? 0,
+	};
 	deleteError = "";
 }
 
@@ -308,8 +315,9 @@ function closeDelete() {
 
 /** 确认删除：叠加弹窗的独立提交，不走 dialogMode 分支 */
 async function confirmDelete() {
-	const name = deleteTarget;
-	if (!name) return;
+	const target = deleteTarget;
+	if (!target) return;
+	const name = target.name;
 	deleteBusy = true;
 	deleteError = "";
 	try {
@@ -324,7 +332,9 @@ async function confirmDelete() {
 			return;
 		}
 		onNotify(i18n(I18nKey.taxonomyDeleted), "success");
-		selectedName = "";
+		/* 只在删掉的正是当前选中项时清空右侧；否则会把无关的选择一起清掉，
+		   看起来像是整页刷新了。 */
+		if (selectedName === name) selectedName = "";
 		deleteTarget = null;
 		await load();
 		await loadPosts();
@@ -896,14 +906,16 @@ $effect(() => {
 				<h3>{i18n(I18nKey.taxonomyDeleteTitle)}</h3>
 			</div>
 			<p class="modal-desc">
-				{i18n(I18nKey.taxonomyDeleteConfirm).replace("{name}", deleteTarget)}
+				{i18n(I18nKey.taxonomyDeleteConfirm)
+					.replace("{name}", deleteTarget.name)
+					.replace("{count}", String(deleteTarget.count))}
 			</p>
 			{#if deleteError}
 				<p class="modal-error">{deleteError}</p>
 			{/if}
 			<div class="dialog-actions">
 				<button
-					class="ui-btn"
+					class="ui-btn ui-btn-soft"
 					type="button"
 					onclick={closeDelete}
 					disabled={deleteBusy}
