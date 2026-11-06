@@ -1576,18 +1576,12 @@ function answerConfirm(ok: boolean) {
 
 	/* 从保存栏清单跳转时的定位提示：左侧竖线加粗并呼吸两次。
 	   竖线用伪元素画，绝对定位不占布局，不会把下方内容顶动。 */
+	/* 跳转到脏项时的高亮：复用 .dirty 已有的左边框，只让它变粗并呼吸。
+	   不额外造伪元素——每个脏字段本来就有 border-left，再叠一条就成了两根线。 */
 	.settings-field.field-flash {
-		position: relative;
-	}
-
-	.settings-field.field-flash::before {
-		content: "";
-		position: absolute;
-		inset-block: 0;
-		left: -0.75rem;
-		width: 3px;
-		border-radius: 2px;
-		background: var(--primary);
+		/* 向左侧外侧补一道同色阴影：视觉上从 2px 变粗到 4px，
+		   但不改 border-width，字段内容不会被挤动。 */
+		box-shadow: -2px 0 0 var(--primary);
 		animation: field-breathe 0.8s ease-in-out 2;
 	}
 
@@ -1595,12 +1589,10 @@ function answerConfirm(ok: boolean) {
 	@keyframes field-breathe {
 		0%,
 		100% {
-			opacity: 0.2;
-			transform: scaleX(1);
+			box-shadow: -2px 0 0 color-mix(in oklab, var(--primary) 30%, transparent);
 		}
 		50% {
-			opacity: 1;
-			transform: scaleX(1.7);
+			box-shadow: -2px 0 0 var(--primary);
 		}
 	}
 
