@@ -301,8 +301,32 @@ export async function POST({ request }) {
 		);
 	}
 	const idx = list.indexOf(from);
-	if (idx >= 0) list.splice(idx, 1);
+	/* 登记表里没有这一项时，之前的实现会跳过 splice 却照旧返回成功，
+	   前端因此提示「已删除」但列表纹丝不动。 */
+	if (idx < 0) {
+		return json(
+			{
+				success: false,
+				message: `登记表里找不到「${from}」，可能已被删除或名称不一致`,
+			},
+			409,
+		);
+	}
+	list.splice(idx, 1);
 	await writeRegistry(registry);
+
+	/* 有文章清理失败也要如实说：登记表已移除，但正文里的引用还在 */
+	if (failed.length > 0) {
+		return json(
+			{
+				success: false,
+				message: `已从登记表移除，但有 ${failed.length} 篇文章清理失败：${failed.join(", ")}`,
+				updated,
+				failed,
+			},
+			500,
+		);
+	}
 
 	return json({
 		success: true,
