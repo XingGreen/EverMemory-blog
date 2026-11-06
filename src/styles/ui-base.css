@@ -293,6 +293,17 @@ textarea.ui-input {
 	overscroll-behavior: contain;
 }
 
+/* 菜单标题：说明这个菜单是做什么的，不参与点击 */
+.ui-menu-header {
+	padding: 0.25rem 0.75rem 0.375rem;
+	border-bottom: 1px solid var(--line-divider);
+	margin-bottom: 0.25rem;
+	font-size: 0.6875rem;
+	letter-spacing: 0.02em;
+	color: var(--content-meta);
+	opacity: 0.75;
+}
+
 /* 菜单项：字号 0.875rem 是两套里较大的那个，统一取它；
    高度由 padding 撑开而非写死，中英文混排不会挤 */
 .ui-menu-item {

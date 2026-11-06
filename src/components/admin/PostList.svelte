@@ -669,65 +669,70 @@ function actionLabel(action: string, title: string): string {
 			{/if}
 			<div class="col col-actions" role="columnheader">
 				<span class="actions-label">{i18n(I18nKey.postColActions)}</span>
-				<Dropdown bind:open={colsPanelOpen} align="end">
-					<button
-						class="cols-trigger"
-						type="button"
-						aria-label={i18n(I18nKey.postColSettings)}
-						aria-expanded={colsPanelOpen}
-						aria-haspopup="true"
-						onclick={() => (colsPanelOpen = !colsPanelOpen)}
-					>
-						<Icon icon="material-symbols:subject" />
-					</button>
-					{#if colsPanelOpen}
-						<div class="ui-menu">
-							<button
-								class="ui-menu-item"
-								type="button"
-								aria-selected={!hiddenCols.category}
-								onclick={() => toggleCol("category")}
-							>
-								<span class="ui-menu-item-label">{i18n(I18nKey.postColCategory)}</span>
-								{#if !hiddenCols.category}
-									<Icon icon="material-symbols:check" class="ui-menu-item-check" />
-								{/if}
-							</button>
-							<button
-								class="ui-menu-item"
-								type="button"
-								aria-selected={!hiddenCols.filetype}
-								onclick={() => toggleCol("filetype")}
-							>
-								<span class="ui-menu-item-label">{i18n(I18nKey.postColFileType)}</span>
-								{#if !hiddenCols.filetype}
-									<Icon icon="material-symbols:check" class="ui-menu-item-check" />
-								{/if}
-							</button>
-							<button
-								class="ui-menu-item"
-								type="button"
-								aria-selected={!hiddenCols.date}
-								onclick={() => toggleCol("date")}
-							>
-								<span class="ui-menu-item-label">{dateColLabel}</span>
-								{#if !hiddenCols.date}
-									<Icon icon="material-symbols:check" class="ui-menu-item-check" />
-								{/if}
-							</button>
-							<button
-								class="ui-menu-item"
-								type="button"
-								aria-selected={!hiddenCols.status}
-								onclick={() => toggleCol("status")}
-							>
-								<span class="ui-menu-item-label">{i18n(I18nKey.postColStatus)}</span>
-								{#if !hiddenCols.status}
-									<Icon icon="material-symbols:check" class="ui-menu-item-check" />
-								{/if}
-							</button>
-						</div>
-					{/if}
+				<Dropdown
+					bind:open={colsPanelOpen}
+					align="end"
+					title={i18n(I18nKey.postColSettings)}
+				>
+					{#snippet trigger()}
+						<button
+							class="cols-trigger"
+							type="button"
+							aria-label={i18n(I18nKey.postColSettings)}
+							aria-expanded={colsPanelOpen}
+							aria-haspopup="true"
+							onclick={() => (colsPanelOpen = !colsPanelOpen)}
+						>
+							<Icon icon="material-symbols:format-align-justify" />
+						</button>
+					{/snippet}
+
+					{#snippet content()}
+						<button
+							class="ui-menu-item"
+							type="button"
+							aria-selected={!hiddenCols.category}
+							onclick={() => toggleCol("category")}
+						>
+							<span class="ui-menu-item-label">{i18n(I18nKey.postColCategory)}</span>
+							{#if !hiddenCols.category}
+								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
+							{/if}
+						</button>
+						<button
+							class="ui-menu-item"
+							type="button"
+							aria-selected={!hiddenCols.filetype}
+							onclick={() => toggleCol("filetype")}
+						>
+							<span class="ui-menu-item-label">{i18n(I18nKey.postColFileType)}</span>
+							{#if !hiddenCols.filetype}
+								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
+							{/if}
+						</button>
+						<button
+							class="ui-menu-item"
+							type="button"
+							aria-selected={!hiddenCols.date}
+							onclick={() => toggleCol("date")}
+						>
+							<span class="ui-menu-item-label">{dateColLabel}</span>
+							{#if !hiddenCols.date}
+								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
+							{/if}
+						</button>
+						<button
+							class="ui-menu-item"
+							type="button"
+							aria-selected={!hiddenCols.status}
+							onclick={() => toggleCol("status")}
+						>
+							<span class="ui-menu-item-label">{i18n(I18nKey.postColStatus)}</span>
+							{#if !hiddenCols.status}
+								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
+							{/if}
+						</button>
+					{/snippet}
 				</Dropdown>
 			</div>
 		</div>
