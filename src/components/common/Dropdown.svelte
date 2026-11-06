@@ -1,17 +1,21 @@
 <script lang="ts">
 import type { Snippet } from "svelte";
+import {
+	type FloatingPosition,
+	floatingStyle,
+	placeUnder,
+	portalToBody,
+} from "@/utils/floating";
 
 /**
  * 下拉菜单外壳。
  *
  * 只负责开合、定位、点击外部与 Esc 关闭，视觉在 ui-base 的 .ui-menu。
  *
- * 为什么用 fixed + 挂到 body，而不是 absolute 留在原地：
- *   后台的 .admin-page / .md3-list 都有 overflow，absolute 菜单会被裁掉；
- *   而 .admin-content 带 zoom，祖先里的 getBoundingClientRect() 返回的是放大后的
- *   视觉坐标，fixed 偏移又在这个 zoom 空间里再乘一次，菜单会随位置线性漂移。
- *   挂到 body 后 rect 与 fixed 偏移同在视口坐标系，也不受任何祖先裁剪。
- *   这套算法与 PostRowMenu 一致。
+ * 为什么 fixed 并挂到 body：后台的 .admin-page 有 overflow: hidden、
+ * .md3-list 有 overflow: auto，absolute 菜单会被裁掉；而 .admin-content 带 zoom，
+ * 祖先里的 rect 是放大后的视觉坐标，fixed 偏移又乘一次 zoom 会线性漂移。
+ * 定位算法与 PostRowMenu 一致，公共部分抽在 utils/floating。
  */
 let {
 	open = $bindable(false),
@@ -30,69 +34,22 @@ let {
 
 let rootEl = $state<HTMLElement | null>(null);
 let menuEl = $state<HTMLElement | null>(null);
-let pos = $state<{
-	top?: number;
-	bottom?: number;
-	left?: number;
-	right?: number;
-	zoom: number;
-	flip: boolean;
-} | null>(null);
+let pos = $state<FloatingPosition | null>(null);
 
-/* 触发器所在 zoom 容器相对视口的缩放比。
-   取容器而非触发器：小尺寸元素取整误差会被放大。 */
-function hostZoom(el: HTMLElement): number {
-	const host = el.closest<HTMLElement>(".admin-content");
-	if (!host) return 1;
-	const visual = host.getBoundingClientRect().width;
-	const layout = host.offsetWidth;
-	return layout > 0 && visual > 0 ? visual / layout : 1;
-}
+/** 调用方改 open 时补一次定位；不是所有入口都走内部 toggle */
+$effect(() => {
+	if (open && !pos && rootEl) pos = placeUnder(rootEl, align);
+	if (!open && pos) pos = null;
+});
 
-function place() {
-	if (!rootEl) return;
-	const rect = rootEl.getBoundingClientRect();
-	/* clientWidth/clientHeight 不含滚动条，避免页面出现滚动条后右缘偏一截 */
-	const vw = document.documentElement.clientWidth;
-	const vh = document.documentElement.clientHeight;
-	/* 距底不足 200px 就向上弹：菜单 176px 起步，留点余量 */
-	const flip = vh - rect.bottom < 200;
-	const horizontal =
-		align === "end"
-			? { right: Math.max(8, vw - rect.right) }
-			: { left: rect.left };
-
-	pos = {
-		...horizontal,
-		...(flip ? { bottom: vh - rect.top + 4 } : { top: rect.bottom + 4 }),
-		zoom: hostZoom(rootEl),
-		flip,
-	};
-}
-
-function toggle() {
-	if (open) {
-		open = false;
-		pos = null;
-		return;
-	}
-	place();
-	open = true;
-}
-
-/* 菜单节点搬到 body：脱离所有 overflow 祖先，也不受 zoom 空间影响 */
+/** 菜单节点挂到 body，脱离所有 overflow 祖先 */
 $effect(() => {
 	const el = menuEl;
 	if (!el) return;
-	if (el.parentElement !== document.body) document.body.appendChild(el);
+	portalToBody(el);
 	return () => {
 		el.remove();
 	};
-});
-
-/* 调用方直接改 open 时也要补一次定位（不是所有入口都走 toggle） */
-$effect(() => {
-	if (open && !pos) place();
 });
 
 $effect(() => {
@@ -107,7 +64,7 @@ $effect(() => {
 	const onKeyDown = (e: KeyboardEvent) => {
 		if (e.key === "Escape") open = false;
 	};
-	/* 滚动或改尺寸时直接收起：菜单是 fixed，不跟随内容移动 */
+	/* 滚动或改尺寸直接收起：菜单是 fixed，不会跟着内容走 */
 	const onViewportChange = () => {
 		open = false;
 	};
@@ -134,16 +91,7 @@ $effect(() => {
 		class="ui-menu dropdown-menu"
 		bind:this={menuEl}
 		role="menu"
-		style:top={pos.top !== undefined ? `${pos.top / pos.zoom}px` : undefined}
-		style:bottom={pos.bottom !== undefined
-			? `${pos.bottom / pos.zoom}px`
-			: undefined}
-		style:left={pos.left !== undefined ? `${pos.left / pos.zoom}px` : undefined}
-		style:right={pos.right !== undefined
-			? `${pos.right / pos.zoom}px`
-			: undefined}
-		style:zoom={pos.zoom}
-		style:transform-origin={pos.flip ? "bottom right" : "top right"}
+		style={floatingStyle(pos)}
 	>
 		{#if title}
 			<div class="ui-menu-header">{title}</div>
@@ -158,7 +106,7 @@ $effect(() => {
 		display: inline-flex;
 	}
 
-	/* 挂到 body 后不再受 .dropdown 约束，定位由行内样式给出 */
+	/* 定位由内联样式给出，这里只保证 fixed */
 	.dropdown-menu {
 		position: fixed;
 	}

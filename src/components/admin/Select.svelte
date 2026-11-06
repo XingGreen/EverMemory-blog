@@ -9,6 +9,12 @@
  * 上下键在选项间移动、Enter 选中。
  */
 import Icon from "@/components/common/Icon.svelte";
+import {
+	type FloatingPosition,
+	floatingStyle,
+	placeUnder,
+	portalToBody,
+} from "@/utils/floating";
 
 let {
 	value = "",
@@ -29,6 +35,8 @@ let {
 let open = $state(false);
 let containerEl = $state<HTMLDivElement | undefined>();
 let activeIndex = $state(-1);
+let menuEl = $state<HTMLElement | null>(null);
+let pos = $state<FloatingPosition | null>(null);
 
 const selectedLabel = $derived(
 	options.find((o) => o.value === value)?.label ?? "",
@@ -36,10 +44,15 @@ const selectedLabel = $derived(
 
 function toggle() {
 	if (disabled) return;
-	open = !open;
 	if (open) {
-		activeIndex = options.findIndex((o) => o.value === value);
+		open = false;
+		pos = null;
+		return;
 	}
+	/* 浮层挂到 body，所以坐标要在这里算好；容器本身的 rect 在 zoom 空间里 */
+	if (containerEl) pos = placeUnder(containerEl, "start", 180);
+	activeIndex = options.findIndex((o) => o.value === value);
+	open = true;
 }
 
 function pick(next: string) {
@@ -77,9 +90,37 @@ function handleKey(e: KeyboardEvent) {
 	}
 }
 
+/* 菜单挂到 body：留在原地会被 .admin-page 与 .md3-list 的 overflow 裁掉 */
+$effect(() => {
+	const el = menuEl;
+	if (!el) return;
+	portalToBody(el);
+	return () => {
+		el.remove();
+	};
+});
+
+/* 菜单是 fixed，不跟随内容滚动，滚一下就收起 */
+$effect(() => {
+	if (!open) return;
+	const close = () => {
+		open = false;
+		pos = null;
+	};
+	window.addEventListener("scroll", close, true);
+	window.addEventListener("resize", close);
+	return () => {
+		window.removeEventListener("scroll", close, true);
+		window.removeEventListener("resize", close);
+	};
+});
+
 function handleOutside(e: PointerEvent) {
 	if (!open) return;
-	if (containerEl && !containerEl.contains(e.target as Node)) open = false;
+	const target = e.target as Node;
+	if (containerEl?.contains(target) || menuEl?.contains(target)) return;
+	open = false;
+	pos = null;
 }
 </script>
 
@@ -104,8 +145,14 @@ function handleOutside(e: PointerEvent) {
 		</span>
 	</button>
 
-	{#if open}
-		<ul class="ui-menu" role="listbox" tabindex="-1">
+	{#if open && pos}
+		<ul
+			class="ui-menu"
+			role="listbox"
+			tabindex="-1"
+			bind:this={menuEl}
+			style={floatingStyle(pos)}
+		>
 			{#each options as opt, i (opt.value)}
 				<li>
 					<button
