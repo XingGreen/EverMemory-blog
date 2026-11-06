@@ -93,7 +93,7 @@ $effect(() => {
 
 {#if open && pos}
 	<div
-		class="ui-menu dropdown-menu"
+		class="ui-menu"
 		bind:this={menuEl}
 		role="menu"
 		style={floatingStyle(pos)}
@@ -112,10 +112,8 @@ $effect(() => {
 		display: inline-flex;
 	}
 
-	/* 定位由内联样式给出，这里只保证 fixed */
-	.dropdown-menu {
-		position: fixed;
-		/* 选项多时内部滚动；overscroll 阻断避免滚到底带动外层 */
+	/* 定位与尺寸都写在 ui-base 的 .ui-menu 与内联样式里，这里只兜底滚动 */
+	:global(.ui-menu) {
 		max-height: min(60vh, 24rem);
 		overflow-y: auto;
 		overscroll-behavior: contain;

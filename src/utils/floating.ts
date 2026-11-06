@@ -57,7 +57,9 @@ export function placeUnder(
 /** 把计算结果摊成内联样式；坐标与缩放分别折算 */
 export function floatingStyle(pos: FloatingPosition): string {
 	const unit = (v: number | undefined) =>
-		v === undefined ? "" : `${v / pos.zoom}px`;
+		v === undefined ? "auto" : `${v / pos.zoom}px`;
+	/* 未指定的边必须显式给 auto：ui-base 的 .ui-menu 带 left: 0，
+	   内联不写 left 时它会压过 right，菜单跑到视口左边去。 */
 	return [
 		"position: fixed",
 		`top: ${unit(pos.top)}`,
@@ -66,9 +68,7 @@ export function floatingStyle(pos: FloatingPosition): string {
 		`right: ${unit(pos.right)}`,
 		`zoom: ${pos.zoom}`,
 		`transform-origin: ${pos.flip ? "bottom" : "top"} right`,
-	]
-		.filter((s) => !s.endsWith(": "))
-		.join("; ");
+	].join("; ");
 }
 
 /**
