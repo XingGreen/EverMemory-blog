@@ -44,6 +44,12 @@ let envFile = $state(".env.local");
 let loading = $state(true);
 /** 被 Git 跟踪的密钥文件：这些是真正的泄漏风险 */
 let leakedFiles = $state<string[]>([]);
+/**
+ * 当前要高亮的字段。
+ * 不能用 classList 直接加类：那个类名不出现在模板里，Svelte 会把它当作
+ * 未使用的 CSS 规则删掉，动画就永远不会触发。
+ */
+let flashKey = $state("");
 let loadError = $state("");
 let saving = $state(false);
 // 每个密钥的输入草稿：本地开发环境直接回填明文，便于查看与局部修改
@@ -296,8 +302,10 @@ function scrollToField(key: string) {
 	const body = document.querySelector(".admin-page-body");
 	field.scrollIntoView({ behavior: "smooth", block: "center" });
 	// 高亮：加类后 1.6s 移除，与 CSS 过渡时长对应
-	field.classList.add("field-flash");
-	setTimeout(() => field.classList.remove("field-flash"), 1600);
+	flashKey = key;
+	setTimeout(() => {
+		if (flashKey === key) flashKey = "";
+	}, 1600);
 	// 兜底：scrollIntoView 在 zoom 容器里偶有偏差，显式校正
 	if (body) {
 		const fieldRect = field.getBoundingClientRect();
@@ -777,6 +785,7 @@ function answerConfirm(ok: boolean) {
 								class="settings-field"
 								class:dirty={isDirty(item)}
 								class:span-full={item.span === 12}
+								class:field-flash={flashKey === item.key}
 								data-secret-key={item.key}
 							>
 								<div class="field-label-row">
