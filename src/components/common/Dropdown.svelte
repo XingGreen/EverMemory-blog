@@ -64,20 +64,25 @@ $effect(() => {
 	const onKeyDown = (e: KeyboardEvent) => {
 		if (e.key === "Escape") open = false;
 	};
-	/* 滚动或改尺寸直接收起：菜单是 fixed，不会跟着内容走 */
-	const onViewportChange = () => {
+	/* 页面滚动或改尺寸时收起：菜单 fixed，不跟随内容移动。
+	   但菜单自己内部的滚动不算——否则一滚就关，看起来像「滚不动」。 */
+	const onScroll = (e: Event) => {
+		if (menuEl?.contains(e.target as Node)) return;
+		open = false;
+	};
+	const onResize = () => {
 		open = false;
 	};
 
 	document.addEventListener("mousedown", onPointerDown);
 	document.addEventListener("keydown", onKeyDown);
-	window.addEventListener("scroll", onViewportChange, true);
-	window.addEventListener("resize", onViewportChange);
+	window.addEventListener("scroll", onScroll, true);
+	window.addEventListener("resize", onResize);
 	return () => {
 		document.removeEventListener("mousedown", onPointerDown);
 		document.removeEventListener("keydown", onKeyDown);
-		window.removeEventListener("scroll", onViewportChange, true);
-		window.removeEventListener("resize", onViewportChange);
+		window.removeEventListener("scroll", onScroll, true);
+		window.removeEventListener("resize", onResize);
 	};
 });
 </script>
@@ -92,6 +97,7 @@ $effect(() => {
 		bind:this={menuEl}
 		role="menu"
 		style={floatingStyle(pos)}
+		onmousedown={(e) => e.stopPropagation()}
 	>
 		{#if title}
 			<div class="ui-menu-header">{title}</div>
@@ -109,5 +115,9 @@ $effect(() => {
 	/* 定位由内联样式给出，这里只保证 fixed */
 	.dropdown-menu {
 		position: fixed;
+		/* 选项多时内部滚动；overscroll 阻断避免滚到底带动外层 */
+		max-height: min(60vh, 24rem);
+		overflow-y: auto;
+		overscroll-behavior: contain;
 	}
 </style>
