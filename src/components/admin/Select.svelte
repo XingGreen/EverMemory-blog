@@ -9,6 +9,12 @@
  * 上下键在选项间移动、Enter 选中。
  */
 import Icon from "@/components/common/Icon.svelte";
+import {
+	floatingStyle,
+	placeUnder,
+	portalToBody,
+	type FloatingPosition,
+} from "@/utils/floating";
 
 let {
 	value = "",
@@ -29,6 +35,8 @@ let {
 let open = $state(false);
 let containerEl = $state<HTMLDivElement | undefined>();
 let activeIndex = $state(-1);
+let menuEl = $state<HTMLElement | null>(null);
+let pos = $state<FloatingPosition | null>(null);
 
 const selectedLabel = $derived(
 	options.find((o) => o.value === value)?.label ?? "",
@@ -36,10 +44,15 @@ const selectedLabel = $derived(
 
 function toggle() {
 	if (disabled) return;
-	open = !open;
 	if (open) {
-		activeIndex = options.findIndex((o) => o.value === value);
+		open = false;
+		pos = null;
+		return;
 	}
+	/* 浮层挂到 body，坐标必须在这里算好 */
+	if (containerEl) pos = placeUnder(containerEl, "start", 180);
+	activeIndex = options.findIndex((o) => o.value === value);
+	open = true;
 }
 
 function pick(next: string) {
@@ -77,9 +90,41 @@ function handleKey(e: KeyboardEvent) {
 	}
 }
 
+/* 菜单挂到 body，脱离 .admin-page 的 overflow 裁切 */
+$effect(() => {
+	const el = menuEl;
+	if (!el) return;
+	portalToBody(el);
+	return () => {
+		el.remove();
+	};
+});
+
+/* 页面滚动收起，但菜单自己内部滚动不算 */
+$effect(() => {
+	if (!open) return;
+	const close = () => {
+		open = false;
+		pos = null;
+	};
+	const onScroll = (e: Event) => {
+		if (menuEl?.contains(e.target as Node)) return;
+		close();
+	};
+	window.addEventListener("scroll", onScroll, true);
+	window.addEventListener("resize", close);
+	return () => {
+		window.removeEventListener("scroll", onScroll, true);
+		window.removeEventListener("resize", close);
+	};
+});
+
 function handleOutside(e: PointerEvent) {
 	if (!open) return;
-	if (containerEl && !containerEl.contains(e.target as Node)) open = false;
+	const target = e.target as Node;
+	if (containerEl?.contains(target) || menuEl?.contains(target)) return;
+	open = false;
+	pos = null;
 }
 </script>
 
@@ -104,8 +149,15 @@ function handleOutside(e: PointerEvent) {
 		</span>
 	</button>
 
-	{#if open}
-		<ul class="ui-menu" role="listbox" tabindex="-1">
+	{#if open && pos}
+		<ul
+			class="ui-menu"
+			role="listbox"
+			tabindex="-1"
+			bind:this={menuEl}
+			style={floatingStyle(pos)}
+			onmousedown={(e) => e.stopPropagation()}
+		>
 			{#each options as opt, i (opt.value)}
 				<li>
 					<button

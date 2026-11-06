@@ -295,6 +295,28 @@ textarea.ui-input {
 	max-height: min(60vh, 24rem);
 	overflow-y: auto;
 	overscroll-behavior: contain;
+	/* 滚动条与 custom-scrollbar 同规格：默认的系统滚动条是亮白粗条配箭头，
+	   放在深色浮层上非常突兀 */
+	scrollbar-width: thin;
+	scrollbar-color: color-mix(in oklab, var(--content-meta) 35%, transparent)
+		transparent;
+}
+
+.ui-menu::-webkit-scrollbar {
+	width: 6px;
+}
+
+.ui-menu::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.ui-menu::-webkit-scrollbar-thumb {
+	border-radius: 3px;
+	background: color-mix(in oklab, var(--content-meta) 35%, transparent);
+}
+
+.ui-menu::-webkit-scrollbar-thumb:hover {
+	background: color-mix(in oklab, var(--content-meta) 55%, transparent);
 }
 
 /* 菜单标题：说明这个菜单是做什么的，不参与点击 */
