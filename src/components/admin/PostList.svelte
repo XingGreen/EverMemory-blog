@@ -678,7 +678,7 @@ function actionLabel(action: string, title: string): string {
 						aria-haspopup="true"
 						onclick={() => (colsPanelOpen = !colsPanelOpen)}
 					>
-						<Icon icon="material-symbols:view-list-outline" />
+						<Icon icon="material-symbols:subject" />
 					</button>
 					{#if colsPanelOpen}
 						<div class="ui-menu">
@@ -1466,13 +1466,17 @@ function actionLabel(action: string, title: string): string {
 
 	/* 操作列额外右内边距：仅靠 .list-item 的 1rem 容器留白时，
 	   图标组仍显得贴边，这里补一档并让按钮在该列内居中。 */
-	/* 表头操作列：左边是列名，右边挂列显示入口 */
+	/* 操作列：表头左边列名、右边列显示入口；行内只有图标，统一靠右 */
 	.col-actions {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
 		padding-right: 0.75rem;
+	}
+
+	.list-item .col-actions {
+		justify-content: flex-end;
 	}
 
 	.col-actions .actions-label {
