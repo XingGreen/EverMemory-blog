@@ -42,6 +42,8 @@ let items = $state<SecretItemDTO[]>([]);
 let writable = $state(false);
 let envFile = $state(".env.local");
 let loading = $state(true);
+/** 被 Git 跟踪的密钥文件：这些是真正的泄漏风险 */
+let leakedFiles = $state<string[]>([]);
 let loadError = $state("");
 let saving = $state(false);
 // 每个密钥的输入草稿：本地开发环境直接回填明文，便于查看与局部修改
@@ -328,6 +330,9 @@ async function load() {
 		const data = await res.json();
 		if (data.success) {
 			items = data.items;
+			leakedFiles = (data.audit ?? [])
+				.filter((a: { tracked: boolean }) => a.tracked)
+				.map((a: { path: string }) => a.path);
 			writable = data.writable;
 			envFile = data.file || ".env.local";
 			// 本地开发环境：直接把明文回填到表单，便于查看与局部修改
@@ -637,6 +642,13 @@ function answerConfirm(ok: boolean) {
 />
 
 <div class="secrets-page">
+	{#if leakedFiles.length > 0}
+		<p class="leak-warn" role="alert">
+			<Icon icon="material-symbols:warning" />
+			有 {leakedFiles.length} 个密钥文件已被 Git 跟踪：{leakedFiles.join("、")}。
+			请把它们移出版本库并加入 .gitignore。
+		</p>
+	{/if}
 	{#if loadError}
 		<div class="status-banner error">
 			<Icon icon="material-symbols:error-outline" />
@@ -1540,21 +1552,46 @@ function answerConfirm(ok: boolean) {
 		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
 	}
 
-	/* 从保存栏清单跳转时的定位高亮：主色描边淡出。
-	   用 outline 而非 border，避免改变布局尺寸造成跳动。 */
-	.settings-field.field-flash {
-		outline: 2px solid color-mix(in oklab, var(--primary) 70%, transparent);
-		outline-offset: 6px;
-		border-radius: 6px;
-		animation: field-flash 1.6s ease-out;
+	.leak-warn {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.5rem;
+		margin: 0 0 1rem;
+		padding: 0.625rem 0.875rem;
+		border-radius: 0.5rem;
+		background: color-mix(in srgb, oklch(0.72 0.16 45) 14%, transparent);
+		font-size: 0.8125rem;
+		line-height: 1.6;
+		color: oklch(0.72 0.16 45);
 	}
 
-	@keyframes field-flash {
-		0% {
-			outline-color: color-mix(in oklab, var(--primary) 85%, transparent);
-		}
+	/* 从保存栏清单跳转时的定位提示：左侧竖线加粗并呼吸两次。
+	   竖线用伪元素画，绝对定位不占布局，不会把下方内容顶动。 */
+	.settings-field.field-flash {
+		position: relative;
+	}
+
+	.settings-field.field-flash::before {
+		content: "";
+		position: absolute;
+		inset-block: 0;
+		left: -0.75rem;
+		width: 3px;
+		border-radius: 2px;
+		background: var(--primary);
+		animation: field-breathe 0.8s ease-in-out 2;
+	}
+
+	/* 0.8s × 2 = 1.6s，与脚本里移除类名的时长对齐 */
+	@keyframes field-breathe {
+		0%,
 		100% {
-			outline-color: transparent;
+			opacity: 0.2;
+			transform: scaleX(1);
+		}
+		50% {
+			opacity: 1;
+			transform: scaleX(1.7);
 		}
 	}
 

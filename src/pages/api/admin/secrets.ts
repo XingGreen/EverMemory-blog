@@ -1,3 +1,6 @@
+import { execSync } from "node:child_process";
+import { readdirSync, statSync } from "node:fs";
+import path from "node:path";
 import {
 	ADMIN_SECRETS,
 	AUTH_SECRET_KEYS,
@@ -41,6 +44,63 @@ const MAX_KEY_LENGTH = 100 * 1024;
 /** 认证类密钥集合（用于判断是否需要使旧会话失效）：来自共享清单，避免前后端漂移 */
 const AUTH_KEYS = new Set(AUTH_SECRET_KEYS);
 
+interface SecretAuditEntry {
+	path: string;
+	/** 是否已被 Git 跟踪：跟踪了就说明密钥进了版本库 */
+	tracked: boolean;
+}
+
+/**
+ * 扫描可能含密钥的文件，检查是否被 Git 跟踪。
+ *
+ * 只覆盖常见位置：根目录的 .env*、.key/ 目录、以及任意 *.key / *.pem /
+ * *.p12 / *.pfx。生产构建没有 git 也没有可写文件系统，直接跳过。
+ */
+function auditSecretFiles(): SecretAuditEntry[] {
+	if (!isEnvFileWritable()) return [];
+	const cwd = process.cwd();
+	const found: string[] = [];
+	try {
+		for (const name of readdirSync(cwd)) {
+			const full = path.join(cwd, name);
+			let isDir = false;
+			try {
+				isDir = statSync(full).isDirectory();
+			} catch {
+				continue;
+			}
+			if (isDir) {
+				if (name === ".key") {
+					for (const f of readdirSync(full)) found.push(`${name}/${f}`);
+				}
+				continue;
+			}
+			if (name.startsWith(".env") || /\.(key|pem|p12|pfx)$/i.test(name)) {
+				found.push(name);
+			}
+		}
+	} catch {
+		return [];
+	}
+
+	/* 模板文件本来就该进版本库，没有真实密钥，不参与告警 */
+	const real = found.filter((p) => !/\.(example|sample|template)$/i.test(p));
+
+	return real.map((p) => {
+		let tracked = false;
+		try {
+			execSync(`git ls-files --error-unmatch "${p}"`, {
+				cwd,
+				stdio: "ignore",
+			});
+			tracked = true;
+		} catch {
+			tracked = false;
+		}
+		return { path: p, tracked };
+	});
+}
+
 export async function GET({
 	request,
 }: {
@@ -74,6 +134,7 @@ export async function GET({
 			writable: isEnvFileWritable(),
 			file: ".env.local",
 			items,
+			audit: auditSecretFiles(),
 		},
 		200,
 	);
