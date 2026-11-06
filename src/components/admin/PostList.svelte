@@ -646,7 +646,7 @@ function actionLabel(action: string, title: string): string {
 				<span class="field-label">{i18n(I18nKey.postColSettings)}</span>
 				<Dropdown bind:open={colsPanelOpen} align="end">
 					<button
-						class="ui-select cols-trigger"
+						class="ui-btn ui-btn-soft cols-trigger"
 						type="button"
 						aria-expanded={colsPanelOpen}
 						aria-haspopup="true"
@@ -1600,15 +1600,10 @@ function actionLabel(action: string, title: string): string {
 		align-items: center;
 	}
 
-	/* 与同排的 Select 保持一致的宽高，只是内容换成图标 */
+	/* 项目标准按钮（ui-btn + ui-btn-soft），宽度与同排 Select 对齐 */
 	.cols-trigger {
-		display: inline-flex;
-		align-items: center;
 		justify-content: center;
-		width: auto;
 		min-width: 130px;
-		cursor: pointer;
-		background-image: none;
 	}
 
 	/* 文件类型列：等宽字体 + 低饱和底，避免和「状态」列的两个徽章抢视觉权重 */

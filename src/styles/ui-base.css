@@ -284,6 +284,11 @@ textarea.ui-input {
 	border-radius: 0.75rem;
 	background: var(--card-bg);
 	box-shadow: var(--shadow-md, 0 8px 24px rgb(0 0 0 / 0.18));
+	/* 选项多时内部滚动：超过半屏或固定高度就出现滑块，
+	   滚到底不会把外层页面一起带着滚 */
+	max-height: min(60vh, 24rem);
+	overflow-y: auto;
+	overscroll-behavior: contain;
 }
 
 /* 菜单项：字号 0.875rem 是两套里较大的那个，统一取它；
