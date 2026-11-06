@@ -186,8 +186,8 @@ function readUrl() {
 	if (sc === "published" || sc === "all") scope = sc;
 }
 
-async function load() {
-	loading = true;
+async function load(silent = false) {
+	if (!silent) loading = true;
 	loadError = "";
 	try {
 		/* 不带 no-store 的话，浏览器会拿删除前的缓存，表现为「删了但列表没变」 */
@@ -205,7 +205,7 @@ async function load() {
 	} catch {
 		loadError = i18n(I18nKey.taxonomyLoadFailed);
 	} finally {
-		loading = false;
+		if (!silent) loading = false;
 	}
 }
 
@@ -329,6 +329,16 @@ async function confirmDelete() {
 		});
 		const data = await res.json();
 		if (!data.success) {
+			/* 后台已经没有了：这不是失败，是前端数据过期。
+			   直接跟着清掉，别让幽灵条目反复要求用户删除。 */
+			if (data.code === "NOT_FOUND") {
+				entries = entries.filter((e) => e.name !== name);
+				if (selectedName === name) selectedName = "";
+				deleteTarget = null;
+				onNotify(i18n(I18nKey.taxonomyDeleted), "success");
+				await load();
+				return;
+			}
 			deleteError = data.message || "failed";
 			return;
 		}
@@ -442,6 +452,16 @@ $effect(() => {
 	void load();
 	void loadPosts();
 	readUrl();
+});
+
+/* 在别处改过数据（另一个标签页、后台脚本、直接改文件）之后回到本页，
+   列表不该还停在旧状态。静默校准，不闪 loading。 */
+$effect(() => {
+	const onVisible = () => {
+		if (document.visibilityState === "visible") void load(true);
+	};
+	document.addEventListener("visibilitychange", onVisible);
+	return () => document.removeEventListener("visibilitychange", onVisible);
 });
 </script>
 

@@ -2,12 +2,12 @@ import { getCollection } from "astro:content";
 
 import { requireAuth } from "@/utils/auth";
 import {
-	type TaxonomyKind,
-	type TaxonomyRegistry,
 	normalizeName,
 	readPostFile,
 	readRegistry,
 	rewriteFrontmatter,
+	type TaxonomyKind,
+	type TaxonomyRegistry,
 	writePostFile,
 	writeRegistry,
 } from "@/utils/taxonomy";
@@ -91,7 +91,8 @@ async function collect(): Promise<{
 	}
 
 	const sortFn = (a: TaxonomyEntry, b: TaxonomyEntry) =>
-		b.count - a.count || a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+		b.count - a.count ||
+		a.name.toLowerCase().localeCompare(b.name.toLowerCase());
 
 	const entries: TaxonomyEntry[] = [
 		...[...catMap.entries()].map(([name, v]) => ({
@@ -122,7 +123,6 @@ export async function GET({ request }) {
 	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 
-
 	/* 分类/标签是随时会被改的数据，不能进浏览器缓存 */
 	const noStore = { "Cache-Control": "no-store, must-revalidate" };
 
@@ -139,7 +139,7 @@ export async function GET({ request }) {
 		console.error("[Admin Taxonomy] GET failed:", error);
 		return json({ success: false, message: "获取分类/标签失败" }, 500);
 	}
-}/**
+} /**
  * 批量改写引用某分类/标签的所有文章。
  *
  * 两阶段提交：先把所有受影响文章读入内存并算好新内容，
@@ -222,7 +222,10 @@ export async function POST({ request }) {
 
 	const { action, kind } = body;
 	if (kind !== "category" && kind !== "tag") {
-		return json({ success: false, message: "kind 必须是 category 或 tag" }, 400);
+		return json(
+			{ success: false, message: "kind 必须是 category 或 tag" },
+			400,
+		);
 	}
 	if (!["create", "rename", "delete"].includes(action ?? "")) {
 		return json({ success: false, message: "action 无效" }, 400);
@@ -311,6 +314,8 @@ export async function POST({ request }) {
 		return json(
 			{
 				success: false,
+				/* 结构化原因：前端据此区分「操作失败」与「早就不存在了」 */
+				code: "NOT_FOUND",
 				message: `登记表里找不到「${from}」，可能已被删除或名称不一致`,
 			},
 			409,
