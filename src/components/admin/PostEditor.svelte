@@ -732,12 +732,30 @@ function persistLocalDraft(draft: DraftFields, restored = false): boolean {
 	const keepRestored =
 		restored || (restoredDraftKey !== null && key === restoredDraftKey);
 	try {
+		const contentKey = JSON.stringify(draft);
+		/* 时间戳表示「这份内容是什么时候写的」，不是「最后一次写盘是什么时候」。
+		   自动保存每隔几百毫秒就会写一次，若无条件刷新 savedAt，
+		   几周前的旧草稿会被刷成刚刚，随后又按「近期」静默套用。 */
+		let prevSavedAt = 0;
+		let prevKey: string | undefined;
+		try {
+			const prev = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "");
+			prevSavedAt = typeof prev?.savedAt === "number" ? prev.savedAt : 0;
+			prevKey =
+				typeof prev?.contentKey === "string" ? prev.contentKey : undefined;
+		} catch {
+			// 没有旧草稿或已损坏：按首次写入处理
+		}
+		const savedAt =
+			prevKey === contentKey && prevSavedAt > 0 ? prevSavedAt : Date.now();
+
 		localStorage.setItem(
 			DRAFT_KEY,
 			JSON.stringify({
 				...draft,
 				...(keepRestored ? { restored: true } : {}),
-				savedAt: Date.now(),
+				contentKey,
+				savedAt,
 			}),
 		);
 		return true;
@@ -984,6 +1002,8 @@ interface DraftFields {
 	tags: string[];
 	/** 写入这份草稿的浏览器与系统，恢复时用来告诉用户「哪台设备上的改动」 */
 	device?: string;
+	/** 内容指纹：时间戳只在内容真正变化时更新，见 persistLocalDraft */
+	contentKey?: string;
 	/**
 	 * 用户已经确认过要这份草稿。
 	 * 恢复后再进来不该重复询问「要恢复吗」——那会形成
@@ -1098,10 +1118,13 @@ async function restoreCreateDraft() {
 	   「刚改完就离开、马上回来」是最常见的路径，每次都问一遍会让人以为内容丢了；
 	   而此时点「保留当前正文」会把草稿清掉，数据就真的没了。
 	   只有隔了较久的草稿才值得问一次——那时用户多半已经忘了自己写过。 */
+	/* 没有内容指纹的草稿是旧版本写下的，它的 savedAt 可能已被反复刷新，
+	   一律当成「年龄未知」走询问，不按「近期」静默套用。 */
 	const RECENT_MS = 5 * 60 * 1000;
-	const age = source.savedAt
-		? Date.now() - source.savedAt
-		: Number.POSITIVE_INFINITY;
+	const age =
+		source.contentKey && typeof source.savedAt === "number"
+			? Date.now() - source.savedAt
+			: Number.POSITIVE_INFINITY;
 	if (source.restored || age < RECENT_MS) {
 		const baseline = JSON.stringify(currentDraft());
 		applyDraft(source);
