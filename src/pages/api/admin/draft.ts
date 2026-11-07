@@ -43,7 +43,12 @@ export interface CloudDraft {
 function json(data: unknown, status = 200): Response {
 	return new Response(JSON.stringify(data), {
 		status,
-		headers: { "Content-Type": "application/json" },
+		headers: {
+			"Content-Type": "application/json",
+			/* 草稿随时会被写、被删，任何一层缓存都只会让人看到过期内容：
+			   服务端已清空，浏览器却还拿旧响应回复「有草稿」。 */
+			"Cache-Control": "no-store, must-revalidate",
+		},
 	});
 }
 
