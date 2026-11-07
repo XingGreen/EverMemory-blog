@@ -173,6 +173,10 @@ function isPhrasingParent(parent) {
  * 表达式占位。MDX 里 `{…}` 独占一行时会被解析成 block 级节点，
  * 但它的父节点可能仍是 heading / h3 / p——在这种上下文里塞 <div> 会把标题拆坏，
  * 所以块级判定要同时看节点类型与父节点。
+ *
+ * 可见文字不用源码本身：`{[ {label:"站点名称", value: site.name}, …]}` 这类长对象
+ * 数组直接铺 32 字，观感就是「满屏 JS 没渲染」，比一个干净的占位更糟。
+ * 固定成 `{…}`，源码全文只进 title 悬浮提示。
  */
 function expressionPlaceholder(node, parent) {
 	const source = String(node.value ?? "")
@@ -181,13 +185,11 @@ function expressionPlaceholder(node, parent) {
 	const isBlock =
 		node.type === "mdxFlowExpression" && !isPhrasingParent(parent);
 	const tag = isBlock ? "div" : "span";
-	/* 显示源码前 32 字：`site.name` 这类一眼能看懂，长表达式截断后也不至于铺满版面 */
-	const label = source.length > 32 ? `${source.slice(0, 32)}…` : source;
 	const tooltip = source.length > 120 ? `${source.slice(0, 120)}…` : source;
 
 	return {
 		type: "html",
-		value: `<${tag} class="mdx-expression" title='{${escapeSingleQuoted(tooltip)}}'>{${escapeText(label)}}</${tag}>`,
+		value: `<${tag} class="mdx-expression" title='{${escapeSingleQuoted(tooltip)}}'>{…}</${tag}>`,
 	};
 }
 

@@ -68,8 +68,9 @@ describe("remarkMdxFlatten", () => {
 		expect(inline[1].type).toBe("html");
 		expect(inline[1].value).toContain('class="mdx-expression"');
 		expect(inline[1].value).toContain("title='{year}'");
-		/* 占位里给出可读的源码片段，而不是一个看不出所以然的省略号 */
-		expect(inline[1].value).toContain(">{year}<");
+		/* 可见文字固定为 {…}，源码只进 title——铺源码会把长对象数组变成满屏 JS */
+		expect(inline[1].value).toContain(">{…}<");
+		expect(inline[1].value).not.toContain(">year<");
 	});
 
 	it("MDX 注释表达式 {/* … */} 直接丢弃", () => {

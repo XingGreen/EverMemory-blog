@@ -64,7 +64,8 @@ describe("MDX 预览渲染", () => {
 		/* 动态部分退化成占位标记，而不是几百行 JS */
 		expect(html).toContain("mdx-expression");
 		expect(html).not.toContain("navigator.clipboard.writeText");
-		/* 源码摘要允许留在 title 里备查，但不能再出现在正文段落 */
-		expect(html.match(/<p>[^<]{0,200}\.map\(/g) ?? []).toHaveLength(0);
+		/* 对象字面量、map 回调等源码只允许出现在 title 属性里，绝不能成为可见文本 */
+		expect(html).not.toContain(">{[ { label:");
+		expect(html).not.toContain(">notes.map((item)");
 	}, 60000);
 });
