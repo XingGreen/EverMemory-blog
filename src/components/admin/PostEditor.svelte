@@ -1295,15 +1295,24 @@ onDestroy(() => {
 });
 
 async function handleSave() {
-	/* 标题改为非必填：留空时用正文前 16 个字符兜底。先清掉 frontmatter 残留、
-	   Markdown 标记与多余空白，避免生成「# 标题」或「---」这样的标题。 */
+	/* 标题改为非必填：留空时取正文第一行兜底。先清掉 frontmatter 残留、
+	   Markdown 标记与多余空白，避免生成「# 标题」或「---」这样的标题；
+	   再在首个逗号处或第 16 字处截断，二者先到先得。 */
 	if (!editorState.title.trim()) {
-		const fallback = editorState.content
-			.replace(/^---[\s\S]*?\n---/, "")
-			.replace(/[#>*_`~[\]()!-]/g, "")
-			.replace(/\s+/g, " ")
-			.trim()
-			.slice(0, 16);
+		const firstLine =
+			editorState.content
+				.replace(/^---[\s\S]*?\n---/, "")
+				.split(/\r?\n/)
+				.map((line) =>
+					line
+						.replace(/[#>*_`~[\]()!-]/g, "")
+						.replace(/\s+/g, " ")
+						.trim(),
+				)
+				.find((line) => line) ?? "";
+		const commaAt = firstLine.search(/[,，]/);
+		const limit = commaAt >= 0 ? Math.min(commaAt, 16) : 16;
+		const fallback = firstLine.slice(0, limit).trim();
 		if (!fallback) {
 			onError(i18n(I18nKey.postTitleRequired));
 			return;

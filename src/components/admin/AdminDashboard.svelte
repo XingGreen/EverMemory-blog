@@ -129,6 +129,14 @@ let deletingPost = $state<Post | null>(null);
 let deleteTrigger: HTMLElement | null = null;
 let toast = $state<{ message: string; type: "success" | "error" } | null>(null);
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
+/** 当前提示条总时长，暂停后据此重新计时 */
+let toastDuration = $state(6000);
+/** 递增即重建进度条元素，让倒计时动画从 100% 重播 */
+let toastProgressKey = $state(0);
+/** 悬停/按住期间暂停，进度条停在满值 */
+let toastPaused = $state(false);
+/** 是否在提示条内按下过：window 级松开只在此为真时恢复，避免别处点击误触发 */
+let toastPressed = false;
 // 环境变量页保存栏状态：由 SecretManager 上报，保存栏渲染在
 // AdminPage 的 footer 槽位（滚动容器之外，始终可见）
 let secretSaveState = $state<{
@@ -545,15 +553,27 @@ const headerTitle = $derived.by(() => {
 	if (activePage === "sessions") return i18n(I18nKey.adminSessions);
 	if (activePage === "categories-and-tags")
 		return i18n(I18nKey.adminCategoriesAndTags);
+	/* 三个独立工作台此前都落到「文章管理」，标签页与移动端顶栏显示错模块。
+	   文案沿用既有 i18n 键与侧栏原文，不新造词条。 */
+	if (activePage === "sync") return i18n(I18nKey.postSyncNow);
+	if (activePage === "links") return "友链管理";
+	if (activePage === "history") return i18n(I18nKey.postHistory);
 	if (viewMode === "edit" && editingPost) return i18n(I18nKey.adminEditPost);
 	if (viewMode === "create") return i18n(I18nKey.adminNewPost);
 	return i18n(I18nKey.adminPosts);
 });
 
 /* 浏览器标签标题跟随当前页：后台是 SPA（pushState 切页），若不主动写
-   document.title，标签页会一直停在首屏进入时的标题。 */
+   document.title，标签页会一直停在首屏进入时的标题。
+   格式：<模块名称> - 控制面板 | <网站名字>；当前页本身就是控制面板时
+   省去重复段，避免出现「控制面板 - 控制面板」。 */
 $effect(() => {
-	if (typeof document !== "undefined") document.title = headerTitle;
+	if (typeof document === "undefined") return;
+	const panel = i18n(I18nKey.adminDashboard);
+	const segments = headerTitle === panel ? [panel] : [headerTitle, panel];
+	document.title = siteName
+		? `${segments.join(" - ")} | ${siteName}`
+		: segments.join(" - ");
 });
 
 async function loadPosts() {
@@ -1069,20 +1089,65 @@ function showToast(
 	duration = 6000,
 ) {
 	toast = { message, type };
+	toastDuration = duration;
+	toastPaused = false;
+	toastPressed = false;
 	if (type === "error") {
 		console.error("[Toast] Error:", message);
 	}
+	startToastCountdown();
+}
+
+/** 启动（或重启）倒计时：进度条回满 100%，按总时长走完即自动关闭 */
+function startToastCountdown() {
 	// 先清除上一个定时器，避免旧定时器提前关掉新提示
 	if (toastTimer) {
 		clearTimeout(toastTimer);
 	}
+	toastProgressKey += 1;
 	toastTimer = setTimeout(() => {
 		toast = null;
 		toastTimer = null;
-	}, duration);
+	}, toastDuration);
+}
+
+/** 悬停/按住：清掉定时器，进度条回满并静止 */
+function pauseToastCountdown() {
+	if (!toast || toastPaused) return;
+	toastPaused = true;
+	if (toastTimer) {
+		clearTimeout(toastTimer);
+		toastTimer = null;
+	}
+	// 重建进度条元素，去掉 running 后停在 scaleX(1)
+	toastProgressKey += 1;
+}
+
+/** 移开/松开：进度条回满，按原时长重新倒计时 */
+function resumeToastCountdown() {
+	if (!toast || !toastPaused) return;
+	toastPaused = false;
+	startToastCountdown();
+}
+
+function pauseToastOnPress() {
+	toastPressed = true;
+	pauseToastCountdown();
+}
+
+/** window 级松开：只处理「提示条内按下、在别处松开」的情况 */
+function resumeToastOnRelease() {
+	if (!toastPressed) return;
+	toastPressed = false;
+	resumeToastCountdown();
 }
 
 function closeToast() {
+	// 手动关闭后必须清掉残留定时器，否则下一次提示会被提前关掉
+	if (toastTimer) {
+		clearTimeout(toastTimer);
+		toastTimer = null;
+	}
 	toast = null;
 }
 
@@ -1097,6 +1162,15 @@ function formatDate(dateStr: string | null): string {
 	});
 }
 </script>
+
+<!-- 松开可能发生在提示条之外（按住后拖出去），元素级 mouseup 收不到会让
+     进度条一直暂停；挂到 window 才能覆盖。切走窗口时同样解除按住态。 -->
+<svelte:window
+	onmouseup={resumeToastOnRelease}
+	ontouchend={resumeToastOnRelease}
+	ontouchcancel={resumeToastOnRelease}
+	onblur={resumeToastOnRelease}
+/>
 
 {#snippet placeholder(title: string, desc: string, icon: string)}
 	<div class="card-base placeholder-page">
@@ -1970,7 +2044,15 @@ function formatDate(dateStr: string | null): string {
 	{/if}
 
 	{#if toast}
-		<div class={`toast ${toast.type}`}>
+		<!-- 悬停/按住暂停倒计时；移开或松开即回满并按原时长重新计时 -->
+		<div
+			class={`toast ${toast.type}`}
+			role="status"
+			onmouseenter={pauseToastCountdown}
+			onmouseleave={resumeToastCountdown}
+			onmousedown={pauseToastOnPress}
+			ontouchstart={pauseToastOnPress}
+		>
 			<Icon
 				icon={toast.type === "success" ? "material-symbols:check" : "material-symbols:error-outline"}
 				class="text-lg"
@@ -1979,6 +2061,15 @@ function formatDate(dateStr: string | null): string {
 			<button class="toast-close" onclick={closeToast} aria-label="关闭通知">
 				<Icon icon="material-symbols:close" class="text-sm" />
 			</button>
+			<div class="toast-progress" aria-hidden="true">
+				{#key toastProgressKey}
+					<div
+						class="toast-progress-bar"
+						class:running={!toastPaused}
+						style:animation-duration={`${toastDuration}ms`}
+					></div>
+				{/key}
+			</div>
 		</div>
 	{/if}
 
@@ -3879,6 +3970,7 @@ function formatDate(dateStr: string | null): string {
 		align-items: center;
 		gap: 0.5rem;
 		backdrop-filter: blur(8px);
+		overflow: hidden;
 	}
 
 	.toast.success {
@@ -3918,6 +4010,39 @@ function formatDate(dateStr: string | null): string {
 	.toast-close:focus {
 		outline: 2px solid white;
 		outline-offset: 2px;
+	}
+
+	/* 倒计时进度条：暂停时停在满值，scaleX(1) → 0 走完即关闭提示。
+	   用 #key 重建元素重播动画，比手动改 animation-play-state 更可靠。 */
+	.toast-progress {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 2px;
+		background: rgba(255, 255, 255, 0.25);
+	}
+
+	.toast-progress-bar {
+		height: 100%;
+		transform: scaleX(1);
+		transform-origin: left center;
+		background: rgba(255, 255, 255, 0.9);
+	}
+
+	.toast-progress-bar.running {
+		animation-name: toastCountdown;
+		animation-timing-function: linear;
+		animation-fill-mode: forwards;
+	}
+
+	@keyframes toastCountdown {
+		from {
+			transform: scaleX(1);
+		}
+		to {
+			transform: scaleX(0);
+		}
 	}
 
 	@keyframes slideIn {
