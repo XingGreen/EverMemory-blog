@@ -207,6 +207,21 @@ async function main() {
 	})()`);
 	console.log("点击恢复后:", JSON.stringify(afterRestore));
 
+	/* 恢复后再刷新：restored 标记应让草稿直接套用，不再弹窗 */
+	await cdp.send("Page.reload");
+	await sleep(6000);
+	const third = await evalJs(`(() => {
+		const dialog = document.querySelector(".modal-overlay");
+		const ta = document.querySelector(".content-editor");
+		return {
+			dialogOpen: !!dialog,
+			dialogTitle: dialog?.querySelector("h2")?.textContent?.trim() ?? null,
+			editorHasMarker: (ta?.value ?? "").includes("probe-recovered"),
+			editorLen: ta?.value?.length ?? 0,
+		};
+	})()`);
+	console.log("恢复后再刷新:", JSON.stringify(third));
+
 	/* 自动保存链路：改一个标记，等防抖到期，看本地与云端是否都收到 */
 	const autoSave = await evalJs(`(async () => {
 		const ta = document.querySelector(".content-editor");

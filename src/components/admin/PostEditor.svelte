@@ -278,6 +278,8 @@ const DRAFT_KEY = $derived(
 		: `admin-post-draft-edit-${post?.slug ?? "unknown"}`,
 );
 let dirty = $state(false);
+/** 用户已确认恢复的那份草稿的内容指纹；内容未再变化时继续带 restored 标记 */
+let restoredDraftKey: string | null = null;
 let draftTimer: ReturnType<typeof setTimeout> | null = null;
 let beforeUnloadHandler: ((e: BeforeUnloadEvent) => void) | null = null;
 // 云端草稿同步（跨设备）：自动上传到服务端存储（本机文件 / Vercel KV）
@@ -718,15 +720,25 @@ function currentDraft(): DraftFields {
  * 云端同步失败时会直接调用它，确保「失败」不等于「数据丢了」。
  * 注意：写入本身不改状态，由调用方决定展示 local-only 还是 failed。
  */
-function persistLocalDraft(draft: DraftFields): boolean {
+function persistLocalDraft(draft: DraftFields, restored = false): boolean {
 	/* slug 还没加载完时不写：此时键会退化成 ...-unknown，等文章到位后
 	   读写都换成 ...-<slug>，先前写进去的那份再也读不回来，表现为「退出再进全丢」。
 	   自动保存可能在正文加载前就触发，这条早退是主要防线。 */
 	if (mode === "edit" && !post?.slug) return false;
+	const key = JSON.stringify(draft);
+	/* 内容仍等于用户确认过的那份时，要保住 restored 标记：
+	   恢复后 400ms 的自动保存会再写一次，若不带着标记写，
+	   就会把刚打上的标记抹掉，下次进来又弹一次。 */
+	const keepRestored =
+		restored || (restoredDraftKey !== null && key === restoredDraftKey);
 	try {
 		localStorage.setItem(
 			DRAFT_KEY,
-			JSON.stringify({ ...draft, savedAt: Date.now() }),
+			JSON.stringify({
+				...draft,
+				...(keepRestored ? { restored: true } : {}),
+				savedAt: Date.now(),
+			}),
 		);
 		return true;
 	} catch {
@@ -972,6 +984,12 @@ interface DraftFields {
 	tags: string[];
 	/** 写入这份草稿的浏览器与系统，恢复时用来告诉用户「哪台设备上的改动」 */
 	device?: string;
+	/**
+	 * 用户已经确认过要这份草稿。
+	 * 恢复后再进来不该重复询问「要恢复吗」——那会形成
+	 * 「恢复 → 退出 → 回来又问」的死循环。
+	 */
+	restored?: boolean;
 }
 
 interface DraftBlob extends DraftFields {
@@ -1068,6 +1086,22 @@ async function restoreCreateDraft() {
 	const source = localTs >= cloudTs ? local : cloud;
 	if (!source || (!source.title && !source.content)) return;
 
+	/* 这份草稿用户上次已经点过「恢复」：直接套用，不再询问。
+	   不打这个标记的话，恢复后的草稿内容与正文不同，下次进来又会被判成
+	   「有未保存改动」而重新弹窗，形成死循环。 */
+	if (source.restored) {
+		const baseline = JSON.stringify(currentDraft());
+		applyDraft(source);
+		resetHistory();
+		persistLocalDraft(currentDraft(), true);
+		restoredDraftKey = JSON.stringify(currentDraft());
+		dirty = true;
+		/* 基线取恢复前的正文：设成恢复态的话，自动保存会认为没有改动，
+		   后续编辑只在内存里，云端永远追不上。 */
+		baselineDraftKey = baseline;
+		return;
+	}
+
 	/* 编辑页：草稿必须与刚加载的正文不同，才说明有未保存改动。
 	   相同就直接跳过，避免把旧草稿无谓地写回表单。
 	   三个细节：
@@ -1114,7 +1148,24 @@ async function restoreCreateDraft() {
 			device: source.device ?? "未知设备",
 			fromCloud,
 		});
-		if (!take) return;
+		/* 用户选择不要这份草稿：必须当场清掉，否则每次进编辑页都问一遍，
+		   形成「选了保留 → 退出 → 回来又问」的死循环。
+		   本地与云端一起清，换设备也不会再被拦。 */
+		if (!take) {
+			try {
+				localStorage.removeItem(DRAFT_KEY);
+				if (localKey !== DRAFT_KEY) localStorage.removeItem(localKey);
+			} catch {
+				// 忽略
+			}
+			const cloudSlug = mode === "create" ? "" : (post?.slug ?? "");
+			void fetch(`/api/admin/draft/?slug=${encodeURIComponent(cloudSlug)}`, {
+				method: "DELETE",
+			}).catch(() => {
+				// 清理失败不影响本次打开
+			});
+			return;
+		}
 	}
 
 	/* 恢复前的表单就是正文内容，留作基线：
@@ -1124,9 +1175,11 @@ async function restoreCreateDraft() {
 	applyDraft(source);
 	resetHistory();
 
-	/* 恢复即落盘。此前只有「槽不同」时才写本地，同槽恢复什么都不留，
-	   于是「恢复 → 直接关页面」这条路下次进来内容又退回正文。 */
-	persistLocalDraft(currentDraft());
+	/* 恢复即落盘，并打上 restored 标记：
+	   下次进来读到它就直接套用，不再问一遍——否则「恢复 → 退出 → 回来又问」
+	   会一直循环下去。 */
+	persistLocalDraft(currentDraft(), true);
+	restoredDraftKey = JSON.stringify(currentDraft());
 	dirty = true;
 
 	/* 草稿来自别的槽（改过 slug 未保存）：搬到当前槽后清掉旧槽。 */
