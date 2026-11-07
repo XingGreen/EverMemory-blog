@@ -34,6 +34,8 @@ export interface CloudDraft {
 	sourceLink: string;
 	enableComment: boolean;
 	tags: string[];
+	/** 写入这份草稿的浏览器与系统 */
+	device?: string;
 	/** 云备份时间 */
 	savedAt: number;
 }
@@ -106,6 +108,9 @@ export async function POST({
 		tags: Array.isArray(body.tags)
 			? body.tags.filter((t): t is string => typeof t === "string")
 			: [],
+		/* 设备信息必须一起存：前端弹窗靠它告诉用户「是在哪台机器上写的」，
+		   丢了就只能显示「未知设备」，让人误以为是别人的数据 */
+		device: typeof body.device === "string" ? body.device : "",
 		savedAt: Date.now(),
 	};
 
