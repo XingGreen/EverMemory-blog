@@ -222,6 +222,21 @@ async function main() {
 	})()`);
 	console.log("恢复后再刷新:", JSON.stringify(third));
 
+	/* 再打开一次：确认标记在多轮之后仍然生效 */
+	await cdp.send("Page.reload");
+	await sleep(6000);
+	const fourth = await evalJs(`(() => {
+		const dialog = document.querySelector(".modal-overlay");
+		const ta = document.querySelector(".content-editor");
+		return {
+			dialogOpen: !!dialog,
+			dialogTitle: dialog?.querySelector("h2")?.textContent?.trim() ?? null,
+			editorHasMarker: (ta?.value ?? "").includes("probe-recovered"),
+			editorLen: ta?.value?.length ?? 0,
+		};
+	})()`);
+	console.log("第二次再打开:", JSON.stringify(fourth));
+
 	/* 自动保存链路：改一个标记，等防抖到期，看本地与云端是否都收到 */
 	const autoSave = await evalJs(`(async () => {
 		const ta = document.querySelector(".content-editor");

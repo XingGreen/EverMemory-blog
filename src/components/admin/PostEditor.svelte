@@ -1083,7 +1083,15 @@ async function restoreCreateDraft() {
 	}
 	const localTs = local?.savedAt || 0;
 	const cloudTs = cloud?.savedAt || 0;
-	const source = localTs >= cloudTs ? local : cloud;
+	/* 用户确认过的草稿优先。按时间戳挑会选到另一侧那份旧的、无标记的副本，
+	   一进来又判成「有未保存改动」，形成「恢复 → 打开 → 又问」的循环。 */
+	const source = local?.restored
+		? local
+		: cloud?.restored
+			? cloud
+			: localTs >= cloudTs
+				? local
+				: cloud;
 	if (!source || (!source.title && !source.content)) return;
 
 	/* 这份草稿用户上次已经点过「恢复」：直接套用，不再询问。
