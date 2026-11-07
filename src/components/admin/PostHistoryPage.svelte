@@ -25,10 +25,13 @@ import { notifyAuthExpired } from "@/utils/auth-expired";
 let {
 	slug,
 	revisionId = "",
+	filePath = "",
 	onLeave,
 }: {
 	slug: string;
 	revisionId?: string;
+	/** 文章真实路径，用于让预览按扩展名选择 Markdown / MDX 管线 */
+	filePath?: string;
 	/** 回编辑器：由 AdminDashboard 注入 SPA 导航，避免整页重载 */
 	onLeave: () => void;
 } = $props();
@@ -249,7 +252,7 @@ async function loadDetail(id: string) {
 		const pres = await fetch("/api/admin/preview/", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ content: body }),
+			body: JSON.stringify({ content: body, filePath }),
 			signal: ac.signal,
 		});
 		const pdata = await pres.json();

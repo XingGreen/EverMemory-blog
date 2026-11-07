@@ -102,3 +102,39 @@
   max-height: 100%;
   resize: none;
 }
+
+/* ── MDX 预览里的组件占位 ──
+   后台预览没有 Astro 组件运行时，`.mdx` 里的 <Icon /> 这类自定义组件渲染不出来。
+   remarkMdxFlatten 会把它们降级成带 data-mdx-component 的占位块：保留子内容，
+   用虚线框和等宽字标签说明「这里是组件，预览不渲染它」。
+   放在 admin.css 而不是组件 scoped 样式里：预览 HTML 是接口返回的、由 {@html} 注入，
+   编辑器与历史版本页两处都要命中。 */
+.admin-shell .mdx-component {
+  border: 1px dashed
+    color-mix(in srgb, var(--primary, currentColor) 55%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--primary, transparent) 6%, transparent);
+  padding: 0.125rem 0.5rem;
+}
+
+.admin-shell div.mdx-component {
+  margin-block: 0.75rem;
+  padding-block: 0.5rem;
+}
+
+.admin-shell span.mdx-component {
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+.admin-shell .mdx-component-tag {
+  font-family: var(--font-mono);
+  font-size: 0.75em;
+  color: color-mix(in srgb, var(--primary, currentColor) 80%, transparent);
+  user-select: none;
+}
+
+.admin-shell div.mdx-component > .mdx-component-tag {
+  display: block;
+  margin-bottom: 0.25rem;
+}

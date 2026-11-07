@@ -1686,6 +1686,7 @@ function formatDate(dateStr: string | null): string {
 					<PostHistoryPage
 						slug={route.slug}
 						revisionId={route.revisionId}
+						filePath={posts.find((p) => p.slug === route.slug)?.filePath ?? ""}
 						onLeave={() => navigate(`${DASHBOARD_PATH}posts/edit/${route.slug}/`)}
 					/>
 				{:else if activePage === "links"}

@@ -1401,7 +1401,12 @@ async function fetchPreview(mdContent: string) {
 		const response = await fetch("/api/admin/preview/", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ content: mdContent }),
+			/* 带上真实文件路径：服务端据此判断是否按 MDX 解析，
+			   否则 .mdx 里的 import / 自闭合 JSX 会被当成普通文本 */
+			body: JSON.stringify({
+				content: mdContent,
+				filePath: post?.filePath ?? "",
+			}),
 		});
 		const data = await response.json();
 
@@ -1586,22 +1591,24 @@ $effect(() => {
 			class:is-resizing={resizing}
 			style={`--editor-max-page-width: ${editorMaxWidth === null ? editorConfig.maxPageWidth : `${editorMaxWidth}px`}`}
 		>
-			<!-- 左右拖拽手柄：向内拖 = 变窄，交互同 VSCode 侧栏分隔条 -->
-			<button
-				class="resize-handle left"
-				type="button"
-				aria-label={i18n(I18nKey.postResizeEditor)}
-				title={i18n(I18nKey.postResizeEditor)}
-				onpointerdown={(e) => startResize(e, "left")}
-			></button>
-			<button
-				class="resize-handle right"
-				type="button"
-				aria-label={i18n(I18nKey.postResizeEditor)}
-				title={i18n(I18nKey.postResizeEditor)}
-				onpointerdown={(e) => startResize(e, "right")}
-			></button>
 			<div class="editor-layout">
+				<!-- 手柄挂在限宽容器内：它的 left/right 必须相对 layout 计算。
+				     挂在 .editor-body 上时，布局缩窄了手柄仍钉在屏幕边缘，
+				     看起来就是「拖了没反应」。 -->
+				<button
+					class="resize-handle left"
+					type="button"
+					aria-label={i18n(I18nKey.postResizeEditor)}
+					title={i18n(I18nKey.postResizeEditor)}
+					onpointerdown={(e) => startResize(e, "left")}
+				></button>
+				<button
+					class="resize-handle right"
+					type="button"
+					aria-label={i18n(I18nKey.postResizeEditor)}
+					title={i18n(I18nKey.postResizeEditor)}
+					onpointerdown={(e) => startResize(e, "right")}
+				></button>
 				<PostEditorWritePanel />
 			</div>
 
@@ -1844,6 +1851,7 @@ $effect(() => {
 	}
 
 	.editor-layout {
+		position: relative;
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
 		grid-template-rows: minmax(0, 1fr);

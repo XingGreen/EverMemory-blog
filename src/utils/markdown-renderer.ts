@@ -14,6 +14,7 @@ import rehypeSlug from "rehype-slug";
 import remarkAdmonitionToBlockquoteCallout from "remark-admonition-to-blockquote-callout";
 import remarkDirective from "remark-directive";
 import remarkMath from "remark-math";
+import remarkMdx from "remark-mdx";
 import remarkSectionize from "remark-sectionize";
 import { expressiveCodeConfig, plantumlConfig, siteConfig } from "@/config";
 import I18nKey from "@/i18n/i18nKey";
@@ -26,14 +27,19 @@ import { rehypePlantuml } from "@/plugins/rehype-plantuml.mjs";
 import { parseDirectiveNode } from "@/plugins/remark-directive-rehype.js";
 import { remarkExcerpt } from "@/plugins/remark-excerpt.js";
 import { remarkImageGrid } from "@/plugins/remark-image-grid.js";
+import { remarkMdxFlatten } from "@/plugins/remark-mdx-flatten.mjs";
 import { remarkMermaid } from "@/plugins/remark-mermaid.js";
 import { remarkPlantuml } from "@/plugins/remark-plantuml.js";
 import { remarkReadingTime } from "@/plugins/remark-reading-time.mjs";
 
 let processorInstance: ReturnType<typeof unified> | null = null;
-let rendererPromise: Promise<
-	Awaited<ReturnType<ReturnType<typeof unified>["createRenderer"]>>
-> | null = null;
+/** MDX 预览专用实例：多挂了 remark-mdx + remarkMdxFlatten，普通 .md 不该走这条路径 */
+let mdxProcessorInstance: ReturnType<typeof unified> | null = null;
+type Renderer = Awaited<
+	ReturnType<ReturnType<typeof unified>["createRenderer"]>
+>;
+let rendererPromise: Promise<Renderer> | null = null;
+let mdxRendererPromise: Promise<Renderer> | null = null;
 
 /**
  * 预览代码块渲染：与前台文章页一致的 expressive-code（高亮/复制/折叠/行号/双主题）。
@@ -108,77 +114,110 @@ const rehypeExpressiveCodePreviewInstance = rehypeExpressiveCode({
 const rehypeExpressiveCodePreview = () => rehypeExpressiveCodePreviewInstance;
 
 /**
+ * 渲染管线共用的 remark 插件序列。
+ *
+ * mdx 为 true 时在最前面挂 remark-mdx（只负责解析出 mdx 节点）与 remarkMdxFlatten
+ * （把它们降级成普通 mdast）。两者必须排在其余插件之前：后续插件
+ * （sectionize / excerpt / imageGrid…）都假设输入是标准 mdast。
+ * 同理 remark-mdx 要排在 remark-gfm 之后——markdown-remark 内部先 use(gfm)，
+ * 我们的插件集合在其后追加，顺序天然正确。
+ */
+/** 与 unified() 入参一致的插件列表类型：抽成函数后需要它来保留元组的上下文推断 */
+type RemarkPluginList = NonNullable<
+	ReturnType<typeof unified>["options"]["remarkPlugins"]
+>;
+
+function buildRemarkPlugins(mdx: boolean): RemarkPluginList {
+	return [
+		...(mdx ? [remarkMdx as never, remarkMdxFlatten as never] : []),
+		...(siteConfig.post.rehypeCallouts.enablePythonMarkdownAdmonitions !== false
+			? [remarkAdmonitionToBlockquoteCallout]
+			: []),
+		remarkMath,
+		remarkReadingTime,
+		remarkImageGrid,
+		remarkExcerpt,
+		remarkDirective,
+		remarkSectionize,
+		parseDirectiveNode,
+		remarkMermaid,
+		[remarkPlantuml, plantumlConfig],
+	];
+}
+
+/**
  * 获取与 Astro 配置一致的 Markdown 处理器
  * 包含项目使用的核心 remark/rehype 插件
  */
-function getProcessor() {
-	if (!processorInstance) {
-		processorInstance = unified({
-			remarkPlugins: [
-				...(siteConfig.post.rehypeCallouts.enablePythonMarkdownAdmonitions !==
-				false
-					? [remarkAdmonitionToBlockquoteCallout]
-					: []),
-				remarkMath,
-				remarkReadingTime,
-				remarkImageGrid,
-				remarkExcerpt,
-				remarkDirective,
-				remarkSectionize,
-				parseDirectiveNode,
-				remarkMermaid,
-				[remarkPlantuml, plantumlConfig],
-			],
-			rehypePlugins: [
-				[rehypeKatex, { katex }],
-				[rehypeCallouts, { theme: siteConfig.post.rehypeCallouts.theme }],
-				rehypeSlug,
-				rehypeMermaid,
-				rehypePlantuml,
-				rehypeFigure as any,
-				[rehypeExternalLinks as any, { siteUrl: siteConfig.site_url }],
-				[rehypeEmailProtection, { method: "base64" }],
-				/* 参考 astro.config 的 rehypeComponents + GithubCardComponent 需要
-				   Astro 组件渲染上下文，运行时管线取不到，故跳过——github 短代码
-				   在历史版本里会退化为普通链接，这是方案 a 已知的唯一缺口。 */
-				[
-					rehypeAutolinkHeadings,
-					{
-						behavior: "append",
-						properties: {
-							className: ["anchor"],
-						},
-						content: {
-							type: "element",
-							tagName: "span",
-							properties: {
-								className: ["anchor-icon"],
-								"data-pagefind-ignore": true,
-							},
-							children: [
-								{
-									type: "text",
-									value: "#",
-								},
-							],
-						},
+function getProcessor(mdx = false) {
+	const cached = mdx ? mdxProcessorInstance : processorInstance;
+	if (cached) return cached;
+
+	const instance = unified({
+		remarkPlugins: buildRemarkPlugins(mdx),
+		rehypePlugins: [
+			[rehypeKatex, { katex }],
+			[rehypeCallouts, { theme: siteConfig.post.rehypeCallouts.theme }],
+			rehypeSlug,
+			rehypeMermaid,
+			rehypePlantuml,
+			rehypeFigure as any,
+			[rehypeExternalLinks as any, { siteUrl: siteConfig.site_url }],
+			[rehypeEmailProtection, { method: "base64" }],
+			/* 参考 astro.config 的 rehypeComponents + GithubCardComponent 需要
+			   Astro 组件渲染上下文，运行时管线取不到，故跳过——github 短代码
+			   在历史版本里会退化为普通链接，这是方案 a 已知的唯一缺口。 */
+			[
+				rehypeAutolinkHeadings,
+				{
+					behavior: "append",
+					properties: {
+						className: ["anchor"],
 					},
-				],
-				rehypeExpressiveCodePreview,
+					content: {
+						type: "element",
+						tagName: "span",
+						properties: {
+							className: ["anchor-icon"],
+							"data-pagefind-ignore": true,
+						},
+						children: [
+							{
+								type: "text",
+								value: "#",
+							},
+						],
+					},
+				},
 			],
-		});
+			rehypeExpressiveCodePreview,
+		],
+	});
+
+	if (mdx) {
+		mdxProcessorInstance = instance;
+	} else {
+		processorInstance = instance;
 	}
-	return processorInstance;
+	return instance;
 }
 
-async function getRenderer() {
+async function getRenderer(mdx = false) {
+	if (mdx) {
+		if (!mdxRendererPromise) {
+			/* 必须开启语法高亮：syntaxHighlight: false 会连带不生成主题颜色变量，
+			   于是浅色模式下代码块仍是黑底（expressive-code 的双主题靠这些变量切换）。
+			   类型定义只接受对象形式，但运行时布尔 true 才是「启用并复用插件已配的主题」，
+			   故用 as any 绕过——实测 false 与「省略」都不生成变量，只有 true 生成。 */
+			mdxRendererPromise = getProcessor(true).createRenderer({
+				syntaxHighlight: true as unknown as undefined,
+			});
+		}
+		return mdxRendererPromise;
+	}
+
 	if (!rendererPromise) {
-		const processor = getProcessor();
-		/* 必须开启语法高亮：syntaxHighlight: false 会连带不生成主题颜色变量，
-		   于是浅色模式下代码块仍是黑底（expressive-code 的双主题靠这些变量切换）。
-		   类型定义只接受对象形式，但运行时布尔 true 才是「启用并复用插件已配的主题」，
-		   故用 as any 绕过——实测 false 与「省略」都不生成变量，只有 true 生成。 */
-		rendererPromise = processor.createRenderer({
+		rendererPromise = getProcessor(false).createRenderer({
 			syntaxHighlight: true as unknown as undefined,
 		});
 	}
@@ -187,9 +226,14 @@ async function getRenderer() {
 
 /**
  * 渲染 Markdown 为 HTML，使用与主站相同的渲染管线
+ *
+ * @param options.mdx 内容是否为 .mdx（决定是否启用 MDX 语法解析与降级）
  */
-export async function renderMarkdown(content: string): Promise<string> {
-	const renderer = await getRenderer();
+export async function renderMarkdown(
+	content: string,
+	options: { mdx?: boolean } = {},
+): Promise<string> {
+	const renderer = await getRenderer(options.mdx === true);
 	const result = await renderer.render(content);
 	return result.code;
 }
