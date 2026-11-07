@@ -1057,18 +1057,36 @@ async function restoreCreateDraft() {
 	if (!source || (!source.title && !source.content)) return;
 
 	/* 编辑页：草稿必须与刚加载的正文不同，才说明有未保存改动。
-	   相同就直接跳过，避免把旧草稿无谓地写回表单。 */
+	   相同就直接跳过，避免把旧草稿无谓地写回表单。
+	   三个细节：
+	     · 换行与首尾空白要归一化，否则 \r\n 与末尾空行会让同一份内容判成不同
+	     · 草稿里为空的字段视为「没改过」：自动保存可能早于正文加载完成，
+	       存下来的是一份只有部分字段的快照，拿空串参与比较必然判成有改动
+	     · 只比这三个字段，其余元数据（tags / category 等）不影响是否提示 */
 	if (mode === "edit") {
+		const norm = (v: string | undefined) =>
+			(v ?? "").replace(/\r\n/g, "\n").trim();
+		const sameField = (draftVal: string | undefined, currentVal: string) =>
+			!draftVal || norm(draftVal) === norm(currentVal);
 		const sameAsPost =
-			(source.content ?? "") === editorState.content &&
-			(source.title ?? "") === editorState.title &&
-			(source.description ?? "") === editorState.description;
+			sameField(source.content, editorState.content) &&
+			sameField(source.title, editorState.title) &&
+			sameField(source.description, editorState.description);
 		if (sameAsPost) {
-			// 正文已是最新，清掉这份冗余草稿
+			/* 正文已是最新：本地与云端两份冗余草稿都要清掉。
+			   只清本地的话，换台设备或清过浏览器数据后再进来，
+			   还会被同一份冗余草稿拦一次。 */
 			try {
 				localStorage.removeItem(DRAFT_KEY);
 			} catch {
 				// 忽略
+			}
+			if (cloud && post?.slug) {
+				void fetch(`/api/admin/draft/?slug=${encodeURIComponent(post.slug)}`, {
+					method: "DELETE",
+				}).catch(() => {
+					// 清理失败不影响本次打开
+				});
 			}
 			return;
 		}

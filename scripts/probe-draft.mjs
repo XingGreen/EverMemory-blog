@@ -1,0 +1,188 @@
+/**
+ * CDP 探针：检查编辑页打开时是否误弹「恢复未保存修改」。
+ *
+ * 步骤：登录 → 打开编辑页 → 读一次状态 → 写入一份与正文一致的草稿 → 刷新 → 再读一次。
+ * 第二次若仍弹窗，说明脏检查被序列化差异绕过。
+ */
+import { spawn } from "node:child_process";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const PORT = 9334;
+const ORIGIN = "http://localhost:4321";
+const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const SLUG = process.argv[2] ?? "demo";
+
+const env = readFileSync(".env.local", "utf8");
+const token = env
+	.split(/\r?\n/)
+	.find((l) => l.startsWith("ADMIN_BREAKGLASS_TOKEN="))
+	?.split("=")
+	.slice(1)
+	.join("=")
+	.replace(/^["']|["']$/g, "");
+
+const profile = mkdtempSync(join(tmpdir(), "probe-draft-"));
+const chrome = spawn(
+	CHROME,
+	[
+		"--headless=new",
+		`--remote-debugging-port=${PORT}`,
+		`--user-data-dir=${profile}`,
+		"--no-first-run",
+		"--no-default-browser-check",
+		"--window-size=1440,900",
+		"about:blank",
+	],
+	{ stdio: "ignore" },
+);
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function waitPort() {
+	for (let i = 0; i < 40; i++) {
+		try {
+			const r = await fetch(`http://127.0.0.1:${PORT}/json/version`);
+			if (r.ok) return;
+		} catch {
+			/* 未就绪 */
+		}
+		await sleep(300);
+	}
+	throw new Error("Chrome 未就绪");
+}
+
+function connect(wsUrl) {
+	const ws = new WebSocket(wsUrl);
+	let id = 0;
+	const pending = new Map();
+	ws.addEventListener("message", (ev) => {
+		const msg = JSON.parse(ev.data);
+		if (msg.id && pending.has(msg.id)) {
+			const { resolve, reject } = pending.get(msg.id);
+			pending.delete(msg.id);
+			msg.error
+				? reject(new Error(JSON.stringify(msg.error)))
+				: resolve(msg.result);
+		}
+	});
+	const ready = new Promise((res, rej) => {
+		ws.addEventListener("open", res);
+		ws.addEventListener("error", rej);
+	});
+	const send = (method, params = {}) =>
+		new Promise((resolve, reject) => {
+			const mid = ++id;
+			pending.set(mid, { resolve, reject });
+			ws.send(JSON.stringify({ id: mid, method, params }));
+		});
+	return { ready, send, close: () => ws.close() };
+}
+
+async function main() {
+	await waitPort();
+	const target = await fetch(
+		`http://127.0.0.1:${PORT}/json/new?${encodeURIComponent("about:blank")}`,
+		{ method: "PUT" },
+	).then((r) => r.json());
+	const cdp = connect(target.webSocketDebuggerUrl);
+	await cdp.ready;
+	await cdp.send("Page.enable");
+	await cdp.send("Runtime.enable");
+
+	const evalJs = async (expression) => {
+		const r = await cdp.send("Runtime.evaluate", {
+			expression,
+			awaitPromise: true,
+			returnByValue: true,
+		});
+		return r.exceptionDetails
+			? { __error: r.exceptionDetails.text }
+			: r.result.value;
+	};
+
+	await cdp.send("Page.navigate", { url: `${ORIGIN}/login/` });
+	await sleep(2500);
+	const login = await evalJs(`(async () => {
+		const res = await fetch("/api/admin/verify/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ token: ${JSON.stringify(token)} }),
+		});
+		return res.status;
+	})()`);
+	console.log("登录:", login);
+
+	await cdp.send("Page.navigate", {
+		url: `${ORIGIN}/admin/posts/edit/${SLUG}/`,
+	});
+	await sleep(8000);
+
+	const first = await evalJs(`(() => {
+		const key = "admin-post-draft-edit-${SLUG}";
+		const raw = localStorage.getItem(key);
+		let draft = null;
+		try {
+			draft = raw ? JSON.parse(raw) : null;
+		} catch {
+			draft = null;
+		}
+		return {
+			hasDraft: !!raw,
+			draftTitleLen: draft?.title?.length ?? 0,
+			draftContentLen: draft?.content?.length ?? 0,
+			dialogOpen: !!document.querySelector(".modal-overlay"),
+			dialogTitle:
+				document.querySelector(".modal-overlay h2, .modal-overlay h3")
+					?.textContent?.trim() ?? null,
+			editorReady: !!document.querySelector(".editor-shell"),
+		};
+	})()`);
+	console.log("首次进入:", JSON.stringify(first));
+
+	const seeded = await evalJs(`(() => {
+		const key = "admin-post-draft-edit-${SLUG}";
+		const ta = document.querySelector("textarea");
+		const titleInput = document.querySelector(".editor-header input");
+		const payload = {
+			title: titleInput ? titleInput.value : "",
+			content: ta ? ta.value : "",
+			description: "",
+			savedAt: Date.now(),
+			device: "Probe",
+		};
+		localStorage.setItem(key, JSON.stringify(payload));
+		return {
+			contentLen: payload.content.length,
+			titleLen: payload.title.length,
+		};
+	})()`);
+	console.log("写入同内容草稿:", JSON.stringify(seeded));
+
+	await cdp.send("Page.reload");
+	await sleep(7000);
+
+	const second = await evalJs(`(() => {
+		const dialog = document.querySelector(".modal-overlay");
+		return {
+			dialogOpen: !!dialog,
+			dialogTitle: dialog?.querySelector("h2, h3")?.textContent?.trim() ?? null,
+			dialogBody:
+				dialog?.querySelector("p")?.textContent?.trim()?.slice(0, 90) ?? null,
+		};
+	})()`);
+	console.log("刷新后:", JSON.stringify(second));
+
+	const shot = await cdp.send("Page.captureScreenshot", { format: "png" });
+	writeFileSync("probe-draft.png", Buffer.from(shot.data, "base64"));
+
+	cdp.close();
+	chrome.kill();
+}
+
+main().catch((e) => {
+	console.error("探针失败:", e.message);
+	chrome.kill();
+	process.exit(1);
+});
