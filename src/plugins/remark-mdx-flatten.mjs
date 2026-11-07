@@ -1,5 +1,3 @@
-import { visit } from "unist-util-visit";
-
 /**
  * 把 MDX 专有节点降级成普通 mdast，供「运行时预览管线」使用。
  *
@@ -21,8 +19,12 @@ import { visit } from "unist-util-visit";
  */
 
 const COMPONENT_NAME = /^[A-Z]/;
-const EVENT_HANDLER = /^on[A-Z]/;
+/** 事件属性一律不输出：预览 HTML 会被 {@html} 注入后台页面，onclick 是真会执行的。
+    JSX 里写 onClick，但小写 onclick 同样合法，所以大小写都不放过。 */
+const EVENT_HANDLER = /^on/i;
 const ATTRIBUTE_NAME = /^[A-Za-z_:][-A-Za-z0-9_:.]*$/;
+/** MDX 注释：{/* … *\/} */
+const EXPRESSION_COMMENT = /^\s*\/\*[\s\S]*\*\/\s*$/;
 
 /** JSX 驼峰属性 → HTML 属性名（只列常用的，其余原样输出） */
 const HTML_ATTRIBUTE_ALIASES = {
@@ -54,6 +56,14 @@ function escapeAttribute(value) {
 	return String(value).replace(/[&<>"]/g, (char) =>
 		char === '"' ? "&quot;" : TEXT_ESCAPES[char],
 	);
+}
+
+/** 单引号属性值：源码里的双引号可以原样保留，读起来不至于满是 &quot; */
+function escapeSingleQuoted(value) {
+	return String(value).replace(/[&<>']/g, (char) => {
+		if (char === "'") return "&#39;";
+		return TEXT_ESCAPES[char];
+	});
 }
 
 /**
@@ -109,38 +119,117 @@ function flattenJsxElement(node, isFlow) {
 	];
 }
 
+const PHRASING_PARENT = new Set([
+	"paragraph",
+	"heading",
+	"emphasis",
+	"strong",
+	"link",
+	"linkReference",
+	"tableCell",
+	"delete",
+	"mdxJsxTextElement",
+]);
+
+/** 这些 JSX 标签内部只放行内内容，块级占位塞进去会把标题/段落拆坏 */
+const PHRASING_TAGS = new Set([
+	"h1",
+	"h2",
+	"h3",
+	"h4",
+	"h5",
+	"h6",
+	"p",
+	"span",
+	"a",
+	"strong",
+	"em",
+	"b",
+	"i",
+	"small",
+	"code",
+	"label",
+	"button",
+	"td",
+	"th",
+	"figcaption",
+]);
+
+function isPhrasingParent(parent) {
+	if (!parent) return false;
+	if (PHRASING_PARENT.has(parent.type)) return true;
+	/* JSX 元素被降级前，子节点看到的 parent 仍是原始 mdxJsxFlowElement，
+	   只能靠标签名判断它是不是行内容器 */
+	if (
+		parent.type === "mdxJsxFlowElement" ||
+		parent.type === "mdxJsxTextElement"
+	) {
+		return PHRASING_TAGS.has(String(parent.name ?? "").toLowerCase());
+	}
+	return false;
+}
+
+/**
+ * 表达式占位。MDX 里 `{…}` 独占一行时会被解析成 block 级节点，
+ * 但它的父节点可能仍是 heading / h3 / p——在这种上下文里塞 <div> 会把标题拆坏，
+ * 所以块级判定要同时看节点类型与父节点。
+ */
+function expressionPlaceholder(node, parent) {
+	const source = String(node.value ?? "")
+		.replace(/\s+/g, " ")
+		.trim();
+	const isBlock =
+		node.type === "mdxFlowExpression" && !isPhrasingParent(parent);
+	const tag = isBlock ? "div" : "span";
+	/* 显示源码前 32 字：`site.name` 这类一眼能看懂，长表达式截断后也不至于铺满版面 */
+	const label = source.length > 32 ? `${source.slice(0, 32)}…` : source;
+	const tooltip = source.length > 120 ? `${source.slice(0, 120)}…` : source;
+
+	return {
+		type: "html",
+		value: `<${tag} class="mdx-expression" title='{${escapeSingleQuoted(tooltip)}}'>{${escapeText(label)}}</${tag}>`,
+	};
+}
+
+/**
+ * 递归降级：先处理子节点，再处理自己。
+ *
+ * 不用 unist-util-visit 的原因：JSX 容器的降级会把「开标签 / 子内容 / 闭标签」
+ * 平铺进父级数组，visit 之后会把原 children 当成父节点的孩子来访问，
+ * 于是 `<h3>{site.name}</h3>` 里的表达式看到 parent=root，被判成块级 <div>，
+ * 标题被拆成三段。递归时 parent 始终是真实宿主节点，判断才成立。
+ */
+function transformChildren(parent) {
+	if (!Array.isArray(parent.children)) return;
+	const next = [];
+	for (const child of parent.children) {
+		next.push(...transformNode(child, parent));
+	}
+	parent.children = next;
+}
+
+function transformNode(node, parent) {
+	if (!node || typeof node !== "object") return [node];
+
+	if (node.type === "mdxjsEsm") return [];
+
+	if (node.type === "mdxFlowExpression" || node.type === "mdxTextExpression") {
+		/* {/* … *\/} 是 MDX 的注释语法，不该出现在成稿里 */
+		if (EXPRESSION_COMMENT.test(node.value ?? "")) return [];
+		return [expressionPlaceholder(node, parent)];
+	}
+
+	if (node.type === "mdxJsxFlowElement" || node.type === "mdxJsxTextElement") {
+		transformChildren(node);
+		return flattenJsxElement(node, node.type === "mdxJsxFlowElement");
+	}
+
+	transformChildren(node);
+	return [node];
+}
+
 export function remarkMdxFlatten() {
 	return (tree) => {
-		visit(tree, (node, index, parent) => {
-			if (!parent || index === undefined || index === null) return;
-
-			if (node.type === "mdxjsEsm") {
-				parent.children.splice(index, 1);
-				return index;
-			}
-
-			if (
-				node.type === "mdxFlowExpression" ||
-				node.type === "mdxTextExpression"
-			) {
-				parent.children.splice(index, 1, {
-					type: "text",
-					value: `{${node.value}}`,
-				});
-				return index + 1;
-			}
-
-			if (
-				node.type === "mdxJsxFlowElement" ||
-				node.type === "mdxJsxTextElement"
-			) {
-				const replacement = flattenJsxElement(
-					node,
-					node.type === "mdxJsxFlowElement",
-				);
-				parent.children.splice(index, 1, ...replacement);
-				return index + 1;
-			}
-		});
+		transformChildren(tree);
 	};
 }

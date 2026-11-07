@@ -35,13 +35,36 @@ describe("MDX 预览渲染", () => {
 		expect(html).toContain("简单的变量导出");
 		expect(html).toContain("这是一个自定义样式的 div 块");
 
-		/* JSX 表达式不求值，按字面量呈现 */
-		expect(html).toContain("今年是 {year} 年。");
+		/* 表达式不求值，降级成占位标记，源码只进 title。
+		   注意：插件输出的是单引号属性，经 rehype-raw 与 hast 序列化后会统一成双引号 */
+		expect(html).toContain('class="mdx-expression"');
+		expect(html).toContain('title="{year}"');
 	}, 60000);
 
 	it("普通 Markdown 不启用 MDX 解析时保持原行为", async () => {
 		const html = await renderMarkdown("## 标题\n\n普通段落。");
 		expect(html).toContain("<h2");
 		expect(html).toContain("普通段落");
+	}, 60000);
+
+	it("整篇 JSX 的页面不把 JS 源码当正文铺开", async () => {
+		const raw = readFileSync("src/content/posts/friends.mdx", "utf8");
+		const body = raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+		const html = await renderMarkdown(body, { mdx: true });
+
+		/* export 块与注释都不该出现在成稿里 */
+		expect(html).not.toContain("export const site");
+		expect(html).not.toContain("左栏：本站信息");
+
+		/* 标签骨架仍然渲染：硬编码的标题文字必须还在 */
+		expect(html).toContain("申请友链");
+		expect(html).toContain("等待审核");
+		expect(html).toContain("注意事项");
+
+		/* 动态部分退化成占位标记，而不是几百行 JS */
+		expect(html).toContain("mdx-expression");
+		expect(html).not.toContain("navigator.clipboard.writeText");
+		/* 源码摘要允许留在 title 里备查，但不能再出现在正文段落 */
+		expect(html.match(/<p>[^<]{0,200}\.map\(/g) ?? []).toHaveLength(0);
 	}, 60000);
 });

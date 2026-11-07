@@ -103,13 +103,16 @@
   resize: none;
 }
 
-/* ── MDX 预览里的组件占位 ──
-   后台预览没有 Astro 组件运行时，`.mdx` 里的 <Icon /> 这类自定义组件渲染不出来。
-   remarkMdxFlatten 会把它们降级成带 data-mdx-component 的占位块：保留子内容，
-   用虚线框和等宽字标签说明「这里是组件，预览不渲染它」。
-   放在 admin.css 而不是组件 scoped 样式里：预览 HTML 是接口返回的、由 {@html} 注入，
+/* ── MDX 预览里的占位标记 ──
+   后台预览没有 Astro 组件运行时，也没有 JSX 求值环境，`.mdx` 里两类东西渲染不出来：
+   · 自定义组件 `<Icon />`  → remarkMdxFlatten 转成 .mdx-component（保留子内容 + 组件名）
+   · JSX 表达式 `{site.name}` → 转成 .mdx-expression（只留一个 … 标记，源码进 title）
+   都用虚线框表示「这里没有真渲染」，不假装成正文。整篇 JSX 的页面（friends.mdx）
+   尤其依赖这条：否则会把几百行 JS 当文章铺出来。
+   放在 admin.css 而不是组件 scoped 样式里：预览 HTML 是接口返回、由 {@html} 注入，
    编辑器与历史版本页两处都要命中。 */
-.admin-shell .mdx-component {
+.admin-shell .mdx-component,
+.admin-shell .mdx-expression {
   border: 1px dashed
     color-mix(in srgb, var(--primary, currentColor) 55%, transparent);
   border-radius: 0.5rem;
@@ -137,4 +140,37 @@
 .admin-shell div.mdx-component > .mdx-component-tag {
   display: block;
   margin-bottom: 0.25rem;
+}
+
+.admin-shell .mdx-expression {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  color: color-mix(in srgb, var(--primary, currentColor) 80%, transparent);
+  cursor: help;
+  user-select: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 表达式属性（src={site.avatar}）求不出值，img 会变成空标签：
+   给个虚线底，避免看起来像一张坏图 */
+.admin-shell img:not([src]),
+.admin-shell img[src=""] {
+  min-height: 1.5rem;
+  min-width: 1.5rem;
+  border: 1px dashed
+    color-mix(in srgb, var(--primary, currentColor) 40%, transparent);
+  border-radius: 0.5rem;
+}
+
+.admin-shell div.mdx-expression {
+  display: block;
+  margin-block: 0.5rem;
+}
+
+.admin-shell span.mdx-expression {
+  display: inline-block;
+  vertical-align: baseline;
 }
