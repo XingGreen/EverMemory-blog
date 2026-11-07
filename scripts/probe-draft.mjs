@@ -271,6 +271,36 @@ async function main() {
 	})()`);
 	console.log("自动保存:", JSON.stringify(autoSave));
 
+	/* 改完内容后离开编辑页再回来：模拟用户「编辑 → 退出 → 重进」 */
+	await cdp.send("Page.navigate", { url: `${ORIGIN}/admin/posts/` });
+	await sleep(3000);
+	await cdp.send("Page.navigate", {
+		url: `${ORIGIN}/admin/posts/edit/${SLUG}/`,
+	});
+	await sleep(7000);
+
+	const revisit = await evalJs(`(() => {
+		const ta = document.querySelector(".content-editor");
+		const dialog = document.querySelector(".modal-overlay");
+		const key = "admin-post-draft-edit-" + ${JSON.stringify(SLUG)};
+		const raw = localStorage.getItem(key);
+		let draft = null;
+		try {
+			draft = raw ? JSON.parse(raw) : null;
+		} catch {
+			draft = null;
+		}
+		return {
+			dialogOpen: !!dialog,
+			editorHasMarker: (ta?.value ?? "").includes("autosave-probe"),
+			editorLen: ta?.value?.length ?? 0,
+			draftHasMarker: !!draft?.content?.includes("autosave-probe"),
+			draftLen: draft?.content?.length ?? 0,
+			draftRestored: draft?.restored ?? null,
+		};
+	})()`);
+	console.log("离开后重进:", JSON.stringify(revisit));
+
 	const shot = await cdp.send("Page.captureScreenshot", { format: "png" });
 	writeFileSync("probe-draft.png", Buffer.from(shot.data, "base64"));
 

@@ -1094,10 +1094,15 @@ async function restoreCreateDraft() {
 				: cloud;
 	if (!source || (!source.title && !source.content)) return;
 
-	/* 这份草稿用户上次已经点过「恢复」：直接套用，不再询问。
-	   不打这个标记的话，恢复后的草稿内容与正文不同，下次进来又会被判成
-	   「有未保存改动」而重新弹窗，形成死循环。 */
-	if (source.restored) {
+	/* 近期草稿直接套用，不弹窗。
+	   「刚改完就离开、马上回来」是最常见的路径，每次都问一遍会让人以为内容丢了；
+	   而此时点「保留当前正文」会把草稿清掉，数据就真的没了。
+	   只有隔了较久的草稿才值得问一次——那时用户多半已经忘了自己写过。 */
+	const RECENT_MS = 5 * 60 * 1000;
+	const age = source.savedAt
+		? Date.now() - source.savedAt
+		: Number.POSITIVE_INFINITY;
+	if (source.restored || age < RECENT_MS) {
 		const baseline = JSON.stringify(currentDraft());
 		applyDraft(source);
 		resetHistory();
