@@ -56,16 +56,57 @@ describe("MDX 预览渲染", () => {
 		expect(html).not.toContain("export const site");
 		expect(html).not.toContain("左栏：本站信息");
 
+		/* 受限求值：纯字面量常量 + 成员访问渲染出真值 */
+		expect(html).toContain("夏夜流萤");
+		expect(html).toContain("飞萤之火自无梦的长夜亮起");
+		expect(html).toContain("hengruoyi@qq.com");
+		/* 表达式属性也求值：头像 img 拿到真实地址 */
+		expect(html).toContain('src="https://weavatar.com');
+
 		/* 标签骨架仍然渲染：硬编码的标题文字必须还在 */
 		expect(html).toContain("申请友链");
 		expect(html).toContain("等待审核");
 		expect(html).toContain("注意事项");
 
-		/* 动态部分退化成占位标记，而不是几百行 JS */
+		/* 函数调用（.map）不可求值，仍是占位 */
 		expect(html).toContain("mdx-expression");
 		expect(html).not.toContain("navigator.clipboard.writeText");
 		/* 对象字面量、map 回调等源码只允许出现在 title 属性里，绝不能成为可见文本 */
 		expect(html).not.toContain(">{[ { label:");
 		expect(html).not.toContain(">notes.map((item)");
+	}, 60000);
+
+	it("受限求值的安全边界", async () => {
+		const mdx = [
+			'export const site = { name: "测试站", nested: { deep: "值" } };',
+			"export const n = 42;",
+			"export const flag = true;",
+			"export const neg = -7;",
+			"export const tpl = `共 ${n} 篇`;",
+			'export const fn = () => "危险";',
+			"",
+			"{site.name}|{site.nested.deep}|{n}|{flag}|{neg}|{tpl}",
+			"",
+			"{site.missing}|{fn()}|{globalThis}|{site.name.constructor}",
+			"",
+			"{ n + 1 }",
+		].join("\n");
+
+		const html = await renderMarkdown(mdx, { mdx: true });
+
+		/* 可求值：成员访问（含嵌套）、数字、布尔、负数、模板串 */
+		expect(html).toContain("测试站");
+		expect(html).toContain("值");
+		expect(html).toContain("42");
+		expect(html).toContain("true");
+		expect(html).toContain("-7");
+		expect(html).toContain("共 42 篇");
+
+		/* 不可求值：缺失属性、函数调用、全局对象、原型链逃逸、算术——一律占位 */
+		const placeholders = html.match(/mdx-expression/g) ?? [];
+		/* site.missing / fn() / globalThis / constructor / n+1 共 5 处 */
+		expect(placeholders.length).toBe(5);
+		expect(html).not.toContain("危险");
+		expect(html).not.toContain("[object Object]");
 	}, 60000);
 });

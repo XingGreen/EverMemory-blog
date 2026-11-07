@@ -8,14 +8,14 @@
  *   2. 自闭合 JSX `<Icon />` 被当成未闭合 HTML 标签，后续正文全被吞进该元素。
  *
  * 这里配合 remark-mdx（只负责解析出 mdxJsx* / mdxjsEsm 节点）做降级：
- *   - `mdxjsEsm`                → 丢弃（import/export 无法在浏览器侧求值）
- *   - `mdx*Expression`          → 还原成字面量文本 `{expr}`
+ *   - `mdxjsEsm`                → 语句丢弃，但 const 纯字面量声明进常量表
+ *   - `mdx*Expression`          → 先试受限求值（常量 + 成员访问），求不出转 {…} 占位
  *   - JSX 片段 `<>…</>`         → 直接展开子节点
  *   - 组件（首字母大写）         → 虚线占位块，保留子内容并标出组件名
  *   - HTML 标签                  → 转回普通标签，属性做 JSX→HTML 映射
  *
  * 已知局限：组件本体不会被渲染（Astro 组件在浏览器运行时里不存在），
- * 表达式也不会求值——预览只负责「结构与正文正确」。
+ * 含函数调用的表达式（`notes.map(...)`）不会求值——预览只负责「结构与正文正确」。
  */
 
 const COMPONENT_NAME = /^[A-Z]/;
@@ -68,10 +68,10 @@ function escapeSingleQuoted(value) {
 
 /**
  * 序列化 JSX 属性。
- * 表达式属性（`className={x}`）与展开属性（`{...props}`）在预览里没有值可输出，
- * 直接跳过——保留一个空属性反而会让浏览器当成合法空值，观感更差。
+ * 字符串属性直接输出；表达式属性（`src={site.avatar}`）尝试受限求值，
+ * 求不出就跳过——保留空属性反而会让浏览器当成合法空值，观感更差。
  */
-function serializeAttributes(attributes) {
+function serializeAttributes(attributes, scope) {
 	const parts = [];
 	for (const attribute of attributes ?? []) {
 		if (attribute.type !== "mdxJsxAttribute") continue;
@@ -82,8 +82,23 @@ function serializeAttributes(attributes) {
 			parts.push(name);
 			continue;
 		}
-		if (typeof attribute.value !== "string") continue;
-		parts.push(`${name}="${escapeAttribute(attribute.value)}"`);
+		if (typeof attribute.value === "string") {
+			parts.push(`${name}="${escapeAttribute(attribute.value)}"`);
+			continue;
+		}
+		if (attribute.value.type === "mdxJsxAttributeValueExpression") {
+			const program = attribute.value.data?.estree;
+			const statement =
+				program?.type === "Program" && program.body.length === 1
+					? program.body[0]
+					: undefined;
+			if (statement?.type === "ExpressionStatement") {
+				const value = evalExpression(statement.expression, scope, 0);
+				if (isPlainValue(value)) {
+					parts.push(`${name}="${escapeAttribute(String(value))}"`);
+				}
+			}
+		}
 	}
 	return parts.length > 0 ? ` ${parts.join(" ")}` : "";
 }
@@ -92,7 +107,7 @@ function html(value) {
 	return { type: "html", value };
 }
 
-function flattenJsxElement(node, isFlow) {
+function flattenJsxElement(node, isFlow, scope) {
 	const children = node.children ?? [];
 
 	// 片段 <>…</>：没有包裹语义，直接展开
@@ -113,7 +128,7 @@ function flattenJsxElement(node, isFlow) {
 
 	// 普通 HTML 标签：还原标签，只做属性名映射
 	return [
-		html(`<${node.name}${serializeAttributes(node.attributes)}>`),
+		html(`<${node.name}${serializeAttributes(node.attributes, scope)}>`),
 		...children,
 		html(`</${node.name}>`),
 	];
@@ -170,23 +185,173 @@ function isPhrasingParent(parent) {
 }
 
 /**
- * 表达式占位。MDX 里 `{…}` 独占一行时会被解析成 block 级节点，
- * 但它的父节点可能仍是 heading / h3 / p——在这种上下文里塞 <div> 会把标题拆坏，
- * 所以块级判定要同时看节点类型与父节点。
+ * 受限求值：让 `{site.name}` 这类「纯字面量常量 + 成员访问」在预览里渲染出真值。
  *
- * 可见文字不用源码本身：`{[ {label:"站点名称", value: site.name}, …]}` 这类长对象
- * 数组直接铺 32 字，观感就是「满屏 JS 没渲染」，比一个干净的占位更糟。
- * 固定成 `{…}`，源码全文只进 title 悬浮提示。
+ * 立场是「解释 AST」，绝不 eval / new Function——即使文章被注入恶意代码，
+ * 求值器只会因为遇到不支持的语法而返回 undefined（占位），不存在代码执行。
+ *
+ * 支持的语法（超出即占位）：
+ *   声明：`export const x = <字面量>`（字面量 = 字符串/数字/布尔/null、
+ *         数组、对象、无插值或插值可求值的模板串、±数字、引用已声明常量）
+ *   表达式：常量标识符、成员访问（`site.name`，只认自有属性，非计算）、
+ *           字面量、模板串
+ * 显式不支持：函数调用（`f()`、`notes.map(...)`）、`new`、计算属性 `a[b]`、
+ *             `let/var`（有再赋值语义）、原型链取值（自有属性之外一律拒绝）
  */
-function expressionPlaceholder(node, parent) {
-	const source = String(node.value ?? "")
-		.replace(/\s+/g, " ")
-		.trim();
+
+const EVAL_DEPTH_MAX = 24;
+/** 超长表达式直接占位：求值收益低，还能防大 AST 拖慢预览 */
+const EVAL_SOURCE_MAX = 2000;
+
+function isPlainValue(value) {
+	return (
+		typeof value === "string" ||
+		typeof value === "number" ||
+		typeof value === "boolean"
+	);
+}
+
+function evalLiteral(node, scope, depth) {
+	if (!node || typeof node !== "object" || depth > EVAL_DEPTH_MAX) return;
+
+	switch (node.type) {
+		case "Literal": {
+			/* regex / bigint 字面量不是普通 JSON 值，排除 */
+			if (node.regex || node.bigint !== undefined) return;
+			return node.value;
+		}
+		case "TemplateLiteral": {
+			/* 插值若也能受限求值就拼接，否则整体放弃 */
+			const parts = [];
+			for (let i = 0; i < node.quasis.length; i++) {
+				parts.push(node.quasis[i].value.cooked ?? "");
+				if (i < node.expressions.length) {
+					const value = evalExpression(node.expressions[i], scope, depth + 1);
+					if (value === undefined) return;
+					parts.push(String(value));
+				}
+			}
+			return parts.join("");
+		}
+		case "ObjectExpression": {
+			const object = {};
+			for (const property of node.properties) {
+				if (property.type !== "Property" || property.computed) return;
+				const key =
+					property.key.type === "Identifier"
+						? property.key.name
+						: property.key.type === "Literal"
+							? String(property.key.value)
+							: undefined;
+				if (key === undefined) return;
+				const value = evalLiteral(property.value, scope, depth + 1);
+				if (value === undefined) return;
+				object[key] = value;
+			}
+			return object;
+		}
+		case "ArrayExpression": {
+			const array = [];
+			for (const element of node.elements) {
+				if (!element) return; /* 稀疏数组 [1, , 2] 不支持 */
+				const value = evalLiteral(element, scope, depth + 1);
+				if (value === undefined) return;
+				array.push(value);
+			}
+			return array;
+		}
+		case "UnaryExpression": {
+			if (node.operator !== "-" && node.operator !== "+") return;
+			const value = evalLiteral(node.argument, scope, depth + 1);
+			if (typeof value !== "number") return;
+			return node.operator === "-" ? -value : value;
+		}
+		case "Identifier": {
+			if (scope && Object.hasOwn(scope, node.name)) return scope[node.name];
+			return;
+		}
+		default:
+			return;
+	}
+}
+
+function evalExpression(node, scope, depth) {
+	if (!node || typeof node !== "object" || depth > EVAL_DEPTH_MAX) return;
+
+	switch (node.type) {
+		case "Identifier":
+		case "Literal":
+		case "TemplateLiteral":
+		case "UnaryExpression":
+			return evalLiteral(node, scope, depth);
+		case "MemberExpression": {
+			/* a[b] 计算属性不支持；只认自有属性，堵死 constructor / __proto__ 链。
+			   中间层允许返回对象/数组（嵌套访问 site.nested.deep 要靠它），
+			   最终值是否可入正文由调用方过滤。 */
+			if (node.computed) return;
+			const object = evalExpression(node.object, scope, depth + 1);
+			if (object === undefined || object === null || typeof object !== "object")
+				return;
+			const key =
+				node.property.type === "Identifier"
+					? node.property.name
+					: node.property.type === "Literal"
+						? String(node.property.value)
+						: undefined;
+			if (key === undefined || !Object.hasOwn(object, key)) return;
+			return object[key];
+		}
+		default:
+			return;
+	}
+}
+
+/** 从 `export const x = …` 声明里收集常量。求不出的（含函数）不进表。 */
+function collectConstants(node, scope) {
+	const program = node.data?.estree;
+	if (program?.type !== "Program") return;
+	for (const statement of program.body) {
+		const declaration =
+			statement.type === "ExportNamedDeclaration"
+				? statement.declaration
+				: statement.type === "VariableDeclaration"
+					? statement
+					: undefined;
+		if (declaration?.type !== "VariableDeclaration") continue;
+		if (declaration.kind !== "const") continue;
+		for (const declarator of declaration.declarations) {
+			if (declarator.id.type !== "Identifier" || !declarator.init) continue;
+			const value = evalLiteral(declarator.init, scope, 0);
+			if (value !== undefined) scope[declarator.id.name] = value;
+		}
+	}
+}
+
+/**
+ * 表达式节点：先试受限求值，求出普通值就渲染为真文本；
+ * 求不出（含函数调用、JSX）退回 {…} 占位。
+ */
+function expressionReplacement(node, parent, scope) {
+	const source = String(node.value ?? "").trim();
 	const isBlock =
 		node.type === "mdxFlowExpression" && !isPhrasingParent(parent);
 	const tag = isBlock ? "div" : "span";
-	const tooltip = source.length > 120 ? `${source.slice(0, 120)}…` : source;
 
+	if (source.length <= EVAL_SOURCE_MAX) {
+		const program = node.data?.estree;
+		const statement =
+			program?.type === "Program" && program.body.length === 1
+				? program.body[0]
+				: undefined;
+		if (statement?.type === "ExpressionStatement") {
+			const value = evalExpression(statement.expression, scope, 0);
+			if (isPlainValue(value)) {
+				return { type: "text", value: String(value) };
+			}
+		}
+	}
+
+	const tooltip = source.length > 120 ? `${source.slice(0, 120)}…` : source;
 	return {
 		type: "html",
 		value: `<${tag} class="mdx-expression" title='{${escapeSingleQuoted(tooltip)}}'>{…}</${tag}>`,
@@ -201,37 +366,41 @@ function expressionPlaceholder(node, parent) {
  * 于是 `<h3>{site.name}</h3>` 里的表达式看到 parent=root，被判成块级 <div>，
  * 标题被拆成三段。递归时 parent 始终是真实宿主节点，判断才成立。
  */
-function transformChildren(parent) {
+function transformChildren(parent, scope) {
 	if (!Array.isArray(parent.children)) return;
 	const next = [];
 	for (const child of parent.children) {
-		next.push(...transformNode(child, parent));
+		next.push(...transformNode(child, parent, scope));
 	}
 	parent.children = next;
 }
 
-function transformNode(node, parent) {
+function transformNode(node, parent, scope) {
 	if (!node || typeof node !== "object") return [node];
 
-	if (node.type === "mdxjsEsm") return [];
+	if (node.type === "mdxjsEsm") {
+		/* 语句本身丢弃，但 const 声明进常量表，供后续表达式求值 */
+		collectConstants(node, scope);
+		return [];
+	}
 
 	if (node.type === "mdxFlowExpression" || node.type === "mdxTextExpression") {
 		/* {/* … *\/} 是 MDX 的注释语法，不该出现在成稿里 */
 		if (EXPRESSION_COMMENT.test(node.value ?? "")) return [];
-		return [expressionPlaceholder(node, parent)];
+		return [expressionReplacement(node, parent, scope)];
 	}
 
 	if (node.type === "mdxJsxFlowElement" || node.type === "mdxJsxTextElement") {
-		transformChildren(node);
-		return flattenJsxElement(node, node.type === "mdxJsxFlowElement");
+		transformChildren(node, scope);
+		return flattenJsxElement(node, node.type === "mdxJsxFlowElement", scope);
 	}
 
-	transformChildren(node);
+	transformChildren(node, scope);
 	return [node];
 }
 
 export function remarkMdxFlatten() {
 	return (tree) => {
-		transformChildren(tree);
+		transformChildren(tree, Object.create(null));
 	};
 }
