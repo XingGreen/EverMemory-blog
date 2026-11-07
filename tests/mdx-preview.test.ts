@@ -1,15 +1,16 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { renderMarkdown } from "@/utils/markdown-renderer";
+import { renderMdxFallback } from "@/utils/mdx-fallback";
 
 /**
- * MDX 预览的端到端回归。
+ * MDX 降级通道（remark-mdx + remarkMdxFlatten）的端到端回归。
  *
  * 曾经的故障：后台预览走纯 remark 管线，`.mdx` 里的 `import` 变成正文段落，
  * 自闭合 `<Icon />` 被当未闭合 HTML 标签，把后续正文全部吞进该元素。
  * 这里直接渲染仓库里的示例文章，锁住「不吞内容 + 组件降级为占位」两件事。
  *
- * 只跑 .mdx 分支：普通 .md 的行为由前台构建覆盖，不在这里重复。
+ * 主通道（evaluate 运行时）的行为在 mdx-runtime.test.ts 里验证。
  */
 
 const MDX_FILE = "src/content/posts/mdx-example.mdx";
@@ -19,9 +20,9 @@ function mdxBody(): string {
 	return raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
 }
 
-describe("MDX 预览渲染", () => {
+describe("MDX 降级通道", () => {
 	it("不把 import/export 当正文，且组件降级为占位而不是吞掉后续内容", async () => {
-		const html = await renderMarkdown(mdxBody(), { mdx: true });
+		const html = await renderMdxFallback(mdxBody());
 
 		/* import 语句会以代码示例形式出现，但绝不能作为正文段落（<p>import …）出现 */
 		expect(html).not.toContain("<p>import ");
@@ -41,16 +42,21 @@ describe("MDX 预览渲染", () => {
 		expect(html).toContain('title="{year}"');
 	}, 60000);
 
-	it("普通 Markdown 不启用 MDX 解析时保持原行为", async () => {
-		const html = await renderMarkdown("## 标题\n\n普通段落。");
+	it("MD 通道不受 MDX 语法影响（双通道互不干扰的回归点）", async () => {
+		const html = await renderMarkdown(
+			"## 标题\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n<!-- 注释 -->\n\n普通 < b 段落。",
+		);
 		expect(html).toContain("<h2");
-		expect(html).toContain("普通段落");
+		/* gfm 表格由 markdown-remark 默认启用 */
+		expect(html).toContain("<table");
+		/* HTML 注释、裸 `<` 在 MD 通道里是合法内容 */
+		expect(html).toContain("普通");
 	}, 60000);
 
 	it("整篇 JSX 的页面不把 JS 源码当正文铺开", async () => {
 		const raw = readFileSync("src/content/posts/friends.mdx", "utf8");
 		const body = raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
-		const html = await renderMarkdown(body, { mdx: true });
+		const html = await renderMdxFallback(body);
 
 		/* export 块与注释都不该出现在成稿里 */
 		expect(html).not.toContain("export const site");
@@ -92,7 +98,7 @@ describe("MDX 预览渲染", () => {
 			"{ n + 1 }",
 		].join("\n");
 
-		const html = await renderMarkdown(mdx, { mdx: true });
+		const html = await renderMdxFallback(mdx);
 
 		/* 可求值：成员访问（含嵌套）、数字、布尔、负数、模板串 */
 		expect(html).toContain("测试站");

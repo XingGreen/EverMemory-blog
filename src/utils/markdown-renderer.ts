@@ -13,9 +13,10 @@ import rehypeKatex from "rehype-katex";
 import rehypeSlug from "rehype-slug";
 import remarkAdmonitionToBlockquoteCallout from "remark-admonition-to-blockquote-callout";
 import remarkDirective from "remark-directive";
+import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import remarkMdx from "remark-mdx";
 import remarkSectionize from "remark-sectionize";
+import remarkSmartypants from "remark-smartypants";
 import { expressiveCodeConfig, plantumlConfig, siteConfig } from "@/config";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -27,19 +28,15 @@ import { rehypePlantuml } from "@/plugins/rehype-plantuml.mjs";
 import { parseDirectiveNode } from "@/plugins/remark-directive-rehype.js";
 import { remarkExcerpt } from "@/plugins/remark-excerpt.js";
 import { remarkImageGrid } from "@/plugins/remark-image-grid.js";
-import { remarkMdxFlatten } from "@/plugins/remark-mdx-flatten.mjs";
 import { remarkMermaid } from "@/plugins/remark-mermaid.js";
 import { remarkPlantuml } from "@/plugins/remark-plantuml.js";
 import { remarkReadingTime } from "@/plugins/remark-reading-time.mjs";
 
 let processorInstance: ReturnType<typeof unified> | null = null;
-/** MDX 预览专用实例：多挂了 remark-mdx + remarkMdxFlatten，普通 .md 不该走这条路径 */
-let mdxProcessorInstance: ReturnType<typeof unified> | null = null;
 type Renderer = Awaited<
 	ReturnType<ReturnType<typeof unified>["createRenderer"]>
 >;
 let rendererPromise: Promise<Renderer> | null = null;
-let mdxRendererPromise: Promise<Renderer> | null = null;
 
 /**
  * 预览代码块渲染：与前台文章页一致的 expressive-code（高亮/复制/折叠/行号/双主题）。
@@ -119,10 +116,14 @@ type RemarkPluginList = NonNullable<
 >;
 
 /**
- * 渲染管线共用的 remark 插件序列（不含 MDX 处理，MDX 分支由调用方叠加）。
+ * MD 通道的 remark 插件序列（标准 Markdown）。
  *
- * 导出给 mdx-runtime（@mdx-js/mdx evaluate）复用：evaluate 自带 MDX 解析，
- * 只需要这里的增强插件；两边共用同一份列表，避免渲染行为漂移。
+ * 导出给两条 MDX 通道复用（避免渲染行为漂移），但 MD 通道与 MDX 通道的
+ * 解析互相独立：本文件的 renderMarkdown() 只接受标准 Markdown；
+ * MDX 一律走 mdx-runtime.ts（主）或 mdx-fallback.ts（保底）。
+ *
+ * gfm / smartypants 不在这里——markdown-remark 默认启用它们（前台一致行为），
+ * 显式传反而会在 evaluate 一侧造成两份默认值的漂移点。
  */
 export function buildSharedRemarkPlugins(): RemarkPluginList {
 	return [
@@ -142,13 +143,23 @@ export function buildSharedRemarkPlugins(): RemarkPluginList {
 }
 
 /**
- * mdx-runtime（@mdx-js/mdx evaluate）专用的 remark 插件列表。
- * 与 buildSharedRemarkPlugins 的差别：去掉 remarkReadingTime / remarkExcerpt——
+ * MDX 主通道（@mdx-js/mdx evaluate）专用的 remark 插件列表。
+ *
+ * evaluate 不继承 markdown-remark 的默认行为，基础能力必须显式传：
+ *   - remark-gfm：表格/删除线/任务列表（MD 通道由 markdown-remark 默认启用，
+ *     MDX 通道漏掉它表格会渲染成纯文本段落）
+ *   - remark-smartypants：引号/破折号美化（MD 通道同为默认启用）
+ * 与 buildSharedRemarkPlugins 的另一处差别：去掉 remarkReadingTime / remarkExcerpt——
  * 它们只往 vfile 的 astro.frontmatter 写构建期元数据，对预览 HTML 无作用，
  * 且直接假设 data.astro 存在，在 evaluate 的裸 VFile 上会炸。
  */
 export function buildMdxRuntimeRemarkPlugins(): RemarkPluginList {
 	return [
+		remarkGfm,
+		/* remarkSmartypants 是工厂，必须用元组让 unified 调用 attacher；
+		   预先调用会把 transformer 当 attacher 用，freeze 阶段直接炸。
+		   其类型经 retext 包装，与 unified 的 Pluggable 不兼容，用 as never 绕过 */
+		[remarkSmartypants as never, {}],
 		...(siteConfig.post.rehypeCallouts.enablePythonMarkdownAdmonitions !== false
 			? [remarkAdmonitionToBlockquoteCallout]
 			: []),
@@ -159,20 +170,6 @@ export function buildMdxRuntimeRemarkPlugins(): RemarkPluginList {
 		parseDirectiveNode,
 		remarkMermaid,
 		[remarkPlantuml, plantumlConfig],
-	];
-}
-
-/**
- * mdx 为 true 时在最前面挂 remark-mdx（只负责解析出 mdx 节点）与 remarkMdxFlatten
- * （把它们降级成普通 mdast）。两者必须排在其余插件之前：后续插件
- * （sectionize / excerpt / imageGrid…）都假设输入是标准 mdast。
- * 同理 remark-mdx 要排在 remark-gfm 之后——markdown-remark 内部先 use(gfm)，
- * 我们的插件集合在其后追加，顺序天然正确。
- */
-function buildRemarkPlugins(mdx: boolean): RemarkPluginList {
-	return [
-		...(mdx ? [remarkMdx as never, remarkMdxFlatten as never] : []),
-		...buildSharedRemarkPlugins(),
 	];
 }
 
@@ -222,42 +219,25 @@ export function buildSharedRehypePlugins() {
 }
 
 /**
- * 获取与 Astro 配置一致的 Markdown 处理器
- * 包含项目使用的核心 remark/rehype 插件
+ * 获取 MD 通道的处理器：只处理标准 Markdown，与 Astro 前台 .md 文章同一管线。
  */
-function getProcessor(mdx = false) {
-	const cached = mdx ? mdxProcessorInstance : processorInstance;
-	if (cached) return cached;
+function getProcessor() {
+	if (processorInstance) return processorInstance;
 
-	const instance = unified({
-		remarkPlugins: buildRemarkPlugins(mdx),
+	processorInstance = unified({
+		remarkPlugins: buildSharedRemarkPlugins(),
 		rehypePlugins: buildSharedRehypePlugins(),
 	});
-
-	if (mdx) {
-		mdxProcessorInstance = instance;
-	} else {
-		processorInstance = instance;
-	}
-	return instance;
+	return processorInstance;
 }
 
-async function getRenderer(mdx = false) {
-	if (mdx) {
-		if (!mdxRendererPromise) {
-			/* 必须开启语法高亮：syntaxHighlight: false 会连带不生成主题颜色变量，
-			   于是浅色模式下代码块仍是黑底（expressive-code 的双主题靠这些变量切换）。
-			   类型定义只接受对象形式，但运行时布尔 true 才是「启用并复用插件已配的主题」，
-			   故用 as any 绕过——实测 false 与「省略」都不生成变量，只有 true 生成。 */
-			mdxRendererPromise = getProcessor(true).createRenderer({
-				syntaxHighlight: true as unknown as undefined,
-			});
-		}
-		return mdxRendererPromise;
-	}
-
+async function getRenderer() {
 	if (!rendererPromise) {
-		rendererPromise = getProcessor(false).createRenderer({
+		/* 必须开启语法高亮：syntaxHighlight: false 会连带不生成主题颜色变量，
+		   于是浅色模式下代码块仍是黑底（expressive-code 的双主题靠这些变量切换）。
+		   类型定义只接受对象形式，但运行时布尔 true 才是「启用并复用插件已配的主题」，
+		   故用 as any 绕过——实测 false 与「省略」都不生成变量，只有 true 生成。 */
+		rendererPromise = getProcessor().createRenderer({
 			syntaxHighlight: true as unknown as undefined,
 		});
 	}
@@ -265,15 +245,11 @@ async function getRenderer(mdx = false) {
 }
 
 /**
- * 渲染 Markdown 为 HTML，使用与主站相同的渲染管线
- *
- * @param options.mdx 内容是否为 .mdx（决定是否启用 MDX 语法解析与降级）
+ * 渲染 Markdown 为 HTML（MD 通道，与主站 .md 文章同一管线）。
+ * MDX 内容不走这里——主通道在 mdx-runtime.ts，降级在 mdx-fallback.ts。
  */
-export async function renderMarkdown(
-	content: string,
-	options: { mdx?: boolean } = {},
-): Promise<string> {
-	const renderer = await getRenderer(options.mdx === true);
+export async function renderMarkdown(content: string): Promise<string> {
+	const renderer = await getRenderer();
 	const result = await renderer.render(content);
 	return result.code;
 }

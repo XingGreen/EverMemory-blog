@@ -1,5 +1,6 @@
 import { requireAuth } from "@/utils/auth";
 import { renderMarkdown } from "@/utils/markdown-renderer";
+import { renderMdxFallback } from "@/utils/mdx-fallback";
 import { renderMdxRuntime } from "@/utils/mdx-runtime";
 
 export const prerender = false;
@@ -21,17 +22,18 @@ export async function POST({ request }) {
 			);
 		}
 
-		/* 只有 .mdx 才启用 MDX 解析：remark-mdx 会把 `<`、`{` 等当成 JSX/表达式语法，
-		   普通 .md 里出现 `<!-- 注释 -->` 这类不合法 JSX 会直接报错。
-		   扩展名判定放在服务端，避免各调用点各写一份。 */
+		/* ── 路由分发：双通道 ──
+		   .md  → MD 通道（renderMarkdown，标准 Markdown，gfm/smartypants 由
+		          markdown-remark 默认启用）
+		   .mdx → MDX 主通道（evaluate 全量执行）；编辑中的半成品编译不过时
+		          落到 MDX 降级通道（remark-mdx-flatten，零执行保结构）
+		   扩展名判定放服务端，避免各调用点各写一份。 */
 		const isMdx =
 			mdx === true ||
 			(typeof filePath === "string" && /\.mdx$/i.test(filePath.trim()));
 
 		let html: string;
 		if (isMdx) {
-			/* 首选 evaluate 全量运行时：.map、模板串、任意表达式都真实渲染。
-			   编辑中的内容随时可能是编译不过的半成品，失败时退回降级管线保底。 */
 			try {
 				html = await renderMdxRuntime(content);
 			} catch (error) {
@@ -39,7 +41,7 @@ export async function POST({ request }) {
 					"[Admin Preview] MDX runtime failed, fallback to flatten:",
 					error instanceof Error ? error.message : error,
 				);
-				html = await renderMarkdown(content, { mdx: true });
+				html = await renderMdxFallback(content);
 			}
 		} else {
 			html = await renderMarkdown(content);

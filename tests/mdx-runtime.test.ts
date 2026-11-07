@@ -38,13 +38,19 @@ describe("MDX 运行时渲染", () => {
 		expect(html).not.toContain("mdx-component");
 	}, 60000);
 
-	it("mdx-example.mdx：import 组件映射为占位，代码块内 import 不被误删", async () => {
+	it("mdx-example.mdx：Icon 真渲染为 svg，代码块内 import 不被误删", async () => {
 		const html = await renderMdxRuntime(
 			mdxBody("src/content/posts/mdx-example.mdx"),
 		);
 
-		/* import 的 Icon（astro-icon，Preact 世界不存在）→ 占位块 */
-		expect(html).toContain('data-mdx-component="Icon"');
+		/* Icon（astro-icon）直读 iconify 数据 → 真 <svg>，保留 class 与默认 1em 尺寸 */
+		expect(html).toContain("<svg");
+		expect(html).toContain('class="text-4xl text-red-500"');
+		expect(html).toContain('width="1em"');
+		/* fa7 全系集合顶层画布是 640（图标级未单独声明时回落） */
+		expect(html).toContain('viewBox="0 0 640 640"');
+		/* 不再是占位块 */
+		expect(html).not.toContain('data-mdx-component="Icon"');
 		/* 占位块之后的正文照常渲染 */
 		expect(html).toContain("火箭发射");
 		expect(html).toContain("使用 JSX");
@@ -74,5 +80,33 @@ describe("MDX 运行时渲染", () => {
 		/* 围栏内的 Fake 示例还在；围栏外的 Icon 被替换为占位 */
 		expect(html).toContain("import { Fake } from 'somewhere'");
 		expect(html).toContain('data-mdx-component="Icon"');
+	}, 60000);
+
+	it("未知集合/图标的 Icon 退回占位块", async () => {
+		const html = await renderMdxRuntime(
+			'import { Icon } from \'astro-icon/components\'\n\nexport const dynamicName = "no-such-set:icon"\n\n<Icon name="no-such-set:icon" />\n<Icon name={dynamicName} />',
+		);
+		/* 两个 Icon（未知集合 + 表达式动态名）都应降级为占位 */
+		expect((html.match(/data-mdx-component="Icon"/g) ?? []).length).toBe(2);
+	}, 60000);
+
+	it("MDX 通道具备 GFM 基础能力：表格/删除线渲染为真实元素", async () => {
+		/* 曾经的故障：evaluate 不继承 markdown-remark 的默认插件，
+		   漏掉 remark-gfm 后 mdx-example.mdx 的表格整张渲染成纯文本段落 */
+		const html = await renderMdxRuntime(
+			"| 特性 | Markdown |\n| :--- | :--- |\n| 基础语法 | 支持 |\n\n~~删除线~~ 与 <b>粗体</b>。",
+		);
+		expect(html).toContain("<table");
+		expect(html).toContain("<th");
+		expect(html).toContain("<del>删除线</del>");
+	}, 60000);
+
+	it("mdx-example.mdx 的对比表格渲染成真实表格", async () => {
+		const html = await renderMdxRuntime(
+			mdxBody("src/content/posts/mdx-example.mdx"),
+		);
+		expect(html).toContain("<table");
+		expect(html).toContain("基础语法");
+		expect(html).toContain("CommonMark");
 	}, 60000);
 });
