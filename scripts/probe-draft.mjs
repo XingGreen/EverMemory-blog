@@ -143,7 +143,7 @@ async function main() {
 
 	const seeded = await evalJs(`(() => {
 		const key = "admin-post-draft-edit-${SLUG}";
-		const ta = document.querySelector("textarea");
+		const ta = document.querySelector(".content-editor");
 		const titleInput = document.querySelector(".editor-header input");
 		const payload = {
 			title: titleInput ? titleInput.value : "",
@@ -206,6 +206,40 @@ async function main() {
 		};
 	})()`);
 	console.log("点击恢复后:", JSON.stringify(afterRestore));
+
+	/* 自动保存链路：改一个标记，等防抖到期，看本地与云端是否都收到 */
+	const autoSave = await evalJs(`(async () => {
+		const ta = document.querySelector(".content-editor");
+		if (!ta) return { noTextarea: true };
+		ta.focus();
+		ta.value = ta.value + String.fromCharCode(10) + "<!-- autosave-probe -->";
+		ta.dispatchEvent(new Event("input", { bubbles: true }));
+		await new Promise((r) => setTimeout(r, 3000));
+		const key = "admin-post-draft-edit-" + ${JSON.stringify(SLUG)};
+		const raw = localStorage.getItem(key);
+		const cloud = await fetch(
+			"/api/admin/draft/?slug=" + encodeURIComponent(${JSON.stringify(SLUG)}),
+		)
+			.then((r) => r.json())
+			.catch(() => null);
+		/* 请求是否真的发出去了：性能条目能反映 fetch 的耗时与结果 */
+		const reqs = performance
+			.getEntriesByType("resource")
+			.filter((r) => r.name.includes("/api/admin/draft"))
+			.map((r) => ({
+				start: Math.round(r.startTime),
+				dur: Math.round(r.duration),
+				size: r.transferSize,
+			}));
+		return {
+			localHasMarker: !!raw && raw.includes("autosave-probe"),
+			cloudHasMarker: !!cloud?.draft?.content?.includes("autosave-probe"),
+			localLen: raw ? raw.length : 0,
+			requestCount: reqs.length,
+			requests: reqs.slice(-4),
+		};
+	})()`);
+	console.log("自动保存:", JSON.stringify(autoSave));
 
 	const shot = await cdp.send("Page.captureScreenshot", { format: "png" });
 	writeFileSync("probe-draft.png", Buffer.from(shot.data, "base64"));

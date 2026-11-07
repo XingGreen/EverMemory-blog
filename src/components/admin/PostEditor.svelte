@@ -719,6 +719,10 @@ function currentDraft(): DraftFields {
  * 注意：写入本身不改状态，由调用方决定展示 local-only 还是 failed。
  */
 function persistLocalDraft(draft: DraftFields): boolean {
+	/* slug 还没加载完时不写：此时键会退化成 ...-unknown，等文章到位后
+	   读写都换成 ...-<slug>，先前写进去的那份再也读不回来，表现为「退出再进全丢」。
+	   自动保存可能在正文加载前就触发，这条早退是主要防线。 */
+	if (mode === "edit" && !post?.slug) return false;
 	try {
 		localStorage.setItem(
 			DRAFT_KEY,
@@ -883,8 +887,16 @@ async function saveCloudDraft(draft: DraftFields) {
 			}),
 		});
 		const data = await res.json();
-		// 代际校验：保存期间又有新改动（cloudSeq 已递增）则丢弃本次结果
-		if (seq !== cloudSeq) return;
+		/* 代际校验：保存期间又有新改动（cloudSeq 已递增）则本次结果作废。
+		   作废后必须把最新内容重新排一次——只 return 不重排的话，
+		   最后一次改动永远等不到上传，本地有内容、云端却停在上一版。 */
+		if (seq !== cloudSeq) {
+			if (cloudTimer) clearTimeout(cloudTimer);
+			cloudTimer = setTimeout(() => {
+				void saveCloudDraft(currentDraft());
+			}, 1500);
+			return;
+		}
 		if (res.ok && data.success) {
 			lastCloudKey = key;
 			cloudSavedAt = data.savedAt ?? null;
