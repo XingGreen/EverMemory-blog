@@ -113,23 +113,19 @@ const rehypeExpressiveCodePreviewInstance = rehypeExpressiveCode({
 
 const rehypeExpressiveCodePreview = () => rehypeExpressiveCodePreviewInstance;
 
-/**
- * 渲染管线共用的 remark 插件序列。
- *
- * mdx 为 true 时在最前面挂 remark-mdx（只负责解析出 mdx 节点）与 remarkMdxFlatten
- * （把它们降级成普通 mdast）。两者必须排在其余插件之前：后续插件
- * （sectionize / excerpt / imageGrid…）都假设输入是标准 mdast。
- * 同理 remark-mdx 要排在 remark-gfm 之后——markdown-remark 内部先 use(gfm)，
- * 我们的插件集合在其后追加，顺序天然正确。
- */
 /** 与 unified() 入参一致的插件列表类型：抽成函数后需要它来保留元组的上下文推断 */
 type RemarkPluginList = NonNullable<
 	ReturnType<typeof unified>["options"]["remarkPlugins"]
 >;
 
-function buildRemarkPlugins(mdx: boolean): RemarkPluginList {
+/**
+ * 渲染管线共用的 remark 插件序列（不含 MDX 处理，MDX 分支由调用方叠加）。
+ *
+ * 导出给 mdx-runtime（@mdx-js/mdx evaluate）复用：evaluate 自带 MDX 解析，
+ * 只需要这里的增强插件；两边共用同一份列表，避免渲染行为漂移。
+ */
+export function buildSharedRemarkPlugins(): RemarkPluginList {
 	return [
-		...(mdx ? [remarkMdx as never, remarkMdxFlatten as never] : []),
 		...(siteConfig.post.rehypeCallouts.enablePythonMarkdownAdmonitions !== false
 			? [remarkAdmonitionToBlockquoteCallout]
 			: []),
@@ -146,6 +142,86 @@ function buildRemarkPlugins(mdx: boolean): RemarkPluginList {
 }
 
 /**
+ * mdx-runtime（@mdx-js/mdx evaluate）专用的 remark 插件列表。
+ * 与 buildSharedRemarkPlugins 的差别：去掉 remarkReadingTime / remarkExcerpt——
+ * 它们只往 vfile 的 astro.frontmatter 写构建期元数据，对预览 HTML 无作用，
+ * 且直接假设 data.astro 存在，在 evaluate 的裸 VFile 上会炸。
+ */
+export function buildMdxRuntimeRemarkPlugins(): RemarkPluginList {
+	return [
+		...(siteConfig.post.rehypeCallouts.enablePythonMarkdownAdmonitions !== false
+			? [remarkAdmonitionToBlockquoteCallout]
+			: []),
+		remarkMath,
+		remarkImageGrid,
+		remarkDirective,
+		remarkSectionize,
+		parseDirectiveNode,
+		remarkMermaid,
+		[remarkPlantuml, plantumlConfig],
+	];
+}
+
+/**
+ * mdx 为 true 时在最前面挂 remark-mdx（只负责解析出 mdx 节点）与 remarkMdxFlatten
+ * （把它们降级成普通 mdast）。两者必须排在其余插件之前：后续插件
+ * （sectionize / excerpt / imageGrid…）都假设输入是标准 mdast。
+ * 同理 remark-mdx 要排在 remark-gfm 之后——markdown-remark 内部先 use(gfm)，
+ * 我们的插件集合在其后追加，顺序天然正确。
+ */
+function buildRemarkPlugins(mdx: boolean): RemarkPluginList {
+	return [
+		...(mdx ? [remarkMdx as never, remarkMdxFlatten as never] : []),
+		...buildSharedRemarkPlugins(),
+	];
+}
+
+/**
+ * 共用 rehype 插件序列。evaluate 与 unified 管线共用，理由同上。
+ * 注意 rehypeExpressiveCodePreview 是共享单例（内部缓存了 shiki 主题），
+ * 两条管线复用同一个实例，不会重复构建。
+ */
+export function buildSharedRehypePlugins() {
+	return [
+		[rehypeKatex, { katex }],
+		[rehypeCallouts, { theme: siteConfig.post.rehypeCallouts.theme }],
+		rehypeSlug,
+		rehypeMermaid,
+		rehypePlantuml,
+		rehypeFigure as any,
+		[rehypeExternalLinks as any, { siteUrl: siteConfig.site_url }],
+		[rehypeEmailProtection, { method: "base64" }],
+		/* 参考 astro.config 的 rehypeComponents + GithubCardComponent 需要
+		   Astro 组件渲染上下文，运行时管线取不到，故跳过——github 短代码
+		   在历史版本里会退化为普通链接，这是方案 a 已知的唯一缺口。 */
+		[
+			rehypeAutolinkHeadings,
+			{
+				behavior: "append",
+				properties: {
+					className: ["anchor"],
+				},
+				content: {
+					type: "element",
+					tagName: "span",
+					properties: {
+						className: ["anchor-icon"],
+						"data-pagefind-ignore": true,
+					},
+					children: [
+						{
+							type: "text",
+							value: "#",
+						},
+					],
+				},
+			},
+		],
+		rehypeExpressiveCodePreview,
+	];
+}
+
+/**
  * 获取与 Astro 配置一致的 Markdown 处理器
  * 包含项目使用的核心 remark/rehype 插件
  */
@@ -155,43 +231,7 @@ function getProcessor(mdx = false) {
 
 	const instance = unified({
 		remarkPlugins: buildRemarkPlugins(mdx),
-		rehypePlugins: [
-			[rehypeKatex, { katex }],
-			[rehypeCallouts, { theme: siteConfig.post.rehypeCallouts.theme }],
-			rehypeSlug,
-			rehypeMermaid,
-			rehypePlantuml,
-			rehypeFigure as any,
-			[rehypeExternalLinks as any, { siteUrl: siteConfig.site_url }],
-			[rehypeEmailProtection, { method: "base64" }],
-			/* 参考 astro.config 的 rehypeComponents + GithubCardComponent 需要
-			   Astro 组件渲染上下文，运行时管线取不到，故跳过——github 短代码
-			   在历史版本里会退化为普通链接，这是方案 a 已知的唯一缺口。 */
-			[
-				rehypeAutolinkHeadings,
-				{
-					behavior: "append",
-					properties: {
-						className: ["anchor"],
-					},
-					content: {
-						type: "element",
-						tagName: "span",
-						properties: {
-							className: ["anchor-icon"],
-							"data-pagefind-ignore": true,
-						},
-						children: [
-							{
-								type: "text",
-								value: "#",
-							},
-						],
-					},
-				},
-			],
-			rehypeExpressiveCodePreview,
-		],
+		rehypePlugins: buildSharedRehypePlugins(),
 	});
 
 	if (mdx) {

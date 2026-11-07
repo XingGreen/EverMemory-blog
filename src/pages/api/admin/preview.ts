@@ -1,5 +1,6 @@
 import { requireAuth } from "@/utils/auth";
 import { renderMarkdown } from "@/utils/markdown-renderer";
+import { renderMdxRuntime } from "@/utils/mdx-runtime";
 
 export const prerender = false;
 
@@ -27,7 +28,22 @@ export async function POST({ request }) {
 			mdx === true ||
 			(typeof filePath === "string" && /\.mdx$/i.test(filePath.trim()));
 
-		const html = await renderMarkdown(content, { mdx: isMdx });
+		let html: string;
+		if (isMdx) {
+			/* 首选 evaluate 全量运行时：.map、模板串、任意表达式都真实渲染。
+			   编辑中的内容随时可能是编译不过的半成品，失败时退回降级管线保底。 */
+			try {
+				html = await renderMdxRuntime(content);
+			} catch (error) {
+				console.warn(
+					"[Admin Preview] MDX runtime failed, fallback to flatten:",
+					error instanceof Error ? error.message : error,
+				);
+				html = await renderMarkdown(content, { mdx: true });
+			}
+		} else {
+			html = await renderMarkdown(content);
+		}
 
 		return new Response(JSON.stringify({ success: true, html }), {
 			status: 200,
