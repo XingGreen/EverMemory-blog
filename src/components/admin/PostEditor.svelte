@@ -1105,17 +1105,21 @@ async function restoreCreateDraft() {
 		if (!take) return;
 	}
 
+	/* 恢复前的表单就是正文内容，留作基线：
+	   之后拿它比对，恢复态才算「有改动」，自动保存才会继续落盘。 */
+	const baselineBeforeRestore = JSON.stringify(currentDraft());
+
 	applyDraft(source);
 	resetHistory();
-	/* 草稿来自别的槽（改过 slug 未保存）：搬到当前槽。
-	   不搬的话下次还要再遍历一遍，而且用户恢复后不再改动就关闭时，
-	   草稿会一直停在旧槽里，始终靠反查才能找到。 */
+
+	/* 恢复即落盘。此前只有「槽不同」时才写本地，同槽恢复什么都不留，
+	   于是「恢复 → 直接关页面」这条路下次进来内容又退回正文。 */
+	persistLocalDraft(currentDraft());
+	dirty = true;
+
+	/* 草稿来自别的槽（改过 slug 未保存）：搬到当前槽后清掉旧槽。 */
 	if (localKey !== DRAFT_KEY) {
 		try {
-			localStorage.setItem(
-				DRAFT_KEY,
-				JSON.stringify({ ...source, savedAt: source.savedAt ?? Date.now() }),
-			);
 			localStorage.removeItem(localKey);
 		} catch {
 			// 迁移失败不影响本次恢复
@@ -1123,9 +1127,9 @@ async function restoreCreateDraft() {
 	}
 	cloudSavedAt = cloudTs || null;
 	if (cloudTs) cloudSync = "local-only";
-	/* 恢复后的内容就是当前基线：不更新的话会被当成「用户刚改动」，
-	   立刻又触发一次草稿写入。 */
-	baselineDraftKey = JSON.stringify(currentDraft());
+	/* 基线取正文而不是恢复后的内容：设成恢复态的话，自动保存会认为没有改动，
+	   后面再改也只在内存里，不会落盘，云端永远追不上。 */
+	baselineDraftKey = baselineBeforeRestore;
 }
 
 /** 有未保存内容时，拦截刷新 / 关闭页面（浏览器原生确认框） */

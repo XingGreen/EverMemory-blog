@@ -147,7 +147,8 @@ async function main() {
 		const titleInput = document.querySelector(".editor-header input");
 		const payload = {
 			title: titleInput ? titleInput.value : "",
-			content: ta ? ta.value : "",
+			content:
+				(ta ? ta.value : "") + String.fromCharCode(10, 10) + "<!-- probe-recovered -->",
 			description: "",
 			savedAt: Date.now(),
 			device: "Probe",
@@ -173,6 +174,38 @@ async function main() {
 		};
 	})()`);
 	console.log("刷新后:", JSON.stringify(second));
+
+	/* 点「恢复」后检查本地草稿是否落盘：这是「恢复后退出即回退」的核心 */
+	const afterRestore = await evalJs(`(async () => {
+		const dialog = document.querySelector(".modal-overlay");
+		if (!dialog) return { noDialog: true };
+		const buttons = [...dialog.querySelectorAll("button")];
+		const take = buttons.find((b) => /恢复/.test(b.textContent || ""));
+		if (!take) {
+			return {
+				noButton: true,
+				labels: buttons.map((b) => b.textContent?.trim()),
+			};
+		}
+		take.click();
+		await new Promise((r) => setTimeout(r, 1500));
+		const key = "admin-post-draft-edit-${SLUG}";
+		const raw = localStorage.getItem(key);
+		let draft = null;
+		try {
+			draft = raw ? JSON.parse(raw) : null;
+		} catch {
+			draft = null;
+		}
+		return {
+			dialogClosed: !document.querySelector(".modal-overlay"),
+			localDraftSaved: !!raw,
+			hasMarker: !!draft?.content?.includes("probe-recovered"),
+			contentLen: draft?.content?.length ?? 0,
+			savedAt: draft?.savedAt ?? null,
+		};
+	})()`);
+	console.log("点击恢复后:", JSON.stringify(afterRestore));
 
 	const shot = await cdp.send("Page.captureScreenshot", { format: "png" });
 	writeFileSync("probe-draft.png", Buffer.from(shot.data, "base64"));
