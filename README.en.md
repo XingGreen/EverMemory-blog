@@ -271,13 +271,16 @@ The copyright of Firefly-related image assets belongs to [miHoYo](https://www.mi
 
 This project is licensed under the [MIT license](https://mit-license.org/). See the [LICENSE](./LICENSE) file for details.
 
-Originally forked from [saicaca/fuwari](https://github.com/saicaca/fuwari). Thanks to the original author for their contributions. 
+Forked from [CuteLeaf/Firefly](https://github.com/CuteLeaf/Firefly) and independently extended.
 
 **Copyright Notice:**
 - Copyright (c) 2024 [saicaca](https://github.com/saicaca) - [fuwari](https://github.com/saicaca/fuwari)
 - Copyright (c) 2025 [CuteLeaf](https://github.com/CuteLeaf) - [Firefly](https://github.com/CuteLeaf/Firefly)
+- Copyright (c) 2026 [XingGreen](https://github.com/XingGreen) - [EverMemory-blog](https://github.com/XingGreen/EverMemory-blog)
 
 Under the MIT license, you are free to use, modify, and distribute the code, but you must retain the above copyright notice.
+
+The admin UI design of this project is inspired by [flare-stack-blog](https://github.com/du2333/flare-stack-blog) (GPL-3.0-only), which is licensed under the GPL. This project is a completely independent implementation and does not copy any of its source code.
 
 ## 🍀 Contributors
 
