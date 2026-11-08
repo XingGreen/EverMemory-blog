@@ -1,115 +1,106 @@
-# AGENTS.md
+# Agent Instructions for EverMemory's Blog
 
-Collaboration rules for this repository. This file is the source of truth for how work is
-done here. Technical details live in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md);
-project usage lives in [`README.md`](./README.md).
+## Summary
 
-## 1. Priority
+An Astro 7 + Svelte 5 personal blog with a built-in admin dashboard. Posts are Markdown /
+MDX files in `src/content/posts/`; frontend pages are prerendered at build time; admin pages
+and API routes run on the server adapter. Swup handles in-site navigation and skips
+`/admin/` and `/login/`. Development happens on Windows.
 
-1. The instruction the user gives in the current turn.
-2. This file.
-3. `docs/ARCHITECTURE.md` and other documentation.
+Design, directory conventions, and code standards follow the reference project **Shirone**
+(MIT licensed). When unsure how something should be structured, read its `AGENTS.md`,
+`rules/`, and `docs/` first and match that standard. Reference projects are chosen per task
+and never hardcoded into committed files; machine paths live under `.workbuddy/` (gitignored).
 
-## 2. Scope of Change
+## Must-follow rules
 
-| Path | Permission |
-| :--- | :--- |
-| `src/pages/admin/**`, `src/pages/api/admin/**`, `src/components/admin/**` | edit directly |
-| `src/pages/**` except `admin`, `src/layouts/**`, `src/components/{layout,widget,controls}/**` | do not modify |
-| `src/components/common/**` | ask first |
-| `src/utils/**`, `src/i18n/**`, `src/config/**`, `src/constants/**` | ask first |
-| `turbo.json`, `astro.config.mjs`, `wrangler.jsonc`, `vercel.json`, `package.json` | ask first |
+- **Scope.** Edit `src/pages/admin/**`, `src/pages/api/admin/**`, and `src/components/admin/**`
+  directly. Do not modify frontend routes (`src/pages/**` except admin), `src/layouts/**`, or
+  `src/components/{layout,widget,controls}/**`. Ask before touching `src/components/common/**`,
+  `src/utils/**`, `src/i18n/**`, `src/config/**`, `src/constants/**`, `turbo.json`,
+  `astro.config.mjs`, `wrangler.jsonc`, `vercel.json`, or `package.json`. Never widen a request
+  beyond its stated scope.
 
-Never change files outside the agreed scope, and never widen a request on your own reading
-of it. If the scope is ambiguous, ask before touching anything.
+- **Ask when unclear.** Scope, values, history trade-offs, or the meaning of a rule: ask instead
+  of deciding alone. Never invent unknown values and never leave placeholders (`<xxx>`, `TBD`,
+  "to be filled in"). When the user describes a problem, align on the approach before editing
+  code.
 
-## 3. Communication
+- **No reinvention.** Check `package.json` / `node_modules`, then official library docs, then a
+  license-checked reference project. If nothing fits, stop and report what is missing and which
+  options exist. Adding a dependency requires reporting the trade-off first. Reuse `src/i18n/`
+  keys instead of writing copy; reuse `src/utils/markdown-renderer.ts`,
+  `src/utils/mdx-runtime.ts`, and the existing preview APIs instead of building a second
+  Markdown pipeline.
 
-- Ask immediately when something is unclear: scope, values, history trade-offs, or the
-  meaning of a rule. Do not work it out alone.
-- Never invent unknown values. Never leave placeholders such as `<xxx>`, `TBD`, or
-  "to be filled in". Ask instead.
-- When the user describes a problem or suggests a change, align on the approach first.
-  Start editing only after an explicit go-ahead.
-- Every value written into documentation must be verifiable in the repository or confirmed
-  by the user.
+- **License.** Check the license of third-party code before reading or adapting it. This project
+  is MIT; copyleft source must not be copied in — study the intent, write the implementation.
+  Never remove `LICENSE`, the copyright lines in any `README*.md`, or the GPL inspiration
+  notice. Never commit absolute paths, usernames, keys, or `.env*`.
 
-## 4. No Reinvention
+- **Git.** Never develop on `master`; create a feature branch. Commits inside the branch may be
+  granular, but **squash or rebase before merging** until the branch is one coherent commit, and
+  confirm the history is clean first. Merge squashed so `master` gets exactly one commit per
+  iteration. Afterwards delete the branch, switch back, and `git pull`. Confirm before creating
+  a branch, merging, pushing, or deleting a branch. Rewriting published history needs a backup
+  branch, explicit approval, and `--force-with-lease`. Commit messages: one short subject line,
+  body at most two lines describing only what changed — no narrative, no conversation traces.
 
-Before writing code, check in this order:
+- **Verify.** `pnpm check`, `pnpm type-check`, and `pnpm test:run` for logic. For style changes
+  also run `npx biome check <files>`, check brace balance inside `<style>`, and request the
+  compiled module (expect HTTP 200) — `astro check` does not parse CSS. UI changes require
+  screenshots for acceptance; a passing type check is not visual proof. Report evidence, never
+  "should be fine".
 
-1. Dependencies already present in `package.json` / `node_modules`.
-2. Official library documentation or official snippets.
-3. A reference project, only after its license has been checked (see §5).
+- **Documentation.** Keep the AI-generated notice on the first line of every README language
+  version. Do not repeat the repository URL in maintenance sections. Badges use shields static
+  badges with official logos and brand colors; never show Issues/Stars counts. Keep all language
+  versions structurally identical, translate only. Keep `todo.md` checked off with commit hashes.
 
-If nothing fits, stop and report what is missing, where it was checked, and which options
-exist. Adding a dependency requires reporting the trade-off first.
+- **Language.** Documentation, code comments, and commit messages are English. Chinese only
+  appears in user-facing copy and `src/i18n/` strings. Migrate existing Chinese documents only
+  when a task touches them; no mass rewrites.
 
-Two standing applications:
+## Required documents
 
-- **i18n copy** — reuse existing keys under `src/i18n/`. Never write or machine-translate
-  new copy; ask whether to reuse a key or add one.
-- **Markdown rendering** — always reuse `src/utils/markdown-renderer.ts`,
-  `src/utils/mdx-runtime.ts`, and the existing preview APIs. Never build a second pipeline.
+- [`rules/project-rules.md`](./rules/project-rules.md) — scope table, Git policy, and delivery
+  rules in full.
+- [`rules/pitfalls.md`](./rules/pitfalls.md) — dev-server, build, and styling traps that have
+  caused real breakage. Read before changing icons, styles, or the build pipeline.
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — routing, configuration, content
+  collections, tests, build pipeline, and deployment.
+- [`docs/ADMIN_MANUAL.md`](./docs/ADMIN_MANUAL.md) — dashboard usage and environment variables.
+  Required before changing admin APIs or authentication.
+- [`docs/EMERGENCY_OPS.md`](./docs/EMERGENCY_OPS.md) — recovery procedures.
+- [`docs/screenshot-guide.md`](./docs/screenshot-guide.md) — headless capture for UI acceptance.
+- [`src/config/README.md`](./src/config/README.md) — configuration reference. Required before
+  changing config types or values.
+- [`README.md`](./README.md) and the four language versions — positioning and usage.
 
-## 5. License Compliance
+## Validation
 
-- Check the license of any third-party code before reading or adapting it, and report the
-  result before use.
-- This project is MIT. Copyleft source (GPL and similar) must not be copied into it: study
-  the idea and the layout intent, write the implementation yourself.
-- Copyright notices are permanent. Never remove or rewrite `LICENSE`, the copyright lines
-  in every `README*.md`, or the GPL inspiration notice.
-- Never commit machine-specific material: absolute paths, usernames, keys, `.env*`.
+- `pnpm dev` serves `http://localhost:4321`; the dashboard is at `/admin/`.
+- `pnpm check` (`astro check`) must report 0 errors before committing.
+- `pnpm type-check` runs `tsc --noEmit --isolatedDeclarations`; the existing error count must not
+  grow.
+- `pnpm test:run` is the single-run suite. `pnpm lint` and `pnpm format` both write files, so use
+  `npx biome check <files>` when a check must not modify anything.
+- `pnpm build` runs the turbo pipeline: icons → LQIPs → config snapshot → taxonomy check →
+  Astro build → font subsetting → Pagefind.
+- If Stylus or Svelte output looks stale, clear `node_modules/.vite` and `.astro`, then restart.
 
-## 6. Git
+## Repository context
 
-- Never develop on `master`. Create a feature branch first.
-- Several commits inside the branch are fine.
-- **Before merging, clean the branch**: squash or rebase until it is one coherent commit.
-  Confirm the history is clean, then merge.
-- Merge squashed so `master` receives exactly one commit per iteration. One task must not
-  leave a trail of fragments on the main branch.
-- After merging: delete the branch (local and remote), switch back, `git pull`.
-- Confirm before each of these four steps: create branch / merge / push / delete branch.
-- Rewriting published history requires a backup branch, explicit approval, and
-  `git push --force-with-lease`.
-- Commit messages: one short subject line; body at most two lines describing only what
-  changed. No narrative, no reasoning, no conversation traces.
-
-## 7. Verification
-
-- Types and templates: `pnpm check`, `pnpm type-check`.
-- Tests: `pnpm test:run`.
-- Style changes: `npx biome check <files>`, brace balance inside `<style>` blocks, and
-  request the compiled module from the dev server (expect HTTP 200). `astro check` does not
-  parse CSS.
-- UI changes: screenshots are required for acceptance. A passing type check is not visual
-  proof.
-- Report conclusions with evidence. Never claim "should be fine".
-
-## 8. Todo and Records
-
-- Mark finished items in `todo.md` (`- [ ]` → `- [x]`) with the commit hash.
-- Keep a daily work log under `.workbuddy/memory/YYYY-MM-DD.md` (local only, gitignored).
-
-## 9. Documentation Rules
-
-- Keep the AI-generated notice on the first line of every README language version.
-- Do not repeat the repository URL in maintenance sections.
-- Badges use shields static badges with official logos and brand colors. Never display
-  Issues or Stars counts.
-- Keep all language versions structurally identical; translate the text only.
-
-## 10. Language
-
-- Documentation, code comments, and commit messages: English.
-- Chinese only in user-facing copy and `src/i18n/` strings.
-- Migrate existing Chinese documents only when a task touches them. No mass rewrites.
-
-## 11. Local-Only Material
-
-- Machine paths, tool install locations, local reference repositories, and AI working notes
-  belong under `.workbuddy/`, which is gitignored.
-- Reference projects are chosen per task by the user. There is no permanent default
-  reference repository, and no reference project path belongs in a committed file.
+- Admin writes differ by capability: post saves write local files only and return 403 in
+  production; deletes and pushes go through the GitHub App (`sync/apply` commits many files in
+  one GraphQL call, which triggers a single deployment); site configuration and taxonomy write
+  straight to GitHub in production; secrets are local-only.
+- `src/content/spec/` holds `about.md`, `friends.mdx`, and `guestbook.md`, read by `/about/`,
+  `/friends/`, and `/guestbook/` through `getEntry("spec", …)`. It is not a generic "special
+  pages" collection.
+- Five UI languages: `en`, `ja`, `ru`, `zh_CN`, `zh_TW`. `zh_CN_zaku` is commented out.
+- The adapter is chosen by environment variable: `CF_WORKERS` wins over `VERCEL`; neither falls
+  back to `@astrojs/node` standalone. `BASE_PATH` controls `base`. New adapter-affecting
+  variables must be registered in `turbo.json` under the `astro-build` task env.
+- Admin overlays are portalled to `document.body`: `.admin-content` applies a `zoom`, so
+  `position: fixed` offsets inside that subtree are scaled a second time.
