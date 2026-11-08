@@ -754,6 +754,7 @@ export const ru: Translation = {
 	[Key.configNavbar]: "Навигация",
 	[Key.configFooter]: "Подвал",
 	[Key.configSidebar]: "Боковая панель",
+	[Key.configAdmin]: "Внешний вид панели",
 	[Key.configSiteDesc]:
 		"Заголовок сайта, описание, цвет темы, переключатели страниц, макет списка статей и другие базовые сведения",
 	[Key.configProfileDesc]: "Аватар, имя, подпись и ссылки на соцсети",
@@ -819,6 +820,8 @@ export const ru: Translation = {
 	[Key.sessionsKickAllOther]: "Отозвать остальные",
 	[Key.sessionsEmpty]: "Нет активных сеансов",
 	[Key.sessionsLoadError]: "Не удалось загрузить сеансы",
+	[Key.sessionsUpdatedAt]: "Обновлено ",
+	[Key.sessionsRefreshing]: "Обновление…",
 	[Key.sessionsLastActive]: "Последняя активность",
 	[Key.sessionsLoginAt]: "Вход",
 	[Key.sessionsIp]: "IP-адрес",

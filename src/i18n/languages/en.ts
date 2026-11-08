@@ -753,6 +753,7 @@ export const en: Translation = {
 	[Key.configNavbar]: "Navigation Bar",
 	[Key.configFooter]: "Footer",
 	[Key.configSidebar]: "Sidebar",
+	[Key.configAdmin]: "Admin appearance",
 	[Key.configSiteDesc]:
 		"Basic info such as site title, description, theme color, page toggles and post list layout",
 	[Key.configProfileDesc]: "Avatar, nickname, signature and social links",
@@ -814,6 +815,8 @@ export const en: Translation = {
 	[Key.sessionsKickAllOther]: "Revoke all others",
 	[Key.sessionsEmpty]: "No active sessions",
 	[Key.sessionsLoadError]: "Failed to load sessions",
+	[Key.sessionsUpdatedAt]: "Updated ",
+	[Key.sessionsRefreshing]: "Refreshing…",
 	[Key.sessionsLastActive]: "Last active",
 	[Key.sessionsLoginAt]: "Signed in",
 	[Key.sessionsIp]: "IP address",

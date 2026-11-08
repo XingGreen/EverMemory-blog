@@ -2,6 +2,17 @@
 
 > 每完成一项，把 `- [ ]` 改成 `- [x]`，并在行尾注明 commit。
 
+## 本轮需求（2026-11-08）
+
+- [x] 后台配置扩展：页面切换动画（四效果）、对话框模糊、背景图来源、整体配置策略（新增 `src/config/adminConfig.ts`）
+- [x] Session 页数据过时：接口 no-store + 30 秒静默刷新 + 「更新于 HH:mm:ss」时间戳
+- [x] App 推荐页无法换页：客户端分页（每页 12 条），筛选/搜索回到第 1 页，运行时重渲染后重算
+- [x] Music 歌单改走 `/api/music/playlists/`，服务端 KV 缓存 10 分钟，回源失败返回过期数据
+- [x] 导航栏分离模式：sticky 下导航底边 6.5rem，内容区改为 +2rem、侧栏改 7.5rem，不再贴死
+- [x] 无标题兜底策略：`siteConfig.post.titleFallback`（extract / filename / require + 长度 + 逗号截断）
+- [x] 草稿线上可用：新增 `src/utils/post-draft-store.ts`，保存/读取/列表/删除/历史恢复全部接入 KV
+- [x] 文章列表表头对齐：表头「标题」补 20px 大头针占位，与行内标题同轴
+
 ## 上游同步（6.13.5 → 6.16.9，选择性）
 
 - [x] 正则注入修复、X-Frame-Options 改 SAMEORIGIN、PlantUML 缩放文字模糊、行内代码保留空格

@@ -799,40 +799,9 @@ if (!isConfigured) {
 	let allDetailedMyPlaylists = [];
 	let allDetailedSubscribedPlaylists = [];
 	let currentFilter = 'all';
-	const CONCURRENCY = 4; // 歌单详情最大并发数，避免一次性向第三方代理打出大量请求
 	// localStorage 缓存：再次进入页面时秒出渲染，避免每次等待第三方代理回源
 	const CACHE_KEY = 'music-playlist-data-' + userId;
 	const CACHE_TTL = 10 * 60 * 1000; // 缓存有效期 10 分钟
-
-	// 带超时的 fetch：第三方代理挂起时自动中断，快速 fallthrough 到备用 API
-	async function fetchWithTimeout(url, options, timeoutMs = 10000) {
-		const controller = new AbortController();
-		const timer = setTimeout(() => controller.abort(), timeoutMs);
-		try {
-			const response = await fetch(url, { ...options, signal: controller.signal });
-			clearTimeout(timer);
-			return response;
-		} catch (error) {
-			clearTimeout(timer);
-			throw error;
-		}
-	}
-
-	// 并发受限的 map：替代 Promise.all，控制同时进行的详情请求数量
-	async function mapWithConcurrency(items, concurrency, mapper) {
-		const results = new Array(items.length);
-		let next = 0;
-		async function worker() {
-			while (next < items.length) {
-				const index = next++;
-				results[index] = await mapper(items[index], index);
-			}
-		}
-		await Promise.all(
-			Array.from({ length: Math.min(concurrency, items.length) }, worker)
-		);
-		return results;
-	}
 
 	function readCache(ignoreTtl = false) {
 		try {
@@ -952,97 +921,6 @@ if (!isConfigured) {
 	tabAll.addEventListener('click', () => setFilter('all'));
 	tabMine.addEventListener('click', () => setFilter('mine'));
 	tabSubscribed.addEventListener('click', () => setFilter('subscribed'));
-
-	async function fetchPlaylists() {
-		if (!userId) {
-			return null;
-		}
-		const userIdStr = userId.toString();
-		const timestamp = Date.now();
-		for (const url of apis) {
-			try {
-				const urlWithCacheBust = url + (url.includes('?') ? '&' : '?') + 't=' + timestamp;
-				const response = await fetchWithTimeout(urlWithCacheBust, {
-					headers: {
-						"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-						"Referer": "https://music.163.com/",
-					},
-				});
-				const data = await response.json();
-
-				if (data.code === 200 && data.playlist) {
-					if (data.subscribedPlaylist && Array.isArray(data.subscribedPlaylist)) {
-						return {
-							myPlaylists: data.playlist.filter(p => {
-								const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-								return creatorId === userIdStr;
-							}),
-							subscribedPlaylists: data.subscribedPlaylist
-						};
-					}
-					return {
-						myPlaylists: data.playlist.filter(p => {
-							const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-							return creatorId === userIdStr;
-						}),
-						subscribedPlaylists: data.playlist.filter(p => {
-							const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-							return creatorId !== userIdStr;
-						})
-					};
-				}
-				if (data.code === 200 && Array.isArray(data)) {
-					return {
-						myPlaylists: data.filter(p => {
-							const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-							return creatorId === userIdStr;
-						}),
-						subscribedPlaylists: data.filter(p => {
-							const creatorId = p.creator?.userId?.toString() || p.creator?.id?.toString();
-							return creatorId !== userIdStr;
-						})
-					};
-				}
-			} catch {
-				continue;
-			}
-		}
-		return null;
-	}
-
-	async function fetchPlaylistDetail(playlistId) {
-		const timestamp = Date.now();
-		const detailApis = [
-			`https://api.i-meto.com/meting/api?server=netease&type=playlist&id=${playlistId}&limit=300`,
-		];
-		for (const url of detailApis) {
-			try {
-				const urlWithCacheBust = url + '&t=' + timestamp;
-				const response = await fetchWithTimeout(urlWithCacheBust, {
-					headers: {
-						"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-						"Referer": "https://music.163.com/",
-					},
-				});
-				const data = await response.json();
-				if (data.code === 200 && data.playlist) {
-					return data.playlist;
-				}
-				if (data.code === 200 && data.tracks) {
-					return data;
-				}
-				if (data.tracks && data.name) {
-					return data;
-				}
-				if (Array.isArray(data) && data.length > 0 && data[0].tracks) {
-					return data[0];
-				}
-			} catch {
-				continue;
-			}
-		}
-		return null;
-	}
 
 	function createSVG(iconName, className) {
 		const svgNS = 'http://www.w3.org/2000/svg';
@@ -1202,39 +1080,37 @@ if (!isConfigured) {
 				}
 			}
 
-			// 从网络加载并渲染，成功后写入缓存；失败时回退到过期缓存，仍无则显示空态
+			// 从站内接口加载（服务端已有 KV 缓存），成功后写入本地缓存；
+			// 失败时回退到过期缓存，仍无则显示空态
 			async function loadData() {
 				try {
-					const result = await fetchPlaylists();
-					if (!result) throw new Error('no data');
+					const res = await fetch(
+						'/api/music/playlists/?uid=' + encodeURIComponent(userId),
+						{ headers: { Accept: 'application/json' } }
+					);
+					const data = await res.json();
+					if (!data || !data.success) throw new Error('no data');
 
-					const { myPlaylists = [], subscribedPlaylists = [] } = result;
-					const allPlaylists = [...myPlaylists, ...subscribedPlaylists];
-					if (allPlaylists.length === 0) throw new Error('empty');
-
-					// 详情并发受限获取；列表接口的 trackCount 更可靠，详情仅作补充，
-					// 避免 limit 截断后把真实数量覆盖成 300
-					const enrich = async (playlist) => {
-						const detail = await fetchPlaylistDetail(playlist.id);
-						if (!detail) return playlist;
-						return {
-							...playlist,
-							...detail,
-							trackCount: playlist.trackCount || detail.trackCount || detail.tracks?.length || 0,
-						};
-					};
-
-					const [my, subscribed] = await Promise.all([
-						myPlaylists.length > 0
-							? mapWithConcurrency(myPlaylists, CONCURRENCY, enrich)
-							: Promise.resolve([]),
-						subscribedPlaylists.length > 0
-							? mapWithConcurrency(subscribedPlaylists, CONCURRENCY, enrich)
-							: Promise.resolve([]),
-					]);
+					const my = Array.isArray(data.my) ? data.my : [];
+					const subscribed = Array.isArray(data.subscribed) ? data.subscribed : [];
+					if (my.length === 0 && subscribed.length === 0) throw new Error('empty');
 
 					writeCache({ my, subscribed });
 					applyPlaylistData({ my, subscribed });
+
+					// 用服务端记录的采集时间覆盖「刚刚」，让人知道数据本身是什么时候拉的
+					if (data.updatedAt) {
+						const el = document.getElementById('updateTime');
+						if (el) {
+							const t = new Date(data.updatedAt).toLocaleString('zh-CN', {
+								month: '2-digit',
+								day: '2-digit',
+								hour: '2-digit',
+								minute: '2-digit'
+							});
+							el.innerHTML = '| 更新时间 ' + t + (data.cached ? '' : '');
+						}
+					}
 				} catch (error) {
 					// 网络失败或数据为空时，回退到过期缓存，避免页面白等后一片空白
 					const stale = readCache(true);

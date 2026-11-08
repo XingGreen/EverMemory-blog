@@ -154,6 +154,31 @@ Any Markdown or MDX rendering must reuse the existing pipeline:
 Preview splits by file type: `.md` uses the pure Markdown pipeline, `.mdx` runs the MDX
 runtime and falls back to the flatten pipeline when compilation fails.
 
+## Drafts in production
+
+The production filesystem is read-only and the build output contains no `src/content`
+sources, so a draft (`draft: true`) used to be unreadable and unsavable online. Drafts now
+have a second home:
+
+| Operation | Order of resolution |
+| :--- | :--- |
+| Read | local file → remote repository → `prodpost:<slug>` in persist-store |
+| Save | local file when writable → `prodpost:<slug>` (read-only deployments) |
+| Restore revision | local file → `prodpost:<slug>` when the snapshot is a draft |
+
+`src/utils/post-draft-store.ts` wraps `persist-store` (Vercel KV in production, files under
+`.data/persist` locally). Published posts are untouched: they still save locally and reach
+the repository only through the sync workbench. Draft revisions keep using `rev:<slug>:<ts>`
+keys, so nothing changes for the history list.
+
+## Music playlist cache
+
+`/api/music/playlists/` serves the whole playlist payload (lists plus track details) from
+`persist-store` under `music:playlists:<uid>`, refreshed at most once every 10 minutes. On an
+upstream failure it returns the stale record instead of an empty page. The `/music/` page now
+makes a single request to this endpoint instead of calling the third-party mirrors N+1 times,
+which is what previously risked rate limits.
+
 ## Build pipeline
 
 `turbo run icons lqips github-cards snapshot astro-build subset-fonts pagefind`, with dependencies:

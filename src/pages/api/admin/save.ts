@@ -9,6 +9,7 @@ import {
 } from "@/utils/github-app";
 import { getStorageProvider } from "@/utils/providers/registry";
 import { getStore } from "@/utils/persist-store";
+import { deleteStoredDraft, putStoredDraft } from "@/utils/post-draft-store";
 
 export const prerender = false;
 
@@ -161,13 +162,51 @@ export async function POST({ request }) {
 			);
 		}
 
+		/* 只读部署（Vercel / Workers）：项目目录不可写，草稿改存 KV。
+		   草稿不参与构建，存 KV 既不会误发布，又能让线上把草稿写完；
+		   正式文章仍不在线上保存——发布路径始终是同步面板。 */
+		if (IS_PROD_BUILD && draft === true) {
+			const stored = await putStoredDraft({ slug, filePath, content: fullContent });
+			if (stored) {
+				/* 草稿换了 slug：旧槽位要清掉，否则列表里会同时出现新旧两条 */
+				if (
+					typeof originalSlug === "string" &&
+					originalSlug &&
+					originalSlug !== slug &&
+					isValidPostSlug(originalSlug)
+				) {
+					await deleteStoredDraft(originalSlug);
+				}
+				return new Response(
+					JSON.stringify({
+						success: true,
+						local: false,
+						remote: false,
+						cloud: true,
+						message: "草稿已保存到云端（当前部署只读，未写入仓库）",
+						filePath,
+					}),
+					{ status: 200, headers: { "Content-Type": "application/json" } },
+				);
+			}
+			return new Response(
+				JSON.stringify({
+					success: false,
+					local: false,
+					remote: false,
+					message: "草稿保存失败：云端存储不可用",
+				}),
+				{ status: 500, headers: { "Content-Type": "application/json" } },
+			);
+		}
+
 		return new Response(
 			JSON.stringify({
 				success: false,
 				local: false,
 				remote: false,
 				message: IS_PROD_BUILD
-					? "当前部署环境为只读，无法写入文章。请在本地开发环境编辑并保存"
+					? "当前部署环境为只读，无法保存正式文章。可先存为草稿，或到本地编辑后从同步面板推送"
 					: "保存失败：写入本地文件出错",
 			}),
 			{

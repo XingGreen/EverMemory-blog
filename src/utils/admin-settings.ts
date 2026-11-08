@@ -268,6 +268,16 @@ export const CONFIG_ITEMS: AdminConfigItem[] = [
 		iconOutline: "material-symbols:view-list-outline",
 		description: "左右侧边栏的组件排列与移动端底部组件",
 	},
+	{
+		key: "admin",
+		file: "src/config/adminConfig.ts",
+		exportName: "adminConfig",
+		typeName: "AdminConfig",
+		label: "后台外观",
+		icon: "material-symbols:dashboard",
+		iconOutline: "material-symbols:dashboard-outline",
+		description: "页面切换动画、对话框模糊、背景图来源与整体配置策略",
+	},
 ];
 
 export function getConfigItem(key: string): AdminConfigItem | undefined {
@@ -298,6 +308,7 @@ const CONFIG_LABEL_KEYS: Record<string, I18nKey> = {
 	"code-theme": I18nKey.configCodeTheme,
 	"pio-spine": I18nKey.configPioSpine,
 	"pio-live2d": I18nKey.configPioLive2d,
+	admin: I18nKey.configAdmin,
 	sidebar: I18nKey.configSidebar,
 };
 

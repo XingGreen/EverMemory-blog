@@ -36,6 +36,10 @@ const SELECT_OPTIONS: Record<string, readonly string[]> = {
 	// 站点配置里的音乐区块与音乐播放器配置（musicConfig）同名键取值不同，需分开
 	"site.music.mode": ["static", "dynamic"],
 	"imageOptimization.formats": ["avif", "webp", "both"],
+	// 后台外观（admin）：策略 / 动画效果 / 背景图来源都是枚举，必须给下拉而不是自由文本
+	"admin.appearanceStrategy": ["inherit", "custom"],
+	"admin.pageTransition.effect": ["slide-fade", "fade", "slide", "zoom"],
+	"admin.background.source": ["inherit", "custom"],
 	// 导航栏（navbar，含单独编辑时的裸键回退）
 	"navbar.menuAlign": ["left", "center"],
 	"navbar.mode": ["attached", "detached"],

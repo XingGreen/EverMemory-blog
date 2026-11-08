@@ -2,6 +2,7 @@ import { getCollection } from "astro:content";
 import type { AdminPostSummary } from "@/types/adminApi";
 import { requireAuth } from "@/utils/auth";
 import { getStorageProvider } from "@/utils/providers/registry";
+import { listStoredDrafts } from "@/utils/post-draft-store";
 import { normalizeSlug, slugFromPath } from "@/utils/post-slug";
 
 export const prerender = false;
@@ -167,6 +168,36 @@ export async function GET({ request }) {
 					: "not-on-github";
 			}
 			extraPosts = await buildRemoteOnlyEntries(localSlugs, remoteSlugs);
+		}
+
+		/* 云端草稿：线上只读部署里，草稿只存在于 KV，既不在集合里也不在 GitHub 上。
+		   不并进列表的话，线上根本看不到自己写的草稿。 */
+		const storedDrafts = await listStoredDrafts();
+		for (const draft of storedDrafts) {
+			const slug = normalizeSlug(draft.slug);
+			if (localSlugs.has(slug)) continue;
+			if (extraPosts.some((item) => normalizeSlug(item.slug) === slug)) continue;
+			extraPosts.push({
+				id: draft.slug,
+				slug: draft.slug,
+				title: readFrontmatterValue(draft.content, "title") || draft.slug,
+				author: readFrontmatterValue(draft.content, "author"),
+				category: readFrontmatterValue(draft.content, "category"),
+				tags: [],
+				published:
+					readFrontmatterValue(draft.content, "published") ||
+					new Date(draft.updatedAt).toISOString(),
+				updated: new Date(draft.updatedAt).toISOString(),
+				draft: true,
+				description: readFrontmatterValue(draft.content, "description"),
+				password: readFrontmatterValue(draft.content, "password"),
+				passwordHint: readFrontmatterValue(draft.content, "passwordHint"),
+				comment: readFrontmatterValue(draft.content, "comment") !== "false",
+				image: readFrontmatterValue(draft.content, "image"),
+				pinned: readFrontmatterValue(draft.content, "pinned") === "true",
+				filePath: draft.filePath,
+				syncState: "not-on-github" as const,
+			});
 		}
 
 		const postsData = [...extraPosts, ...localData].sort((a, b) => {

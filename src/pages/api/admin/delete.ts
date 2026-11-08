@@ -1,6 +1,7 @@
 import { requireAuth } from "@/utils/auth";
 import { IS_PROD_BUILD } from "@/utils/env";
 import { deleteFileLocally, isValidPostSlug } from "@/utils/github-app";
+import { deleteStoredDraft } from "@/utils/post-draft-store";
 import { getStorageProvider } from "@/utils/providers/registry";
 
 export const prerender = false;
@@ -56,10 +57,13 @@ export async function POST({ request }) {
 			);
 		}
 
+		/* 3. 云端草稿：线上只读部署里草稿只在 KV，不删干净会一直在列表里 */
+		const cloudDeleted = await deleteStoredDraft(slug);
+
 		/* 任一条通道成功即算成功。此前只看 localSuccess：生产目录只读时它恒为
 		   false，于是「GitHub 已删掉、本地删不了」会被报成 500 删除失败——线上
 		   删除文章必然误报。 */
-		if (localSuccess || githubSuccess) {
+		if (localSuccess || githubSuccess || cloudDeleted) {
 			return new Response(
 				JSON.stringify({
 					success: true,
@@ -67,7 +71,9 @@ export async function POST({ request }) {
 					remote: githubSuccess,
 					message: githubSuccess
 						? "删除成功（已同步到 GitHub）"
-						: `删除成功（已删除本地文件，但 GitHub 同步失败：${githubError}）`,
+						: cloudDeleted
+							? "删除成功（已删除云端草稿）"
+							: `删除成功（已删除本地文件，但 GitHub 同步失败：${githubError}）`,
 					filePath,
 				}),
 				{ status: 200, headers: { "Content-Type": "application/json" } },

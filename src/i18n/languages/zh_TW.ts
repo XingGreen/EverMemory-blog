@@ -727,6 +727,7 @@ export const zh_TW: Translation = {
 	[Key.configNavbar]: "導覽列",
 	[Key.configFooter]: "頁尾",
 	[Key.configSidebar]: "側邊欄",
+	[Key.configAdmin]: "後台外觀",
 	[Key.configSiteDesc]:
 		"站點標題、描述、主題色、頁面開關、文章列表佈局等基礎資訊",
 	[Key.configProfileDesc]: "頭像、暱稱、個人簽名與社交連結",
@@ -783,6 +784,8 @@ export const zh_TW: Translation = {
 	[Key.sessionsKickAllOther]: "踢掉其他裝置",
 	[Key.sessionsEmpty]: "暫無線上會話",
 	[Key.sessionsLoadError]: "會話清單載入失敗",
+	[Key.sessionsUpdatedAt]: "更新於 ",
+	[Key.sessionsRefreshing]: "重新整理中…",
 	[Key.sessionsLastActive]: "最後活躍",
 	[Key.sessionsLoginAt]: "登入時間",
 	[Key.sessionsIp]: "IP 位址",

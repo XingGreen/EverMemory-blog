@@ -16,7 +16,7 @@ Other language versions: [简体中文](./README.md) · [繁體中文](./docs/RE
 
 ## Overview
 
-Posts are Markdown / MDX files stored in `src/content/posts/` and turned into pages by Astro at build time; `/admin/` provides editing, live preview, drafts, revision history, and site configuration. Post saves write local files only and production deployments are read-only; pushes go through the sync workbench and each push corresponds to a new build.
+Posts are Markdown / MDX files stored in `src/content/posts/` and turned into pages by Astro at build time; `/admin/` provides editing, live preview, drafts, revision history, and site configuration. Post saves write local files only, while drafts fall back to cloud storage in production; pushes go through the sync workbench and each push corresponds to a new build.
 
 UI text supports Simplified Chinese, Traditional Chinese, English, Japanese, and Russian. The default language is set by `SITE_LANG` in `src/config/siteConfig.ts`, with translations in `src/i18n/languages/`.
 
@@ -154,7 +154,7 @@ Posts live in `src/content/posts/` (`.md` / `.mdx`); the about, guestbook, and f
 
 `pnpm build` produces `dist/`; `pnpm preview` serves the build locally. When both `CF_WORKERS` and `VERCEL` are set, `CF_WORKERS` takes precedence; `BASE_PATH` sets a deployment subpath and defaults to `/`. Cloudflare Workers deployments also require KV bindings such as `SESSION`; the namespace ID must be created and filled into `wrangler.jsonc`.
 
-In production the project directory is read-only: posts can only be saved in local development, and production rejects writes. Pushes and deletes go through the GitHub App; pushes happen in the sync workbench, commit many files at once, and trigger a single deployment. Site configuration and categories/tags are written straight to GitHub in production, while environment variables and secrets can only be written locally.
+In production the project directory is read-only: published posts can only be saved in local development, and production rejects those writes. Drafts are the exception — they are stored in cloud storage, so they stay editable online and their revisions stay restorable. Pushes and deletes go through the GitHub App; pushes happen in the sync workbench, commit many files at once, and trigger a single deployment. Site configuration and categories/tags are written straight to GitHub in production, while environment variables and secrets can only be written locally.
 
 Recommended checks before deployment:
 

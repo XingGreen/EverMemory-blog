@@ -1,6 +1,8 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
+import { adminConfig } from "@/config/adminConfig";
+import { backgroundWallpaper } from "@/config/backgroundWallpaper";
 import { editorConfig } from "@/config/editorConfig";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -119,6 +121,52 @@ let isVerified = $state(
 let adminUsername = $state("");
 // 存储降级：KV 熔断时后台仍可用（仅 JWT 鉴权），但会话表能力受限
 let storageDegraded = $state(false);
+
+/* ── 后台外观（src/config/adminConfig.ts 下发）─────────────────────────
+   appearanceStrategy = "inherit" 时复用前台配置：背景图取前台的桌面壁纸，
+   并跳过后台自定义的配色覆盖；"custom" 时完全按 adminConfig 的取值来。
+   页面切换动画与对话框模糊是后台自身的交互，不受策略影响，仍按各开关执行。 */
+const adminAppearanceStrategy = adminConfig.appearanceStrategy ?? "inherit";
+
+const adminViewDuration = Math.max(
+	0,
+	adminConfig.pageTransition?.duration ?? 220,
+);
+
+const adminDialogBlur = (() => {
+	if (adminConfig.dialogBlur?.enable === false) return "0px";
+	return `${Math.max(0, adminConfig.dialogBlur?.radius ?? 4)}px`;
+})();
+
+/** 后台背景图：inherit 取前台第一张桌面壁纸，custom 取自定义地址 */
+const adminBgUrl = (() => {
+	const conf = adminConfig.background ?? {};
+	const source = conf.source ?? "inherit";
+	if (source === "custom") return (conf.customUrl || "").trim();
+	// inherit：前台壁纸可能是单张或数组，取第一张
+	const desktop = backgroundWallpaper.desktop ?? "";
+	const first = Array.isArray(desktop) ? desktop[0] : desktop;
+	if (!first || typeof first !== "string") return "";
+	if (/^https?:\/\//.test(first) || first.startsWith("/")) return first;
+	return `${import.meta.env.BASE_URL ?? "/"}${first.replace(/^\//, "")}`;
+})();
+
+/** 页面切换动画类：切页时短暂挂上，动画结束后移除，避免影响后续布局 */
+let viewAnimClass = $state("");
+$effect(() => {
+	// 依赖 activePage：路由变化即重新触发动画
+	void activePage;
+	if (adminConfig.pageTransition?.enable === false || !adminViewDuration) {
+		viewAnimClass = "";
+		return;
+	}
+	const effect = adminConfig.pageTransition?.effect ?? "slide-fade";
+	viewAnimClass = "";
+	const raf = requestAnimationFrame(() => {
+		viewAnimClass = `admin-view-enter admin-view-${effect}`;
+	});
+	return () => cancelAnimationFrame(raf);
+});
 let posts = $state<Post[]>([]);
 let isLoading = $state(true);
 let error = $state("");
@@ -1539,7 +1587,12 @@ function formatDate(dateStr: string | null): string {
 {#if !isVerified}
 	<div class="login-loading"></div>
 {:else}
-	<div class="admin-layout">
+	<div
+		class="admin-layout"
+		data-admin-bg={adminBgUrl ? "on" : "off"}
+		data-appearance-strategy={adminAppearanceStrategy}
+		style={`--admin-bg-url: ${adminBgUrl ? `url('${adminBgUrl}')` : "none"}; --admin-dialog-blur: ${adminDialogBlur}; --admin-view-duration: ${adminViewDuration}ms`}
+	>
 		<!-- 移动端侧边栏遮罩 -->
 		{#if isSidebarOpen}
 			<button
@@ -1734,7 +1787,7 @@ function formatDate(dateStr: string | null): string {
 			{/if}
 
 			<div
-			class="admin-content"
+			class="admin-content {viewAnimClass}"
 			class:content-wide={activePage === "posts" && viewMode !== "list"}
 			class:content-fixed={activePage === "settings" ||
 				activePage === "env" ||
@@ -4273,5 +4326,102 @@ function formatDate(dateStr: string | null): string {
 		flex-shrink: 0;
 		margin-top: 0.125rem;
 		color: var(--info);
+	}
+
+	/* ────────────────────────────────────────────────────────────
+	   后台外观：由 src/config/adminConfig.ts 下发
+	   · 切换动画四种效果，时长走 --admin-view-duration
+	   · 背景图走 --admin-bg-url，铺在最底层并压暗，保证正文可读
+	   · 对话框模糊走 --admin-dialog-blur（0px 即关闭）
+	   ──────────────────────────────────────────────────────────── */
+	.admin-view-enter {
+		animation-duration: var(--admin-view-duration, 220ms);
+		animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+		animation-fill-mode: both;
+	}
+
+	.admin-view-slide-fade {
+		animation-name: adminViewSlideFade;
+	}
+	.admin-view-fade {
+		animation-name: adminViewFade;
+	}
+	.admin-view-slide {
+		animation-name: adminViewSlide;
+	}
+	.admin-view-zoom {
+		animation-name: adminViewZoom;
+	}
+
+	@keyframes adminViewSlideFade {
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+	@keyframes adminViewFade {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
+	@keyframes adminViewSlide {
+		from {
+			transform: translateX(-16px);
+		}
+		to {
+			transform: none;
+		}
+	}
+
+	@keyframes adminViewZoom {
+		from {
+			opacity: 0;
+			transform: scale(0.985);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+	/* 背景图层：固定在视口，压暗后不吃点击 */
+	.admin-layout[data-admin-bg="on"]::before {
+		content: "";
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+		background-image: var(--admin-bg-url);
+		background-size: cover;
+		background-position: center;
+		opacity: 0.12;
+		pointer-events: none;
+	}
+
+	.admin-layout[data-admin-bg="on"] .admin-sidebar,
+	.admin-layout[data-admin-bg="on"] .admin-main {
+		position: relative;
+		z-index: 1;
+	}
+
+	/* 对话框遮罩模糊：各弹窗自带的 4px 由这里的变量统一接管 */
+	:global(.modal-overlay),
+	:global(.sidebar-backdrop) {
+		-webkit-backdrop-filter: blur(var(--admin-dialog-blur, 4px)) !important;
+		backdrop-filter: blur(var(--admin-dialog-blur, 4px)) !important;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.admin-view-enter {
+			animation: none !important;
+		}
 	}
 </style>

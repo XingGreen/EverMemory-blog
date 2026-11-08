@@ -14,6 +14,17 @@ import { siteConfig } from "./siteConfig";
  */
 
 const ZH_LABELS: Record<string, string> = {
+	// —— 后台外观（AdminConfig）——
+	appearanceStrategy: "配置策略（复用前台 / 后台独立）",
+	pageTransition: "页面切换动画",
+	effect: "动画效果",
+	duration: "动画时长（毫秒）",
+	dialogBlur: "对话框模糊",
+	radius: "模糊半径（px）",
+	background: "背景图",
+	source: "图片来源（跟随前台 / 自定义）",
+	customUrl: "自定义背景图地址",
+	overlay: "遮罩不透明度",
 	// —— 站点（SiteConfig）——
 	title: "站点标题",
 	subtitle: "副标题",

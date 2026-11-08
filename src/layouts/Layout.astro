@@ -769,7 +769,9 @@ const siteLogo = await getSiteLogo();
     body.sticky-navbar.no-banner-layout.navbar-detached #sidebar-sticky,
     body.sticky-navbar.no-banner-layout.navbar-detached #left-sidebar-sticky,
     body.sticky-navbar.no-banner-layout.navbar-detached #right-sidebar-sticky {
-      top: 6.5rem !important;
+      /* 分离模式下导航栏从 1rem 起、高 5.5rem，底边在 6.5rem；
+         再过 1rem 才是侧边栏，否则会与导航栏下沿贴死 */
+      top: 7.5rem !important;
     }
   }
 

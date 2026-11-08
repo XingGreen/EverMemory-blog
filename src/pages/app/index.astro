@@ -136,6 +136,10 @@ const runtimeLabels = {
 						<Icon is:inline name="material-symbols:search-off-rounded" class="text-4xl mb-3" />
 						<div class="text-sm">{i18n(I18nKey.searchNoResults)}</div>
 					</div>
+					<div
+						class="app-pagination hidden items-center justify-center gap-1.5 mt-6"
+						id="app-pagination"
+					></div>
 				</>
 			) : (
 				<div class="flex flex-col items-center justify-center py-16 text-neutral-400 dark:text-neutral-500">
@@ -184,6 +188,8 @@ const runtimeLabels = {
 			class AppFilter extends HTMLElement {
 				selectedTag = "all";
 				selectedPlatform = "all";
+				page = 1;
+				pageSize = 12;
 
 				constructor() {
 					super();
@@ -193,16 +199,26 @@ const runtimeLabels = {
 					this.addEventListener("click", this.handleClick);
 					// 使用事件委托绑定 input，避免自定义元素升级时子节点尚未解析而丢失监听
 					this.addEventListener("input", this.handleInput);
+					// 运行时配置重渲染会整体替换卡片，替换后必须重算分页，
+					// 否则分页条还停在旧数据上（点页码没有对应卡片）
+					document.addEventListener("app:rendered", this.handleRerender);
+					this.applyFilters();
 				}
 
 				disconnectedCallback() {
 					this.removeEventListener("click", this.handleClick);
 					this.removeEventListener("input", this.handleInput);
+					document.removeEventListener("app:rendered", this.handleRerender);
 				}
+
+				handleRerender = () => {
+					this.page = 1;
+					this.applyFilters();
+				};
 
 				handleInput(e) {
 					if (e.target.matches("[data-search]")) {
-						this.applyFilters();
+						this.applyFilters(true);
 					}
 				}
 
@@ -210,6 +226,15 @@ const runtimeLabels = {
 					const target = e.target;
 					const button = target.closest("button");
 					if (!button) return;
+
+					if ("page" in button.dataset) {
+						const next = Number(button.dataset.page);
+						if (Number.isFinite(next) && next >= 1) {
+							this.page = next;
+							this.applyFilters();
+						}
+						return;
+					}
 
 					if ("tag" in button.dataset) {
 						this.selectedTag = button.dataset.tag;
@@ -245,21 +270,21 @@ const runtimeLabels = {
 						});
 					}
 
-					this.applyFilters();
+					this.applyFilters(true);
 				}
 
-				applyFilters() {
+				applyFilters(resetPage = false) {
+					if (resetPage) this.page = 1;
 					const container = this.closest(".card-base");
 					if (!container) return;
 
 					const input = this.querySelector("[data-search]");
 					const query = (input?.value || "").toLowerCase().trim();
-					const cards = container.querySelectorAll(".app-card");
+					const allCards = Array.from(container.querySelectorAll(".app-card"));
 
-					let hasVisible = false;
-
-					cards.forEach((card) => {
-						const cardEl = card;
+					// 先按条件筛出命中的卡片，再按页切分——两步分开，
+					// 否则「筛选后第 3 页」会停在空白页
+					const matched = allCards.filter((cardEl) => {
 						const tags = (cardEl.dataset.tags || "").split(",");
 						const platforms = (cardEl.dataset.platform || "").split(",");
 						const name = (cardEl.querySelector("h3")?.textContent || "").toLowerCase();
@@ -277,21 +302,78 @@ const runtimeLabels = {
 							desc.includes(query) ||
 							tags.some((t) => t.toLowerCase().includes(query));
 
-						if (tagMatch && platformMatch && searchMatch) {
-							cardEl.style.display = "";
-							cardEl.classList.add("animate-fade-in-up");
-							hasVisible = true;
-						} else {
-							cardEl.style.display = "none";
-							cardEl.classList.remove("animate-fade-in-up");
-						}
+						return tagMatch && platformMatch && searchMatch;
+					});
+
+					const pageSize = this.pageSize;
+					const totalPages = Math.max(1, Math.ceil(matched.length / pageSize));
+					if (this.page > totalPages) this.page = totalPages;
+					const start = (this.page - 1) * pageSize;
+
+					allCards.forEach((cardEl) => {
+						const index = matched.indexOf(cardEl);
+						const onPage = index >= start && index < start + pageSize;
+						cardEl.style.display = index !== -1 && onPage ? "" : "none";
+						if (onPage) cardEl.classList.add("animate-fade-in-up");
+						else cardEl.classList.remove("animate-fade-in-up");
 					});
 
 					const emptyEl = container.querySelector(".app-empty");
 					if (emptyEl) {
-						emptyEl.classList.toggle("hidden", hasVisible);
-						emptyEl.classList.toggle("flex", !hasVisible);
+						emptyEl.classList.toggle("hidden", matched.length > 0);
+						emptyEl.classList.toggle("flex", matched.length === 0);
 					}
+
+					this.renderPagination(matched.length, totalPages);
+				}
+
+				/** 分页条：上一页 / 页码 / 下一页，页码过多时只显示当前页附近的窗口 */
+				renderPagination(total, totalPages) {
+					const box = document.getElementById("app-pagination");
+					if (!box) return;
+
+					if (total === 0 || totalPages <= 1) {
+						box.classList.add("hidden");
+						box.classList.remove("flex");
+						box.innerHTML = "";
+						return;
+					}
+
+					box.classList.remove("hidden");
+					box.classList.add("flex");
+
+					const base = "btn-regular px-3 py-1.5 rounded-lg text-sm font-medium transition-colors";
+					const active = "bg-(--primary) text-white";
+					const normal = "bg-(--btn-regular-bg) text-(--btn-content) hover:bg-(--btn-regular-bg-hover)";
+					const disabled = "opacity-40 cursor-not-allowed";
+
+					const parts = [];
+					parts.push(
+						`<button type="button" data-page="${this.page - 1}" class="${base} ${normal} ${this.page <= 1 ? disabled : ""}" ${this.page <= 1 ? "disabled" : ""}>‹</button>`,
+					);
+
+					const windowSize = 2;
+					const from = Math.max(1, this.page - windowSize);
+					const to = Math.min(totalPages, this.page + windowSize);
+					if (from > 1) {
+						parts.push(`<button type="button" data-page="1" class="${base} ${normal}">1</button>`);
+						if (from > 2) parts.push('<span class="px-1 text-neutral-400">…</span>');
+					}
+					for (let i = from; i <= to; i++) {
+						parts.push(
+							`<button type="button" data-page="${i}" class="${base} ${i === this.page ? active : normal}">${i}</button>`,
+						);
+					}
+					if (to < totalPages) {
+						if (to < totalPages - 1) parts.push('<span class="px-1 text-neutral-400">…</span>');
+						parts.push(`<button type="button" data-page="${totalPages}" class="${base} ${normal}">${totalPages}</button>`);
+					}
+
+					parts.push(
+						`<button type="button" data-page="${this.page + 1}" class="${base} ${normal} ${this.page >= totalPages ? disabled : ""}" ${this.page >= totalPages ? "disabled" : ""}>›</button>`,
+					);
+
+					box.innerHTML = parts.join("");
 				}
 			}
 			customElements.define("app-filter", AppFilter);
@@ -423,6 +505,8 @@ const runtimeLabels = {
 					return;
 				}
 				grid.innerHTML = apps.map(cardHtml).join("");
+				// 通知筛选器重算分页：卡片被整体替换后，旧页码已无对应节点
+				document.dispatchEvent(new CustomEvent("app:rendered"));
 			}
 
 			async function apply() {

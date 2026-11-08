@@ -184,6 +184,15 @@ export const siteConfig: SiteConfig = {
 		sharePoster: true,
 		// OpenGraph图片功能，注意开启后要渲染很长时间，不建议本地调试的时候开启
 		generateOgImages: false,
+		// 标题留空时的兜底策略（保存时生效）
+		titleFallback: {
+			// extract=取正文首个非空行；filename=直接用文章标识；require=必须手填
+			mode: "extract",
+			// extract 模式下最多取多少个字
+			maxLength: 16,
+			// extract 模式下遇到中英文逗号是否截断
+			stopAtComma: true,
+		},
 	},
 	// bangumi配置
 	bangumi: {

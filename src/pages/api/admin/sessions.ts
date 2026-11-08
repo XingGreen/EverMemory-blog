@@ -8,7 +8,11 @@ export const prerender = false;
 function json(data: unknown, status = 200): Response {
 	return new Response(JSON.stringify(data), {
 		status,
-		headers: { "Content-Type": "application/json" },
+		headers: {
+			"Content-Type": "application/json",
+			/* 会话列表是「当前在线设备」的快照，缓存只会让界面显示已经退出的设备 */
+			"Cache-Control": "no-store, must-revalidate",
+		},
 	});
 }
 

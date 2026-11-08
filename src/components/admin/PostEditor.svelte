@@ -4,6 +4,7 @@ import { prefersReducedMotion } from "svelte/motion";
 import { fade, fly } from "svelte/transition";
 import Icon from "@/components/common/Icon.svelte";
 import { editorConfig } from "@/config/editorConfig";
+import { siteConfig } from "@/config/siteConfig";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import type { AdminWriteResponse } from "@/types/adminApi";
@@ -1295,24 +1296,42 @@ onDestroy(() => {
 });
 
 async function handleSave() {
-	/* 标题改为非必填：留空时取正文第一行兜底。先清掉 frontmatter 残留、
-	   Markdown 标记与多余空白，避免生成「# 标题」或「---」这样的标题；
-	   再在首个逗号处或第 16 字处截断，二者先到先得。 */
+	/* 标题留空时按 siteConfig.post.titleFallback 兜底：
+	   extract 取正文首个非空行（清掉 frontmatter、Markdown 标记与多余空白），
+	   在首个中英文逗号或 maxLength 字处截断，二者先到先得；
+	   filename 直接用文章标识；require 则拒绝保存。 */
 	if (!editorState.title.trim()) {
-		const firstLine =
-			editorState.content
-				.replace(/^---[\s\S]*?\n---/, "")
-				.split(/\r?\n/)
-				.map((line) =>
-					line
-						.replace(/[#>*_`~[\]()!-]/g, "")
-						.replace(/\s+/g, " ")
-						.trim(),
-				)
-				.find((line) => line) ?? "";
-		const commaAt = firstLine.search(/[,，]/);
-		const limit = commaAt >= 0 ? Math.min(commaAt, 16) : 16;
-		const fallback = firstLine.slice(0, limit).trim();
+		const fallbackConf = siteConfig.post?.titleFallback ?? {};
+		const mode = fallbackConf.mode ?? "extract";
+
+		if (mode === "require") {
+			onError(i18n(I18nKey.postTitleRequired));
+			return;
+		}
+
+		let fallback = "";
+		if (mode === "filename") {
+			fallback = editorState.slug.trim();
+		} else {
+			const maxLength = fallbackConf.maxLength ?? 16;
+			const stopAtComma = fallbackConf.stopAtComma !== false;
+			const firstLine =
+				editorState.content
+					.replace(/^---[\s\S]*?\n---/, "")
+					.split(/\r?\n/)
+					.map((line) =>
+						line
+							.replace(/[#>*_`~[\]()!-]/g, "")
+							.replace(/\s+/g, " ")
+							.trim(),
+					)
+					.find((line) => line) ?? "";
+			const commaAt = stopAtComma ? firstLine.search(/[,，]/) : -1;
+			const limit =
+				commaAt >= 0 ? Math.min(commaAt, maxLength) : maxLength;
+			fallback = firstLine.slice(0, limit).trim();
+		}
+
 		if (!fallback) {
 			onError(i18n(I18nKey.postTitleRequired));
 			return;

@@ -36,6 +36,7 @@ export type {
 } from "../types/fontConfig"; // 字体类型定义
 export { analyticsConfig } from "./analyticsConfig"; // 统计分析配置
 export { announcementConfig } from "./announcementConfig"; // 公告配置
+export { adminConfig } from "./adminConfig"; // 后台外观配置
 export { appConfig } from "./appConfig"; // 应用推荐配置
 // 样式配置
 export { backgroundWallpaper } from "./backgroundWallpaper"; // 背景壁纸配置

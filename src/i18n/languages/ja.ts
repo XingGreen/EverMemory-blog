@@ -745,6 +745,7 @@ export const ja: Translation = {
 	[Key.configNavbar]: "ナビゲーションバー",
 	[Key.configFooter]: "フッター",
 	[Key.configSidebar]: "サイドバー",
+	[Key.configAdmin]: "管理画面の外観",
 	[Key.configSiteDesc]:
 		"サイトタイトル、説明、テーマカラー、ページのオン/オフ、記事リストのレイアウトなどの基本情報",
 	[Key.configProfileDesc]: "アバター、ニックネーム、自己紹介とSNSリンク",
@@ -806,6 +807,8 @@ export const ja: Translation = {
 	[Key.sessionsKickAllOther]: "他のデバイスをすべて切断",
 	[Key.sessionsEmpty]: "アクティブなセッションはありません",
 	[Key.sessionsLoadError]: "セッション一覧の読み込みに失敗しました",
+	[Key.sessionsUpdatedAt]: "更新 ",
+	[Key.sessionsRefreshing]: "更新中…",
 	[Key.sessionsLastActive]: "最終アクティブ",
 	[Key.sessionsLoginAt]: "ログイン日時",
 	[Key.sessionsIp]: "IP アドレス",

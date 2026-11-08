@@ -31,6 +31,21 @@ let loading = $state(true);
 let loadError = $state("");
 let kicking = $state<string | null>(null);
 let kickingAll = $state(false);
+/** 最近一次成功拉取的时间：会话是实时数据，必须让人知道这份列表是什么时候的 */
+let lastUpdated = $state<number | null>(null);
+/** 后台自动刷新中（与首次加载区分，避免整页闪成骨架） */
+let refreshing = $state(false);
+
+const REFRESH_INTERVAL_MS = 30_000;
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
+
+function fmtClock(ts: number): string {
+	return new Date(ts).toLocaleTimeString("zh-CN", {
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
+	});
+}
 
 function fmtTime(ts: number): string {
 	if (!ts) return "-";
@@ -66,21 +81,29 @@ const deviceIconList = [
 	{ icon: "material-symbols:devices" },
 ];
 
-async function load() {
-	loading = true;
+async function load(options: { silent?: boolean } = {}) {
+	const silent = options.silent === true;
+	if (silent) refreshing = true;
+	else loading = true;
 	loadError = "";
 	try {
-		const res = await fetch("/api/admin/sessions/");
+		/* 加时间戳并把 cache 设成 no-store：浏览器与中间层都不缓存，
+		   否则「刚踢掉的设备」会因为命中旧响应而继续显示 */
+		const res = await fetch(`/api/admin/sessions/?_t=${Date.now()}`, {
+			cache: "no-store",
+		});
 		const data = await res.json();
 		if (!res.ok || !data.success) {
 			loadError = data.message || i18n(I18nKey.sessionsLoadError);
 			return;
 		}
 		sessions = data.sessions ?? [];
+		lastUpdated = Date.now();
 	} catch {
 		loadError = i18n(I18nKey.sessionsLoadError);
 	} finally {
 		loading = false;
+		refreshing = false;
 	}
 }
 
@@ -128,7 +151,25 @@ async function kickAllOther() {
 	}
 }
 
-onMount(load);
+onMount(() => {
+	load();
+	/* 会话会因别处登录/退出而变，页面停留时每 30 秒静默刷新一次；
+	   标签页不可见时不刷，避免后台常驻请求 */
+	const tick = () => {
+		if (document.visibilityState === "visible") load({ silent: true });
+	};
+	refreshTimer = setInterval(tick, REFRESH_INTERVAL_MS);
+	const onVisible = () => {
+		if (document.visibilityState === "visible") load({ silent: true });
+	};
+	document.addEventListener("visibilitychange", onVisible);
+
+	return () => {
+		if (refreshTimer) clearInterval(refreshTimer);
+		refreshTimer = null;
+		document.removeEventListener("visibilitychange", onVisible);
+	};
+});
 </script>
 
 <div class="sessions-page">
@@ -149,8 +190,17 @@ onMount(load);
 			<span>{i18n(I18nKey.adminSessionsDesc)}</span>
 		</div>
 		<div class="toolbar-actions">
-			<button class="sec-btn" onclick={load} disabled={loading}>
-				<Icon icon="material-symbols:refresh" />
+			{#if lastUpdated}
+				<span class="updated-at" title={new Date(lastUpdated).toLocaleString("zh-CN")}>
+					{#if refreshing}
+						{i18n(I18nKey.sessionsRefreshing)}
+					{:else}
+						{i18n(I18nKey.sessionsUpdatedAt)}{fmtClock(lastUpdated)}
+					{/if}
+				</span>
+			{/if}
+			<button class="sec-btn" onclick={() => load()} disabled={loading || refreshing}>
+				<Icon icon="material-symbols:refresh" class={refreshing ? "spin" : ""} />
 				<span>{i18n(I18nKey.secretsReload)}</span>
 			</button>
 			<button
@@ -272,7 +322,15 @@ onMount(load);
 
 	.toolbar-actions {
 		display: flex;
+		align-items: center;
 		gap: 0.5rem;
+	}
+
+	/* 数据时间戳：会话是实时数据，必须显式标出这份列表的采集时刻 */
+	.updated-at {
+		font-size: 0.8rem;
+		color: var(--content-meta);
+		white-space: nowrap;
 	}
 
 	.sec-btn {

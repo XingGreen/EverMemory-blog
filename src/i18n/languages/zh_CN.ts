@@ -725,6 +725,7 @@ export const zh_CN: Translation = {
 	[Key.configNavbar]: "导航栏",
 	[Key.configFooter]: "页脚",
 	[Key.configSidebar]: "侧边栏",
+	[Key.configAdmin]: "后台外观",
 	[Key.configSiteDesc]:
 		"站点标题、描述、主题色、页面开关、文章列表布局等基础信息",
 	[Key.configProfileDesc]: "头像、昵称、个人签名与社交链接",
@@ -780,6 +781,8 @@ export const zh_CN: Translation = {
 	[Key.sessionsKickAllOther]: "踢掉其他设备",
 	[Key.sessionsEmpty]: "暂无在线会话",
 	[Key.sessionsLoadError]: "会话列表加载失败",
+	[Key.sessionsUpdatedAt]: "更新于 ",
+	[Key.sessionsRefreshing]: "刷新中…",
 	[Key.sessionsLastActive]: "最后活跃",
 	[Key.sessionsLoginAt]: "登录时间",
 	[Key.sessionsIp]: "IP 地址",

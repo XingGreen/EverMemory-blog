@@ -127,6 +127,15 @@ export type SiteConfig = {
 		sharePoster?: boolean;
 		// OpenGraph图片功能
 		generateOgImages: boolean;
+		// 标题留空时的兜底策略
+		titleFallback?: {
+			/** extract=取正文首行；filename=用文章标识；require=必须手填 */
+			mode?: "extract" | "filename" | "require";
+			/** extract 模式下最多取多少个字 */
+			maxLength?: number;
+			/** extract 模式下遇到中英文逗号是否截断 */
+			stopAtComma?: boolean;
+		};
 	};
 
 	// bangumi配置

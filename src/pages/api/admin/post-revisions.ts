@@ -24,6 +24,7 @@ import { requireAuth } from "@/utils/auth";
 import { saveFileLocally } from "@/utils/github-app";
 import { getStorageProvider } from "@/utils/providers/registry";
 import { getStore } from "@/utils/persist-store";
+import { getStoredDraft, putStoredDraft } from "@/utils/post-draft-store";
 
 export const prerender = false;
 
@@ -320,6 +321,11 @@ export async function POST({
 			current = null;
 		}
 	}
+	/* 云端草稿：线上既没有源码文件、也没推到 GitHub，正文只在 KV 里 */
+	if (current === null) {
+		const stored = await getStoredDraft(slug);
+		if (stored) current = stored.content;
+	}
 	if (current === null) {
 		return json({ success: false, message: "当前正文不存在" }, 404);
 	}
@@ -336,8 +342,30 @@ export async function POST({
 		// 备份失败不阻断恢复，但会在响应里提示
 	}
 
-	const ok = saveFileLocally(postRel, target);
-	if (!ok) return json({ success: false, message: "写入正文失败" }, 500);
+	const savedLocally = saveFileLocally(postRel, target);
+	/* 只读部署写不了磁盘：草稿恢复到 KV，正式文章仍交给 GitHub */
+	let savedCloud = false;
+	if (!savedLocally) {
+		const isDraft = /^draft:[ \t]*(true|yes)[ \t]*$/im.test(target);
+		if (isDraft) {
+			savedCloud = await putStoredDraft({
+				slug,
+				filePath: postRel,
+				content: target,
+			});
+		}
+	}
+	if (!savedLocally && !savedCloud) {
+		return json({ success: false, message: "写入正文失败" }, 500);
+	}
+
+	/* 落到云端草稿就到此为止：草稿不该被推到线上仓库 */
+	if (savedCloud) {
+		return json({
+			success: true,
+			message: "已恢复到云端草稿（当前部署只读，未推送仓库）",
+		});
+	}
 
 	// 生产环境本地目录只读，正文还要推一次 GitHub；失败不视为整体失败
 	let pushed = true;

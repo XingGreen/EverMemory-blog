@@ -588,6 +588,7 @@ function actionLabel(action: string, title: string): string {
 	{#snippet headerRow()}
 		<div class="header-row" role="rowgroup">
 			<div class="col col-title" role="columnheader" aria-sort={ariaSortFor("title")}>
+				<span class="head-pin-spacer" aria-hidden="true"></span>
 				{i18n(I18nKey.postColTitle)}
 			</div>
 			{#if !hiddenCols.category}
@@ -1391,6 +1392,15 @@ function actionLabel(action: string, title: string): string {
 		width: 20px;
 		height: calc(1.0625rem * 1.5);
 		flex-shrink: 0;
+	}
+
+	/* 表头占位：行内标题前面有 20px 大头针槽 + 0.75rem 间距，
+	   表头文本必须让开同样的宽度，否则「标题」二字会比下方标题左出一截。
+	   表头列自身 gap 是 0.25rem，所以这里补 0.5rem 即可凑齐 0.75rem */
+	.head-pin-spacer {
+		width: 20px;
+		flex-shrink: 0;
+		margin-right: 0.5rem;
 	}
 
 	/* 置顶图标：实心大头针（对齐参考项目 lucide Pin），
