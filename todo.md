@@ -2,6 +2,24 @@
 
 > 每完成一项，把 `- [ ]` 改成 `- [x]`，并在行尾注明 commit。
 
+## 上游同步（6.13.5 → 6.16.9，选择性）
+
+- [x] 正则注入修复、X-Frame-Options 改 SAMEORIGIN、PlantUML 缩放文字模糊、行内代码保留空格
+- [x] 日期格式化统一走 siteConfig 时区，纯日期输入不再跨天
+- [x] 构建产物根目录统一解析（dist/client、.vercel/output/static、dist），Pagefind 改由脚本运行
+- [x] 许可证图标按名称自动匹配
+- [x] GitHub 卡片改为构建期缓存，新增 `pnpm github-cards`
+- [x] quarantine 脚本：收录 md/mdx、剥离代码块、过滤外链
+- [x] 分页支持输入页码跳转
+- [x] Atom 订阅页与 llms.txt
+- [x] Schema.org 结构化数据与 OG 元数据补全
+- [x] Biome 升级至 2.6.2 并排除 Markdown 内容文件
+- [ ] 未跟进：壁纸系统单源化重写、样式按页拆分、导航栏重写（与本地实现冲突，需单独立项）
+- [ ] 未跟进：markdown 栈迁移与 Astro 大版本升级（会破坏 MD/MDX 双通道）
+- [ ] 未跟进：动态页、项目展示、书签导航、文章系列、VNDB/MAL 等新增页面
+- [ ] 未跟进：OG 图改用本地中文字体（本项目 og 页基于 satori，woff2 不被支持，需换字体方案）
+- [ ] 未跟进：new-post 自动生成拼音 slug（依赖 frontmatter slug 字段，本项目尚未支持）
+
 ## 文章编辑器
 
 - [x] 封面图误删：点图改为聚焦地址框，删除由独立按钮触发并二次确认

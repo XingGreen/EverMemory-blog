@@ -15,21 +15,14 @@ import { glob } from "glob";
 import subsetFont from "subset-font";
 import { fontConfig, fontsList } from "../src/config";
 import { toPublicPath } from "../src/utils/fontHelper";
+import { resolveSiteRoot } from "./site-root";
 
 // ─── 配置 ───────────────────────────────────────────────
 
 // astro 产物根目录：node adapter 输出 dist/client，vercel adapter 输出
-// .vercel/output/static，无 adapter 时为 dist。取第一个包含 _astro 的目录。
+// .vercel/output/static，无 adapter 时为 dist。交由 site-root 统一判定。
 async function resolveClientDir(): Promise<string> {
-	for (const dir of ["dist/client", ".vercel/output/static", "dist"]) {
-		try {
-			const stat = await fs.stat(path.join(dir, "_astro"));
-			if (stat.isDirectory()) return dir;
-		} catch {
-			// 继续尝试下一个候选目录
-		}
-	}
-	return "dist";
+	return resolveSiteRoot();
 }
 
 // ─── 字体配置解析 ────────────────────────────────────────

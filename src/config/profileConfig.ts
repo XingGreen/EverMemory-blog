@@ -60,5 +60,11 @@ export const profileConfig: ProfileConfig = {
 			icon: "simple-icons:neteasecloudmusic",
 			url: "https://y.music.163.com/m/user?id=9010085648",
 		},
+		{
+			name: "Atom",
+			icon: "fa7-solid:atom",
+			url: "/atom/",
+			showName: false,
+		},
 	],
 };

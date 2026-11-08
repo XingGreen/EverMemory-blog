@@ -238,6 +238,7 @@ export const en: Translation = {
 	[Key.paginationOf]: "of",
 	[Key.paginationTotal]: ", Total",
 	[Key.paginationRecords]: " records",
+	[Key.paginationJump]: "Jump to page",
 
 	// 404 Page
 	[Key.notFound]: "404",
@@ -267,6 +268,15 @@ export const en: Translation = {
 		"It is recommended to use Feedly, Inoreader or other RSS readers to subscribe to this site.",
 	[Key.rssCopied]: "RSS link copied to clipboard!",
 	[Key.rssCopyFailed]: "Copy failed, please copy the link manually",
+
+	// Atom Page
+	[Key.atom]: "Atom Feed",
+	[Key.atomDescription]: "Subscribe to get latest updates",
+	[Key.atomSubtitle]:
+		"Subscribe via Atom to get the latest articles and updates immediately",
+	[Key.atomLink]: "Atom Link",
+	[Key.atomCopyToReader]: "Copy link to your Atom reader",
+	[Key.atomCopied]: "Atom link copied to clipboard!",
 
 	// Last Modified Time Card
 	[Key.lastModifiedPrefix]: "Last updated on ",

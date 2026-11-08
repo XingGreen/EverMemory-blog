@@ -230,6 +230,15 @@ export const zaku: Translation = {
 	[Key.paginationOf]: "页，合计",
 	[Key.paginationTotal]: "页，总共有",
 	[Key.paginationRecords]: "条杂鱼内容",
+	[Key.paginationJump]: "跳转到指定页",
+
+	// Atom 页面
+	[Key.atom]: "Atom 订阅",
+	[Key.atomDescription]: "订阅获取最新更新",
+	[Key.atomSubtitle]: "通过 Atom 订阅，第一时间获取最新文章和动态",
+	[Key.atomLink]: "Atom 链接",
+	[Key.atomCopyToReader]: "复制链接到你的 Atom 阅读器",
+	[Key.atomCopied]: "Atom 链接已复制到剪贴板！",
 
 	// 404页面
 	[Key.notFound]: "404找不到",

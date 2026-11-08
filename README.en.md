@@ -45,7 +45,7 @@ UI text supports Simplified Chinese, Traditional Chinese, English, Japanese, and
 
 - Astro 7 + Svelte 5 + TypeScript + Tailwind CSS 4
 - Biome linting and formatting, Vitest unit tests, turbo-orchestrated build pipeline
-- Build order: icon generation → LQIP → config snapshot → taxonomy check → Astro build → font subsetting → Pagefind indexing
+- Build order: icon generation → LQIP → GitHub card cache → config snapshot → taxonomy check → Astro build → font subsetting → Pagefind indexing
 
 ## Quick Start
 

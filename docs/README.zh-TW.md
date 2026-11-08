@@ -45,7 +45,7 @@
 
 - Astro 7 + Svelte 5 + TypeScript + Tailwind CSS 4
 - Biome 程式碼風格檢查、Vitest 單元測試、turbo 編排建置流程
-- 建置順序：圖示產生 → LQIP → 設定快照 → 分類標籤檢查 → Astro 建置 → 字型子集 → Pagefind 索引
+- 建置順序：圖示產生 → LQIP → GitHub 卡片快取 → 設定快照 → 分類標籤檢查 → Astro 建置 → 字型子集 → Pagefind 索引
 
 ## 快速開始
 

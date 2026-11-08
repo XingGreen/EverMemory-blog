@@ -68,10 +68,38 @@ function toggleYear(year: number) {
 	});
 }
 
+/* 纯日期输入（YAML 只写 YYYY-MM-DD，解析为 UTC 午夜）按时区换算会跨天，
+   这类值一律保留原始日历日期。 */
+function isDateOnly(date: Date) {
+	return (
+		date.getUTCHours() === 0 &&
+		date.getUTCMinutes() === 0 &&
+		date.getUTCSeconds() === 0 &&
+		date.getUTCMilliseconds() === 0
+	);
+}
+
+function getPostYear(date: Date) {
+	if (isDateOnly(date)) return date.getUTCFullYear();
+	return Number(
+		new Intl.DateTimeFormat("en-CA", {
+			year: "numeric",
+			timeZone: siteConfig.timezone || undefined,
+		}).format(date),
+	);
+}
+
 function formatDate(date: Date) {
-	const month = (date.getMonth() + 1).toString().padStart(2, "0");
-	const day = date.getDate().toString().padStart(2, "0");
-	return `${month}-${day}`;
+	if (isDateOnly(date)) {
+		const month = (date.getUTCMonth() + 1).toString().padStart(2, "0");
+		const day = date.getUTCDate().toString().padStart(2, "0");
+		return `${month}-${day}`;
+	}
+	return new Intl.DateTimeFormat("en-CA", {
+		month: "2-digit",
+		day: "2-digit",
+		timeZone: siteConfig.timezone || undefined,
+	}).format(date);
 }
 
 function formatTag(tagList: string[]) {
@@ -149,7 +177,7 @@ onMount(async () => {
 
 	const grouped = filteredPosts.reduce(
 		(acc, post) => {
-			const year = post.data.published.getFullYear();
+			const year = getPostYear(post.data.published);
 			if (!acc[year]) {
 				acc[year] = [];
 			}

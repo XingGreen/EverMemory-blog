@@ -250,6 +250,13 @@ export const siteConfig: SiteConfig = {
 			"*.bilibili.com",
 		],
 	},
+	// 订阅 (RSS / Atom) 配置
+	feed: {
+		// 订阅条目内容模式：
+		// - "full": 包含文章正文全文（默认）
+		// - "summary": 仅包含摘要/描述，不含正文，体积更小
+		contentMode: "full",
+	},
 	// 站点语言，在本配置文件顶部SITE_LANG定义
 	lang: "zh_CN",
 };

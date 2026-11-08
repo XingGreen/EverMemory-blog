@@ -9,7 +9,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "build": "turbo run icons lqips snapshot astro-build subset-fonts pagefind",
+    "build": "turbo run icons lqips github-cards snapshot astro-build subset-fonts pagefind",
     "preview": "astro preview",
     "astro": "astro",
     "astro-build": "astro build",
@@ -17,7 +17,7 @@
     "taxonomy-check": "npx tsx scripts/validate-taxonomy.ts",
     "taxonomy-sync": "npx tsx scripts/validate-taxonomy.ts --sync",
     "subset-fonts": "npx tsx scripts/subset-fonts.ts",
-    "pagefind": "pagefind --site dist",
+    "pagefind": "npx tsx scripts/run-pagefind.ts",
     "type-check": "tsc --noEmit --isolatedDeclarations",
     "new-post": "node scripts/new-post.js",
     "format": "biome format --write ./src",
@@ -25,7 +25,8 @@
     "preinstall": "npx only-allow pnpm",
     "icons": "node scripts/generate-icons.js",
     "icons:watch": "node scripts/generate-icons.js --watch",
-    "lqips": "npx tsx scripts/generate-lqips.ts"
+    "lqips": "npx tsx scripts/generate-lqips.ts",
+    "github-cards": "npx tsx scripts/generate-github-card-data.ts"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.9",
@@ -100,7 +101,7 @@
   "devDependencies": {
     "@astrojs/node": "^11.0.3",
     "@astrojs/ts-plugin": "^1.10.9",
-    "@biomejs/biome": "2.5.0",
+    "@biomejs/biome": "2.6.2",
     "@iconify-json/mdi": "^1.2.3",
     "@iconify-json/svg-spinners": "^1.2.4",
     "@tailwindcss/vite": "^4.3.1",

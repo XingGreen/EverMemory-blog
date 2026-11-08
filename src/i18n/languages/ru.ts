@@ -238,6 +238,7 @@ export const ru: Translation = {
 	[Key.paginationOf]: "из",
 	[Key.paginationTotal]: ", всего",
 	[Key.paginationRecords]: " записей",
+	[Key.paginationJump]: "Перейти к странице",
 
 	// 404 Страница
 	[Key.notFound]: "404",
@@ -268,6 +269,15 @@ export const ru: Translation = {
 	[Key.rssCopied]: "RSS ссылка скопирована в буфер обмена!",
 	[Key.rssCopyFailed]:
 		"Ошибка копирования, пожалуйста, скопируйте ссылку вручную",
+
+	// Atom Page
+	[Key.atom]: "Atom-лента",
+	[Key.atomDescription]: "Подпишитесь на последние обновления",
+	[Key.atomSubtitle]:
+		"Подпишитесь через Atom, чтобы сразу получать последние статьи и обновления",
+	[Key.atomLink]: "Atom-ссылка",
+	[Key.atomCopyToReader]: "Скопируйте ссылку в свой Atom-ридер",
+	[Key.atomCopied]: "Atom-ссылка скопирована в буфер обмена!",
 
 	// Последнее изменение
 	[Key.lastModifiedPrefix]: "Последнее обновление: ",

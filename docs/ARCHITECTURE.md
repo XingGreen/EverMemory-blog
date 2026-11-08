@@ -156,18 +156,22 @@ runtime and falls back to the flatten pipeline when compilation fails.
 
 ## Build pipeline
 
-`turbo run icons lqips snapshot astro-build subset-fonts pagefind`, with dependencies:
+`turbo run icons lqips github-cards snapshot astro-build subset-fonts pagefind`, with dependencies:
 
 1. `icons` — generates `src/constants/icons.ts`
 2. `lqips` — generates `src/constants/lqips.json`
-3. `snapshot` — generates `src/constants/admin-config-snapshot.ts` (gitignored)
-4. `taxonomy-check` — validates the category/tag registry before the build
-5. `astro-build` — the Astro build itself (`cache: false`)
-6. `subset-fonts` — production font subsetting
-7. `pagefind` — search index over `dist/`
+3. `github-cards` — caches GitHub repository metadata for `::github` cards
+4. `snapshot` — generates `src/constants/admin-config-snapshot.ts` (gitignored)
+5. `taxonomy-check` — validates the category/tag registry before the build
+6. `astro-build` — the Astro build itself (`cache: false`)
+7. `subset-fonts` — production font subsetting (writes into the real site root)
+8. `pagefind` — search index written to the real site root
 
-Generated icon and LQIP data are committed; the admin config snapshot is not. Regenerate
-with `pnpm icons`, `pnpm lqips`, or `pnpm snapshot`.
+`scripts/site-root.ts` resolves that root (`dist/client`, `.vercel/output/static`, or
+`dist`), so font subsetting and Pagefind target the directory that is actually deployed.
+
+Generated icon, LQIP, and GitHub card data are committed; the admin config snapshot is not.
+Regenerate with `pnpm icons`, `pnpm lqips`, `pnpm github-cards`, or `pnpm snapshot`.
 
 ## Deployment
 

@@ -32,6 +32,17 @@
       ],
       "outputs": ["src/constants/admin-config-snapshot.ts"]
     },
+    "github-cards": {
+      "inputs": [
+        "src/content/**/*.md",
+        "src/content/**/*.mdx",
+        "src/constants/github-card-data.json",
+        "src/utils/github-card-utils.ts",
+        "scripts/generate-github-card-data.ts"
+      ],
+      "outputs": ["src/constants/github-card-data.json"],
+      "env": ["GITHUB_TOKEN"]
+    },
     "taxonomy-check": {
       "inputs": [
         "src/content/**/*.md",
@@ -41,7 +52,7 @@
       ]
     },
     "astro-build": {
-      "dependsOn": ["icons", "lqips", "snapshot", "taxonomy-check"],
+      "dependsOn": ["icons", "lqips", "github-cards", "snapshot", "taxonomy-check"],
       "cache": false,
       "env": ["CF_WORKERS", "VERCEL", "BASE_PATH"]
     },

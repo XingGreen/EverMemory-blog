@@ -237,6 +237,7 @@ export const ja: Translation = {
 	[Key.paginationOf]: "ページ、全",
 	[Key.paginationTotal]: "ページ、合計",
 	[Key.paginationRecords]: "件",
+	[Key.paginationJump]: "指定ページへ移動",
 
 	// 404ページ
 	[Key.notFound]: "404",
@@ -265,6 +266,14 @@ export const ja: Translation = {
 		"Feedly、Inoreaderまたは他のRSSリーダーを使用してこのサイトを購読することを推奨します。",
 	[Key.rssCopied]: "RSSリンクがクリップボードにコピーされました！",
 	[Key.rssCopyFailed]: "コピーに失敗しました。手動でリンクをコピーしてください",
+
+	// Atom ページ
+	[Key.atom]: "Atom フィード",
+	[Key.atomDescription]: "最新の更新を購読",
+	[Key.atomSubtitle]: "Atom で購読すると、最新の記事と更新をすぐに受け取れます",
+	[Key.atomLink]: "Atom リンク",
+	[Key.atomCopyToReader]: "Atom リーダーにリンクをコピー",
+	[Key.atomCopied]: "Atom リンクをクリップボードにコピーしました！",
 
 	// 最終更新時間カード
 	[Key.lastModifiedPrefix]: "最終更新日：",
