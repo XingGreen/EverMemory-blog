@@ -53,8 +53,14 @@ export async function POST({
 		if (!item?.path || !item?.slug) {
 			return json({ success: false, message: "条目缺少 slug 或 path" }, 400);
 		}
-		if (item.path.includes("..")) {
-			return json({ success: false, message: "非法路径" }, 400);
+		if (!isAllowedPostPath(item.path)) {
+			return json(
+				{
+					success: false,
+					message: "非法路径：同步只处理 src/content/posts 下的 Markdown 文件",
+				},
+				400,
+			);
 		}
 		if (item.direction !== "pull" && item.direction !== "push") {
 			return json({ success: false, message: "方向必须是 pull 或 push" }, 400);
@@ -210,6 +216,25 @@ export async function POST({
 				: `完成 ${okCount} 项，失败 ${failCount} 项`,
 		results,
 	});
+}
+
+/**
+ * 同步条目只允许指向文章目录。
+ *
+ * 只拦 ".." 挡不住绝对路径，也挡不住 .env.local 这类同项目文件：
+ * push 方向会把读到的文件内容提交进公开仓库——一条
+ * `{"path": ".env.local", "direction": "push"}` 就足以把全部密钥推上去；
+ * pull 方向同样能覆盖任意可写文件。因此按「目录 + 扩展名 + 解析后前缀」
+ * 三重条件限制，而不是只做字符串黑名单。
+ */
+const POST_PATH_RE = /^src\/content\/posts\/(?:[^/]+\/)*[^/]+\.mdx?$/;
+
+export function isAllowedPostPath(value: unknown): value is string {
+	if (typeof value !== "string" || !POST_PATH_RE.test(value)) return false;
+	if (value.includes("..")) return false;
+	const root = path.resolve(process.cwd(), "src/content/posts");
+	const abs = path.resolve(process.cwd(), value);
+	return abs.startsWith(`${root}${path.sep}`);
 }
 
 function json(payload: unknown, status = 200): Response {

@@ -98,6 +98,11 @@
 
 ## 已完成
 
+- [x] 历史版本的 slug 未校验：`../` 可把读取/删除点挪到文章目录外，补齐 `isValidPostSlug`
+- [x] 历史版本恢复按 `.mdx` 真实路径写入，不再给 mdx 文章另存出同名 `.md` 副本
+- [x] 同步执行只接受 `src/content/posts` 下的 Markdown：原校验只拦 `..`，`.env.local` 可被推到公开仓库
+- [x] 密钥导出加二次确认（与写入同一门槛），前端识别 `STEP_UP_REQUIRED` 并引导重新授权
+- [x] frontmatter 转义补反斜杠与控制字符，标题含 Windows 路径不再让构建失败
 - [x] 同步列表漏文件：改扫盘取条目，不再依赖 `getCollection`
 - [x] 断网误判为 unknown，保留本地条目而非清空列表
 - [x] 面板每次打开强制重新拉取，加 `no-store` 与请求序号

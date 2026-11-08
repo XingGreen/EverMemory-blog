@@ -509,11 +509,31 @@ function timestampForFilename(): string {
 	return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
 
+/**
+ * 导出接口要求 5 分钟内的强认证，凭据过期时返回 403 + STEP_UP_REQUIRED。
+ * 统一在这里引导重新授权，否则用户只看到一句「HTTP 403」不知道该做什么。
+ * 返回 true 表示已接管（正在跳转），调用方直接收工。
+ */
+async function handleStepUp(res: Response): Promise<boolean> {
+	if (res.status !== 403) return false;
+	const data = (await res.json().catch(() => null)) as {
+		code?: string;
+	} | null;
+	if (data?.code !== "STEP_UP_REQUIRED") return false;
+	onNotify("身份凭证已过期，正在跳转重新验证…", "error", 6000);
+	const next = encodeURIComponent(location.pathname);
+	window.location.href = `/api/admin/auth/github/?force=1&next=${next}`;
+	return true;
+}
+
 async function downloadEnv() {
 	exportBusy = true;
 	try {
 		const res = await fetch("/api/admin/secrets/export/?format=env");
-		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		if (!res.ok) {
+			if (await handleStepUp(res)) return;
+			throw new Error(`HTTP ${res.status}`);
+		}
 		const text = await res.text();
 		const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
 		const url = URL.createObjectURL(blob);
@@ -538,7 +558,10 @@ async function copyVercelCommands() {
 	exportBusy = true;
 	try {
 		const res = await fetch("/api/admin/secrets/export/?format=vercel");
-		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		if (!res.ok) {
+			if (await handleStepUp(res)) return;
+			throw new Error(`HTTP ${res.status}`);
+		}
 		const text = await res.text();
 		await navigator.clipboard.writeText(text);
 		onNotify(i18n(I18nKey.secretsExportCopied), "success", 8000);

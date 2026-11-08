@@ -1,5 +1,9 @@
 import { writeAuditLog } from "@/utils/audit-log";
-import { requireAuth } from "@/utils/auth";
+import {
+	hasFreshAuth,
+	requireAuth,
+	stepUpRequiredResponse,
+} from "@/utils/auth";
 import { getClientIp } from "@/utils/client-ip";
 import { buildEnvExport, buildVercelCliCommands } from "@/utils/secret-export";
 
@@ -13,6 +17,13 @@ export async function GET({
 }): Promise<Response> {
 	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
+
+	/* 导出内容是全部密钥的明文（含 GitHub 私钥、JWT 签名密钥），
+	   一旦泄露等于丢站；因此与 secrets.ts 的写入同一门槛——
+	   距上次强认证不超过 5 分钟。 */
+	if (!hasFreshAuth(auth.payload)) {
+		return stepUpRequiredResponse();
+	}
 
 	const url = new URL(request.url);
 	const format = url.searchParams.get("format") === "vercel" ? "vercel" : "env";

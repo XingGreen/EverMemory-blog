@@ -12,19 +12,13 @@
  * 保证「恢复」本身也可回退。
  */
 
-import {
-	existsSync,
-	mkdirSync,
-	readdirSync,
-	readFileSync,
-	rmSync,
-} from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
-import { saveFileLocally } from "@/utils/github-app";
-import { getStorageProvider } from "@/utils/providers/registry";
+import { isValidPostSlug, saveFileLocally } from "@/utils/github-app";
 import { getStore } from "@/utils/persist-store";
 import { getStoredDraft, putStoredDraft } from "@/utils/post-draft-store";
+import { getStorageProvider } from "@/utils/providers/registry";
 
 export const prerender = false;
 
@@ -32,16 +26,8 @@ type RevisionReason = "auto" | "publish" | "restore_backup";
 
 const REVISIONS_ROOT = "src/content/.revisions";
 
-function postRelPath(slug: string): string {
-	return `src/content/posts/${slug}.md`;
-}
-
 function revisionDirRel(slug: string): string {
 	return `${REVISIONS_ROOT}/${slug}`;
-}
-
-function revisionFileName(reason: RevisionReason): string {
-	return `${Date.now()}-${reason}.md`;
 }
 
 function json(data: unknown, status = 200): Response {
@@ -178,6 +164,12 @@ export async function GET({
 	const slug = url.searchParams.get("slug")?.trim() ?? "";
 	const id = url.searchParams.get("id")?.trim() ?? "";
 	if (!slug) return json({ success: false, message: "缺少 slug" }, 400);
+	/* slug 会被拼进文件路径（老格式 .revisions 的回退分支），必须与
+	   save / delete 同一口径校验。只清 ".." 是不够的，slug 里出现
+	   "../../pages/api/admin" 就能把读取点挪到文章目录之外。 */
+	if (!isValidPostSlug(slug)) {
+		return json({ success: false, message: "文章标识不合法" }, 400);
+	}
 
 	if (!id) {
 		return json({ success: true, revisions: await listRevisions(slug) });
@@ -235,6 +227,10 @@ export async function POST({
 	const id = body.id?.trim() ?? "";
 	if (!slug || !id)
 		return json({ success: false, message: "缺少 slug 或 id" }, 400);
+	/* 同 GET：slug 决定 .revisions 路径，删除分支还会 rmSync 它 */
+	if (!isValidPostSlug(slug)) {
+		return json({ success: false, message: "文章标识不合法" }, 400);
+	}
 	if (id.includes("/") || id.includes("..")) {
 		return json({ success: false, message: "非法的版本 id" }, 400);
 	}
@@ -306,7 +302,11 @@ export async function POST({
 	if (target === null)
 		return json({ success: false, message: "版本不存在" }, 404);
 
-	const postRel = postRelPath(slug);
+	/* 真实路径必须探测扩展名：mdx 文章按 .md 恢复会另存出一份同名副本，
+	   正文看着「恢复了」，线上仍是旧内容（save.ts 踩过同一个坑）。 */
+	const storage = getStorageProvider();
+	const postRel =
+		(await storage.resolvePath?.(slug)) ?? `src/content/posts/${slug}.md`;
 	const postAbs = path.resolve(process.cwd(), postRel);
 	/* 当前正文：本地可读就用本地，否则从 GitHub 取。
 	   云端项目目录只读，existsSync 恒为 false，只认本地会直接 404。 */
@@ -315,7 +315,7 @@ export async function POST({
 		current = readFileSync(postAbs, "utf-8");
 	} else {
 		try {
-			const read = await getStorageProvider().readFile(postRel);
+			const read = await storage.readFile(postRel);
 			current = read.ok ? read.content : null;
 		} catch {
 			current = null;
@@ -370,7 +370,7 @@ export async function POST({
 	// 生产环境本地目录只读，正文还要推一次 GitHub；失败不视为整体失败
 	let pushed = true;
 	try {
-		pushed = await getStorageProvider().writeFile(
+		pushed = await storage.writeFile(
 			postRel,
 			target,
 			`chore(history): 恢复到 ${id}`,

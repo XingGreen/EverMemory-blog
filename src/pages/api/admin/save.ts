@@ -7,9 +7,9 @@ import {
 	isValidPostSlug,
 	saveFileLocally,
 } from "@/utils/github-app";
-import { getStorageProvider } from "@/utils/providers/registry";
 import { getStore } from "@/utils/persist-store";
 import { deleteStoredDraft, putStoredDraft } from "@/utils/post-draft-store";
+import { getStorageProvider } from "@/utils/providers/registry";
 
 export const prerender = false;
 
@@ -202,7 +202,11 @@ export async function POST({ request }) {
 		   草稿不参与构建，存 KV 既不会误发布，又能让线上把草稿写完；
 		   正式文章仍不在线上保存——发布路径始终是同步面板。 */
 		if (IS_PROD_BUILD && draft === true) {
-			const stored = await putStoredDraft({ slug, filePath, content: fullContent });
+			const stored = await putStoredDraft({
+				slug,
+				filePath,
+				content: fullContent,
+			});
 			if (stored) {
 				/* 草稿换了 slug：旧槽位要清掉，否则列表里会同时出现新旧两条 */
 				if (
@@ -287,8 +291,8 @@ function buildFrontmatter(data: {
 	const lines: string[] = [];
 
 	if (data.title) lines.push(`title: "${escapeYaml(data.title)}"`);
-	if (data.published) lines.push(`published: ${data.published}`);
-	if (data.updated) lines.push(`updated: ${data.updated}`);
+	if (data.published) lines.push(`published: ${safeScalar(data.published)}`);
+	if (data.updated) lines.push(`updated: ${safeScalar(data.updated)}`);
 	if (data.description)
 		lines.push(`description: "${escapeYaml(data.description)}"`);
 	if (data.image) lines.push(`image: "${escapeYaml(data.image)}"`);
@@ -305,8 +309,10 @@ function buildFrontmatter(data: {
 		lines.push(`licenseUrl: "${escapeYaml(data.licenseUrl)}"`);
 	if (data.sourceLink)
 		lines.push(`sourceLink: "${escapeYaml(data.sourceLink)}"`);
-	if (data.draft !== undefined) lines.push(`draft: ${data.draft}`);
-	lines.push(`pinned: ${data.pinned ?? false}`);
+	/* 布尔字段强制取真值：前端传 "false" 字符串时不该被写成布尔 true，
+	   夹带换行的值也不该有机会往 frontmatter 里加行 */
+	if (data.draft !== undefined) lines.push(`draft: ${data.draft === true}`);
+	lines.push(`pinned: ${data.pinned === true}`);
 	if (data.comment !== undefined) lines.push(`comment: ${data.comment}`);
 	if (data.password) lines.push(`password: "${escapeYaml(data.password)}"`);
 	if (data.passwordHint)
@@ -315,6 +321,25 @@ function buildFrontmatter(data: {
 	return lines.join("\n");
 }
 
+/** 裸标量（日期等）只允许单行：换行会往 frontmatter 里注入额外字段 */
+function safeScalar(value: unknown): string {
+	return String(value)
+		.replace(/[\r\n]+/g, " ")
+		.trim();
+}
+
+/**
+ * 双引号 YAML 标量的转义。
+ *
+ * 反斜杠必须最先处理：在双引号标量里 `\U`、`\P` 都是非法转义，标题里写一个
+ * Windows 路径（`C:\Users\...`）就会让整篇 frontmatter 解析失败，下一次
+ * `astro build` 直接崩——而保存接口本身是成功的，问题要到构建时才暴露。
+ * 换行与控制字符压成空格：否则 `published` 这类未转义的值可以带一个换行
+ * 往 frontmatter 里注入任意字段。
+ */
 function escapeYaml(str: string): string {
-	return str.replace(/"/g, '\\"');
+	return str
+		.replace(/\\/g, "\\\\")
+		.replace(/"/g, '\\"')
+		.replace(/\p{Cc}+/gu, " ");
 }
