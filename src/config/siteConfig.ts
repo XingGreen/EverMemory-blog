@@ -12,7 +12,7 @@ export const siteConfig: SiteConfig = {
 	// 站点 URL
 	site_url: "https://blog.evermemory.dpdns.org",
 	// 站点描述
-	description: "EverMemory's blog 是一款基于 Firefly 开发的清新美观且现代化个人博客主题模板，专为技术爱好者和内容创作者设计。该主题融合了现代 Web 技术栈，提供了丰富的功能模块和高度可定制的界面，让您能够轻松打造出专业且美观的个人博客网站。",
+	description: "一个用 Astro 构建的个人博客，文章在构建时渲染成页面，用于记录与展示个人的写作和日常，配色、布局与阅读偏好都可按自己的喜好调整。",
 	// 站点关键词
 	keywords: [
 		"EverMemory",

@@ -118,7 +118,7 @@
     "vitest": "^3.2.4"
   },
   "packageManager": "pnpm@9.14.4",
-  "description": "<img src=\"./docs/images/Forget-me-not.png\" width = \"350\" height = \"500\" alt=\"Forget-me-not\" align=right />",
+  "description": "一个用 Astro 构建的个人博客，文章在构建时渲染成页面，用于记录与展示个人的写作和日常，配色、布局与阅读偏好都可按自己的喜好调整。",
   "main": "svelte.config.js",
   "directories": {
     "doc": "docs"
