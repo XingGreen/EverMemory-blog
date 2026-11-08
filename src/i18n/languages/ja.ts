@@ -833,6 +833,28 @@ export const ja: Translation = {
 	[Key.cloudDraftSyncing]: "同期中…",
 	[Key.cloudDraftFailed]: "クラウド同期に失敗しました（ローカルに保存済み）",
 	[Key.cloudDraftRetry]: "再試行",
+	[Key.postStateSaved]: "保存済み",
+	[Key.postStateDirty]: "下書き・未保存",
+	[Key.postStateFresh]: "新規・未保存",
+	[Key.postStateDraftAt]: "下書きの保存時刻 {time}",
+	[Key.postDraftBannerTitle]: "下書きを編集中",
+	[Key.postDraftBannerBody]:
+		"{ago}に {device} で加えた変更は下書きにだけ保存され、本文にはまだ反映されていません。",
+	[Key.postDraftBannerDiscard]: "下書きを破棄して本文に戻る",
+	[Key.postDraftBannerDismiss]: "閉じる",
+	[Key.postDraftConflictTitle]: "下書きと本文が一致しません",
+	[Key.postDraftConflictLead]:
+		"この記事には未保存の下書きがあり、現在の本文と内容が異なります。どちらを使うか選んでください：",
+	[Key.postDraftConflictDraft]: "未保存の下書き",
+	[Key.postDraftConflictCloud]: "クラウド下書き",
+	[Key.postDraftConflictBody]: "現在の本文",
+	[Key.postDraftConflictBodyMeta]: "{date} に更新",
+	[Key.postDraftConflictWords]: "{n} 文字",
+	[Key.postDraftConflictUseDraft]: "下書きを使う",
+	[Key.postDraftConflictUseBody]: "本文を使い、下書きを破棄",
+	[Key.postDraftConflictHint]:
+		"「本文を使う」を選ぶとこの下書きは削除され、元に戻せません。",
+	[Key.postDraftConflictEmpty]: "（内容なし）",
 	[Key.secretsGroupGithubDesc]:
 		"リポジトリへの書き込みに使う GitHub App の身元と秘密鍵",
 	[Key.secretsGroupAuthDesc]:

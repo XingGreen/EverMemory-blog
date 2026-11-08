@@ -841,6 +841,28 @@ export const en: Translation = {
 	[Key.cloudDraftSyncing]: "Syncing...",
 	[Key.cloudDraftFailed]: "Cloud sync failed, saved locally",
 	[Key.cloudDraftRetry]: "Retry",
+	[Key.postStateSaved]: "Saved",
+	[Key.postStateDirty]: "Draft · unsaved",
+	[Key.postStateFresh]: "New · unsaved",
+	[Key.postStateDraftAt]: "Draft saved at {time}",
+	[Key.postDraftBannerTitle]: "You are editing a draft",
+	[Key.postDraftBannerBody]:
+		"Unsaved changes from {ago} on {device}: they only exist in the draft and are not in the post yet.",
+	[Key.postDraftBannerDiscard]: "Discard draft and reload post",
+	[Key.postDraftBannerDismiss]: "Dismiss",
+	[Key.postDraftConflictTitle]: "Draft and post differ",
+	[Key.postDraftConflictLead]:
+		"This post has an unsaved draft that differs from the current text. Pick the one to keep:",
+	[Key.postDraftConflictDraft]: "Unsaved draft",
+	[Key.postDraftConflictCloud]: "Cloud draft",
+	[Key.postDraftConflictBody]: "Current post",
+	[Key.postDraftConflictBodyMeta]: "Updated {date}",
+	[Key.postDraftConflictWords]: "{n} words",
+	[Key.postDraftConflictUseDraft]: "Use draft",
+	[Key.postDraftConflictUseBody]: "Use post, discard draft",
+	[Key.postDraftConflictHint]:
+		"\"Use post\" deletes this draft. It cannot be undone.",
+	[Key.postDraftConflictEmpty]: "(no text)",
 	[Key.secretsGroupGithubDesc]:
 		"GitHub App identity and private key used to write to your repository",
 	[Key.secretsGroupAuthDesc]:

@@ -823,6 +823,35 @@ enum I18nKey {
 	cloudDraftSyncing = "cloudDraftSyncing",
 	cloudDraftFailed = "cloudDraftFailed",
 	cloudDraftRetry = "cloudDraftRetry",
+
+	// 草稿状态：顶栏徽章 / 恢复横幅 / 草稿与正文的冲突选择
+	/** 顶栏徽章：当前内容与已保存的正文一致 */
+	postStateSaved = "postStateSaved",
+	/** 顶栏徽章：有未保存改动，只存在草稿里 */
+	postStateDirty = "postStateDirty",
+	/** 顶栏徽章：新建文章，还没保存过 */
+	postStateFresh = "postStateFresh",
+	/** 徽章 tooltip：草稿最后一次自动保存的时间，{time} 为时分 */
+	postStateDraftAt = "postStateDraftAt",
+	postDraftBannerTitle = "postDraftBannerTitle",
+	/** 横幅正文：{ago} 相对时间，{device} 设备描述 */
+	postDraftBannerBody = "postDraftBannerBody",
+	postDraftBannerDiscard = "postDraftBannerDiscard",
+	postDraftBannerDismiss = "postDraftBannerDismiss",
+	postDraftConflictTitle = "postDraftConflictTitle",
+	postDraftConflictLead = "postDraftConflictLead",
+	postDraftConflictDraft = "postDraftConflictDraft",
+	postDraftConflictCloud = "postDraftConflictCloud",
+	postDraftConflictBody = "postDraftConflictBody",
+	/** 正文卡片的时间行，{date} 为发布日期 */
+	postDraftConflictBodyMeta = "postDraftConflictBodyMeta",
+	/** 卡片里的字数，{n} 为词数 */
+	postDraftConflictWords = "postDraftConflictWords",
+	postDraftConflictUseDraft = "postDraftConflictUseDraft",
+	postDraftConflictUseBody = "postDraftConflictUseBody",
+	postDraftConflictHint = "postDraftConflictHint",
+	/** 某一侧没有任何文字内容时的占位 */
+	postDraftConflictEmpty = "postDraftConflictEmpty",
 	secretsGroupGithub = "secretsGroupGithub",
 	secretsGroupGithubDesc = "secretsGroupGithubDesc",
 	secretsGroupAuth = "secretsGroupAuth",

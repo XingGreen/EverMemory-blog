@@ -846,6 +846,28 @@ export const ru: Translation = {
 	[Key.cloudDraftSyncing]: "Синхронизация…",
 	[Key.cloudDraftFailed]: "Не удалось синхронизировать, сохранено локально",
 	[Key.cloudDraftRetry]: "Повторить",
+	[Key.postStateSaved]: "Сохранено",
+	[Key.postStateDirty]: "Черновик · не сохранён",
+	[Key.postStateFresh]: "Новая · не сохранена",
+	[Key.postStateDraftAt]: "Черновик сохранён в {time}",
+	[Key.postDraftBannerTitle]: "Редактируется черновик",
+	[Key.postDraftBannerBody]:
+		"Изменения от {ago} на {device} хранятся только в черновике и ещё не попали в текст статьи.",
+	[Key.postDraftBannerDiscard]: "Отказаться от черновика и вернуться к тексту",
+	[Key.postDraftBannerDismiss]: "Скрыть",
+	[Key.postDraftConflictTitle]: "Черновик и текст различаются",
+	[Key.postDraftConflictLead]:
+		"У этой статьи есть несохранённый черновик, отличающийся от текущего текста. Выберите, что использовать:",
+	[Key.postDraftConflictDraft]: "Несохранённый черновик",
+	[Key.postDraftConflictCloud]: "Облачный черновик",
+	[Key.postDraftConflictBody]: "Текущий текст",
+	[Key.postDraftConflictBodyMeta]: "Обновлено {date}",
+	[Key.postDraftConflictWords]: "{n} слов",
+	[Key.postDraftConflictUseDraft]: "Использовать черновик",
+	[Key.postDraftConflictUseBody]: "Использовать текст, удалить черновик",
+	[Key.postDraftConflictHint]:
+		"«Использовать текст» удалит черновик без возможности отмены.",
+	[Key.postDraftConflictEmpty]: "(пусто)",
 	[Key.secretsGroupGithubDesc]:
 		"Идентичность GitHub App и приватный ключ для записи в репозиторий",
 	[Key.secretsGroupAuthDesc]:

@@ -14,7 +14,8 @@ import {
 	loadPostTitles,
 } from "@/utils/admin-post-titles";
 import { buildEncryptedTitle } from "@/utils/encrypted-title";
-import DraftRestoreDialog from "./DraftRestoreDialog.svelte";
+import { countWords } from "@/utils/reading-stats";
+import DraftConflictDialog from "./DraftConflictDialog.svelte";
 import PostEditorFmPanel from "./PostEditorFmPanel.svelte";
 import PostEditorTocPanel from "./PostEditorTocPanel.svelte";
 import PostEditorWritePanel from "./PostEditorWritePanel.svelte";
@@ -285,8 +286,34 @@ const DRAFT_KEY = $derived(
 		: `admin-post-draft-edit-${post?.slug ?? "unknown"}`,
 );
 let dirty = $state(false);
+/** 最近一次草稿写入本地的时间：顶栏徽章据此显示「草稿保存于 12:03」 */
+let lastDraftSavedAt = $state<number | null>(null);
+/**
+ * 恢复草稿后的顶部横幅。草稿套用进编辑区后，编辑器里看到的内容与云端正文
+ * 已经不是一回事，不做标记的话用户会误以为自己看的就是已保存的正文。
+ */
+let draftBanner = $state<{
+	ago: string;
+	device: string;
+	fromCloud: boolean;
+} | null>(null);
 /** 用户已确认恢复的那份草稿的内容指纹；内容未再变化时继续带 restored 标记 */
 let restoredDraftKey: string | null = null;
+/** 本次进入后是否成功保存过（新建模式下用来区分「新建未保存」与「已保存」） */
+let savedOnce = $state(false);
+
+/**
+ * 顶栏状态徽章三态：
+ *   saved  编辑区里的内容就是已保存的正文
+ *   dirty  有未保存改动，只存在草稿里（本地/云端），还没写进正文
+ *   fresh  新建文章，一次都还没保存过
+ * 草稿自动保存能防止丢内容，但也会让人误以为「已经存好了」，
+ * 所以状态必须在顶栏可见，而不是只藏在右上角的同步徽章里。
+ */
+type DocState = "saved" | "dirty" | "fresh";
+const docState = $derived<DocState>(
+	dirty ? "dirty" : mode === "create" && !savedOnce ? "fresh" : "saved",
+);
 let draftTimer: ReturnType<typeof setTimeout> | null = null;
 let beforeUnloadHandler: ((e: BeforeUnloadEvent) => void) | null = null;
 // 云端草稿同步（跨设备）：自动上传到服务端存储（本机文件 / Vercel KV）
@@ -732,12 +759,11 @@ function persistLocalDraft(draft: DraftFields, restored = false): boolean {
 	   读写都换成 ...-<slug>，先前写进去的那份再也读不回来，表现为「退出再进全丢」。
 	   自动保存可能在正文加载前就触发，这条早退是主要防线。 */
 	if (mode === "edit" && !post?.slug) return false;
-	const key = JSON.stringify(draft);
-	/* 内容仍等于用户确认过的那份时，要保住 restored 标记：
-	   恢复后 400ms 的自动保存会再写一次，若不带着标记写，
-	   就会把刚打上的标记抹掉，下次进来又弹一次。 */
-	const keepRestored =
-		restored || (restoredDraftKey !== null && key === restoredDraftKey);
+	/* 本次会话一旦恢复过草稿，后续写入都保留 restored 标记：
+	   用户已经做过「用这份草稿」的决定，继续编辑不改变这个决定，
+	   否则每次退出再进来都会重问一遍「草稿与正文用哪个」。
+	   恢复后 400ms 的自动保存也会再写一次，不带着标记就会把标记抹掉。 */
+	const keepRestored = restored || restoredDraftKey !== null;
 	try {
 		const contentKey = JSON.stringify(draft);
 		/* 时间戳表示「这份内容是什么时候写的」，不是「最后一次写盘是什么时候」。
@@ -765,6 +791,9 @@ function persistLocalDraft(draft: DraftFields, restored = false): boolean {
 				savedAt,
 			}),
 		);
+		/* 顶栏徽章要显示「草稿保存于 12:03」：这里记的是内容真正变化的时间，
+		   不是每次写盘的时刻，所以内容没变时它不会乱跳 */
+		lastDraftSavedAt = savedAt;
 		return true;
 	} catch {
 		// 隐私模式 / 配额不足：写不进去，由调用方按「未保存」处理
@@ -858,10 +887,18 @@ $effect(() => {
 	const draft: DraftFields = currentDraft();
 	// 草稿自动保存对新建与编辑都生效：编辑页同样会因误关标签页丢改动。
 	// 去抖时长对齐参考 use-auto-save.ts 的 debounceMs 默认值 1500ms。
-	if (!hasDraftContent()) return;
+	if (!hasDraftContent()) {
+		/* 内容被清空也算改动：此时没有可写进草稿的字段，但绝不能因此显示「已保存」。
+		   空表单 + 有基线 = 用户把原来有的东西删掉了。 */
+		if (baselineDraftKey) dirty = true;
+		return;
+	}
 	/* 与加载时的基线一致 → 用户还没改过，不写草稿。
 	   否则编辑页一进来就会因「正文从空变有值」触发一次保存并显示「仅本地」。 */
 	if (JSON.stringify(draft) === baselineDraftKey) return;
+	/* 走到这里说明内容确实变了：状态徽章立刻转为「草稿 · 未保存」，
+	   不必等 400ms 后的写盘完成——用户改动后第一眼就该看到这个提示 */
+	dirty = true;
 	if (draftTimer) clearTimeout(draftTimer);
 	draftTimer = setTimeout(() => {
 		const saved = persistLocalDraft(draft);
@@ -878,7 +915,6 @@ $effect(() => {
 	cloudTimer = setTimeout(() => {
 		void saveCloudDraft(draft);
 	}, 1500);
-	dirty = true;
 });
 
 /** 上传草稿到云端（内容无变化时跳过；敏感字段不上传） */
@@ -1047,31 +1083,60 @@ function applyDraft(data: Partial<DraftBlob>) {
 	dirty = true;
 }
 
-/** 草稿恢复确认弹窗的内容；null 表示未打开 */
-let restorePrompt = $state<{
-	ago: string;
-	device: string;
-	fromCloud: boolean;
-} | null>(null);
-let restoreResolve: ((take: boolean) => void) | null = null;
+/** 冲突弹窗的三个出口 */
+type DraftChoice = "draft" | "body" | "cancel";
 
-/** 打开弹窗并等待用户选择。调用方 await 它，流程与 confirm 一致。 */
-function askRestore(info: {
-	ago: string;
-	device: string;
-	fromCloud: boolean;
-}): Promise<boolean> {
-	restorePrompt = info;
-	return new Promise<boolean>((resolve) => {
-		restoreResolve = resolve;
+/** 草稿与正文冲突弹窗的内容；null 表示未打开 */
+let conflictPrompt = $state<{
+	draft: {
+		title: string;
+		excerpt: string;
+		words: number;
+		meta: string;
+		fromCloud: boolean;
+	};
+	body: { title: string; excerpt: string; words: number; meta: string };
+} | null>(null);
+let conflictResolve: ((choice: DraftChoice) => void) | null = null;
+
+/** 打开选择框并等待用户决定。调用方 await 它，流程与 confirm 一致。 */
+function askConflict(info: NonNullable<typeof conflictPrompt>) {
+	conflictPrompt = info;
+	conflictResolve = null;
+	return new Promise<DraftChoice>((resolve) => {
+		conflictResolve = resolve;
 	});
 }
 
-function answerRestore(take: boolean) {
-	restorePrompt = null;
-	const resolve = restoreResolve;
-	restoreResolve = null;
-	resolve?.(take);
+function answerConflict(choice: DraftChoice) {
+	conflictPrompt = null;
+	const resolve = conflictResolve;
+	conflictResolve = null;
+	resolve?.(choice);
+}
+
+/**
+ * 截一段纯文本用于并排对比：去掉 frontmatter、代码块、链接语法与 Markdown 标记，
+ * 压成单行。对比框里放原文会让两张卡片高度差得离谱，也读不出「改了什么」。
+ */
+function excerptOf(text: string, limit = 90): string {
+	const plain = (text ?? "")
+		.replace(/^---[\s\S]*?\n---/, "")
+		.replace(/```[\s\S]*?```/g, " ")
+		.replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+		.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+		.replace(/[#>*_`~|]+/g, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+	return plain.length > limit ? `${plain.slice(0, limit)}…` : plain;
+}
+
+/** 徽章里的时分；不带日期，同一天内足够，跨天由相对时间（横幅）负责 */
+function clockOf(ts: number): string {
+	return new Date(ts).toLocaleTimeString(undefined, {
+		hour: "2-digit",
+		minute: "2-digit",
+	});
 }
 
 /** 重新进入新建页时，恢复草稿：本地 localStorage 与云端各取较新者 */
@@ -1121,100 +1186,95 @@ async function restoreCreateDraft() {
 				: cloud;
 	if (!source || (!source.title && !source.content)) return;
 
-	/* 近期草稿直接套用，不弹窗。
-	   「刚改完就离开、马上回来」是最常见的路径，每次都问一遍会让人以为内容丢了；
-	   而此时点「保留当前正文」会把草稿清掉，数据就真的没了。
-	   只有隔了较久的草稿才值得问一次——那时用户多半已经忘了自己写过。 */
-	/* 没有内容指纹的草稿是旧版本写下的，它的 savedAt 可能已被反复刷新，
-	   一律当成「年龄未知」走询问，不按「近期」静默套用。 */
-	const RECENT_MS = 5 * 60 * 1000;
-	const age =
-		source.contentKey && typeof source.savedAt === "number"
-			? Date.now() - source.savedAt
-			: Number.POSITIVE_INFINITY;
-	if (source.restored || age < RECENT_MS) {
-		const baseline = JSON.stringify(currentDraft());
-		applyDraft(source);
-		resetHistory();
-		persistLocalDraft(currentDraft(), true);
-		restoredDraftKey = JSON.stringify(currentDraft());
-		dirty = true;
-		/* 基线取恢复前的正文：设成恢复态的话，自动保存会认为没有改动，
-		   后续编辑只在内存里，云端永远追不上。 */
-		baselineDraftKey = baseline;
+	/* 用户此前已经确认过这份草稿（restored 标记）：不再追问，直接套用。
+	   追问会形成「恢复 → 打开 → 又问一遍」的循环；但横幅照样显示，
+	   让用户始终知道自己看的是草稿、不是正文。 */
+	if (source.restored) {
+		applyRestoredDraft(source, source === cloud, localKey, cloudTs);
 		return;
 	}
 
-	/* 编辑页：草稿必须与刚加载的正文不同，才说明有未保存改动。
-	   相同就直接跳过，避免把旧草稿无谓地写回表单。
+	/* 新建页没有「正文」可以冲突，草稿就是唯一内容：直接套用 + 横幅告知 */
+	if (mode === "create") {
+		applyRestoredDraft(source, source === cloud, localKey, cloudTs);
+		return;
+	}
+
+	/* 编辑页：草稿与正文相同 → 只是冗余备份，清掉即可，不必打扰用户。
 	   三个细节：
 	     · 换行与首尾空白要归一化，否则 \r\n 与末尾空行会让同一份内容判成不同
 	     · 草稿里为空的字段视为「没改过」：自动保存可能早于正文加载完成，
 	       存下来的是一份只有部分字段的快照，拿空串参与比较必然判成有改动
 	     · 只比这三个字段，其余元数据（tags / category 等）不影响是否提示 */
-	if (mode === "edit") {
-		const norm = (v: string | undefined) =>
-			(v ?? "").replace(/\r\n/g, "\n").trim();
-		const sameField = (draftVal: string | undefined, currentVal: string) =>
-			!draftVal || norm(draftVal) === norm(currentVal);
-		const sameAsPost =
-			sameField(source.content, editorState.content) &&
-			sameField(source.title, editorState.title) &&
-			sameField(source.description, editorState.description);
-		if (sameAsPost) {
-			/* 正文已是最新：本地与云端两份冗余草稿都要清掉。
-			   只清本地的话，换台设备或清过浏览器数据后再进来，
-			   还会被同一份冗余草稿拦一次。 */
-			try {
-				localStorage.removeItem(DRAFT_KEY);
-			} catch {
-				// 忽略
-			}
-			if (cloud && post?.slug) {
-				void fetch(`/api/admin/draft/?slug=${encodeURIComponent(post.slug)}`, {
-					method: "DELETE",
-				}).catch(() => {
-					// 清理失败不影响本次打开
-				});
-			}
-			return;
-		}
-		/* 内容不同 → 确实有未保存的改动，但用户可能已经忘了这份草稿的存在。
-		   直接覆盖表单会让人以为「正文被改了」，所以问一次，而不是自作主张。
-		   用项目自己的弹窗而非 window.confirm：原生弹窗拿不到主题，
-		   也没法把「哪台设备、多久之前」排成可读的样子。 */
-		/* 来源不同，含义完全不同：本地是「我在这台机器上改过」，
-		   云端是「可能在手机或另一台电脑上写的」。 */
-		const fromCloud = cloud !== null && (local === null || cloudTs > localTs);
-		const take = await askRestore({
-			ago: source.savedAt ? humanAgo(source.savedAt) : "之前",
-			device: source.device ?? "未知设备",
-			fromCloud,
-		});
-		/* 用户选择不要这份草稿：必须当场清掉，否则每次进编辑页都问一遍，
-		   形成「选了保留 → 退出 → 回来又问」的死循环。
-		   本地与云端一起清，换设备也不会再被拦。 */
-		if (!take) {
-			try {
-				localStorage.removeItem(DRAFT_KEY);
-				if (localKey !== DRAFT_KEY) localStorage.removeItem(localKey);
-			} catch {
-				// 忽略
-			}
-			const cloudSlug = mode === "create" ? "" : (post?.slug ?? "");
-			void fetch(`/api/admin/draft/?slug=${encodeURIComponent(cloudSlug)}`, {
-				method: "DELETE",
-			}).catch(() => {
-				// 清理失败不影响本次打开
-			});
-			return;
-		}
+	const norm = (v: string | undefined) =>
+		(v ?? "").replace(/\r\n/g, "\n").trim();
+	const sameField = (draftVal: string | undefined, currentVal: string) =>
+		!draftVal || norm(draftVal) === norm(currentVal);
+	const sameAsPost =
+		sameField(source.content, editorState.content) &&
+		sameField(source.title, editorState.title) &&
+		sameField(source.description, editorState.description);
+	if (sameAsPost) {
+		/* 正文已是最新：本地（含旧槽）与云端两份冗余草稿都要清掉。
+		   只清本地的话，换台设备或清过浏览器数据后再进来，
+		   还会被同一份冗余草稿拦一次。 */
+		clearStoredDrafts(localKey);
+		return;
 	}
 
-	/* 恢复前的表单就是正文内容，留作基线：
-	   之后拿它比对，恢复态才算「有改动」，自动保存才会继续落盘。 */
-	const baselineBeforeRestore = JSON.stringify(currentDraft());
+	/* 内容不同 = 真冲突。这里不再按「草稿有多新」决定是否静默套用：
+	   静默套用会让人以为正文被改了，静默丢弃又可能丢掉刚写的东西。
+	   把两份并排摆出来让用户选，是唯一不会误导的处理方式。 */
+	const fromCloud = cloud !== null && (local === null || cloudTs > localTs);
+	const choice = await askConflict({
+		draft: {
+			title: source.title ?? "",
+			excerpt: excerptOf(source.content ?? ""),
+			words: countWords(source.content ?? ""),
+			meta: `${source.savedAt ? humanAgo(source.savedAt) : "之前"} · ${
+				source.device ?? "未知设备"
+			}`,
+			fromCloud,
+		},
+		body: {
+			title: editorState.title,
+			excerpt: excerptOf(editorState.content),
+			words: countWords(editorState.content),
+			meta: i18n(I18nKey.postDraftConflictBodyMeta).replace(
+				"{date}",
+				post?.updated
+					? formatDate(post.updated)
+					: post?.published
+						? formatDate(post.published)
+						: "—",
+			),
+		},
+	});
 
+	/* 用正文：草稿当场清掉，否则每次进编辑页都问一遍 */
+	if (choice === "body") {
+		clearStoredDrafts(localKey);
+		return;
+	}
+	/* 取消（Esc / 点遮罩）：先不动，草稿留着，下次进来再问 */
+	if (choice === "cancel") return;
+
+	applyRestoredDraft(source, fromCloud, localKey, cloudTs);
+}
+
+/**
+ * 把草稿套进编辑区。
+ *
+ * 恢复前的表单就是正文内容，必须留作基线：之后拿它比对，恢复态才算「有改动」，
+ * 自动保存才会继续落盘；基线设成恢复后的内容的话，后续编辑只停在内存里。
+ */
+function applyRestoredDraft(
+	source: DraftBlob,
+	fromCloud: boolean,
+	localKey: string,
+	cloudTs: number,
+) {
+	const baselineBeforeRestore = JSON.stringify(currentDraft());
 	applyDraft(source);
 	resetHistory();
 
@@ -1235,9 +1295,43 @@ async function restoreCreateDraft() {
 	}
 	cloudSavedAt = cloudTs || null;
 	if (cloudTs) cloudSync = "local-only";
-	/* 基线取正文而不是恢复后的内容：设成恢复态的话，自动保存会认为没有改动，
-	   后面再改也只在内存里，不会落盘，云端永远追不上。 */
+
+	/* 横幅：草稿套进来之后，编辑区的内容就不再等于云端正文了 */
+	draftBanner = {
+		ago: source.savedAt ? humanAgo(source.savedAt) : "之前",
+		device: source.device ?? "未知设备",
+		fromCloud,
+	};
 	baselineDraftKey = baselineBeforeRestore;
+}
+
+/** 清掉这份文章的所有草稿副本：本地当前槽、反查到的旧槽、云端 */
+function clearStoredDrafts(localKey: string) {
+	try {
+		localStorage.removeItem(DRAFT_KEY);
+		if (localKey !== DRAFT_KEY) localStorage.removeItem(localKey);
+	} catch {
+		// 忽略清理失败
+	}
+	const cloudSlug = mode === "create" ? "" : (post?.slug ?? "");
+	void fetch(`/api/admin/draft/?slug=${encodeURIComponent(cloudSlug)}`, {
+		method: "DELETE",
+	}).catch(() => {
+		// 清理失败不影响本次打开
+	});
+}
+
+/**
+ * 「放弃草稿，回到正文」：先清本地与云端草稿，再整页重载。
+ * 直接在当前页还原字段容易漏（正文、历史栈、基线、渲染结果都要回退），
+ * 重载最稳，也符合用户「回到正文」的预期。
+ */
+function discardDraftAndReload() {
+	clearStoredDrafts(DRAFT_KEY);
+	draftBanner = null;
+	/* 关掉 beforeunload 的拦截：这次重载是用户主动的，不该再弹一次「确定离开」 */
+	dirty = false;
+	window.location.reload();
 }
 
 /** 有未保存内容时，拦截刷新 / 关闭页面（浏览器原生确认框） */
@@ -1338,8 +1432,7 @@ async function handleSave() {
 						)
 						.find((line) => line) ?? "";
 				const commaAt = stopAtComma ? firstLine.search(/[,，]/) : -1;
-				const limit =
-					commaAt >= 0 ? Math.min(commaAt, maxLength) : maxLength;
+				const limit = commaAt >= 0 ? Math.min(commaAt, maxLength) : maxLength;
 				fallback = firstLine.slice(0, limit).trim();
 			}
 
@@ -1424,6 +1517,9 @@ async function handleSave() {
 			cloudSavedAt = null;
 			cloudSync = "idle";
 			dirty = false;
+			/* 正文已落盘：草稿不再代表任何未保存内容，横幅随之撤掉 */
+			savedOnce = true;
+			draftBanner = null;
 			onSave(data.message);
 		} else {
 			console.error("[Editor] 保存失败:", data.message);
@@ -1510,21 +1606,53 @@ $effect(() => {
 });
 </script>
 
-<DraftRestoreDialog
-	open={restorePrompt !== null}
-	ago={restorePrompt?.ago ?? ""}
-	device={restorePrompt?.device ?? ""}
-	fromCloud={restorePrompt?.fromCloud ?? false}
-	onRestore={() => answerRestore(true)}
-	onKeep={() => answerRestore(false)}
+<DraftConflictDialog
+	open={conflictPrompt !== null}
+	draft={conflictPrompt?.draft ?? {
+		title: "",
+		excerpt: "",
+		words: 0,
+		meta: "",
+		fromCloud: false,
+	}}
+	body={conflictPrompt?.body ?? { title: "", excerpt: "", words: 0, meta: "" }}
+	onUseDraft={() => answerConflict("draft")}
+	onUseBody={() => answerConflict("body")}
+	onCancel={() => answerConflict("cancel")}
 />
 
 <div class="editor-shell">
 	<header class="editor-header">
-		<button class="editor-back" onclick={onCancel}>
-			<Icon icon="material-symbols:arrow-back" class="text-sm" />
-			{i18n(I18nKey.postCancel)}
-		</button>
+		<!-- 返回 + 状态徽章成组靠左：中间位置留给绝对居中的云端同步徽章 -->
+		<div class="header-left">
+			<button class="editor-back" onclick={onCancel}>
+				<Icon icon="material-symbols:arrow-back" class="text-sm" />
+				{i18n(I18nKey.postCancel)}
+			</button>
+			<!-- 文档状态：一眼看清「编辑区里的东西到底存没存进正文」。
+			     草稿自动保存只保证内容不丢，并不等于保存，所以状态必须放在最显眼的位置 -->
+			<span
+				class="doc-state"
+				class:is-dirty={docState === "dirty"}
+				class:is-fresh={docState === "fresh"}
+				title={docState === "dirty" && lastDraftSavedAt
+					? i18n(I18nKey.postStateDraftAt).replace(
+							"{time}",
+							clockOf(lastDraftSavedAt),
+						)
+					: undefined}
+			>
+				<span class="doc-state-dot"></span>
+				{docState === "dirty"
+					? i18n(I18nKey.postStateDirty)
+					: docState === "fresh"
+						? i18n(I18nKey.postStateFresh)
+						: i18n(I18nKey.postStateSaved)}
+				{#if docState === "dirty" && lastDraftSavedAt}
+					<span class="doc-state-time">{clockOf(lastDraftSavedAt)}</span>
+				{/if}
+			</span>
+		</div>
 		<div class="header-actions">
 			<!-- 同步徽章对新建与编辑都显示：编辑页同样会自动保存草稿，
 			     只对新页面提示会让编辑页的失败完全无感知 -->
@@ -1635,6 +1763,41 @@ $effect(() => {
 			</button>
 		</div>
 	</header>
+
+	<!-- 草稿横幅：套用草稿后编辑区里的内容已经不是云端正文，必须常驻标记，
+	     否则用户会把它当成已保存的文章继续写，最后才发现正文没变 -->
+	{#if draftBanner}
+		<div class="draft-banner" role="status">
+			<span class="draft-banner-icon">
+				<Icon icon="material-symbols:notes-rounded" />
+			</span>
+			<div class="draft-banner-text">
+				<strong>{i18n(I18nKey.postDraftBannerTitle)}</strong>
+				<span>
+					{i18n(I18nKey.postDraftBannerBody)
+						.replace("{ago}", draftBanner.ago)
+						.replace("{device}", draftBanner.device)}
+					{#if draftBanner.fromCloud}
+						（{i18n(I18nKey.postDraftConflictCloud)}）
+					{/if}
+				</span>
+			</div>
+			<button
+				class="ui-btn ui-btn-soft draft-banner-action"
+				onclick={discardDraftAndReload}
+			>
+				{i18n(I18nKey.postDraftBannerDiscard)}
+			</button>
+			<button
+				class="draft-banner-close"
+				aria-label={i18n(I18nKey.postDraftBannerDismiss)}
+				title={i18n(I18nKey.postDraftBannerDismiss)}
+				onclick={() => (draftBanner = null)}
+			>
+				<Icon icon="material-symbols:close" />
+			</button>
+		</div>
+	{/if}
 
 	{#if isLoadingContent}
 		<div class="loading-editorState">
@@ -1749,6 +1912,135 @@ $effect(() => {
 		border-bottom: 1px solid var(--line-divider);
 		background: var(--card-bg);
 		border-radius: var(--radius-large) var(--radius-large) 0 0;
+	}
+
+	/* 左侧返回 + 状态徽章：两者成组，避免与绝对居中的同步徽章抢位置 */
+	.header-left {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-width: 0;
+	}
+
+	/* ── 文档状态徽章 ──
+	   和右上角的「云端同步」徽章回答的是两个问题：
+	   这里＝编辑区的内容有没有写进正文；那里＝草稿有没有传到云端。
+	   已保存用中性灰（不必强调），有未保存改动用主色（需要留意），
+	   新建未保存用警示黄（一次都没存过，风险最高）。 */
+	.doc-state {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.25rem 0.625rem;
+		border-radius: 999px;
+		border: 1px solid var(--line-divider);
+		background: var(--btn-regular-bg);
+		color: var(--content-meta);
+		font-size: 0.75rem;
+		font-weight: 500;
+		white-space: nowrap;
+	}
+
+	.doc-state-dot {
+		width: 0.4375rem;
+		height: 0.4375rem;
+		border-radius: 50%;
+		background: currentColor;
+		opacity: 0.7;
+	}
+
+	.doc-state.is-dirty {
+		border-color: color-mix(in oklab, var(--primary) 40%, transparent);
+		background: color-mix(in oklab, var(--primary) 12%, transparent);
+		color: var(--primary);
+	}
+
+	.doc-state.is-fresh {
+		border-color: color-mix(in oklab, var(--warning, #b8860b) 40%, transparent);
+		background: color-mix(in oklab, var(--warning, #b8860b) 12%, transparent);
+		color: var(--warning, #b8860b);
+	}
+
+	/* 草稿最后一次写入的时分：与「草稿 · 未保存」并排，弱一档 */
+	.doc-state-time {
+		font-variant-numeric: tabular-nums;
+		opacity: 0.75;
+	}
+
+	/* ── 草稿横幅 ──
+	   套用草稿后常驻，直到保存或用户主动放弃。用主色的浅底而非警示色：
+	   它不是错误，只是「你正在改的东西还没进正文」这件事需要一直被看见 */
+	.draft-banner {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex-shrink: 0;
+		padding: 0.625rem 1.5rem;
+		border-bottom: 1px solid
+			color-mix(in oklab, var(--primary) 28%, transparent);
+		background: color-mix(in oklab, var(--primary) 8%, transparent);
+		color: var(--deep-text);
+	}
+
+	.draft-banner-icon {
+		display: flex;
+		flex-shrink: 0;
+		color: var(--primary);
+		font-size: 1.125rem;
+	}
+
+	.draft-banner-text {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.25rem 0.5rem;
+		min-width: 0;
+		font-size: 0.8125rem;
+		line-height: 1.5;
+		color: var(--content-meta);
+	}
+
+	.draft-banner-text strong {
+		color: var(--primary);
+		font-weight: 600;
+		white-space: nowrap;
+	}
+
+	.draft-banner-action {
+		margin-left: auto;
+		flex-shrink: 0;
+	}
+
+	.draft-banner-close {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		width: 1.75rem;
+		height: 1.75rem;
+		padding: 0;
+		border: none;
+		border-radius: 50%;
+		background: transparent;
+		color: var(--content-meta);
+		cursor: pointer;
+		transition: background-color 0.15s;
+	}
+
+	.draft-banner-close:hover {
+		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
+	}
+
+	/* 窄屏：横幅里的说明文字会挤成一列，按钮也不再靠右，改为换行堆叠 */
+	@media (max-width: 640px) {
+		.draft-banner {
+			flex-wrap: wrap;
+			padding-inline: 1rem;
+		}
+
+		.draft-banner-action {
+			margin-left: 0;
+		}
 	}
 
 	/* 左侧返回 + 右侧文字按钮：共用无底色样式，hover 才浮现浅底（对齐参考 header 的层级） */
@@ -2040,6 +2332,11 @@ $effect(() => {
 
 		.editor-back {
 			align-self: flex-start;
+		}
+
+		/* 窄屏下「返回 + 状态徽章」一行放不下时换行，避免把状态挤出屏幕 */
+		.header-left {
+			flex-wrap: wrap;
 		}
 
 		.cloud-badge {
