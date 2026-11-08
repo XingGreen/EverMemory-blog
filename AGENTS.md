@@ -21,10 +21,12 @@ and never hardcoded into committed files; machine paths live under `.workbuddy/`
   `astro.config.mjs`, `wrangler.jsonc`, `vercel.json`, or `package.json`. Never widen a request
   beyond its stated scope.
 
-- **Ask when unclear.** Scope, values, history trade-offs, or the meaning of a rule: ask instead
-  of deciding alone. Never invent unknown values and never leave placeholders (`<xxx>`, `TBD`,
-  "to be filled in"). When the user describes a problem, align on the approach before editing
-  code.
+- **Decide and execute.** Routine code edits, file organisation, and formatting: decide and run
+  them without asking. When a standard, style, or architecture question is unclear, read the
+  reference project (Shirone) or the existing implementation and follow that — do not ask. Never
+  invent unknown values and never leave placeholders (`<xxx>`, `TBD`, "to be filled in"). Stop
+  and report only when the instruction conflicts with the real system behaviour (would crash or
+  corrupt data), or when the action touches sensitive data or destructive Git operations.
 
 - **No reinvention.** Check `package.json` / `node_modules`, then official library docs, then a
   license-checked reference project. If nothing fits, stop and report what is missing and which
@@ -41,9 +43,11 @@ and never hardcoded into committed files; machine paths live under `.workbuddy/`
 - **Git.** Never develop on `master`; create a feature branch. Commits inside the branch may be
   granular, but **squash or rebase before merging** until the branch is one coherent commit, and
   confirm the history is clean first. Merge squashed so `master` gets exactly one commit per
-  iteration. Afterwards delete the branch, switch back, and `git pull`. Confirm before creating
-  a branch, merging, pushing, or deleting a branch. Rewriting published history needs a backup
-  branch, explicit approval, and `--force-with-lease`. Commit messages: one short subject line,
+  iteration. Afterwards delete the branch, switch back, and `git pull`. Run this normal flow
+  without asking. Stop and report before destructive Git operations: force push, `reset --hard`,
+  rewriting published history, or deleting an unmerged branch. Rewriting published history
+  needs a backup branch, explicit approval, and `--force-with-lease`. Commit messages: one short
+  subject line,
   body at most two lines describing only what changed — no narrative, no conversation traces.
 
 - **Verify.** `pnpm check`, `pnpm type-check`, and `pnpm test:run` for logic. For style changes

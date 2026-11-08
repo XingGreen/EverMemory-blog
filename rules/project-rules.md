@@ -18,14 +18,16 @@ request to justify touching files outside the agreed area.
 
 ## 2. Requirement handling
 
-- Ask immediately when anything is unclear. This covers scope ambiguity, unknown values,
-  history trade-offs, and the meaning of the rules themselves.
+- **Decide and execute.** Routine code edits, file organisation, and formatting are decided and
+  run directly — do not ask for permission.
+- When a standard, style, or architecture question is unclear, read the reference project
+  (Shirone) or compare the existing implementation, and follow that instead of asking.
+- Stop and report only when: the instruction conflicts with the real system behaviour (would
+  crash or corrupt data), or the action touches sensitive data or destructive Git operations.
 - Never invent values. Never ship placeholders: `<xxx>`, `TBD`, "to be filled in", "not
   specified", "to be added".
-- Everything written into documentation must be verifiable in the repository or confirmed by
-  the user. When a fact cannot be checked, ask.
-- When the user describes a problem or proposes a change, align on the approach first. Start
-  editing only after an explicit go-ahead.
+- Everything written into documentation must be verifiable in the repository or confirmed by the
+  user. When a fact cannot be checked, ask.
 - A plan means listing the work, not doing one item at a time. Related bugs found along the way
   are fixed in the same pass, and finished items are ticked off in `todo.md`.
 
@@ -39,10 +41,10 @@ request to justify touching files outside the agreed area.
   fragments on the main branch.
 - After merging: delete the branch locally and remotely, switch back, `git pull`, then start the
   next task.
-- Confirm before creating a branch, merging, pushing, or deleting a branch, unless the user has
-  explicitly waived that check for the current task.
-- Rewriting published history requires a backup branch, explicit approval, and
-  `git push --force-with-lease`.
+- Run the normal branch → commit → squash-merge → delete → push flow without asking.
+- Stop and report before destructive Git operations: force push, `reset --hard`, rewriting
+  published history, or deleting an unmerged branch. Rewriting published history requires a
+  backup branch, explicit approval, and `git push --force-with-lease`.
 - Commit messages: one short subject line; body at most two lines, only what changed. No
   reasoning, no narrative, no conversation traces. `scripts/check-commit-msg.mjs` rejects
   phrases such as "previous round", "measured", or "per your request".
