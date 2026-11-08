@@ -1,310 +1,160 @@
+# EverMemory's Blog
 
-<img src="./images/1131.png" width = "350" height = "500" alt="Firefly" align=right />
+> Персональный блог на Astro, построенный вокруг файлов контента, со встроенной панелью управления.
 
-<div align="center">
+![Node.js >= 22](https://img.shields.io/badge/node.js-%3E%3D22-brightgreen)
+![pnpm 9](https://img.shields.io/badge/pnpm-9-blue)
+![Astro 7](https://img.shields.io/badge/Astro-7.0.2-orange)
+![License: MIT](https://img.shields.io/github/license/XingGreen/EverMemory-blog)
+[![Issues](https://img.shields.io/github/issues/XingGreen/EverMemory-blog)](https://github.com/XingGreen/EverMemory-blog/issues)
 
-# Firefly
-> Свежий и красивый шаблон темы блога Astro
-> 
-> ![Node.js >= 22](https://img.shields.io/badge/node.js-%3E%3D22-brightgreen) 
-![pnpm >= 9](https://img.shields.io/badge/pnpm-%3E%3D9-blue)
-![Astro](https://img.shields.io/badge/Astro-7.0.2-orange)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9.2-blue)
->
-> [![Stars](https://img.shields.io/github/stars/CuteLeaf/Firefly?style=social)](https://github.com/CuteLeaf/Firefly/stargazers)
-[![Forks](https://img.shields.io/github/forks/CuteLeaf/Firefly?style=social)](https://github.com/CuteLeaf/Firefly/network/members)
-[![Issues](https://img.shields.io/github/issues/CuteLeaf/Firefly)](https://github.com/CuteLeaf/Firefly/issues)
-> 
-> [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Z8Z41NQALY)
->
-> **QQ交流群：[1087127207](https://qm.qq.com/q/ZGsFa8qX2G)**
-> 
-> ![GitHub License](https://img.shields.io/github/license/CuteLeaf/Firefly)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/CuteLeaf/Firefly)
-[![Afdian Sponsor](https://img.shields.io/badge/Afdian-Поддержать%20автора-ff69b4.svg)](https://ifdian.net/a/cuteleaf)
+Другие языки: [简体中文](../README.md) · [繁體中文](./README.zh-TW.md) · [English](../README.en.md) · [日本語](./README.ja.md)
 
-</div>
+## Обзор проекта
 
+Статьи хранятся в виде файлов Markdown / MDX в `src/content/posts/` и превращаются в страницы средствами Astro во время сборки; `/admin/` предоставляет редактирование, предпросмотр, черновики, историю версий и настройки сайта. Запись из панели выполняется через GitHub App, поэтому публикация контента соответствует новой сборке.
 
----
-📖 README:
-**[简体中文](../README.md)** | **[繁體中文](README.zh-TW.md)** | **[English](../README.en.md)** | **[日本語](README.ja.md)** | **[Русский](README.ru.md)** 
+Тексты интерфейса поддерживают упрощённый китайский, традиционный китайский, английский, японский и русский языки. Язык по умолчанию задаётся `SITE_LANG` в `src/config/siteConfig.ts`, переводы находятся в `src/i18n/languages/`.
 
-🚀 Быстрое руководство:
-[**🖥️Демо**](https://firefly.cuteleaf.cn/) /
-[**📝Документация**](https://docs-firefly.cuteleaf.cn/) /
-[**🍀Мой блог**](https://blog.cuteleaf.cn)
+## Возможности
 
-⚡ Генерация статического сайта: Сверхбыстрая загрузка и SEO-оптимизация на основе Astro
+### Контент и чтение
 
-🎨 Современный дизайн: Чистый и красивый интерфейс с настраиваемыми цветами темы
+- Статьи в Markdown / MDX с поддержкой GFM, блоков-предупреждений, расширенных блоков кода с номерами строк, формул KaTeX, диаграмм Mermaid и PlantUML, карточек репозиториев GitHub
+- Категории, теги, закрепление, черновики, защита паролем, краткое описание, оценка времени чтения, оглавление (TOC)
+- Страница архива, специальные страницы (коллекция `spec`), полнотекстовый поиск Pagefind, RSS и карта сайта
+- Светлая / тёмная / системная тема, настройка оттенка темы, режимы обоев «баннер / на весь экран / прозрачные / однотонные», одна или две боковые панели
+- Настраиваемые модули: просмотр изображений, комментарии, содержимое подвала, шрифты, музыкальный плеер, маскот
+- Переходы между страницами через Swup и адаптивная вёрстка
 
-📱 Мобильная адаптация: Идеальный адаптивный опыт с оптимизацией для мобильных устройств
+### Панель управления
 
-🔧 Высокая настраиваемость: Большинство функций можно настроить через конфигурационные файлы
+- Вход через GitHub OAuth (список разрешённых аккаунтов), сессии на JWT HttpOnly Cookie, список активных устройств с принудительным выходом, повторная аутентификация
+- Необязательный вход по аварийному токену и проверка Cloudflare Turnstile
+- Список статей, редактирование с предпросмотром в реальном времени, сохранение и удаление, продолжение черновика на другом устройстве, история версий и просмотр различий
+- Рабочая область синхронизации, управление категориями и тегами, управление ссылками, настройки сайта, переменные окружения и секреты, управление сессиями
+- Предпросмотр в панели отрисовывает `.md` и `.mdx` через отдельные каналы, независимо друг от друга
 
-<table width="100%" align="center">
-  <tr>
-    <td colspan="3" align="center">
-      <img src="./images/1.webp" >
-      <br>Режим баннера</td>
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><img src="./images/3.webp" width="300"><br>Режим оверлея</td>
-    <td align="center"><img src="./images/2.webp" width="300"><br>Режим полноэкранных обоев</td>
-    <td align="center"><img src="./images/4.webp" width="300"><br>Режим сплошного цвета</td>
-  </tr>
-</table>
-<img alt="Lighthouse" src="./docs/images/Lighthouse.png" />
+### Инженерная часть
 
->[!TIP]
->
->Firefly — это свежий, красивый и современный шаблон темы персонального блога, разработанный на основе фреймворка Astro и шаблона Fuwari специально для технических энтузиастов и создателей контента. Тема объединяет современный веб-стек, предоставляет богатые функциональные модули и высоко настраиваемый интерфейс, позволяя легко создать профессиональный и эстетичный персональный блог.
->
->С точки зрения ключевых макетов Firefly инновационно добавляет левые и правые двойные боковые панели, сеточный макет статей (многоколоночный) и макет masonry.
->
->Также добавлены виджеты статистики сайта, календаря, оглавления статьи, музыкального плеера и быстрой навигации по категориям, что делает боковую панель и общий макет страницы более насыщенными.
->
->Кроме того, добавлены такие компоненты, как постер для шеринга, рекомендации связанных статей и случайные статьи, что делает страницы публикаций более содержательными.
->
->**Если вы используете или берете за основу вышеуказанные дизайны компонентов и связанный код Firefly, пожалуйста, укажите источник: Firefly.**
->
->Firefly также сохраняет оригинальный макет fuwari, который можно свободно переключать в конфигурационном файле в соответствии с вашими предпочтениями.
->
->**Подробнее о настройках макета и демонстрациях см.: [Детали системы макетов Firefly](https://firefly.cuteleaf.cn/posts/firefly-layout-system/)**
->
->Firefly поддерживает многоязычный UI через i18n, но, кроме упрощенного китайского, остальные языки переведены ИИ. Если вы заметите ошибки, пожалуйста, отправьте [Pull Request](https://github.com/CuteLeaf/Firefly/pulls) для исправления.
+- Astro 7 + Svelte 5 + TypeScript + Tailwind CSS 4
+- Проверка стиля кода Biome, модульные тесты Vitest, конвейер сборки под управлением turbo
+- Порядок сборки: генерация иконок → LQIP → снимок конфигурации → сборка Astro → подмножество шрифтов → индекс Pagefind
 
-## ✨ Возможности
-
-### Основные функции
-
-- [x] **Astro + Tailwind CSS** - Сверхбыстрая генерация статических сайтов на основе современного технологического стека
-- [x] **Плавная анимация** - Анимация переходов между страницами Swup для шелковисто-плавного просмотра
-- [x] **Адаптивный дизайн** - Идеальная адаптация для настольных компьютеров, планшетов и мобильных устройств
-- [x] **Многоязычная поддержка** - Интернационализация i18n UI, поддержка упрощенного китайского, традиционного китайского, английского, японского, русского
-- [x] **Полнотекстовый поиск** - Клиентский поиск на основе Pagefind, поддержка индексации содержимого статей. 
-
-### Персонализация
-- [x] **Динамическая боковая панель** - Поддержка одиночной и двойной боковой панели
-- [x] **Макет статей** - Поддержка списка (один столбец) и сетки (многоколонный/Masonry)
-- [x] **Управление шрифтами** - Поддержка пользовательских шрифтов с богатым выбором шрифтов
-- [x] **Настройка подвала** - Внедрение HTML-контента, полная настраиваемость
-- [x] **Режим света и тьмы** - Поддержка светлого/темного/системного режимов
-- [x] **Настройка навигации** - Логотип, заголовок, ссылки полностью настраиваются
-- [x] **Переключение режимов обоев** - Баннерные обои, полноэкранные обои, полноэкранные прозрачные обои, однотонный фон
-- [x] **Настройка цвета темы** - Регулировка оттенка на 360°
-
-
-Если у вас есть полезные функции и оптимизации, пожалуйста, отправьте [Pull Request](https://github.com/CuteLeaf/Firefly/pulls)
-
-## 🚀 Быстрый старт
+## Быстрый старт
 
 ### Требования
 
 - Node.js ≥ 22
-- pnpm ≥ 9
+- pnpm 9 (версия зафиксирована в `packageManager`; для установки допускается только pnpm)
 
-### Локальная разработка
+### Установка и запуск
 
-1. **Клонировать репозиторий:**
-   ```bash
-   git clone https://github.com/Cuteleaf/Firefly.git
-   cd Firefly
-   ```
-   
-   **Сначала создайте [Fork](https://github.com/CuteLeaf/Firefly/fork) в свой репозиторий, затем клонируйте (рекомендуется). Не забудьте нажать Star перед Fork!**
-
-   ```bash
-   git clone https://github.com/you-github-name/Firefly.git
-   cd Firefly
-   ```
-3. **Установить зависимости:**
-   ```bash
-   # Установите pnpm, если еще не установлен
-   npm install -g pnpm
-   
-   # Установить зависимости проекта
-   pnpm install
-   ```
-
-4. **Настроить блог:**
-   - Отредактируйте конфигурационные файлы в каталоге `src/config/` для настройки блога
-
-5. **Запустить сервер разработки:**
-   ```bash
-   pnpm dev
-   ```
-   Блог будет доступен по адресу `http://localhost:4321`
-
-### Развертывание на платформе хостинга
-- **См. [официальное руководство](https://docs.astro.build/ru/guides/deploy/) для развертывания блога на Vercel, Netlify, Cloudflare Pages, EdgeOne Pages и т.д.**
-- **Vercel**, **Netlify** и другие популярные платформы поддерживают автоматическое развертывание и автоматически выбирают подходящий адаптер в зависимости от окружения.
-
-   Пресет фреймворка: `Astro`
-
-   Корневой каталог: `./`
-
-   Каталог вывода: `dist`
-
-   Команда сборки: `pnpm run build`
-
-   Команда установки: `pnpm install`
-
-   [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/CuteLeaf/Firefly&project-name=Firefly&repository-name=Firefly)
-   [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/CuteLeaf/Firefly)
-
-## 📖 Настройка
-
-> 📚 **Подробная документация по настройке**: См. [документацию Firefly](https://docs-firefly.cuteleaf.cn/) для полного руководства по настройке
-
-### Установка языка сайта
-
-Чтобы установить язык по умолчанию для вашего блога, отредактируйте файл `src/config/siteConfig.ts`:
-
-```typescript
-// Определить язык сайта
-const SITE_LANG = "zh_CN";
+```bash
+git clone https://github.com/XingGreen/EverMemory-blog.git
+cd EverMemory-blog
+pnpm install
+pnpm dev
 ```
 
-**Поддерживаемые коды языков:**
-- `zh_CN` - Упрощенный китайский
-- `zh_TW` - Традиционный китайский
-- `en` - Английский
-- `ja` - Японский
-- `ru` - Русский
+Сервер разработки по умолчанию работает на `http://localhost:4321`, вход в панель — `/admin/`. Переменные окружения, необходимые для входа и записи, описаны в [`docs/ADMIN_MANUAL.md`](./ADMIN_MANUAL.md).
 
+### Частые команды
 
-### Структура конфигурационных файлов
+| Команда | Назначение |
+| :--- | :--- |
+| `pnpm install` | Установить зависимости |
+| `pnpm dev` | Запустить локальный сервер разработки |
+| `pnpm build` | Выполнить полную производственную сборку |
+| `pnpm preview` | Локально просмотреть результат сборки |
+| `pnpm check` | Проверка типов и шаблонов Astro |
+| `pnpm type-check` | Проверка типов TypeScript |
+| `pnpm lint` / `pnpm format` | Проверка Biome (с автоисправлением) и форматирование |
+| `pnpm test` / `pnpm test:run` | Vitest в режиме наблюдения / однократный запуск |
+| `pnpm new-post <filename>` | Создать новую статью |
+| `pnpm icons` / `pnpm lqips` | Пересоздать данные иконок и LQIP |
+| `pnpm astro ...` | Вызвать Astro CLI |
 
-```
-src/
-├── config/
-│   ├── index.ts                  # Индексный файл конфигурации
-│   ├── siteConfig.ts             # Базовая конфигурация сайта
-│   ├── analyticsConfig.ts        # Конфигурация аналитики
-│   ├── announcementConfig.ts     # Конфигурация объявлений
-│   ├── backgroundWallpaper.ts    # Конфигурация фоновых обоев
-│   ├── commentConfig.ts          # Конфигурация системы комментариев
-│   ├── coverImageConfig.ts       # Конфигурация обложек статей
-│   ├── effectsConfig.ts          # Конфигурация анимационных эффектов (сакура и др.)
-│   ├── expressiveCodeConfig.ts   # Конфигурация подсветки кода
-│   ├── fontConfig.ts             # Конфигурация шрифтов
-│   ├── footerConfig.ts           # Конфигурация подвала
-│   ├── friendsConfig.ts          # Конфигурация дружественных ссылок
-│   ├── galleryConfig.ts          # Конфигурация галереи
-│   ├── licenseConfig.ts          # Конфигурация лицензии
-│   ├── musicConfig.ts            # Конфигурация музыкального плеера
-│   ├── navBarConfig.ts           # Конфигурация навигационной панели
-│   ├── pioConfig.ts              # Конфигурация маскота
-│   ├── plantumlConfig.ts         # Конфигурация диаграмм PlantUML
-│   ├── profileConfig.ts          # Конфигурация профиля пользователя
-│   ├── sidebarConfig.ts          # Конфигурация макета боковой панели
-│   └── sponsorConfig.ts          # Конфигурация спонсоров
-```
+## Настройка и контент
 
+### Настройки сайта
 
-## ⚙️ Frontmatter статьи
+Настройки разделены по функциональности в `src/config/` и экспортируются через `src/config/index.ts`. Заголовок сайта, URL, язык, оттенок темы, постраничная навигация и переключатели страниц находятся в `siteConfig.ts`; назначение каждого файла описано в [`src/config/README.md`](../src/config/README.md).
 
-```yaml
----
-title: My First Blog Post
-published: 2023-09-09
-description: This is the first post of my new Astro blog.
-image: ./cover.jpg  # Или используйте "api" для включения случайных обложек
-tags: [Foo, Bar]
-category: Front-end
-draft: false
-lang: zh-CN      # Устанавливайте только если язык статьи отличается от языка сайта в `siteConfig.ts`
-pinned: false    # Закрепить статью
-comment: true    # Включить комментарии
----
-```
+Адрес сайта определяется `site_url` в `siteConfig.ts`. При добавлении логики сборки, управляемой переменной окружения, зарегистрируйте эту переменную также в `env` файла `turbo.json`, иначе она не будет передана задаче сборки.
 
-## 📖 Расширения Markdown
+### Статьи и Frontmatter
 
-Помимо поддержки [GitHub Flavored Markdown](https://github.github.com/gfm/) по умолчанию в Astro, есть несколько дополнительных функций Markdown:
+Статьи находятся в `src/content/posts/` (`.md` / `.mdx`), специальные страницы — в `src/content/spec/`. Поля определены в `src/content.config.ts`:
 
-- Предупреждающие блоки (Admonitions) - Поддержка тем GitHub, Obsidian, VitePress и Docusaurus ([Предпросмотр и использование](https://firefly.cuteleaf.cn/posts/markdown-extended/))
-- Карточки репозиториев GitHub ([Предпросмотр и использование](https://firefly.cuteleaf.cn/posts/markdown-extended/))
-- Улучшенные блоки кода на основе Expressive Code ([Предпросмотр](http://firefly.cuteleaf.cn/posts/code-examples/) / [Документация](https://expressive-code.com/))
+| Поле | Тип | Описание |
+| :--- | :--- | :--- |
+| `title` | string | Заголовок, обязательно |
+| `published` | date | Дата публикации, обязательно |
+| `updated` | date | Дата обновления |
+| `draft` | boolean | Черновик, по умолчанию `false` |
+| `description` | string | Краткое описание |
+| `image` | string | Обложка |
+| `tags` | string[] | Теги |
+| `category` | string | Категория |
+| `lang` | string | Язык статьи, указывается при отличии от языка сайта по умолчанию |
+| `pinned` | boolean | Закрепить сверху |
+| `author` / `sourceLink` | string | Автор и ссылка на источник |
+| `licenseName` / `licenseUrl` | string | Название лицензии статьи и ссылка |
+| `comment` | boolean | Разрешены ли комментарии |
+| `password` / `passwordHint` | string | Пароль для чтения и подсказка |
 
-## 🧞 Команды
+### Структура каталогов
 
-Все команды должны выполняться в корневом каталоге проекта:
+| Путь | Содержимое |
+| :--- | :--- |
+| `src/pages/` | Маршруты страниц Astro, вход в панель в `src/pages/admin/` |
+| `src/pages/api/admin/` | API панели управления |
+| `src/components/` | Компоненты, компоненты панели в `src/components/admin/` |
+| `src/layouts/` | Макеты страниц |
+| `src/content/` | Статьи и содержимое специальных страниц |
+| `src/config/` | Настройки сайта и функций |
+| `src/plugins/` | Расширения remark / rehype |
+| `src/i18n/` | Ключи переводов и языковые файлы |
+| `src/utils/`, `src/constants/` | Утилиты и генерируемые данные |
+| `scripts/` | Скрипты времени сборки |
+| `tests/` | Модульные тесты |
+| `docs/` | Документация по администрированию и эксплуатации |
 
-| Команда                    | Действие                                            |
-|:---------------------------|:----------------------------------------------------|
-| `pnpm install`             | Установить зависимости                              |
-| `pnpm dev`                 | Запустить локальный сервер разработки на `localhost:4321` |
-| `pnpm build`               | Собрать сайт в `./dist/`                            |
-| `pnpm preview`             | Локальный предварительный просмотр собранного сайта |
-| `pnpm check`               | Проверить код на наличие ошибок                     |
-| `pnpm format`              | Отформатировать код с помощью Biome                 |
-| `pnpm new-post <filename>` | Создать новую статью                                |
-| `pnpm astro ...`           | Выполнить `astro add`, `astro check` и другие команды |
-| `pnpm astro --help`        | Показать справку Astro CLI                          |
+## Сборка и развёртывание
 
-## 🙏 Благодарности
+`astro.config.mjs` выбирает адаптер в зависимости от переменных окружения:
 
-Особая благодарность [saicaca](https://github.com/saicaca) за разработку шаблона [fuwari](https://github.com/saicaca/fuwari), на котором Firefly основан для вторичной разработки.
+| Условие | Адаптер | Результат и настройки |
+| :--- | :--- | :--- |
+| `VERCEL=1` | `@astrojs/vercel` | Настройки платформы в `vercel.json` |
+| `CF_WORKERS=1` | `@astrojs/cloudflare` | `dist/client` + `dist/server/entry.mjs`, настройки в `wrangler.jsonc` |
+| Ни одна не задана | `@astrojs/node` (standalone) | Вывод в `dist/` |
 
-Авторские права на изображения Firefly принадлежат компании [miHoYo](https://www.mihoyo.com/), разработчику игры ["Honkai: Star Rail"](https://sr.mihoyo.com/).
+`pnpm build` создаёт `dist/`, `pnpm preview` позволяет просмотреть сборку локально. Для развёртывания в Cloudflare Workers также необходимы KV-привязки, например `SESSION`; идентификатор пространства имён нужно создать и указать в `wrangler.jsonc`.
 
-### Технический стек
+В производственной среде каталог проекта доступен только для чтения: запись статей выполняется через GitHub, а запись настроек сайта, категорий, тегов и секретов сейчас работает только в локальной среде разработки.
 
-- [Astro](https://astro.build) 
-- [Tailwind CSS](https://tailwindcss.com) 
-- [Iconify](https://iconify.design)
+## Поддержка
 
-### Проекты вдохновения
+- **Репозиторий**: [XingGreen/EverMemory-blog](https://github.com/XingGreen/EverMemory-blog); правила отправки issues и pull requests — в [`CONTRIBUTING.md`](../CONTRIBUTING.md)
+- **Сопровождающий**: Не указан
+- **Документация**
+  - [`CLAUDE.md`](../CLAUDE.md) — архитектура, технические соглашения и правила разработки
+  - [`docs/ADMIN_MANUAL.md`](./ADMIN_MANUAL.md) — использование панели и переменные окружения
+  - [`docs/EMERGENCY_OPS.md`](./EMERGENCY_OPS.md) — аварийные операции
+  - [`src/config/README.md`](../src/config/README.md) — описание настроек
+  - [`todo.md`](../todo.md) — незавершённые задачи и известные проблемы
+- **Проверки**: `pnpm check`, `pnpm test:run`, `pnpm lint` / `pnpm format`
 
-- [fuwari](https://github.com/saicaca/fuwari)
-- [hexo-theme-shoka](https://github.com/amehime/hexo-theme-shoka)
-- [astro-koharu](https://github.com/cosZone/astro-koharu)
-- [Mizuki](https://github.com/matsuzaka-yuki/Mizuki)
+## Лицензия и соответствие
 
-### Другие ссылки
-- Компонент страницы [Bangumi Collection](https://kasuha.com/posts/fuwari-enhance-ep2/) блогера `霞葉`
-- Q-версия [Firefly Mascot Spine Model](https://www.bilibili.com/video/BV1fuVzzdE5y) от создателя Bilibili `公公的日常`
+Проект распространяется по лицензии [MIT License](../LICENSE). При использовании, изменении или распространении сохраняйте следующие уведомления об авторских правах:
 
-## 📝 Лицензия
+- Copyright (c) 2024 saicaca
+- Copyright (c) 2025 CuteLeaf
+- Copyright (c) 2026 XingGreen
 
-Этот проект распространяется под лицензией [MIT license](https://mit-license.org/), подробности см. в файле [LICENSE](../LICENSE).
+Дизайн панели управления вдохновлён проектом flare-stack-blog (GPL-3.0-only); данный проект является самостоятельной реализацией и не копирует его исходный код.
 
-Первоначально ветвлено из [saicaca/fuwari](https://github.com/saicaca/fuwari). Благодарим автора оригинального проекта за вклад. 
-
-**Уведомление об авторских правах:**
-- Copyright (c) 2024 [saicaca](https://github.com/saicaca) - [fuwari](https://github.com/saicaca/fuwari)
-- Copyright (c) 2025 [CuteLeaf](https://github.com/CuteLeaf) - [Firefly](https://github.com/CuteLeaf/Firefly)
-
-В соответствии с лицензией MIT вы можете свободно использовать, изменять и распространять код, но обязаны сохранять вышеуказанное уведомление об авторских правах.
-
-## 🍀 Участники
-
-Спасибо следующим участникам за их вклад в этот проект. Если у вас есть вопросы или предложения, пожалуйста, отправьте [Issue](https://github.com/CuteLeaf/Firefly/issues) или [Pull Request](https://github.com/CuteLeaf/Firefly/pulls).
-
-><a href="https://github.com/CuteLeaf/Firefly/graphs/contributors">
->  <img src="https://contrib.rocks/image?repo=CuteLeaf/Firefly" />
-></a>
-
-Спасибо следующим участникам за их вклад в исходный проект [fuwari](https://github.com/saicaca/fuwari), который заложил основу для этого проекта.
-
-><a href="https://github.com/saicaca/fuwari/graphs/contributors">
->  <img src="https://contrib.rocks/image?repo=saicaca/fuwari" />
-></a>
-
-## ⭐ История звезд
-
-[![Star History Chart](https://api.star-history.com/svg?repos=CuteLeaf/Firefly&type=Date)](https://star-history.com/#CuteLeaf/Firefly&Date)
-
-
-<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
-<!-- prettier-ignore-start -->
-<!-- markdownlint-disable -->
-
-<!-- markdownlint-restore -->
-<!-- prettier-ignore-end -->
-
-<!-- ALL-CONTRIBUTORS-LIST:END -->
+Авторские права на часть изображений и ресурсов маскота принадлежат соответствующим правообладателям.
