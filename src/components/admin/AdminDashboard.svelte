@@ -303,6 +303,40 @@ function toggleCollapseSidebar() {
 	localStorage.setItem("admin-sidebar-collapsed", String(sidebarCollapsed));
 }
 
+/**
+ * 侧栏导航的点击波纹。
+ *
+ * 事件挂在侧栏容器上做委托（导航项有 button / a 两种标签，逐个绑定会重复十几次）。
+ * 侧栏位于带 zoom 的 .admin-content 内，getBoundingClientRect 拿到的是放大后的
+ * 视觉坐标，因此用 rect 与 offsetWidth 的比值换算回本地坐标，否则波纹中心会偏。
+ */
+function spawnNavRipple(e: PointerEvent) {
+	if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+		return;
+	}
+	const item = (e.target as HTMLElement | null)?.closest?.(
+		".nav-item",
+	) as HTMLElement | null;
+	if (!item || item.hasAttribute("disabled")) return;
+
+	const rect = item.getBoundingClientRect();
+	const zoom = item.offsetWidth > 0 ? rect.width / item.offsetWidth : 1;
+	const size = Math.max(rect.width, rect.height) * 1.8;
+	const left = (e.clientX - rect.left) / zoom - size / 2;
+	const top = (e.clientY - rect.top) / zoom - size / 2;
+
+	const ripple = document.createElement("span");
+	ripple.className = "nav-ripple";
+	ripple.style.width = `${size}px`;
+	ripple.style.height = `${size}px`;
+	ripple.style.left = `${left}px`;
+	ripple.style.top = `${top}px`;
+	item.appendChild(ripple);
+	ripple.addEventListener("animationend", () => ripple.remove(), {
+		once: true,
+	});
+}
+
 const activePage = $derived<Page>(
 	route.page === "404"
 		? "404"
@@ -1605,7 +1639,12 @@ function formatDate(dateStr: string | null): string {
 		{/if}
 
 		<!-- 左侧导航栏 -->
-		<aside class="admin-sidebar" class:open={isSidebarOpen} class:collapsed={sidebarCollapsed}>
+		<aside
+			class="admin-sidebar"
+			class:open={isSidebarOpen}
+			class:collapsed={sidebarCollapsed}
+			onpointerdown={spawnNavRipple}
+		>
 			<!-- 折叠/展开按钮：悬垂在侧边栏右上角外侧（参考 flare admin-sidebar-toggle） -->
 			<button
 				class="sidebar-collapse"
@@ -1721,7 +1760,11 @@ function formatDate(dateStr: string | null): string {
 					class:active={activePage === "sessions"}
 					onclick={goSessions}
 				>
-					<Icon icon="material-symbols:devices" />
+					{#if activePage === "sessions"}
+						<Icon icon="material-symbols:devices" />
+					{:else}
+						<Icon icon="material-symbols:devices-outline" />
+					{/if}
 					<span>{i18n(I18nKey.adminSessions)}</span>
 				</button>
 
@@ -2392,8 +2435,13 @@ function formatDate(dateStr: string | null): string {
 		gap: 0.375rem;
 		flex: 1;
 		min-height: 0;
-		/* 侧栏整体不再滚动（折叠按钮需悬垂出界），滚动需求下沉到导航区 */
+		/* 侧栏整体不再滚动（折叠按钮需悬垂出界），滚动需求下沉到导航区。
+		   overflow-y:auto 会把 overflow-x 一并变成 auto，选中高亮一旦宽出 1px
+		   就会被裁成「不完整」的圆角；显式关掉横向溢出并给上下留 2px，
+		   滚动到首尾项时圆角也不会贴边被切。 */
 		overflow-y: auto;
+		overflow-x: hidden;
+		padding-block: 2px;
 		scrollbar-width: thin;
 		scrollbar-color: color-mix(in oklab, var(--deep-text) 25%, transparent) transparent;
 	}
@@ -2444,10 +2492,35 @@ function formatDate(dateStr: string | null): string {
 		font-family: inherit;
 		text-align: left;
 		line-height: 1.3;
+		/* 波纹要裁在圆角内：不加这两条会溢出成方块 */
+		position: relative;
+		overflow: hidden;
 		/* 侧边栏内的链接项（返回首页）去除下划线 */
 		text-decoration: none;
 		/* 展开/收起过渡：padding 随侧栏宽度平滑变化，文字宽/透明度的过渡见下方 span 规则 */
 		transition: background 0.15s, color 0.15s, padding 0.25s ease;
+	}
+
+	/* 点击波纹：从指针位置扩散到覆盖整行，透明度渐隐。
+	   颜色取 currentColor（hover / 选中会自动变主色），不写死白或黑。 */
+	:global(.nav-ripple) {
+		position: absolute;
+		border-radius: 50%;
+		background: color-mix(in oklab, currentColor 26%, transparent);
+		transform: scale(0);
+		pointer-events: none;
+		animation: navRipple 0.48s cubic-bezier(0.2, 0, 0, 1) forwards;
+	}
+
+	@keyframes navRipple {
+		from {
+			transform: scale(0);
+			opacity: 1;
+		}
+		to {
+			transform: scale(1);
+			opacity: 0;
+		}
 	}
 
 	/* 导航图标统一 24px（MD3 drawer leading icon 规范值）。
@@ -2482,9 +2555,12 @@ function formatDate(dateStr: string | null): string {
 			max-width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
+	/* 焦点环画在内侧（offset 取负）：滚动容器必须 overflow 裁切（波纹/高亮都要），
+	   外描边会被裁切线切掉左右两边，只剩上下弧，看起来像「框不完整」。
+	   -2px 让整个环落在项内部，配合 border-radius 自动成圆角，任何容器都裁不到 */
 	.nav-item:focus-visible {
 		outline: 2px solid var(--primary);
-		outline-offset: 2px;
+		outline-offset: -2px;
 	}
 
 	/* 一级导航项选中：主色调高亮（底色 + 文字都取 --primary 系列） */
@@ -2748,6 +2824,9 @@ function formatDate(dateStr: string | null): string {
 		padding: 0.875rem 0.1875rem;
 		border: none;
 		border-bottom: 2px solid transparent;
+		/* 让下划线压住容器那 1px 分隔线：否则高亮只在分隔线上方画了 2px，
+		   看起来像「没画满」。-1px 之后两者共线，视觉上是一条完整的指示条 */
+		margin-bottom: -1px;
 		background: transparent;
 		color: color-mix(in oklab, var(--deep-text) 75%, transparent);
 		font-size: 0.875rem;
@@ -2765,9 +2844,11 @@ function formatDate(dateStr: string | null): string {
 		color: var(--primary);
 	}
 
+	/* 页签容器 overflow-x:auto 且上下零留白，外描边的上下两边会被裁掉；
+	   与侧栏导航项同理，焦点环画在内侧 */
 	.settings-tab:focus-visible {
 		outline: 2px solid var(--primary);
-		outline-offset: 3px;
+		outline-offset: -2px;
 	}
 
 	/* ── 工作区标题区：对齐参考 settings-heading ──
@@ -4007,14 +4088,17 @@ function formatDate(dateStr: string | null): string {
 		font-size: 0.75rem;
 	}
 
-	/* ── Toast ── */
+	/* ── Toast ──
+	   配色随明暗主题反转：深色界面用浅底深字，浅色界面用深底浅字。
+	   做法是把状态色与 --deep-text 混：浅色主题下 --deep-text 是近黑，
+	   混出暗底；暗色主题下它是近白，混出浅底。文字取 --page-bg（与 --deep-text
+	   互为反色），因此不需要写两套 media/主题选择器。 */
 	.toast {
 		position: fixed;
 		top: 5rem;
 		right: 2rem;
 		padding: 0.75rem 1.25rem;
 		border-radius: var(--radius-lg);
-		color: white;
 		font-weight: 500;
 		box-shadow: var(--shadow-lg);
 		animation: slideIn 0.3s ease-out;
@@ -4024,14 +4108,19 @@ function formatDate(dateStr: string | null): string {
 		gap: 0.5rem;
 		backdrop-filter: blur(8px);
 		overflow: hidden;
+		/* 兜底：没有状态色时也保持反色底 */
+		background: var(--deep-text);
+		color: var(--page-bg);
 	}
 
 	.toast.success {
-		background: color-mix(in oklab, var(--success) 92%, transparent);
+		background: color-mix(in oklab, var(--success) 42%, var(--deep-text));
+		color: var(--page-bg);
 	}
 
 	.toast.error {
-		background: color-mix(in oklab, var(--destructive) 92%, transparent);
+		background: color-mix(in oklab, var(--destructive) 42%, var(--deep-text));
+		color: var(--page-bg);
 	}
 
 	.toast-message {
@@ -4040,8 +4129,10 @@ function formatDate(dateStr: string | null): string {
 		word-break: break-word;
 	}
 
+	/* 关闭按钮与进度条同样跟随反色：用文字色（--page-bg）的透明度，
+	   不再写死白色 */
 	.toast-close {
-		background: rgba(255, 255, 255, 0.2);
+		background: color-mix(in oklab, var(--page-bg) 20%, transparent);
 		border: none;
 		border-radius: 50%;
 		width: 1.5rem;
@@ -4050,18 +4141,18 @@ function formatDate(dateStr: string | null): string {
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
-		color: white;
+		color: inherit;
 		padding: 0;
 		flex-shrink: 0;
 		transition: background 0.15s;
 	}
 
 	.toast-close:hover {
-		background: rgba(255, 255, 255, 0.4);
+		background: color-mix(in oklab, var(--page-bg) 40%, transparent);
 	}
 
 	.toast-close:focus {
-		outline: 2px solid white;
+		outline: 2px solid currentColor;
 		outline-offset: 2px;
 	}
 
@@ -4073,14 +4164,14 @@ function formatDate(dateStr: string | null): string {
 		right: 0;
 		bottom: 0;
 		height: 2px;
-		background: rgba(255, 255, 255, 0.25);
+		background: color-mix(in oklab, var(--page-bg) 25%, transparent);
 	}
 
 	.toast-progress-bar {
 		height: 100%;
 		transform: scaleX(1);
 		transform-origin: left center;
-		background: rgba(255, 255, 255, 0.9);
+		background: color-mix(in oklab, var(--page-bg) 90%, transparent);
 	}
 
 	.toast-progress-bar.running {

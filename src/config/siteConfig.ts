@@ -193,6 +193,15 @@ export const siteConfig: SiteConfig = {
 			// extract 模式下遇到中英文逗号是否截断
 			stopAtComma: true,
 		},
+		// 加密文章的默认标题（设了密码但标题留空时使用）
+		// 加密文章的正文不该出现在标题里，因此这一项不走 titleFallback
+		encryptedTitle: {
+			// 标题前缀，与时间之间用空格分隔
+			prefix: "加密文章",
+			// 时间格式：支持 YYYY / MM / DD / HH / mm / ss 占位符，
+			// 也可以填 iso 输出 ISO 8601；时区取 siteConfig.timezone
+			timeFormat: "YYYY-MM-DD HH:mm",
+		},
 	},
 	// bangumi配置
 	bangumi: {

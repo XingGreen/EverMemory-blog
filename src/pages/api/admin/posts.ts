@@ -3,6 +3,7 @@ import type { AdminPostSummary } from "@/types/adminApi";
 import { requireAuth } from "@/utils/auth";
 import { getStorageProvider } from "@/utils/providers/registry";
 import { listStoredDrafts } from "@/utils/post-draft-store";
+import { countWords, stripFrontmatter } from "@/utils/reading-stats";
 import { normalizeSlug, slugFromPath } from "@/utils/post-slug";
 
 export const prerender = false;
@@ -154,6 +155,8 @@ export async function GET({ request }) {
 			pinned: post.data.pinned || false,
 			/* 扩展名必须取自真实文件：硬编码 .md 会让 .mdx 文章
 			   在列表里冒充 .md，保存时还会把它写成 .md。 */
+			words: countWords(post.body ?? ""),
+			lang: post.data.lang || "",
 			filePath: `src/content/posts/${(post.filePath ?? `${post.id}.md`).replace(/^.*content\/posts\//, "")}`,
 			/* 由下方远端比对填充；远端不可用时保持 null，前端不显示徽章 */
 			syncState: null as "deployed" | "not-on-github" | null,
@@ -195,6 +198,8 @@ export async function GET({ request }) {
 				comment: readFrontmatterValue(draft.content, "comment") !== "false",
 				image: readFrontmatterValue(draft.content, "image"),
 				pinned: readFrontmatterValue(draft.content, "pinned") === "true",
+				words: countWords(stripFrontmatter(draft.content)),
+				lang: readFrontmatterValue(draft.content, "lang"),
 				filePath: draft.filePath,
 				syncState: "not-on-github" as const,
 			});

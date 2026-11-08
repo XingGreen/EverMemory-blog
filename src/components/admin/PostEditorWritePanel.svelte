@@ -1,15 +1,26 @@
 <script lang="ts">
 import { getContext } from "svelte";
 import PostMetaBar from "@/components/admin/PostMetaBar.svelte";
+import AdminPostStats from "@/components/admin/AdminPostStats.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import { resolveAdminAsset } from "@/utils/admin-asset-url";
+import { countWords, readingMinutes } from "@/utils/reading-stats";
 import { POST_EDITOR_CONTEXT } from "./postEditorContext";
 
 const { state: editorState, actions } = getContext<{
 	state: import("./postEditorContext").PostEditorContextValue["state"];
 	actions: import("./postEditorContext").PostEditorContextValue["actions"];
 }>(POST_EDITOR_CONTEXT);
+
+/* 正文统计：与前台同一口径（reading-time 词数 + 200 词/分钟） */
+const wordCount = $derived(countWords(editorState.content));
+const minutes = $derived(readingMinutes(wordCount));
+/* 封面图可能是相对路径（./images/x.avif），换算成后台取图端点 */
+const coverUrl = $derived(
+	resolveAdminAsset(editorState.image, `src/content/posts/${editorState.slug}.md`),
+);
 
 /* 行号列：textarea 的文本不是 DOM 节点，CSS 计数器数不了行，所以用一个与正文
    同字体、同 line-height 的 gutter，靠 scrollTop 同步。行数按换行符统计。 */
@@ -203,12 +214,17 @@ const TOOLS: {
 		>
 			<!-- 标题 + 元数据栏：与历史版本页共用 PostMetaBar，
 			     数据源绑定当前编辑器状态，随输入实时更新 -->
+			<AdminPostStats
+				words={wordCount}
+				{minutes}
+				password={(editorState.password ?? "").trim().length > 0}
+			/>
 			<h1 class="mb-3 text-3xl font-bold text-(--deep-text)">{editorState.title || "—"}</h1>
 			<PostMetaBar
 				published={editorState.published}
 				category={editorState.category}
 				tags={editorState.tags}
-				image={editorState.image}
+				image={coverUrl}
 			/>
 			{@html editorState.renderedHtml}
 		</div>

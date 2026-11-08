@@ -17,10 +17,13 @@
  */
 
 import PostMetaBar from "@/components/admin/PostMetaBar.svelte";
+import AdminPostStats from "@/components/admin/AdminPostStats.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
+import { resolveAdminAsset } from "@/utils/admin-asset-url";
 import { notifyAuthExpired } from "@/utils/auth-expired";
+import { countWords, readingMinutes } from "@/utils/reading-stats";
 
 let {
 	slug,
@@ -50,6 +53,9 @@ type Revision = {
 let revisions = $state<Revision[]>([]);
 let listLoading = $state(true);
 let detailHtml = $state("");
+/* 当前版本正文字数与预估阅读时长：口径与前台一致（reading-time + 200 词/分钟） */
+let detailWords = $state(0);
+const detailMinutes = $derived(readingMinutes(detailWords));
 let detailLoading = $state(false);
 let currentId = $state(revisionId);
 let confirmOpen = $state(false);
@@ -223,6 +229,7 @@ async function loadDetail(id: string) {
 	if (!id) {
 		detailAbort?.abort();
 		detailHtml = "";
+		detailWords = 0;
 		return;
 	}
 	/* 连点多个版本时，先中断上一个请求——否则旧响应可能后到并覆盖新选中项，
@@ -232,6 +239,7 @@ async function loadDetail(id: string) {
 	detailAbort = ac;
 	detailLoading = true;
 	detailHtml = "";
+	detailWords = 0;
 	try {
 		const res = await fetch(
 			`/api/admin/post-revisions/?slug=${encodeURIComponent(slug)}&id=${encodeURIComponent(id)}`,
@@ -249,6 +257,7 @@ async function loadDetail(id: string) {
 			/^---\r?\n[\s\S]*?\r?\n---\r?\n?/,
 			"",
 		);
+		detailWords = countWords(body);
 		const pres = await fetch("/api/admin/preview/", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -259,7 +268,10 @@ async function loadDetail(id: string) {
 		if (!ac.signal.aborted)
 			detailHtml = pdata.success ? (pdata.html ?? "") : "";
 	} catch {
-		if (!ac.signal.aborted) detailHtml = "";
+		if (!ac.signal.aborted) {
+			detailHtml = "";
+			detailWords = 0;
+		}
 	} finally {
 		if (!ac.signal.aborted) detailLoading = false;
 	}
@@ -440,6 +452,7 @@ $effect(() => {
 				{:else if !selected}
 					<p class="post-history-note">{i18n(I18nKey.postHistoryEmpty)}</p>
 				{:else}
+					<AdminPostStats words={detailWords} minutes={detailMinutes} />
 					<h2 class="post-editor-title">{selected.title || "—"}</h2>
 					<p class="post-history-banner">
 						{i18n(I18nKey.postHistoryBannerTitle).replace(
@@ -455,7 +468,7 @@ $effect(() => {
 						published={String(selected.savedAt)}
 						category={selected.category}
 						tags={selected.tags}
-						image={selected.image}
+						image={resolveAdminAsset(selected.image, filePath)}
 					/>
 					<!-- 渲染容器与编辑页预览完全同一组 class：
 					     src/components/admin/PostEditorWritePanel.svelte:201

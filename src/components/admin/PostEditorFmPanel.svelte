@@ -1,6 +1,8 @@
 <script lang="ts">
 import { getContext, onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
+import { findTitleConflict, loadPostTitles, type PostTitleEntry } from "@/utils/admin-post-titles";
+import { countWords, readingMinutes } from "@/utils/reading-stats";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import ConfirmDialog from "./ConfirmDialog.svelte";
@@ -24,6 +26,18 @@ let taxonomy = $state<{ categories: string[]; tags: string[] }>({
 	tags: [],
 });
 
+/* 已存在标题：用于标题输入框下方的即时红字提示。
+   只在本组件首次挂载时拉一次（内部 30s 缓存），失败就静默跳过。 */
+let existingTitles = $state<PostTitleEntry[]>([]);
+
+const titleConflict = $derived(
+	findTitleConflict(existingTitles, editorState.title, editorState.slug),
+);
+
+/* 正文统计：与前台同一口径（reading-time 词数 + 200 词/分钟） */
+const wordCount = $derived(countWords(editorState.content));
+const minutes = $derived(readingMinutes(wordCount));
+
 /* 标签选择器：结构照搬参考项目 features/tags/components/tag-selector.tsx ——
    单容器承载「已选 chips + 输入框」，点击容器聚焦输入并展开候选，
    候选区宽度与容器一致、最高 12.5rem。 */
@@ -32,6 +46,10 @@ let tagBoxEl = $state<HTMLDivElement | undefined>();
 let tagInputEl = $state<HTMLInputElement | undefined>();
 
 onMount(() => {
+	void loadPostTitles().then((items) => {
+		existingTitles = items;
+	});
+
 	void (async () => {
 		try {
 			const res = await fetch("/api/admin/taxonomy/");
@@ -226,13 +244,26 @@ function answerConfirm(ok: boolean) {
 									bind:value={editorState.title}
 									placeholder={i18n(I18nKey.postTitlePlaceholder)}
 									class="ui-input"
+									class:ui-input-error={Boolean(titleConflict)}
+									aria-invalid={Boolean(titleConflict)}
+									aria-describedby={titleConflict ? "post-title-error" : undefined}
 								/>
 							</label>
+							{#if titleConflict}
+								<p class="field-error" id="post-title-error" role="alert">
+									{i18n(I18nKey.postTitleDuplicate)}
+								</p>
+							{/if}
+							<p class="field-stats">
+								{i18n(I18nKey.postStatsLine)
+									.replace("{words}", String(wordCount))
+									.replace("{minutes}", String(minutes))}
+							</p>
 						</div>
 
-<div class="form-group">
-						<label>
-							{i18n(I18nKey.postSlug)}
+						<div class="form-group">
+							<label>
+								{i18n(I18nKey.postSlug)}
 							<div class="slug-field">
 								<span class="slug-prefix">/posts/</span>
 								<input
@@ -841,6 +872,29 @@ function answerConfirm(ok: boolean) {
 		z-index: 2;
 	}
 
+	/* 标题重名的即时提示：跟随 MD3 错误色，字号略小于正文 */
+	.field-error {
+		margin: 0.375rem 0 0;
+		font-size: 0.75rem;
+		line-height: 1.4;
+		color: var(--destructive);
+	}
+
+	/* 输入框进入错误态：边框与聚焦环都换成错误色，不只靠下方红字 */
+	:global(.ui-input-error),
+	:global(.ui-input-error:focus) {
+		border-color: var(--destructive) !important;
+		box-shadow: 0 0 0 2px color-mix(in oklab, var(--destructive) 18%, transparent);
+	}
+
+	/* 正文字数与预计阅读时长 */
+	.field-stats {
+		margin: 0.375rem 0 0;
+		font-size: 0.75rem;
+		line-height: 1.4;
+		color: var(--content-meta);
+	}
+
 	.switch-track {
 		width: 32px;
 		height: 18px;
@@ -874,7 +928,9 @@ function answerConfirm(ok: boolean) {
 	}
 
 	.md3-switch input:checked ~ .switch-track .switch-thumb {
-		left: 18px;
+		/* 轨道内宽 28px（32 - 2×2 边框），12px 圆点右侧留 2px；
+		   原来的 18px 让圆点右缘顶到 30px，视觉上贴死右边框 */
+		left: 14px;
 		width: 12px;
 		height: 12px;
 		background: white;

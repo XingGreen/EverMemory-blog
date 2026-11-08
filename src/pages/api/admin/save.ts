@@ -84,6 +84,42 @@ export async function POST({ request }) {
 			pinned,
 		});
 
+		/* 同名拦截：新建（无 originalSlug）或改了标识时，目标文件必须不存在。
+		   此前直接 writeFile，等于用新文章静默覆盖同名旧文章，
+		   而旧文章的正文在覆盖瞬间就没了（历史快照也只能追溯）。 */
+		const isRenaming =
+			typeof originalSlug === "string" &&
+			originalSlug !== "" &&
+			originalSlug !== slug;
+		if (!originalSlug || isRenaming) {
+			let occupied = false;
+			try {
+				occupied = existsSync(path.resolve(process.cwd(), filePath));
+			} catch {
+				occupied = false;
+			}
+			if (!occupied) {
+				try {
+					const read = await storage.readFile(filePath);
+					occupied = read.ok;
+				} catch {
+					occupied = false;
+				}
+			}
+			if (occupied) {
+				return new Response(
+					JSON.stringify({
+						success: false,
+						code: "POST_EXISTS",
+						message: isRenaming
+							? `标识 ${slug} 已被占用，请换一个`
+							: `已存在同名文章（${slug}），请修改标识后再保存`,
+					}),
+					{ status: 409, headers: { "Content-Type": "application/json" } },
+				);
+			}
+		}
+
 		const fullContent = `---\n${frontmatter}\n---\n\n${content}`;
 
 		/* 0. 保存快照——历史版本功能的数据来源。

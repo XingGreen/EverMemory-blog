@@ -1,4 +1,5 @@
 import { requireAuth } from "@/utils/auth";
+import { rewriteRelativeSrc } from "@/utils/admin-asset-url";
 import { renderMarkdown } from "@/utils/markdown-renderer";
 import { renderMdxFallback } from "@/utils/mdx-fallback";
 import { renderMdxRuntime } from "@/utils/mdx-runtime";
@@ -46,6 +47,10 @@ export async function POST({ request }) {
 		} else {
 			html = await renderMarkdown(content);
 		}
+
+		/* 相对图片路径（`./images/x.avif`）在后台页面里会以 `/admin/...` 为基准解析，
+		   必然 404；统一换成后台取图端点，按文章文件所在目录取源文件。 */
+		html = rewriteRelativeSrc(html, typeof filePath === "string" ? filePath : "");
 
 		return new Response(JSON.stringify({ success: true, html }), {
 			status: 200,

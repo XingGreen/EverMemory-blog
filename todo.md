@@ -13,6 +13,20 @@
 - [x] 草稿线上可用：新增 `src/utils/post-draft-store.ts`，保存/读取/列表/删除/历史恢复全部接入 KV
 - [x] 文章列表表头对齐：表头「标题」补 20px 大头针占位，与行内标题同轴
 
+## 本轮需求·二批（2026-11-08，e300d97f）
+
+- [x] 本地图片渲染：新增 `/api/admin/post-asset/`，预览与历史版本把相对图片路径改写为该端点（本地读盘、只读部署回源 GitHub raw）；封面图同样换算
+- [x] 加密文章默认标题：`siteConfig.post.encryptedTitle`（prefix + timeFormat，支持 YYYY/MM/DD/HH/mm/ss 与 iso），设密码且标题留空时不再取正文首行
+- [x] 同名文章拦截（创建）：`save.ts` 在新建或改标识时检查本地与远端占用，返回 409 `POST_EXISTS`
+- [x] 同名文章拦截（输入提示）：标题输入框下方红字提示，保存前再校验一次标题冲突并阻断
+- [x] Switch 按钮间距：选中态 thumb 由 `left: 18px` 收到 `14px`，右侧留 2px
+- [x] 侧边栏 Tab 框选不完整：滚动容器关横向溢出并留 2px 内边距；设置页 tab 下划线压住 1px 分隔线
+- [x] 侧边栏图标样式：会话管理未选中用 `devices-outline`，选中用 `devices`
+- [x] 通知栏配色自适应：底色由状态色与 `--deep-text` 混合，文字取 `--page-bg`，明暗主题自动反转；进度条与关闭按钮同步
+- [x] 侧边栏波纹动画：指针位置扩散、跟随 currentColor，尊重 `prefers-reduced-motion`
+- [x] 文章管理列扩展：新增字数、作者、语言代码、是否有密码四列（默认收起）
+- [x] 阅读数据复用：新增 `AdminPostStats`，编辑预览与历史版本页均显示字数与阅读时长
+
 ## 上游同步（6.13.5 → 6.16.9，选择性）
 
 - [x] 正则注入修复、X-Frame-Options 改 SAMEORIGIN、PlantUML 缩放文字模糊、行内代码保留空格

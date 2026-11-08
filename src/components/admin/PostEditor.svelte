@@ -8,6 +8,12 @@ import { siteConfig } from "@/config/siteConfig";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import type { AdminWriteResponse } from "@/types/adminApi";
+import {
+	findTitleConflict,
+	invalidatePostTitles,
+	loadPostTitles,
+} from "@/utils/admin-post-titles";
+import { buildEncryptedTitle } from "@/utils/encrypted-title";
 import DraftRestoreDialog from "./DraftRestoreDialog.svelte";
 import PostEditorFmPanel from "./PostEditorFmPanel.svelte";
 import PostEditorTocPanel from "./PostEditorTocPanel.svelte";
@@ -1296,47 +1302,67 @@ onDestroy(() => {
 });
 
 async function handleSave() {
-	/* 标题留空时按 siteConfig.post.titleFallback 兜底：
+	/* 标题留空时的兜底：
+	   加密文章改用「前缀 + 时间」，绝不从正文里取——正文首行一旦当了标题，
+	   加密就形同虚设。未加密的文章仍按 siteConfig.post.titleFallback 处理：
 	   extract 取正文首个非空行（清掉 frontmatter、Markdown 标记与多余空白），
 	   在首个中英文逗号或 maxLength 字处截断，二者先到先得；
 	   filename 直接用文章标识；require 则拒绝保存。 */
 	if (!editorState.title.trim()) {
-		const fallbackConf = siteConfig.post?.titleFallback ?? {};
-		const mode = fallbackConf.mode ?? "extract";
-
-		if (mode === "require") {
-			onError(i18n(I18nKey.postTitleRequired));
-			return;
-		}
-
-		let fallback = "";
-		if (mode === "filename") {
-			fallback = editorState.slug.trim();
+		if (editorState.password.trim()) {
+			editorState.title = buildEncryptedTitle();
 		} else {
-			const maxLength = fallbackConf.maxLength ?? 16;
-			const stopAtComma = fallbackConf.stopAtComma !== false;
-			const firstLine =
-				editorState.content
-					.replace(/^---[\s\S]*?\n---/, "")
-					.split(/\r?\n/)
-					.map((line) =>
-						line
-							.replace(/[#>*_`~[\]()!-]/g, "")
-							.replace(/\s+/g, " ")
-							.trim(),
-					)
-					.find((line) => line) ?? "";
-			const commaAt = stopAtComma ? firstLine.search(/[,，]/) : -1;
-			const limit =
-				commaAt >= 0 ? Math.min(commaAt, maxLength) : maxLength;
-			fallback = firstLine.slice(0, limit).trim();
-		}
+			const fallbackConf = siteConfig.post?.titleFallback ?? {};
+			const mode = fallbackConf.mode ?? "extract";
 
-		if (!fallback) {
-			onError(i18n(I18nKey.postTitleRequired));
-			return;
+			if (mode === "require") {
+				onError(i18n(I18nKey.postTitleRequired));
+				return;
+			}
+
+			let fallback = "";
+			if (mode === "filename") {
+				fallback = editorState.slug.trim();
+			} else {
+				const maxLength = fallbackConf.maxLength ?? 16;
+				const stopAtComma = fallbackConf.stopAtComma !== false;
+				const firstLine =
+					editorState.content
+						.replace(/^---[\s\S]*?\n---/, "")
+						.split(/\r?\n/)
+						.map((line) =>
+							line
+								.replace(/[#>*_`~[\]()!-]/g, "")
+								.replace(/\s+/g, " ")
+								.trim(),
+						)
+						.find((line) => line) ?? "";
+				const commaAt = stopAtComma ? firstLine.search(/[,，]/) : -1;
+				const limit =
+					commaAt >= 0 ? Math.min(commaAt, maxLength) : maxLength;
+				fallback = firstLine.slice(0, limit).trim();
+			}
+
+			if (!fallback) {
+				onError(i18n(I18nKey.postTitleRequired));
+				return;
+			}
+			editorState.title = fallback;
 		}
-		editorState.title = fallback;
+	}
+
+	/* 标题重名：输入时只是红字提醒，保存必须拦住。
+	   服务端还有一道按 slug 的同名拦截（POST_EXISTS），这里挡的是「标题相同、
+	   标识不同」的情况——两篇文章显示同名同样会让读者分不清。 */
+	const selfSlug = mode === "edit" ? post?.slug : undefined;
+	const conflict = findTitleConflict(
+		await loadPostTitles(true),
+		editorState.title,
+		selfSlug,
+	);
+	if (conflict) {
+		onError(i18n(I18nKey.postTitleDuplicate));
+		return;
 	}
 
 	if (!editorState.slug.trim()) {
@@ -1382,6 +1408,8 @@ async function handleSave() {
 		const data: AdminWriteResponse = await response.json();
 
 		if (response.ok && data.success) {
+			/* 标题清单变了（新建或改名），失效缓存，下一篇文章进来时重新拉 */
+			invalidatePostTitles();
 			try {
 				localStorage.removeItem(DRAFT_KEY);
 			} catch {

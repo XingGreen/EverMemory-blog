@@ -43,6 +43,9 @@ export type AdminPostSummary = {
 	pinned: boolean;
 	filePath: string;
 	syncState: PostSyncState;
+	/* 列表可选列：字数与语言代码。旧响应/远端条目可能没有，读的时候按 0 与空串兜底 */
+	words?: number;
+	lang?: string;
 };
 
 export type AdminPostsResponse =

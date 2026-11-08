@@ -82,13 +82,25 @@ let statusFilter = $state<StatusFilter>("all");
 /* ── 表项显隐（内置在列表页，不进设置页）──
    只有次要列可隐藏；标题与操作列始终显示，否则会出现无法操作的行。
    列宽通过 --post-grid-cols 下发，窄屏媒体查询里的单列布局优先级更高，不受影响。 */
-type HideableCol = "category" | "filetype" | "date" | "status";
+type HideableCol =
+	| "category"
+	| "filetype"
+	| "words"
+	| "author"
+	| "lang"
+	| "password"
+	| "date"
+	| "status";
 const HIDDEN_COLS_KEY = "admin-post-list-hidden-cols";
 
 function readHiddenCols(): Record<HideableCol, boolean> {
 	const empty: Record<HideableCol, boolean> = {
 		category: false,
 		filetype: false,
+		words: true,
+		author: true,
+		lang: true,
+		password: true,
 		date: false,
 		status: false,
 	};
@@ -105,6 +117,11 @@ function readHiddenCols(): Record<HideableCol, boolean> {
 let hiddenCols = $state<Record<HideableCol, boolean>>({
 	category: false,
 	filetype: false,
+	/* 新增的四列默认收起：老用户升级后表格布局不变，需要时再从「列显示」打开 */
+	words: true,
+	author: true,
+	lang: true,
+	password: true,
 	date: false,
 	status: false,
 });
@@ -125,6 +142,10 @@ const gridCols = $derived(
 		"2.9fr",
 		hiddenCols.category ? "" : "0.9fr",
 		hiddenCols.filetype ? "" : "0.7fr",
+		hiddenCols.words ? "" : "0.8fr",
+		hiddenCols.author ? "" : "0.9fr",
+		hiddenCols.lang ? "" : "0.7fr",
+		hiddenCols.password ? "" : "0.8fr",
 		hiddenCols.date ? "" : "1.1fr",
 		hiddenCols.status ? "" : "0.9fr",
 		"1.2fr",
@@ -599,6 +620,20 @@ function actionLabel(action: string, title: string): string {
 					{i18n(I18nKey.postColFileType)}
 				</div>
 			{/if}
+			{#if !hiddenCols.words}
+				<div class="col col-words" role="columnheader">{i18n(I18nKey.postColWords)}</div>
+			{/if}
+			{#if !hiddenCols.author}
+				<div class="col col-author" role="columnheader">{i18n(I18nKey.postColAuthor)}</div>
+			{/if}
+			{#if !hiddenCols.lang}
+				<div class="col col-lang" role="columnheader">{i18n(I18nKey.postColLang)}</div>
+			{/if}
+			{#if !hiddenCols.password}
+				<div class="col col-password" role="columnheader">
+					{i18n(I18nKey.postColPassword)}
+				</div>
+			{/if}
 			{#if !hiddenCols.date}
 				<div class="col col-date" role="columnheader" aria-sort={ariaSortFor("date")}>
 					{dateColLabel}
@@ -647,6 +682,50 @@ function actionLabel(action: string, title: string): string {
 						>
 							<span class="ui-menu-item-label">{i18n(I18nKey.postColFileType)}</span>
 							{#if !hiddenCols.filetype}
+								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
+							{/if}
+						</button>
+						<button
+							class="ui-menu-item"
+							type="button"
+							aria-selected={!hiddenCols.words}
+							onclick={() => toggleCol("words")}
+						>
+							<span class="ui-menu-item-label">{i18n(I18nKey.postColWords)}</span>
+							{#if !hiddenCols.words}
+								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
+							{/if}
+						</button>
+						<button
+							class="ui-menu-item"
+							type="button"
+							aria-selected={!hiddenCols.author}
+							onclick={() => toggleCol("author")}
+						>
+							<span class="ui-menu-item-label">{i18n(I18nKey.postColAuthor)}</span>
+							{#if !hiddenCols.author}
+								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
+							{/if}
+						</button>
+						<button
+							class="ui-menu-item"
+							type="button"
+							aria-selected={!hiddenCols.lang}
+							onclick={() => toggleCol("lang")}
+						>
+							<span class="ui-menu-item-label">{i18n(I18nKey.postColLang)}</span>
+							{#if !hiddenCols.lang}
+								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
+							{/if}
+						</button>
+						<button
+							class="ui-menu-item"
+							type="button"
+							aria-selected={!hiddenCols.password}
+							onclick={() => toggleCol("password")}
+						>
+							<span class="ui-menu-item-label">{i18n(I18nKey.postColPassword)}</span>
+							{#if !hiddenCols.password}
 								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
 							{/if}
 						</button>
@@ -784,6 +863,50 @@ function actionLabel(action: string, title: string): string {
 								<span class="filetype-chip">
 									{post.filePath.slice(post.filePath.lastIndexOf(".")) || "—"}
 								</span>
+							</div>
+						{/if}
+
+						<!-- 字数 -->
+						{#if !hiddenCols.words}
+							<div class="col col-words" role="cell" data-label={i18n(I18nKey.postColWords)}>
+								<span class="text-meta">{post.words ? post.words.toLocaleString() : "—"}</span>
+							</div>
+						{/if}
+
+						<!-- 作者 -->
+						{#if !hiddenCols.author}
+							<div class="col col-author" role="cell" data-label={i18n(I18nKey.postColAuthor)}>
+								<span class="text-meta">{post.author || "—"}</span>
+							</div>
+						{/if}
+
+						<!-- 语言代码 -->
+						{#if !hiddenCols.lang}
+							<div class="col col-lang" role="cell" data-label={i18n(I18nKey.postColLang)}>
+								{#if post.lang}
+									<span class="filetype-chip">{post.lang}</span>
+								{:else}
+									<span class="text-meta">—</span>
+								{/if}
+							</div>
+						{/if}
+
+						<!-- 是否有密码 -->
+						{#if !hiddenCols.password}
+							<div
+								class="col col-password"
+								role="cell"
+								data-label={i18n(I18nKey.postColPassword)}
+							>
+								{#if post.password}
+									<Icon
+										icon="material-symbols:lock-outline"
+										class="inline-state-icon"
+										aria-label={i18n(I18nKey.postColPasswordYes)}
+									/>
+								{:else}
+									<span class="text-meta">—</span>
+								{/if}
 							</div>
 						{/if}
 
@@ -1271,6 +1394,12 @@ function actionLabel(action: string, title: string): string {
 		color: var(--md-on-surface-variant);
 		font-size: 0.8125rem;
 		font-weight: 500;
+	}
+
+	/* 行内状态图标（如密码锁）：与文字同高、颜色跟随次要文字 */
+	.inline-state-icon {
+		font-size: 1.125rem;
+		color: var(--content-meta);
 	}
 
 	.header-row .col {

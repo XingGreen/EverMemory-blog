@@ -136,6 +136,13 @@ export type SiteConfig = {
 			/** extract 模式下遇到中英文逗号是否截断 */
 			stopAtComma?: boolean;
 		};
+		// 加密文章的默认标题（设了密码但标题留空时使用）
+		encryptedTitle?: {
+			/** 标题前缀，与时间之间用空格分隔 */
+			prefix?: string;
+			/** 时间格式：YYYY/MM/DD/HH/mm/ss 占位符，或 iso */
+			timeFormat?: string;
+		};
 	};
 
 	// bangumi配置
