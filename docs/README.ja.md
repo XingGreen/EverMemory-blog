@@ -169,7 +169,8 @@ pnpm build
 
 ## ドキュメント
 
-- [`CLAUDE.md`](../CLAUDE.md) — アーキテクチャ、技術規約、開発ルール
+- [`AGENTS.md`](../AGENTS.md) — コラボレーション規約と変更範囲
+- [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md) — アーキテクチャ、技術規約、ビルドフロー
 - [`docs/ADMIN_MANUAL.md`](./ADMIN_MANUAL.md) — 管理画面の使い方と環境変数
 - [`docs/EMERGENCY_OPS.md`](./EMERGENCY_OPS.md) — 緊急時の操作
 - [`src/config/README.md`](../src/config/README.md) — 設定項目の説明

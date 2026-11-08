@@ -169,7 +169,8 @@ pnpm build
 
 ## 專案文件
 
-- [`CLAUDE.md`](../CLAUDE.md) — 架構、技術約定與開發規約
+- [`AGENTS.md`](../AGENTS.md) — 協作規範與操作邊界
+- [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md) — 架構、技術約定與建置流程
 - [`docs/ADMIN_MANUAL.md`](./ADMIN_MANUAL.md) — 後台使用與環境變數設定
 - [`docs/EMERGENCY_OPS.md`](./EMERGENCY_OPS.md) — 應急操作
 - [`src/config/README.md`](../src/config/README.md) — 設定項目說明

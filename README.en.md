@@ -169,7 +169,8 @@ On the hosting platform, set the build command to `pnpm build` and the output di
 
 ## Documentation
 
-- [`CLAUDE.md`](./CLAUDE.md) — architecture, technical conventions, and development rules
+- [`AGENTS.md`](./AGENTS.md) — collaboration rules and scope of change
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — architecture, technical conventions, and build pipeline
 - [`docs/ADMIN_MANUAL.md`](./docs/ADMIN_MANUAL.md) — admin usage and environment variables
 - [`docs/EMERGENCY_OPS.md`](./docs/EMERGENCY_OPS.md) — emergency operations
 - [`src/config/README.md`](./src/config/README.md) — configuration reference

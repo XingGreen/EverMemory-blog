@@ -5,13 +5,32 @@
  * 用来定位「点了没反应 / 滚不动 / 点内部被关掉」的真因。
  */
 import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const PORT = 9333;
 const ORIGIN = "http://localhost:4321";
-const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const CHROME = resolveChrome();
+
+/** Resolve the Chrome executable; CHROME_PATH overrides the default locations. */
+function resolveChrome() {
+	const candidates = [
+		process.env.CHROME_PATH,
+		join(process.env.PROGRAMFILES ?? "", "Google/Chrome/Application/chrome.exe"),
+		join(
+			process.env["PROGRAMFILES(X86)"] ?? "",
+			"Google/Chrome/Application/chrome.exe",
+		),
+		join(process.env.LOCALAPPDATA ?? "", "Google/Chrome/Application/chrome.exe"),
+	].filter(Boolean);
+	const found = candidates.find((candidate) => existsSync(candidate));
+	if (!found) {
+		console.error("Chrome not found. Set CHROME_PATH to the executable path.");
+		process.exit(0);
+	}
+	return found;
+}
 
 const env = readFileSync(".env.local", "utf8");
 const token = env

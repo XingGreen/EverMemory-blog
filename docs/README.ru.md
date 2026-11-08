@@ -169,7 +169,8 @@ pnpm build
 
 ## Документация
 
-- [`CLAUDE.md`](../CLAUDE.md) — архитектура, технические соглашения и правила разработки
+- [`AGENTS.md`](../AGENTS.md) — правила совместной работы и границы изменений
+- [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md) — архитектура, технические соглашения и конвейер сборки
 - [`docs/ADMIN_MANUAL.md`](./ADMIN_MANUAL.md) — использование панели и переменные окружения
 - [`docs/EMERGENCY_OPS.md`](./EMERGENCY_OPS.md) — аварийные операции
 - [`src/config/README.md`](../src/config/README.md) — описание настроек

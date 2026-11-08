@@ -169,7 +169,8 @@ pnpm build
 
 ## 项目文档
 
-- [`CLAUDE.md`](./CLAUDE.md) — 架构、技术约定与开发规约
+- [`AGENTS.md`](./AGENTS.md) — 协作规范与操作边界
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — 架构、技术约定与构建流程
 - [`docs/ADMIN_MANUAL.md`](./docs/ADMIN_MANUAL.md) — 后台使用与环境变量配置
 - [`docs/EMERGENCY_OPS.md`](./docs/EMERGENCY_OPS.md) — 应急操作
 - [`src/config/README.md`](./src/config/README.md) — 配置项说明
