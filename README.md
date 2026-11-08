@@ -1,308 +1,160 @@
-*本项目由AI生成
-<img src="./docs/images/Forget-me-not.png" width = "350" height = "500" alt="Forget-me-not" align=right />
+# EverMemory's Blog
 
-<div align="center">
+> 以内容文件为核心、自带管理后台的 Astro 个人博客。
 
-# EverMemory's blog
+![Node.js >= 22](https://img.shields.io/badge/node.js-%3E%3D22-brightgreen)
+![pnpm 9](https://img.shields.io/badge/pnpm-9-blue)
+![Astro 7](https://img.shields.io/badge/Astro-7.0.2-orange)
+![License: MIT](https://img.shields.io/github/license/XingGreen/EverMemory-blog)
+[![Issues](https://img.shields.io/github/issues/XingGreen/EverMemory-blog)](https://github.com/XingGreen/EverMemory-blog/issues)
 
-> 一款清新美观的 Astro 静态博客主题模板
->
-> ![Node.js >= 22](https://img.shields.io/badge/node.js-%3E%3D22-brightgreen)
-> ![pnpm >= 9](https://img.shields.io/badge/pnpm-%3E%3D9-blue)
-> ![Astro](https://img.shields.io/badge/Astro-7.0.2-orange)
-> ![TypeScript](https://img.shields.io/badge/TypeScript-5.9.2-blue)
->
-> [![Issues](https://img.shields.io/github/issues/XingGreen/EverMemory-blog)](https://github.com/XingGreen/EverMemory-blog/issues)
->
-> ![GitHub License](https://img.shields.io/github/license/XingGreen/EverMemory-blog)
-> [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/XingGreen/EverMemory-blog)
+其他语言版本：[繁體中文](./docs/README.zh-TW.md) · [English](./README.en.md) · [日本語](./docs/README.ja.md) · [Русский](./docs/README.ru.md)
 
-</div>
+## 项目简介
 
-***
+文章以 Markdown / MDX 文件存放在 `src/content/posts/`，由 Astro 在构建期生成页面；`/admin/` 提供文章编辑、预览、草稿、历史版本与站点配置等能力。后台写入通过 GitHub App 完成，内容发布对应一次重新构建。
 
-README：
-**[简体中文](README.md)** | **[繁體中文](docs/README.zh-TW.md)** | **[English](README.en.md)** | **[日本語](docs/README.ja.md)** | **[Русский](docs/README.ru.md)**
+界面文案支持简体中文、繁体中文、英文、日文与俄文，默认语言由 `src/config/siteConfig.ts` 中的 `SITE_LANG` 决定，词条位于 `src/i18n/languages/`。
 
- 快速指南：
-**[🍀作者博客](https://blog.cuteleaf.cn)**
-**[🌸我的博客](https://blog.cuteleaf.cn)**
+## 功能特性
 
-⚡ 静态站点生成: 基于Astro的超快加载速度和SEO优化
+### 内容与阅读
 
-🎨 现代化设计: 简洁美观的界面，支持自定义主题色
+- Markdown / MDX 文章，支持 GFM、提醒块、增强代码块与行号、KaTeX 公式、Mermaid 与 PlantUML 图表、GitHub 仓库卡片
+- 分类、标签、置顶、草稿、密码保护、摘要、阅读时间估算与目录（TOC）
+- 归档页、专栏页（`spec` 集合）、Pagefind 站内全文搜索、RSS 与站点地图
+- 亮色 / 暗色 / 跟随系统，主题色相调节，横幅 / 全屏 / 透明 / 纯色壁纸模式，单侧或双侧侧边栏
+- 图片灯箱、评论、页脚内容、字体、音乐播放器、看板娘等可配置模块
+- Swup 页面过渡与响应式布局
 
-📱 移动友好: 完美的响应式体验，移动端专项优化
+### 管理后台
 
-🔧 高度可配置: 大部分功能模块均可通过配置文件自定义
+- GitHub OAuth 登录（白名单账号）、JWT HttpOnly Cookie 会话、在线设备查看与踢下线、重新认证
+- 可选的应急令牌登录与 Cloudflare Turnstile 人机验证
+- 文章列表、编辑与实时预览、保存与删除、草稿跨设备续写、历史版本与差异查看
+- 同步工作台、分类与标签管理、友链管理、站点配置、环境变量与密钥管理、会话管理
+- 后台预览按 `.md` 与 `.mdx` 分通道渲染，互不干扰
 
-<table width="100%" align="center">
-  <tr>
-    <td colspan="3" align="center">
-      <img src="./docs/images/1.png" >
-      <br>横幅模式</td>
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><img src="./docs/images/3.png" width="300"><br>透明模式</td>
-    <td align="center"><img src="./docs/images/2.png" width="300"><br>全屏壁纸模式</td>
-    <td align="center"><img src="./docs/images/4.png" width="300"><br>纯色模式</td>
-  </tr>
-</table>
+### 工程能力
 
-> \[!TIP]
->
-> EverMemory's blog 是一款基于 Astro 框架和 Firefly 模板开发的清新美观且现代化个人博客主题模板，专为技术爱好者和内容创作者设计。该主题融合了现代 Web 技术栈，提供了丰富的功能模块和高度可定制的界面，让您能够轻松打造出专业且美观的个人博客网站。
->
-> **如果你参考或使用了本项目中有关 Firefly 的组件设计和相关代码，请注明来自 Firefly。**
+- Astro 7 + Svelte 5 + TypeScript + Tailwind CSS 4
+- Biome 代码风格检查、Vitest 单元测试、turbo 编排构建流水线
+- 构建顺序：图标生成 → LQIP → 配置快照 → Astro 构建 → 字体子集 → Pagefind 索引
 
-## ✨ 功能特性
-
-### 核心功能
-
-- [x] **Astro + Tailwind CSS** - 基于现代技术栈的超快静态站点生成
-- [x] **流畅动画** - Swup 页面过渡动画，提供丝滑的浏览体验
-- [x] **响应式设计** - 完美适配桌面端、平板和移动设备
-- [x] **多语言支持** - i18n 国际化，UI支持简体中文、繁体中文、英文、日文、俄语
-- [x] **全文搜索** - 基于 Pagefind 的客户端搜索，支持文章内容索引
-
-### 个性化
-
-- [x] **动态侧边栏** - 支持配置单侧边栏、双侧边栏
-- [x] **文章布局** - 支持配置(单列)列表、网格(多列/瀑布流)布局
-- [x] **字体管理** - 支持自定义字体，丰富的字体选择器
-- [x] **页脚配置** - HTML 内容注入，完全自定义
-- [x] **亮暗色模式** - 支持亮色/暗色/跟随系统三种模式
-- [x] **导航栏自定义** - Logo、标题、链接全面自定义
-- [x] **壁纸模式切换** - 横幅壁纸、全屏壁纸、全屏透明壁纸、纯色背景
-- [x] **主题色自定义** - 360° 色相调节
-
-如果你有好用的功能和优化，请提交 [Pull Request](https://github.com/XingGreen/EverMemory-blog/pulls)
-
-## 🚀 快速开始
+## 快速开始
 
 ### 环境要求
 
 - Node.js ≥ 22
-- pnpm ≥ 9
+- pnpm 9（版本由 `packageManager` 固定，安装时仅允许 pnpm）
 
-### 本地开发部署
+### 安装与启动
 
-1. **克隆仓库：**
-   ```bash
-   git clone https://github.com/XingGreen/EverMemory-blog.git
-   cd EverMemory-blog
-   ```
-   **先** **[Fork](https://github.com/CuteLeaf/Firefly/fork)** **到自己仓库在克隆（推荐），记得先点 Star 在 Fork 哦！**
-   ```bash
-   git clone https://github.com/XingGreen/EverMemory-blog.git
-   cd EverMemory-blog
-   ```
-
-2.  **安装依赖：**
-
-    ```bash
-    # 如果没有安装 pnpm，先安装
-    npm install -g pnpm
-    ```
-
-    ```bash
-    # 如果连 npm 都没有安装，先安装
-    Node.js
-    ```
-
-    ```bash
-    # 安装项目依赖
-    pnpm install
-    ```
-
-1. **配置博客：**
-   - 编辑 `src/config/` 目录下的配置文件自定义博客设置
-2. **启动开发服务器：**
-   ```bash
-   pnpm dev
-   ```
-   博客将在 `http://localhost:4321` 可用
-
-### 社区教程
-
-Cloudflare Workers部署：[【不用服务器，无需备案，零成本搭建一个自己的个人博客】](https://www.bilibili.com/video/BV1hX9XBKEhm)
-
-### 平台托管部署
-
-- **参考[官方指南](https://docs.astro.build/zh-cn/guides/deploy/)将博客部署至 Vercel, Netlify, Cloudflare Pages, EdgeOne Pages 等。**
-- **Vercel**、**Netlify** 等主流平台自动部署，会根据环境自动选择适配器。
-
-  框架预设： `Astro`
-
-  根目录： `./`
-
-  输出目录： `dist`
-
-  构建命令： `pnpm run build`
-
-  安装命令： `pnpm install`
-
-  [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/CuteLeaf/Firefly\&project-name=Firefly\&repository-name=Firefly)
-  [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/CuteLeaf/Firefly)
-
-## 📖 配置说明
-
-> 📚 **详细配置文档**: 查看 [Firefly使用文档](https://docs-firefly.cuteleaf.cn/) 获取完整的配置指南
-
-### 设置网站语言
-
-要设置博客的默认语言，请编辑 `src/config/siteConfig.ts` 文件：
-
-```typescript
-// 定义站点语言
-const SITE_LANG = "zh_CN";
+```bash
+git clone https://github.com/XingGreen/EverMemory-blog.git
+cd EverMemory-blog
+pnpm install
+pnpm dev
 ```
 
-**支持的语言代码：**
+开发服务器默认运行在 `http://localhost:4321`，后台入口为 `/admin/`。后台登录与写入所需的环境变量见 [`docs/ADMIN_MANUAL.md`](./docs/ADMIN_MANUAL.md)。
 
-- `zh_CN` - 简体中文
-- `zh_TW` - 繁体中文
-- `en` - 英文
-- `ja` - 日文
-- `ru` - 俄文
+### 常用命令
 
-### 配置文件结构
+| 命令 | 作用 |
+| :--- | :--- |
+| `pnpm install` | 安装依赖 |
+| `pnpm dev` | 启动本地开发服务器 |
+| `pnpm build` | 执行完整生产构建 |
+| `pnpm preview` | 本地预览构建产物 |
+| `pnpm check` | Astro 类型与模板检查 |
+| `pnpm type-check` | TypeScript 类型检查 |
+| `pnpm lint` / `pnpm format` | Biome 检查（含自动修复）与格式化 |
+| `pnpm test` / `pnpm test:run` | Vitest 监视模式 / 单次运行 |
+| `pnpm new-post <filename>` | 新建文章 |
+| `pnpm icons` / `pnpm lqips` | 重新生成图标与 LQIP 数据 |
+| `pnpm astro ...` | 调用 Astro CLI |
 
-```
-src/
-├── config/
-│   ├── index.ts                  # 配置索引文件
-│   ├── siteConfig.ts             # 站点基础配置
-│   ├── analyticsConfig.ts        # 统计分析配置
-│   ├── announcementConfig.ts     # 公告配置
-│   ├── backgroundWallpaper.ts    # 背景壁纸配置
-│   ├── commentConfig.ts          # 评论系统配置
-│   ├── coverImageConfig.ts       # 封面图配置
-│   ├── effectsConfig.ts          # 动画特效配置（樱花等）
-│   ├── expressiveCodeConfig.ts   # 代码高亮配置
-│   ├── fontConfig.ts             # 字体配置
-│   ├── footerConfig.ts           # 页脚配置
-│   ├── friendsConfig.ts          # 友链配置
-│   ├── galleryConfig.ts          # 相册配置
-│   ├── licenseConfig.ts          # 许可证配置
-│   ├── musicConfig.ts            # 音乐播放器配置
-│   ├── navBarConfig.ts           # 导航栏配置
-│   ├── pioConfig.ts              # 看板娘配置
-│   ├── plantumlConfig.ts         # PlantUML 图表配置
-│   ├── profileConfig.ts          # 用户资料配置
-│   ├── sidebarConfig.ts          # 侧边栏布局配置
-│   └── sponsorConfig.ts          # 打赏配置
-```
+## 配置与内容
 
-## ⚙️ 文章 Frontmatter
+### 站点配置
 
-```yaml
----
-title: My First Blog Post
-published: 2023-09-09
-description: This is the first post of my new Astro blog.
-image: ./cover.jpg  # 或使用 "api" 来启用随机封面图
-tags: [Foo, Bar]
-category: Front-end
-draft: false
-lang: zh-CN      # 仅当文章语言与 `siteConfig.ts` 中的网站语言不同时需要设置
-pinned: false    # 置顶
-comment: true    # 是否允许评论
----
-```
-详细内容查看 [Firefly 简单使用指南](./src/content/posts/guide/index.md) 文件
-## 🧩 Markdown 扩展语法
+可配置项按功能拆分在 `src/config/`，由 `src/config/index.ts` 统一导出。站点标题、地址、语言、主题色、分页与页面开关位于 `siteConfig.ts`；各配置文件的用途见 [`src/config/README.md`](./src/config/README.md)。
 
-除了 Astro 默认支持的 [GitHub Flavored Markdown](https://github.github.com/gfm/) 之外，还包含了一些额外的 Markdown 功能：
+站点地址以 `siteConfig.ts` 的 `site_url` 为准。若新增由环境变量控制的构建逻辑，需同步把变量登记到 `turbo.json` 的 `env`，否则变量不会传给构建任务。
 
-- 提醒块（Admonitions） - 支持 GitHub, Obsidian, VitePress, Docusaurus 四种风格主题配置 ([预览和用法](https://firefly.cuteleaf.cn/posts/markdown-extended/))
-- GitHub 仓库卡片 ([预览和用法](https://firefly.cuteleaf.cn/posts/markdown-extended/))
-- 基于 Expressive Code 的增强代码块 ([预览](http://firefly.cuteleaf.cn/posts/code-examples/) / [文档](https://expressive-code.com/))
+### 文章与 Frontmatter
 
-## 🧞 指令
+文章位于 `src/content/posts/`（`.md` / `.mdx`），特殊页面位于 `src/content/spec/`。字段定义见 `src/content.config.ts`：
 
-下列指令均需要在项目根目录执行：
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `title` | string | 标题，必填 |
+| `published` | date | 发布日期，必填 |
+| `updated` | date | 更新日期 |
+| `draft` | boolean | 草稿，默认 `false` |
+| `description` | string | 摘要 |
+| `image` | string | 封面图 |
+| `tags` | string[] | 标签 |
+| `category` | string | 分类 |
+| `lang` | string | 文章语言与站点默认语言不同时填写 |
+| `pinned` | boolean | 置顶 |
+| `author` / `sourceLink` | string | 作者与原文链接 |
+| `licenseName` / `licenseUrl` | string | 文章授权名称与链接 |
+| `comment` | boolean | 是否允许评论 |
+| `password` / `passwordHint` | string | 阅读密码与提示 |
 
-| Command                    | Action                            |
-| :------------------------- | :-------------------------------- |
-| `pnpm install`             | 安装依赖                              |
-| `pnpm dev`                 | 在 `localhost:4321` 启动本地开发服务器      |
-| `pnpm build`               | 构建网站至 `./dist/`                   |
-| `pnpm preview`             | 本地预览已构建的网站                        |
-| `pnpm check`               | 检查代码中的错误                          |
-| `pnpm format`              | 使用Biome格式化您的代码                    |
-| `pnpm new-post <filename>` | 创建新文章                             |
-| `pnpm astro ...`           | 执行 `astro add`, `astro check` 等指令 |
-| `pnpm astro --help`        | 显示 Astro CLI 帮助                   |
+### 目录结构
 
-## 🙏 致谢
+| 路径 | 内容 |
+| :--- | :--- |
+| `src/pages/` | Astro 页面路由，后台入口在 `src/pages/admin/` |
+| `src/pages/api/admin/` | 后台接口 |
+| `src/components/` | 组件，后台组件集中在 `src/components/admin/` |
+| `src/layouts/` | 页面布局 |
+| `src/content/` | 文章与特殊页面内容 |
+| `src/config/` | 站点与功能配置 |
+| `src/plugins/` | remark / rehype 扩展 |
+| `src/i18n/` | 语言词条与键名 |
+| `src/utils/`、`src/constants/` | 工具函数与生成数据 |
+| `scripts/` | 构建期脚本 |
+| `tests/` | 单元测试 |
+| `docs/` | 管理与运维文档 |
 
-非常感谢 [CuteLeaf](https://github.com/CuteLeaf) 开发了这么优秀的主题！
+## 构建与部署
 
-同时也要感谢：
+`astro.config.mjs` 依据环境变量选择适配器：
 
-- [saicaca](https://github.com/saicaca) 开发的 [fuwari](https://github.com/saicaca/fuwari) 模板，Firefly 就是基于它二次开发的
-- 所有为 [Firefly](https://github.com/CuteLeaf/Firefly) 和 [fuwari](https://github.com/saicaca/fuwari) 做出贡献的开发者们
+| 条件 | 适配器 | 产物与配置 |
+| :--- | :--- | :--- |
+| `VERCEL=1` | `@astrojs/vercel` | 平台配置见 `vercel.json` |
+| `CF_WORKERS=1` | `@astrojs/cloudflare` | `dist/client` + `dist/server/entry.mjs`，配置见 `wrangler.jsonc` |
+| 均未设置 | `@astrojs/node`（standalone） | 输出到 `dist/` |
 
+`pnpm build` 产出 `dist/`，`pnpm preview` 可本地预览。Cloudflare Workers 部署还需配置 `SESSION` 等 KV 绑定，命名空间 ID 需自行创建后填入 `wrangler.jsonc`。
 
-流萤部分相关图片素材版权归游戏 [《崩坏：星穹铁道》](https://sr.mihoyo.com/) 开发商 [米哈游](https://www.mihoyo.com/) 所有
+生产环境的项目目录只读：文章写入通过 GitHub 完成；站点配置、分类标签与密钥等写入目前仅在本地开发环境可用。
 
-### 技术栈
+## 维护信息
 
-- [Astro](https://astro.build)
-- [Tailwind CSS](https://tailwindcss.com)
-- [Iconify](https://iconify.design)
-- [Svelte 5](https://svelte.dev/)
-- [pnpm](https://pnpm.io/)
-- [Biome](https://biomejs.dev/)
-- [Vitest](https://vitest.dev/)
-- [Upstash KV](https://upstash.com/) (会话/缓存后端)
+- **仓库**：[XingGreen/EverMemory-blog](https://github.com/XingGreen/EverMemory-blog)；问题反馈与 Pull Request 约定见 [`CONTRIBUTING.md`](./CONTRIBUTING.md)
+- **维护者**：待补充
+- **文档索引**
+  - [`CLAUDE.md`](./CLAUDE.md) — 架构、技术约定与开发规约
+  - [`docs/ADMIN_MANUAL.md`](./docs/ADMIN_MANUAL.md) — 后台使用与环境变量配置
+  - [`docs/EMERGENCY_OPS.md`](./docs/EMERGENCY_OPS.md) — 应急操作
+  - [`src/config/README.md`](./src/config/README.md) — 配置项说明
+  - [`todo.md`](./todo.md) — 待办与已知问题
+- **校验**：`pnpm check`、`pnpm test:run`、`pnpm lint` / `pnpm format`
 
-## ✨ 已实现功能
+## 授权与合规
 
-- **内容**：文章（加密/密码保护、图钉、分类/标签、草稿）、专栏页（`spec` 集合）、归档、搜索（Pagefind 站内索引）
-- **交互**：评论系统、图片灯箱、目录生成（TOC）、阅读时间估算、Mermaid 图表、PlantUML、KaTeX 公式、GitHub 卡片
-- **后台管理**：GitHub OAuth 登录 + 应急令牌（break-glass）+ 重新认证（step-up）；会话表 + 同设备（UA）去重；文章编辑 + 预览；站点设置
-- **安全**：密码内容加密（scrypt）、登录认证简化（去密码哈希/锁定/IP 封禁）、审计日志、Turnstile 验证
-- **国际化**：zh_CN / zh_TW / ja / ru 多语言支持
+本项目采用 [MIT License](./LICENSE)。使用、修改或分发时需保留以下版权声明：
 
-## 🛠 维护状态（2026-10）
+- Copyright (c) 2024 saicaca
+- Copyright (c) 2025 CuteLeaf
+- Copyright (c) 2026 XingGreen
 
-- **架构**：Astro 7.0.2 + Svelte 5，Node ≥22，pnpm 包管理
-- **测试**：Vitest 175 tests 全部通过（`pnpm test:run`）
-- **构建**：`pnpm build`（图标 → LQIP → Astro → Pagefind 索引）
-- **文档**：设计决策与完整架构说明见 [`CLAUDE.md`](./CLAUDE.md)；管理手册见 [`docs/ADMIN_MANUAL.md`](./docs/ADMIN_MANUAL.md)
-- **最近改动**：认证路径简化为 GitHub OAuth（已完成，见 `git log`）；后台 UI 对齐通用设计模式（参考 `flare-stack-blog` 概念，独立实现）
+后台界面的设计参考了 flare-stack-blog（GPL-3.0-only）的构思；本项目为独立实现，未复制其源代码。
 
-## 📝 许可协议
-
-本项目遵循 [MIT license](https://mit-license.org/) 开源协议，详细查看 [LICENSE](./LICENSE) 文件
-
-Fork 自 [CuteLeaf/Firefly](https://github.com/CuteLeaf/Firefly)，在此基础上独立扩展。
-
-**版权声明：**本项目基于 MIT 协议开源，详见 [LICENSE](./LICENSE)。原始作者 [saicaca](https://github.com/saicaca)（[fuwari](https://github.com/saicaca/fuwari)）与 [CuteLeaf](https://github.com/CuteLeaf)（[Firefly](https://github.com/CuteLeaf/Firefly)）的贡献已在代码历史中保留；本仓库的直接上游为 Firefly。
-
-- Copyright (c) 2024 [saicaca](https://github.com/saicaca) - [fuwari](https://github.com/saicaca/fuwari)
-- Copyright (c) 2025 [CuteLeaf](https://github.com/CuteLeaf) - [Firefly](https://github.com/CuteLeaf/Firefly)
-- Copyright (c) 2026 [XingGreen](https://github.com/XingGreen) - [EverMemory-blog](https://github.com/XingGreen/EverMemory-blog)
-
-根据 MIT 开源协议，你可以自由使用、修改、分发代码，但需保留上述版权声明。
-
-本项目的后台界面设计灵感来源于 [flare-stack-blog](https://github.com/du2333/flare-stack-blog)（GPL-3.0-only），该项目采用 GPL 协议。本项目为完全独立实现，未复制其源代码。
-
-## ⭐ Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=XingGreen/EverMemory-blog\&type=Date)](https://star-history.com/#XingGreen/EverMemory-blog\&Date)
-
-<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
-
-<!-- prettier-ignore-start -->
-
-<!-- markdownlint-disable -->
-
-<!-- markdownlint-restore -->
-
-<!-- prettier-ignore-end -->
-
-<!-- ALL-CONTRIBUTORS-LIST:END -->
+部分图片与看板娘素材的版权归各自权利人所有。
