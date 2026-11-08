@@ -1,3 +1,5 @@
+*本项目由AI生成
+
 # EverMemory's Blog
 
 > 以内容文件为核心、自带管理后台的 Astro 个人博客。

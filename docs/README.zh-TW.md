@@ -1,3 +1,5 @@
+*本專案由AI生成
+
 # EverMemory's Blog
 
 > 以內容檔案為核心、內建管理後台的 Astro 個人部落格。

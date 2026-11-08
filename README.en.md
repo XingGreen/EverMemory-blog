@@ -1,3 +1,5 @@
+*This project is AI-generated
+
 # EverMemory's Blog
 
 > An Astro personal blog built around content files, with an integrated admin dashboard.
