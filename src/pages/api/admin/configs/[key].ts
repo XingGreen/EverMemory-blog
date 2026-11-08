@@ -10,7 +10,7 @@ import {
 	saveConfigJsonRemote,
 	saveConfigSource,
 } from "@/utils/config-io";
-import { saveFileToGitHub } from "@/utils/github-app";
+import { getStorageProvider } from "@/utils/providers/registry";
 
 export const prerender = false;
 
@@ -109,11 +109,18 @@ export async function POST({ request, params }) {
 		// Serverless 环境：源码或表单数据均以 GitHub 为存储（触发自动重建后生效）
 		if (isRemoteRuntime()) {
 			if (typeof body?.source === "string" && body.source.length > 0) {
-				const ok = await saveFileToGitHub(
-					item.file,
-					body.source,
-					`update config source (${params.key}) via admin dashboard`,
+			const storage = getStorageProvider();
+			if (!storage.isConfigured()) {
+				return json(
+					{ success: false, message: "请配置 GitHub App 凭证" },
+					400,
 				);
+			}
+			const ok = await storage.writeFile(
+				item.file,
+				body.source,
+				`update config source (${params.key}) via admin dashboard`,
+			);
 				if (!ok)
 					return json(
 						{ success: false, message: "GitHub 保存失败，请稍后重试" },

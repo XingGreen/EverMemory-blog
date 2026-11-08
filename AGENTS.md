@@ -73,6 +73,8 @@ and never hardcoded into committed files; machine paths live under `.workbuddy/`
   caused real breakage. Read before changing icons, styles, or the build pipeline.
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — routing, configuration, content
   collections, tests, build pipeline, and deployment.
+- [`docs/PROVIDERS.md`](./docs/PROVIDERS.md) — auth and storage adapter interfaces, provider
+  selection, and the permission model. Required before touching admin APIs.
 - [`docs/ADMIN_MANUAL.md`](./docs/ADMIN_MANUAL.md) — dashboard usage and environment variables.
   Required before changing admin APIs or authentication.
 - [`docs/EMERGENCY_OPS.md`](./docs/EMERGENCY_OPS.md) — recovery procedures.

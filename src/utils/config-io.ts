@@ -68,8 +68,8 @@ export async function saveConfigJsonRemote(
 	const source = await readConfigSourceFromGitHub(key);
 	if (source === null) throw new Error("从 GitHub 读取当前配置源码失败");
 	const content = buildConfigSource(item, source, data);
-	const { saveFileToGitHub } = await import("./github-app");
-	return saveFileToGitHub(
+	const { getStorageProvider } = await import("./providers/registry");
+	return getStorageProvider().writeFile(
 		item.file,
 		content,
 		`update config (${key}) via admin dashboard`,
@@ -84,8 +84,9 @@ export async function readConfigSourceFromGitHub(
 	key: string,
 ): Promise<string | null> {
 	const item = loadItem(key);
-	const { getFileFromGitHub } = await import("./github-app");
-	return getFileFromGitHub(item.file);
+	const { getStorageProvider } = await import("./providers/registry");
+	const read = await getStorageProvider().readFile(item.file);
+	return read.ok ? read.content : null;
 }
 
 function loadItem(key: string) {
@@ -180,9 +181,10 @@ export async function saveConfigSource(
 		throw new Error(`源码校验未通过（已自动还原旧内容）: ${msg}`);
 	}
 
-	const { saveFileLocally, saveFileToGitHub } = await import("./github-app");
+	const { saveFileLocally } = await import("./github-app");
+	const { getStorageProvider } = await import("./providers/registry");
 	const local = saveFileLocally(item.file, source);
-	const github = await saveFileToGitHub(
+	const github = await getStorageProvider().writeFile(
 		item.file,
 		source,
 		`update config source (${key}) via admin dashboard`,
@@ -248,9 +250,10 @@ export async function saveConfigJson(
 	// html 等原始文本配置：直接以传入内容作为文件内容，避免 TS 序列化
 	const content =
 		item.kind === "html" ? (data as string) : buildConfigFileContent(key, data);
-	const { saveFileLocally, saveFileToGitHub } = await import("./github-app");
+	const { saveFileLocally } = await import("./github-app");
+	const { getStorageProvider } = await import("./providers/registry");
 	const local = saveFileLocally(item.file, content);
-	const github = await saveFileToGitHub(
+	const github = await getStorageProvider().writeFile(
 		item.file,
 		content,
 		`update config (${key}) via admin dashboard`,

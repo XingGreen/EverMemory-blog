@@ -5,9 +5,9 @@ import { IS_PROD_BUILD } from "@/utils/env";
 import {
 	deleteFileLocally,
 	isValidPostSlug,
-	resolvePostPath,
 	saveFileLocally,
 } from "@/utils/github-app";
+import { getStorageProvider } from "@/utils/providers/registry";
 import { getStore } from "@/utils/persist-store";
 
 export const prerender = false;
@@ -59,8 +59,9 @@ export async function POST({ request }) {
 		}
 
 		/* 沿用已有文件的扩展名（.md / .mdx）；新建文章没有既有文件，默认 .md */
+		const storage = getStorageProvider();
 		const filePath =
-			(await resolvePostPath(slug)) ?? `src/content/posts/${slug}.md`;
+			(await storage.resolvePath?.(slug)) ?? `src/content/posts/${slug}.md`;
 
 		const frontmatter = buildFrontmatter({
 			title,
@@ -133,7 +134,7 @@ export async function POST({ request }) {
 				isValidPostSlug(originalSlug)
 			) {
 				const oldPath =
-					(await resolvePostPath(originalSlug)) ??
+					(await storage.resolvePath?.(originalSlug)) ??
 					`src/content/posts/${originalSlug}.md`;
 				// 路径相同说明解析到了同一文件，不能删
 				if (oldPath !== filePath) {

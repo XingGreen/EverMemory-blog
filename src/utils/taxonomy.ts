@@ -15,12 +15,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import {
-	deleteFileFromGitHub,
-	getFileFromGitHub,
-	resolvePostPath,
-	saveFileToGitHub,
-} from "./github-app";
+import { getStorageProvider } from "./providers/registry";
 import { isEnvFileWritable } from "./secret-io";
 
 export type TaxonomyKind = "category" | "tag";
@@ -51,10 +46,10 @@ export async function readRegistry(): Promise<TaxonomyRegistry> {
 				tags: Array.isArray(data.tags) ? data.tags : [],
 			};
 		}
-		// 生产环境读 GitHub
-		const raw = await getFileFromGitHub(REGISTRY_PATH);
-		if (!raw) return empty;
-		const data = JSON.parse(raw) as Partial<TaxonomyRegistry>;
+		// 生产环境读远端存储
+		const read = await getStorageProvider().readFile(REGISTRY_PATH);
+		if (!read.ok) return empty;
+		const data = JSON.parse(read.content) as Partial<TaxonomyRegistry>;
 		return {
 			categories: Array.isArray(data.categories) ? data.categories : [],
 			tags: Array.isArray(data.tags) ? data.tags : [],
@@ -73,7 +68,7 @@ export async function writeRegistry(registry: TaxonomyRegistry): Promise<void> {
 		fs.writeFileSync(p, content, "utf-8");
 		return;
 	}
-	await saveFileToGitHub(
+	await getStorageProvider().writeFile(
 		REGISTRY_PATH,
 		content,
 		"chore(taxonomy): 更新分类/标签登记表",
@@ -168,13 +163,14 @@ export function rewriteFrontmatter(
 
 /** 读取一篇文章的原始文本（本地或 GitHub） */
 export async function readPostFile(slug: string): Promise<string | null> {
-	const relPath = await resolvePostPath(slug);
+	const relPath = (await getStorageProvider().resolvePath?.(slug)) ?? null;
 	if (!relPath) return null;
 	try {
 		if (isEnvFileWritable()) {
 			return fs.readFileSync(path.resolve(process.cwd(), relPath), "utf-8");
 		}
-		return await getFileFromGitHub(relPath);
+		const read = await getStorageProvider().readFile(relPath);
+		return read.ok ? read.content : null;
 	} catch {
 		return null;
 	}
@@ -186,7 +182,7 @@ export async function writePostFile(
 	content: string,
 	message: string,
 ): Promise<boolean> {
-	const relPath = await resolvePostPath(slug);
+	const relPath = (await getStorageProvider().resolvePath?.(slug)) ?? null;
 	if (!relPath) return false;
 	try {
 		if (isEnvFileWritable()) {
@@ -197,7 +193,7 @@ export async function writePostFile(
 			);
 			return true;
 		}
-		await saveFileToGitHub(relPath, content, message);
+		await getStorageProvider().writeFile(relPath, content, message);
 		return true;
 	} catch {
 		return false;
@@ -216,7 +212,7 @@ export async function deletePostFile(
 			if (fs.existsSync(p)) fs.unlinkSync(p);
 			return true;
 		}
-		await deleteFileFromGitHub(relPath, message);
+		await getStorageProvider().deleteFile(relPath, message);
 		return true;
 	} catch {
 		return false;

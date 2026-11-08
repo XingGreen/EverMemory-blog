@@ -12,12 +12,8 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { writeAuditLog } from "@/utils/audit-log";
 import { requireAuth } from "@/utils/auth";
-import {
-	commitFiles,
-	readFileFromGitHub,
-	saveFileLocally,
-	saveFileToGitHub,
-} from "@/utils/github-app";
+import { saveFileLocally } from "@/utils/github-app";
+import { getStorageProvider } from "@/utils/providers/registry";
 
 export const prerender = false;
 
@@ -72,7 +68,7 @@ export async function POST({
 	   幂等但会凭空多出一个 commit，等于多触发一次部署。 */
 	for (const item of items.filter((i) => i.direction === "pull")) {
 		try {
-			const remote = await readFileFromGitHub(item.path);
+			const remote = await getStorageProvider().readFile(item.path);
 			if (!remote.ok) {
 				/* 只有 404 才说「不存在」；断网、认证失败、5xx 各有各的说法，
 				   把它们都说成「远端不存在」会让人去仓库里找一个本来就有的文件。 */
@@ -129,7 +125,7 @@ export async function POST({
 		const body = pending
 			.map((f) => `- ${f.path.replace(/^src\/content\/posts\//, "")}`)
 			.join("\n");
-		const commit = await commitFiles(
+		const commit = await getStorageProvider().commitFiles(
 			pending.map((f) => ({ path: f.path, content: f.content })),
 			{ headline, body },
 		);
@@ -154,7 +150,7 @@ export async function POST({
 				let ok = false;
 				let message: string | undefined;
 				try {
-					ok = await saveFileToGitHub(
+					ok = await getStorageProvider().writeFile(
 						file.path,
 						file.content,
 						`chore(sync): push ${file.slug} to remote`,

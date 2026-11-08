@@ -2,7 +2,8 @@ import { getCollection } from "astro:content";
 import fs from "node:fs";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
-import { getFileFromGitHub, isValidPostSlug, resolvePostPath } from "@/utils/github-app";
+import { isValidPostSlug } from "@/utils/github-app";
+import { getStorageProvider } from "@/utils/providers/registry";
 
 export const prerender = false;
 
@@ -40,7 +41,10 @@ export async function GET({ request, url }) {
 		}
 
 		/* 先解析真实路径：可能是 .md，也可能是 .mdx（内容集合两种都收） */
-		const resolved = await resolvePostPath(slug);
+		const storage = getStorageProvider();
+		const resolved = storage.resolvePath
+			? await storage.resolvePath(slug)
+			: null;
 		if (!resolved) {
 			return new Response(
 				JSON.stringify({ success: false, message: "文章文件不存在" }),
@@ -51,9 +55,13 @@ export async function GET({ request, url }) {
 		/* 本地可读就读盘；只读部署（Vercel / Workers）下项目目录没有源码，回源 GitHub。
 		   否则线上点「编辑」任何已有文章都会 404（元数据有 getCollection 兜着，正文没有）。 */
 		const localPath = path.resolve(process.cwd(), resolved);
-		const raw = fs.existsSync(localPath)
-			? fs.readFileSync(localPath, "utf-8")
-			: await getFileFromGitHub(resolved);
+		let raw: string | null;
+		if (fs.existsSync(localPath)) {
+			raw = fs.readFileSync(localPath, "utf-8");
+		} else {
+			const read = await storage.readFile(resolved);
+			raw = read.ok ? read.content : null;
+		}
 
 		if (raw !== null) {
 			const frontmatterEnd = raw.indexOf("---", 3);

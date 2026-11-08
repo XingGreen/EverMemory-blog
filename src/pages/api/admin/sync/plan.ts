@@ -17,7 +17,8 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
 import { gitBlobSha, hasCrlf } from "@/utils/git-blob";
-import { describeFetchError, listMarkdownWithSha } from "@/utils/github-app";
+import { describeFetchError } from "@/utils/github-app";
+import { getStorageProvider } from "@/utils/providers/registry";
 import { slugFromPath } from "@/utils/post-slug";
 
 export const prerender = false;
@@ -106,6 +107,15 @@ export async function GET({
 	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
 
+	/* 未配置存储凭证时直接说明，避免把「读不到远端」误报成「全部未推送」 */
+	const storage = getStorageProvider();
+	if (!storage.isConfigured()) {
+		return new Response(
+			JSON.stringify({ success: false, message: "请配置 GitHub App 凭证" }),
+			{ status: 400, headers: { "Content-Type": "application/json" } },
+		);
+	}
+
 	const checkedAt = Date.now();
 
 	/* 1. 远端元数据（含 sha），一次递归，不拉正文 */
@@ -113,7 +123,8 @@ export async function GET({
 	let error: string | null = null;
 	try {
 		remote = await withTimeout(
-			listMarkdownWithSha("src/content/posts"),
+			getStorageProvider().listMarkdownWithSha?.("src/content/posts") ??
+				Promise.resolve([]),
 			REMOTE_TIMEOUT_MS,
 		);
 	} catch (err) {

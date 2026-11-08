@@ -1,11 +1,8 @@
 import { getCollection } from "astro:content";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
-import {
-	getFileFromGitHub,
-	listAllMarkdownFiles,
-	saveFileLocally,
-} from "@/utils/github-app";
+import { saveFileLocally } from "@/utils/github-app";
+import { getStorageProvider } from "@/utils/providers/registry";
 
 export const prerender = false;
 
@@ -15,11 +12,20 @@ export async function POST({ request }) {
 		return auth.response;
 	}
 
+	const storage = getStorageProvider();
+	if (!storage.isConfigured()) {
+		return new Response(
+			JSON.stringify({ success: false, message: "请配置 GitHub App 凭证" }),
+			{ status: 400, headers: { "Content-Type": "application/json" } },
+		);
+	}
+
 	try {
 		console.log("[Admin Sync] Starting sync...");
 
-		// 1. 从 GitHub 获取所有 .md 文件列表
-		const githubFiles = await listAllMarkdownFiles("src/content/posts");
+		// 1. 从远端存储获取所有 .md 文件列表
+		const githubFiles =
+			(await storage.listMarkdownPaths?.("src/content/posts")) ?? [];
 		console.log(`[Admin Sync] GitHub files: ${githubFiles.length}`);
 
 		// 2. 获取本地已有的文章列表
@@ -36,7 +42,8 @@ export async function POST({ request }) {
 
 			if (!localSlugs.has(slug)) {
 				console.log(`[Admin Sync] Downloading missing file: ${filePath}`);
-				const content = await getFileFromGitHub(filePath);
+				const read = await storage.readFile(filePath);
+				const content = read.ok ? read.content : null;
 
 				if (content) {
 					const localPath = filePath.replace(

@@ -3,11 +3,10 @@ import { writeAuditLog } from "@/utils/audit-log";
 import {
 	clearAuthCookie,
 	generateSessionToken,
-	isBreakglassConfigured,
 	SESSION_MAX_AGE,
 	setAuthCookie,
-	verifyBreakglassToken,
 } from "@/utils/auth";
+import { getAuthProviderById } from "@/utils/providers/registry";
 import { getClientIp } from "@/utils/client-ip";
 import { describeDevice, registerSession } from "@/utils/session-store";
 import { verifyTurnstileToken } from "@/utils/turnstile";
@@ -32,7 +31,8 @@ export async function POST({ request }) {
 		const { token, turnstileToken } = body;
 		const clientKey = getClientIp(request);
 
-		if (!isBreakglassConfigured()) {
+		const provider = getAuthProviderById("breakglass");
+		if (!provider?.isConfigured()) {
 			return json(
 				{ success: false, message: "应急登录未启用，请使用 GitHub 登录" },
 				400,
@@ -59,12 +59,13 @@ export async function POST({ request }) {
 			return json({ success: false, message: "请输入应急登录令牌" }, 400);
 		}
 
-		if (!verifyBreakglassToken(token)) {
+		const verified = await provider.verifyToken?.(token);
+		if (!verified?.ok) {
 			writeAuditLog({
 				event: "login_failure",
 				client: clientKey,
 				username: "admin",
-				detail: "breakglass token mismatch",
+				detail: `breakglass token rejected (${verified?.error ?? "unknown"})`,
 			});
 			const headers = new Headers();
 			clearAuthCookie(headers);

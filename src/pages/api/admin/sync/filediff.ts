@@ -8,7 +8,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
 import { gitBlobSha } from "@/utils/git-blob";
-import { getFileFromGitHub } from "@/utils/github-app";
+import { getStorageProvider } from "@/utils/providers/registry";
 
 export const prerender = false;
 
@@ -49,8 +49,12 @@ export async function GET({
 	let remoteContent: string | null = null;
 	let remoteError: string | null = null;
 	try {
-		remoteContent = await getFileFromGitHub(filePath);
-		if (remoteContent === null) remoteError = "远端不存在该文件";
+		const read = await getStorageProvider().readFile(filePath);
+		if (read.ok) {
+			remoteContent = read.content;
+		} else {
+			remoteError = read.message;
+		}
 	} catch (error) {
 		remoteError = error instanceof Error ? error.message : String(error);
 	}

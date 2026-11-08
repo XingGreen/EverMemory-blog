@@ -21,12 +21,8 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
-import {
-	deleteFileFromGitHub,
-	getFileFromGitHub,
-	saveFileLocally,
-	saveFileToGitHub,
-} from "@/utils/github-app";
+import { saveFileLocally } from "@/utils/github-app";
+import { getStorageProvider } from "@/utils/providers/registry";
 import { getStore } from "@/utils/persist-store";
 
 export const prerender = false;
@@ -206,7 +202,8 @@ export async function GET({
 			content = readFileSync(abs, "utf-8");
 		} else {
 			try {
-				content = await getFileFromGitHub(rel);
+				const read = await getStorageProvider().readFile(rel);
+				content = read.ok ? read.content : null;
 			} catch {
 				content = null;
 			}
@@ -271,7 +268,7 @@ export async function POST({
 		}
 		let removedRemote = false;
 		try {
-			await deleteFileFromGitHub(
+			await getStorageProvider().deleteFile(
 				revRel,
 				`chore(history): 删除历史版本 ${slug}/${id}`,
 			);
@@ -298,7 +295,8 @@ export async function POST({
 		if (existsSync(revAbs)) target = readFileSync(revAbs, "utf-8");
 		else {
 			try {
-				target = await getFileFromGitHub(revRel);
+				const read = await getStorageProvider().readFile(revRel);
+				target = read.ok ? read.content : null;
 			} catch {
 				target = null;
 			}
@@ -316,7 +314,8 @@ export async function POST({
 		current = readFileSync(postAbs, "utf-8");
 	} else {
 		try {
-			current = await getFileFromGitHub(postRel);
+			const read = await getStorageProvider().readFile(postRel);
+			current = read.ok ? read.content : null;
 		} catch {
 			current = null;
 		}
@@ -343,7 +342,7 @@ export async function POST({
 	// 生产环境本地目录只读，正文还要推一次 GitHub；失败不视为整体失败
 	let pushed = true;
 	try {
-		pushed = await saveFileToGitHub(
+		pushed = await getStorageProvider().writeFile(
 			postRel,
 			target,
 			`chore(history): 恢复到 ${id}`,

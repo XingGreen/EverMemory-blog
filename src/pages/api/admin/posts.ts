@@ -1,7 +1,7 @@
 import { getCollection } from "astro:content";
 import type { AdminPostSummary } from "@/types/adminApi";
 import { requireAuth } from "@/utils/auth";
-import { getFileFromGitHub, listAllMarkdownFiles } from "@/utils/github-app";
+import { getStorageProvider } from "@/utils/providers/registry";
 import { normalizeSlug, slugFromPath } from "@/utils/post-slug";
 
 export const prerender = false;
@@ -47,8 +47,9 @@ async function getRemoteSlugs(): Promise<Map<string, string> | null> {
 		   经常超过 4s，原来几乎每次都以 timeout 收场，同步状态因此永远标不上，
 		   用户看到的就是「明明没网却显示已同步」。
 		   拿不到就降级为 null，不能让同步标记决定列表能不能打开。 */
+		const storage = getStorageProvider();
 		const paths = await withTimeout(
-			listAllMarkdownFiles("src/content/posts"),
+			storage.listMarkdownPaths?.("src/content/posts") ?? Promise.resolve([]),
 			REMOTE_TIMEOUT_MS,
 		);
 		const slugs = new Map<string, string>();
@@ -92,7 +93,8 @@ async function buildRemoteOnlyEntries(
 	const entries: AdminPostSummary[] = [];
 	for (const [slug, filePath] of remoteSlugs) {
 		if (localSlugs.has(slug)) continue;
-		const raw = await getFileFromGitHub(filePath).catch(() => null);
+		const read = await getStorageProvider().readFile(filePath);
+		const raw = read.ok ? read.content : null;
 		if (!raw) continue;
 		entries.push({
 			id: slug,

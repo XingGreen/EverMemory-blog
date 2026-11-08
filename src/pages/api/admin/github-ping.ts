@@ -1,5 +1,5 @@
 import { requireAuth } from "@/utils/auth";
-import { testGitHubConnection } from "@/utils/github-app";
+import { getStorageProvider } from "@/utils/providers/registry";
 
 export const prerender = false;
 
@@ -12,7 +12,14 @@ export async function GET({ request }) {
 	}
 
 	try {
-		const latency = await testGitHubConnection();
+		const storage = getStorageProvider();
+		if (!storage.isConfigured()) {
+			return new Response(
+				JSON.stringify({ success: false, message: "请配置 GitHub App 凭证" }),
+				{ status: 400, headers: { "Content-Type": "application/json" } },
+			);
+		}
+		const latency = await storage.testConnection();
 		return new Response(JSON.stringify({ success: true, latency }), {
 			status: 200,
 			headers: { "Content-Type": "application/json" },

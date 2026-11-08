@@ -1,11 +1,7 @@
 import { requireAuth } from "@/utils/auth";
 import { IS_PROD_BUILD } from "@/utils/env";
-import {
-	deleteFileFromGitHub,
-	deleteFileLocally,
-	isValidPostSlug,
-	resolvePostPath,
-} from "@/utils/github-app";
+import { deleteFileLocally, isValidPostSlug } from "@/utils/github-app";
+import { getStorageProvider } from "@/utils/providers/registry";
 
 export const prerender = false;
 
@@ -36,8 +32,9 @@ export async function POST({ request }) {
 		console.log(`[Admin Delete] Slug: ${slug}`);
 
 		/* 解析真实路径：mdx 文章若按 .md 去删会删不到（并误报） */
+		const storage = getStorageProvider();
 		const filePath =
-			(await resolvePostPath(slug)) ?? `src/content/posts/${slug}.md`;
+			(await storage.resolvePath?.(slug)) ?? `src/content/posts/${slug}.md`;
 		const commitMessage = `delete post: ${title || slug} via admin dashboard`;
 
 		/* 1. 本地文件只在开发构建下可删：生产（Vercel / Workers）目录只读，
@@ -50,7 +47,7 @@ export async function POST({ request }) {
 		let githubSuccess = false;
 		let githubError: string | null = null;
 		try {
-			await deleteFileFromGitHub(filePath, commitMessage);
+			await storage.deleteFile(filePath, commitMessage);
 			githubSuccess = true;
 		} catch (err) {
 			githubError = err instanceof Error ? err.message : String(err);
