@@ -28,6 +28,7 @@ import SecretManager from "./SecretManager.svelte";
 import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
 import SyncPage from "./SyncPage.svelte";
+import { createPageIntroStore } from "./page-intro.svelte";
 import TaxonomyManager from "./TaxonomyManager.svelte";
 
 type Post = {
@@ -1033,6 +1034,20 @@ async function performLogout() {
 // ── 导航（History API 真实路径路由） ──
 const DASHBOARD_PATH = "/admin/";
 
+/* 当前页说明文字：AdminPage 写入，移动顶栏标题旁的问号读取并弹出 */
+const pageIntro = createPageIntroStore();
+let introOpen = $state(false);
+let introWrap: HTMLDivElement | null = $state(null);
+
+function onIntroOutside(event: MouseEvent) {
+	if (!introOpen) return;
+	if (introWrap && !introWrap.contains(event.target as Node)) introOpen = false;
+}
+
+function onIntroKeydown(event: KeyboardEvent) {
+	if (event.key === "Escape") introOpen = false;
+}
+
 function navigate(path: string) {
 	isSidebarOpen = false;
 	/* 防护：pushState 会把相对路径基于当前 URL 解析，得到错乱地址后 applyRoute
@@ -1269,10 +1284,14 @@ function formatDate(dateStr: string | null): string {
 	ontouchend={resumeToastOnRelease}
 	ontouchcancel={resumeToastOnRelease}
 	onblur={resumeToastOnRelease}
+	onclick={onIntroOutside}
 	onkeydown={(event) => {
 		/* Esc 关抽屉：移动端抽屉盖住整屏，唯一的关闭手段是左上角按钮和点遮罩，
 		   手机单手操作点左上角很别扭，退回键（Esc）是自然出口。 */
-		if (event.key === "Escape" && isSidebarOpen) isSidebarOpen = false;
+		if (event.key === "Escape") {
+			if (isSidebarOpen) isSidebarOpen = false;
+			onIntroKeydown(event);
+		}
 	}}
 />
 
@@ -1841,7 +1860,27 @@ function formatDate(dateStr: string | null): string {
 				<button class="menu-toggle" onclick={() => (isSidebarOpen = true)} aria-label="打开菜单">
 					<Icon icon="material-symbols:menu-rounded" style="font-size: 28px" />
 				</button>
-				<h1 class="topbar-title">{headerTitle}</h1>
+				<div class="topbar-heading">
+					<h1 class="topbar-title">{headerTitle}</h1>
+					{#if pageIntro.value}
+						<!-- 页面说明收进问号，与标题并排（不占正文区） -->
+						<div class="topbar-help" bind:this={introWrap}>
+							<button
+								class="topbar-help-btn"
+								aria-label={i18n(I18nKey.statusViewDetail)}
+								aria-expanded={introOpen}
+								onclick={() => (introOpen = !introOpen)}
+							>
+								<Icon icon="material-symbols:help-outline" style="font-size: 20px" />
+							</button>
+						</div>
+					{/if}
+				</div>
+				{#if introOpen}
+					<!-- 气泡挂在顶栏上、左缘对齐：不再相对按钮定位，避免长文本
+					     在窄屏上左右越界 -->
+					<div class="topbar-help-bubble">{pageIntro.value}</div>
+				{/if}
 				{#if activePage === "posts" && viewMode === "list"}
 					<!-- 主操作上移到顶栏（参考项目 MobileTopBar 的 primaryAction 槽位）：
 					     页面自身的 h1 与按钮组在窄屏已隐藏，操作不能跟着一起消失 -->
@@ -2782,10 +2821,26 @@ function formatDate(dateStr: string | null): string {
 		flex-shrink: 0;
 		border: none;
 		box-shadow: var(--shadow-card);
+		/* 问号气泡要盖住下方内容，顶栏需要自成一个层叠上下文 */
+		position: relative;
+		z-index: 30;
+		/* .card-base 默认 overflow:hidden，会把气泡裁掉；顶栏内没有需要裁切的
+		   内容（只有一个按钮和图标），放开即可 */
+		overflow: visible;
+	}
+
+	/* 标题与问号并排成一组：组占满剩余宽度，问号始终紧贴标题右侧，
+	   右侧操作按钮另起一组靠右对齐 */
+	.topbar-heading {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex: 1;
+		min-width: 0;
 	}
 
 	.topbar-title {
-		flex: 1;
+		flex: 0 1 auto;
 		min-width: 0;
 		margin: 0;
 		font-size: 1.0625rem;
@@ -2794,6 +2849,65 @@ function formatDate(dateStr: string | null): string {
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	/* 说明问号：与标题并排，视觉 28px、命中区 44px（::after 外扩 8px） */
+	.topbar-help {
+		position: relative;
+		flex-shrink: 0;
+	}
+
+	.topbar-help-btn {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		padding: 0;
+		border: none;
+		border-radius: 50%;
+		background: transparent;
+		color: var(--content-meta);
+		cursor: pointer;
+		transition: background 0.15s ease, color 0.15s ease;
+	}
+
+	.topbar-help-btn::after {
+		content: "";
+		position: absolute;
+		inset: -8px;
+		border-radius: 50%;
+	}
+
+	.topbar-help-btn:hover {
+		background: var(--btn-regular-bg);
+		color: var(--deep-text);
+	}
+
+	.topbar-help-btn:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	/* 气泡：挂在顶栏下沿、左缘对齐，宽度受视口约束，不会左右越界 */
+	.topbar-help-bubble {
+		position: absolute;
+		top: calc(100% - 0.25rem);
+		left: 1rem;
+		z-index: 40;
+		width: max-content;
+		max-width: min(calc(100vw - 4rem), 19rem);
+		padding: 0.625rem 0.75rem;
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-md);
+		background: var(--float-panel-bg);
+		box-shadow: var(--shadow-lg);
+		color: var(--deep-text);
+		font-size: 0.8125rem;
+		font-weight: 400;
+		line-height: 1.6;
+		white-space: normal;
 	}
 
 	/* 顶栏主操作：36px 高，与顶栏 60px 内容高度留出 12px 上下呼吸。
