@@ -1,4 +1,5 @@
 <script lang="ts">
+import BlurUpImage from "@/components/common/BlurUpImage.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import AdminPage from "./AdminPage.svelte";
 import Checkbox from "./Checkbox.svelte";
@@ -440,7 +441,13 @@ $effect(() => {
 				<div class="table-row" role="row">
 					<div class="c-name" role="cell">
 						{#if link.imgurl}
-							<img class="avatar" src={link.imgurl} alt="" loading="lazy" />
+							<BlurUpImage
+								src={link.imgurl}
+								alt=""
+								width="2rem"
+								height="2rem"
+								radius="0.5rem"
+							/>
 						{:else}
 							<span class="avatar placeholder"></span>
 						{/if}

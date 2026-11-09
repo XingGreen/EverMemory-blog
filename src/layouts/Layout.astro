@@ -1805,8 +1805,15 @@ function disableAnimation() {
   }
 
   // LQIP fade-in：图片加载完成后淡出占位渐变
+  // 同时解除高斯模糊与轻微放大（blur-up），两者过渡时长一致，观感是一次平滑替换
   function initImageLoadFadeIn() {
     const placeholders = document.querySelectorAll<HTMLElement>('.lqip-placeholder');
+    const reveal = (img: HTMLImageElement) => {
+      img.style.opacity = '1';
+      img.style.filter = 'none';
+      img.style.transform = 'none';
+      img.classList.add('img-loaded');
+    };
     placeholders.forEach(placeholder => {
       const container = placeholder.parentElement;
       if (!container) return;
@@ -1814,11 +1821,11 @@ function disableAnimation() {
       if (!img) return;
 
       if (img.complete && img.naturalWidth > 0) {
-        img.style.opacity = '1';
+        reveal(img);
         placeholder.classList.add('loaded');
       } else {
         img.addEventListener('load', () => {
-          img.style.opacity = '1';
+          reveal(img);
           placeholder.classList.add('loaded');
         }, { once: true });
         img.addEventListener('error', () => {
