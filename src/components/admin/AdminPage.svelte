@@ -1,5 +1,8 @@
 <script lang="ts">
 import type { Snippet } from "svelte";
+import Icon from "@/components/common/Icon.svelte";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
 
 /**
  * 后台页面外壳（标题区 + 内容区 + 可选页脚）
@@ -33,7 +36,25 @@ let {
 	footer?: Snippet;
 	actions?: Snippet;
 } = $props();
+
+/**
+ * 窄屏说明气泡：手机上一段说明文字会占掉两三行首屏空间，
+ * 因此把说明收进问号按钮，点开才显示。桌面端照常平铺，按钮不渲染。
+ */
+let helpOpen = $state(false);
+let helpWrap: HTMLDivElement | null = $state(null);
+
+function onWindowClick(event: MouseEvent) {
+	if (!helpOpen) return;
+	if (helpWrap && !helpWrap.contains(event.target as Node)) helpOpen = false;
+}
+
+function onWindowKeydown(event: KeyboardEvent) {
+	if (event.key === "Escape") helpOpen = false;
+}
 </script>
+
+<svelte:window onclick={onWindowClick} onkeydown={onWindowKeydown} />
 
 <div class="card-base admin-page">
 	<header class="admin-page-heading">
@@ -43,6 +64,21 @@ let {
 				<p>{intro}</p>
 			{/if}
 		</div>
+		{#if intro}
+			<div class="heading-help" bind:this={helpWrap}>
+				<button
+					class="heading-help-btn"
+					aria-label={i18n(I18nKey.statusViewDetail)}
+					aria-expanded={helpOpen}
+					onclick={() => (helpOpen = !helpOpen)}
+				>
+					<Icon icon="material-symbols:help-outline" />
+				</button>
+				{#if helpOpen}
+					<div class="heading-help-bubble">{intro}</div>
+				{/if}
+			</div>
+		{/if}
 		{#if actions}
 			<div class="heading-actions">
 				{@render actions()}
@@ -102,6 +138,69 @@ let {
 		flex-shrink: 0;
 	}
 
+	/* 说明问号：仅窄屏出现（桌面端说明文字平铺显示） */
+	.heading-help {
+		display: none;
+		position: relative;
+		margin-left: auto;
+		flex-shrink: 0;
+	}
+
+	.heading-help-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		/* 用 px 而不是 rem：窄屏根字号是 14px，2rem 只有 28px */
+		width: 32px;
+		height: 32px;
+		padding: 0;
+		border: none;
+		border-radius: 50%;
+		background: var(--btn-regular-bg);
+		color: var(--content-meta);
+		font-size: 1.125rem;
+		cursor: pointer;
+		transition: background 0.15s ease, color 0.15s ease;
+	}
+
+	/* 视觉 32px 低于 44px 触控下限，伪元素外扩补足 */
+	.heading-help-btn::after {
+		content: "";
+		position: absolute;
+		inset: -6px;
+		border-radius: 50%;
+	}
+
+	.heading-help-btn:hover {
+		background: var(--btn-regular-bg-hover);
+		color: var(--deep-text);
+	}
+
+	.heading-help-btn:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	/* 气泡：绝对定位在问号下方、右对齐，避免超出卡片右缘。
+	   表面沿用后台浮层三件套（浮层底 / 主文字 / 分隔线描边）。 */
+	.heading-help-bubble {
+		position: absolute;
+		top: calc(100% + 0.5rem);
+		right: 0;
+		z-index: 20;
+		width: max-content;
+		max-width: min(72vw, 17rem);
+		padding: 0.625rem 0.75rem;
+		border: 1px solid var(--line-divider);
+		border-radius: var(--radius-md);
+		background: var(--float-panel-bg);
+		box-shadow: var(--shadow-lg);
+		color: var(--deep-text);
+		font-size: 0.8125rem;
+		line-height: 1.6;
+		white-space: normal;
+	}
+
 	/* 28px：与参考项目 .taxonomy-heading h1 的 calc(28 * unit) 一致。
 	   上一轮据截图墨迹高度误判成 24px（那张参考截图的 DPR 不是 2，
 	   换算基准错了），此处恢复 1.75rem。 */
@@ -141,9 +240,13 @@ let {
 			display: none;
 		}
 
+		/* 说明文字收进问号：窄屏一段两行的说明会挤掉首屏内容 */
 		.admin-page-heading p {
-			font-size: 0.8125rem;
-			line-height: 1.4;
+			display: none;
+		}
+
+		.heading-help {
+			display: block;
 		}
 	}
 
