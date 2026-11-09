@@ -39,6 +39,11 @@ touching icons, styles, the build pipeline, or the dev server.
   `getComputedStyle`.
 - `overflow: hidden` does not clip fixed descendants; a "clipped by the parent" symptom is
   usually an offset problem, not clipping.
+- **Overlays share one surface token set.** Dialogs, row menus, modals and toasts all take
+  `--float-panel-bg` / `--deep-text` / `--line-divider` (the project's stand-in for
+  surface-container-high / on-surface / outline-variant). Do not invent inverted schemes such as
+  mixing a status colour into `--deep-text` with `--page-bg` text: severity belongs on the icon
+  badge, a semantic border, and the progress fill.
 
 ## Tooling
 

@@ -1678,5 +1678,26 @@ $effect(() => {
 			padding-bottom: calc(12 * var(--tx-unit));
 			max-height: 200px;
 		}
+
+		/* 手机宽度下四列硬压会把「操作」列挤成一条缝，按钮点不中。
+		   给表格一个下限宽度（34rem ≈ 544px），超出部分由
+		   .taxonomy-post-scroll 的 overflow:auto 横向滚动承担——
+		   要么滚动，要么无法操作，滚动是更合理的那一个。 */
+		.post-list-table {
+			min-width: 34rem;
+		}
+	}
+
+	/* 手机触控：44px 下限。本组件用 --tx-unit=1px 的像素体系，
+	   32px 的模式 tab 和 34px 的行内操作在手机上都低于 MD3 触控下限 */
+	@media (max-width: 768px) {
+		.taxonomy-mode-tabs button {
+			min-height: 44px;
+		}
+
+		.taxonomy-context-action {
+			width: 44px;
+			height: 44px;
+		}
 	}
 </style>

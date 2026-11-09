@@ -86,6 +86,49 @@
   }
 }
 
+/* ── 移动端触控热区（≤768px）──
+   Layout.astro 给 <html> 设了 text-[14px] md:text-[16px]：手机上 1rem = 14px，
+   组件里用 rem 写的「2.75rem ≈ 44px」实际只有 38.5px，触控下限全线缩水。
+   这里用 px 把后台可交互控件的热区统一抬到 MD3 下限 44px。
+   纯图标小按钮不在此放大（会把色板/开关等密集控件撑破布局），
+   由各组件自己的命中区外扩（::after）或局部规则处理。 */
+@media (max-width: 768px) {
+  /* .ui-btn / .savebar-btn 由 AdminDashboard 的移动端媒体块负责（那里已有
+     同一规则），这里只收其余组件里被 14px 根字号缩水的控件。 */
+  .admin-shell .sec-btn,
+  .admin-shell .btn,
+  .admin-shell .select-trigger,
+  .admin-shell .editor-back,
+  .admin-shell .editor-text-btn,
+  .admin-shell .post-editor-back,
+  .admin-shell .post-editor-restore,
+  .admin-shell .status-dismiss,
+  .admin-shell .section-link,
+  .admin-shell .connectivity-btn,
+  .admin-shell .mode-tabs button,
+  .admin-shell .tabs button,
+  .admin-shell .settings-action-btn,
+  .admin-shell .toggle,
+  .admin-shell .add-btn,
+  .admin-shell .post-list-row-actions > a {
+    min-height: 44px;
+  }
+
+  /* 行内文本操作链接：inline 元素不吃 min-height，转 inline-flex 才生效 */
+  .admin-shell .section-link,
+  .admin-shell .connectivity-btn,
+  .admin-shell .post-list-row-actions > a,
+  .admin-shell .c-site a {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* 友链卡片里的站点域名链接：整行可点，高度补到 44px */
+  .admin-shell .c-site a {
+    min-height: 44px;
+  }
+}
+
 /* ── 多行输入框统一约束 ──
    禁止横向滚动（内容超宽时换行，而不是把框撑出横向滚动条），
    并给一个上限高度，超出后纵向滚动。

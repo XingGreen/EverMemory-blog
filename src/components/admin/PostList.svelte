@@ -1253,26 +1253,6 @@ function actionLabel(action: string, title: string): string {
 		white-space: nowrap;
 	}
 
-	.select-wrap {
-		position: relative;
-		display: flex;
-		align-items: center;
-	}
-
-	.select-wrap .ui-select {
-		/* 形状由 ui-base 的 .ui-select 提供,这里只保留后台的宽度约束;
-		   底色换卡片底 —— 筛选项是「浮在卡片上」的触发器,
-		   对齐参考项目 post-list-sort-trigger 的 --fuwari-card-bg */
-		background-color: var(--card-bg);
-		min-width: 130px;
-		max-width: 220px;
-	}
-
-	.select-wrap .ui-select:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
 	/* ── 状态容器 ── */
 	.state-container {
 		display: flex;
@@ -1726,12 +1706,13 @@ function actionLabel(action: string, title: string): string {
 			color 0.15s;
 	}
 
-	/* 命中区外扩到 42dp：与 12px 间距配合后相邻命中区不重叠（净间隙 4px），
-	   既保住触控目标又不会让两个按钮的热区串在一起 */
+	/* 命中区外扩到 44px：34px 视觉 + 上下左右各 5px。与 12px 间距配合后
+	   相邻命中区不重叠（净间隙 2px），既保住触控目标又不会让两个按钮的
+	   热区串在一起 */
 	:global(.icon-action::after) {
 		content: "";
 		position: absolute;
-		inset: -4px;
+		inset: -5px;
 		border-radius: 10px;
 	}
 
@@ -1859,30 +1840,79 @@ function actionLabel(action: string, title: string): string {
 			padding-bottom: 0.25rem;
 		}
 
-		/* 分类/标签/排序整行占满，select 跟着拉宽 */
-		.toolbar-field {
-			flex: 1 1 100%;
+		/* 分类/标签/排序：按演示文件改为「横向滑动的一排胶囊」，不再一人一行。
+		   选择器必须对准 Select 实际渲染的 .select-root（基础规则的
+		   width:10rem 在窄屏只有 140px，会让下拉只占半行）。 */
+		.toolbar-fields {
+			flex-direction: row;
+			flex-wrap: nowrap;
+			align-items: center;
+			gap: 0.5rem;
+			width: 100%;
+			overflow-x: auto;
+			padding-bottom: 0.5rem;
+			/* 隐藏滚动条但保留滚动（演示 .scrollbar-hide） */
+			scrollbar-width: none;
+			-ms-overflow-style: none;
 		}
 
-		.toolbar-field .select-wrap,
-		.toolbar-field .select-wrap select {
-			flex: 1;
-			max-width: none;
+		.toolbar-fields::-webkit-scrollbar {
+			display: none;
+		}
+
+		.toolbar-field {
+			flex: 0 0 auto;
+			gap: 0.375rem;
+		}
+
+		.toolbar-field :global(.select-root) {
+			width: auto;
+			flex: 0 0 auto;
+			min-width: 0;
+		}
+
+		/* 胶囊外观：32px 高、12px 圆角、细描边、次要面板底 */
+		.toolbar-fields .toolbar-field :global(.select-trigger) {
+			position: relative;
+			width: auto;
+			height: 32px;
+			min-height: 32px;
+			padding: 0 0.5rem;
+			gap: 0.25rem;
+			border: 1px solid var(--line-divider);
+			border-radius: 12px;
+			background: var(--btn-regular-bg);
+			color: var(--deep-text);
+			font-size: 0.75rem;
+		}
+
+		/* 视觉 32px 仍低于 44px 触控下限，用伪元素纵向外扩，
+		   横向不扩（避免相邻胶囊热区串在一起） */
+		.toolbar-fields .toolbar-field :global(.select-trigger)::after {
+			content: "";
+			position: absolute;
+			left: 0;
+			right: 0;
+			top: -6px;
+			bottom: -6px;
+			border-radius: 12px;
 		}
 
 		.header-row {
 			display: none;
 		}
 
+		/* 卡片行（对齐演示）：第一行「标题 + 状态」，第二行「日期 + 扩展名 … 操作」；
+		   日期与 .md 并排在同一行，不再各占一行。 */
 		.list-item {
 			display: grid;
-			grid-template-columns: minmax(0, 1fr) auto;
+			grid-template-columns: auto auto minmax(0, 1fr) auto;
 			grid-template-areas:
-				"title status"
-				"meta  actions";
+				"title title title status"
+				"date  filetype .  actions";
 			align-items: center;
-			gap: 0.625rem 0.75rem;
-			padding: 1.125rem 0.25rem;
+			gap: 0.625rem 0.5rem;
+			padding: 1.25rem 0.25rem;
 			min-width: 0;
 		}
 
@@ -1899,11 +1929,22 @@ function actionLabel(action: string, title: string): string {
 		}
 
 		.col-date {
-			grid-area: meta;
+			grid-area: date;
 			align-self: center;
 		}
 
-		.col-category {
+		.col-filetype {
+			grid-area: filetype;
+			justify-self: start;
+			align-self: center;
+			padding: 0;
+		}
+
+		.col-category,
+		.col-words,
+		.col-author,
+		.col-lang,
+		.col-password {
 			display: none;
 		}
 
@@ -1912,21 +1953,77 @@ function actionLabel(action: string, title: string): string {
 			justify-self: end;
 			align-self: center;
 			padding: 0;
-			width: 100%;
-			max-width: 220px;
+			width: auto;
 		}
 
-		/* 堆叠态补回表头丢失的列名 */
+		/* 演示文件的元信息行只有「日期 + 扩展名」，不带列名标签 */
 		.col-date::before {
-			content: attr(data-label);
-			font-size: 0.75rem;
-			color: var(--md-on-surface-variant);
-			margin-right: 0.375rem;
+			content: none;
 		}
 
 		.title {
 			white-space: normal;
 			overflow-wrap: anywhere;
+		}
+	}
+
+	/* ── 手机（≤768px）：按演示文件逐项对齐字号/内距/圆角 ──
+	   演示来源：用户提供的「移动端文章管理」HTML，颜色与尺寸一律换成本项目
+	   token（--btn-regular-bg / --line-divider / --content-meta / radius 12px）。 */
+	@media (max-width: 768px) {
+		/* Tab：gap 2rem → 1.5rem（演示 gap-6），行高收到 2.75rem（py-3） */
+		.filter-chips {
+			gap: 1.5rem;
+			margin-bottom: 1.25rem;
+		}
+
+		.chip {
+			min-height: 2.75rem;
+		}
+
+		/* 状态徽章：演示是 10px 字号 + 4px 圆角 + 2px/8px 内距 */
+		.status-chip {
+			min-height: 18px;
+			padding: 1px 0.5rem;
+			border-radius: 4px;
+			font-size: 10px;
+		}
+
+		.sync-chip {
+			border-radius: 4px;
+			font-size: 10px;
+		}
+
+		/* 标题 14px/700、摘要 12px（演示 text-sm font-bold / text-xs） */
+		.title {
+			font-size: 0.875rem;
+			font-weight: 700;
+			line-height: 1.35;
+		}
+
+		/* 操作按钮：34px → 32px、圆角 8px、间距 4px；命中区保持 44px */
+		.icon-actions {
+			gap: 0.25rem;
+		}
+
+		:global(.icon-action) {
+			width: 32px;
+			height: 32px;
+			border-radius: 8px;
+		}
+
+		:global(.icon-action::after) {
+			inset: -6px;
+		}
+
+		:global(.icon-action .action-icon) {
+			font-size: 1rem;
+		}
+
+		/* 底部统计：演示 px-5 py-4、12px */
+		.list-footer {
+			padding: 0.875rem 1.25rem 0;
+			font-size: 0.75rem;
 		}
 	}
 </style>

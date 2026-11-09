@@ -1753,6 +1753,15 @@ function answerConfirm(ok: boolean) {
 		cursor: pointer;
 		opacity: 0.6;
 		transition: opacity 0.15s ease, background 0.15s ease;
+		/* 视觉 24px（手机上 1.5rem=21px）太小，伪元素外扩命中区到 45px */
+		position: relative;
+	}
+
+	.field-menu-trigger::after {
+		content: "";
+		position: absolute;
+		inset: -12px;
+		border-radius: var(--radius-md);
 	}
 
 	.field-menu-trigger svg {
@@ -1912,6 +1921,15 @@ function answerConfirm(ok: boolean) {
 		opacity: 0.45;
 		cursor: pointer;
 		transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+	}
+
+	/* 视觉 2rem（手机上 28px）低于 44px 触控下限；
+	   伪元素外扩到 44px，按钮绝对定位在输入框右侧，外扩不会压到别的控件 */
+	.input-toggle::after {
+		content: "";
+		position: absolute;
+		inset: -8px;
+		border-radius: var(--radius-md);
 	}
 
 	.input-toggle:hover:not(:disabled) {

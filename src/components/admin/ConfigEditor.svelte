@@ -358,7 +358,8 @@ function addItem(arr: JsonValue[]) {
 	}
 
 	.scalar-item .remove-btn {
-		position: static;
+		/* relative 而非 static：让 ::after 命中区（见 .remove-btn）有定位基准 */
+		position: relative;
 		margin-top: 0.25rem;
 		flex-shrink: 0;
 	}
@@ -370,6 +371,15 @@ function addItem(arr: JsonValue[]) {
 		width: 1.5rem;
 		height: 1.5rem;
 		font-size: 0.75rem;
+	}
+
+	/* 视觉 24px（手机上 1.5rem=21px）太小，伪元素外扩命中区到 45px；
+	   命中区落在按钮自身周围，不会和相邻控件重叠 */
+	.remove-btn::after {
+		content: "";
+		position: absolute;
+		inset: -12px;
+		border-radius: var(--radius-md);
 	}
 
 	.icon-btn {

@@ -311,6 +311,16 @@ const TOOLS: {
 		color: var(--primary);
 	}
 
+	/* 手机触控：2rem=28px（根字号 14px 时更小）远低于 44px 下限。
+	   工具栏 flex-wrap，放大后换行排布即可，不能靠伪元素外扩——
+	   0.25rem 的间距会让相邻热区几乎完全重叠 */
+	@media (max-width: 768px) {
+		.md-toolbar button {
+			width: 44px;
+			height: 44px;
+		}
+	}
+
 	.toolbar-glyph {
 		font-size: 0.6875rem;
 		font-weight: 700;
@@ -402,9 +412,20 @@ const TOOLS: {
 	}
 
 	@media (max-width: 900px) {
+		/* 原本是固定 60vh：手机上视口矮，60vh 再叠加顶栏/工具栏/统计条
+		   就会把正文推出可视区。改为跟随 flex 分配，最小留 12rem，
+		   保证再矮的屏幕上 textarea 也不是一条缝。 */
 		.content-editor,
 		.content-preview {
-			height: 60vh;
+			height: auto;
+			min-height: 12rem;
+		}
+
+		/* iOS 聚焦字号 <16px 的输入框会整页放大，且退出后常不还原。
+		   行号列必须同步字号，否则与正文行高不一致，逐行错位。 */
+		.content-editor,
+		.editor-gutter {
+			font-size: 16px;
 		}
 	}
 	/* ── 行号列 ──

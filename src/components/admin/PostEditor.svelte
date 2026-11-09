@@ -2325,9 +2325,21 @@ $effect(() => {
 	}
 
 	@media (max-width: 768px) {
+		/* 高度基准已由 .admin-layout 在窄屏把 --admin-viewport-h 改写为 100%
+		   （移动端多了 .mobile-topbar，按视口算会多出顶栏高度）。
+		   这里显式再兜一层：父级高度万一无法解析时退化为可伸缩项。 */
+		.editor-shell {
+			height: 100%;
+			min-height: 0;
+			border-radius: var(--radius-large);
+		}
+
 		.editor-header {
 			flex-direction: column;
 			align-items: stretch;
+			gap: 0.75rem;
+			/* 顶栏在小屏不必留大内边距，省下的高度全给正文 */
+			padding: 0.875rem 1rem;
 		}
 
 		.editor-back {
@@ -2347,6 +2359,23 @@ $effect(() => {
 
 		.header-actions {
 			width: 100%;
+			/* 手机上四个动作按钮挤在一行会溢出：允许换行、按内容均分，
+			   保证「保存」始终可见且热区不被压窄 */
+			flex-wrap: wrap;
+			gap: 0.5rem;
+		}
+
+		/* 左右拖拽改宽只在有多余横向空间时成立，手机上没有可拖的余量，
+		   10px 热区反而会吃掉正文边缘的点击（容易误触发拖动） */
+		.resize-handle {
+			display: none;
+		}
+
+		/* 抽屉占满内容区：小屏右滑抽屉若只占 360px，剩下的窄条既看不清
+		   也点不准，不如整屏呈现 */
+		.editor-drawer {
+			width: 100%;
+			max-width: none;
 		}
 	}
 </style>

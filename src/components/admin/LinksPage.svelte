@@ -857,6 +857,20 @@ $effect(() => {
 		cursor: pointer;
 	}
 
+	/* 手机上 1.75rem = 24.5px（根字号 14px），低于 44px 触控下限；
+	   直接放大按钮本体而不是伪元素外扩——行内按钮间距只有 0.125rem，
+	   外扩会让相邻热区大面积重叠 */
+	@media (max-width: 768px) {
+		.icon-btn {
+			width: 44px;
+			height: 44px;
+		}
+
+		.c-actions {
+			gap: 0.25rem;
+		}
+	}
+
 	.icon-btn:hover:not(:disabled) {
 		background: var(--btn-plain-bg-hover);
 		color: var(--deep-text);

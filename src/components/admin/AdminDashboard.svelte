@@ -292,6 +292,23 @@ function toggleTheme() {
 let isSidebarOpen = $state(false); // 移动端侧边栏抽屉是否打开
 let sidebarCollapsed = $state(false); // 桌面端侧边栏是否折叠（仅图标模式）
 
+/* 抽屉展开时锁住底层页面的滚动。
+   手机上侧栏是 fixed 浮层，底层若仍可滚动，手指在抽屉外滑动会带着背后页面
+   一起走，看起来像「抽屉飘在滚动的内容上」；抽屉内部自己有滚动区，不受影响。
+   只在窄屏锁：桌面态 isSidebarOpen 恒为 false，但视口拉宽时若残留 true，
+   这里用 matchMedia 兜底，避免把桌面整页锁死。 */
+$effect(() => {
+	if (typeof window === "undefined") return;
+	const root = document.documentElement;
+	const narrow = window.matchMedia("(max-width: 1023px)").matches;
+	const lock = isSidebarOpen && narrow;
+	const previous = root.style.overflow;
+	if (lock) root.style.overflow = "hidden";
+	return () => {
+		root.style.overflow = previous;
+	};
+});
+
 if (typeof window !== "undefined") {
 	const savedCollapsed = localStorage.getItem("admin-sidebar-collapsed");
 	if (savedCollapsed === "true") sidebarCollapsed = true;
@@ -1252,6 +1269,11 @@ function formatDate(dateStr: string | null): string {
 	ontouchend={resumeToastOnRelease}
 	ontouchcancel={resumeToastOnRelease}
 	onblur={resumeToastOnRelease}
+	onkeydown={(event) => {
+		/* Esc 关抽屉：移动端抽屉盖住整屏，唯一的关闭手段是左上角按钮和点遮罩，
+		   手机单手操作点左上角很别扭，退回键（Esc）是自然出口。 */
+		if (event.key === "Escape" && isSidebarOpen) isSidebarOpen = false;
+	}}
 />
 
 {#snippet placeholder(title: string, desc: string, icon: string)}
@@ -1817,7 +1839,7 @@ function formatDate(dateStr: string | null): string {
 		<div class="admin-main">
 			<div class="card-base mobile-topbar">
 				<button class="menu-toggle" onclick={() => (isSidebarOpen = true)} aria-label="打开菜单">
-					<Icon icon="material-symbols:menu-rounded" />
+					<Icon icon="material-symbols:menu-rounded" style="font-size: 28px" />
 				</button>
 				<h1 class="topbar-title">{headerTitle}</h1>
 			</div>
@@ -1874,17 +1896,21 @@ function formatDate(dateStr: string | null): string {
 						>
 							{#snippet actions()}
 								<button
-									class="ui-btn ui-btn-soft"
+									class="ui-btn ui-btn-soft post-sync-btn"
 									onclick={() => navigate(`${DASHBOARD_PATH}sync/`)}
 									disabled={isLoading || isSyncing}
 									aria-label={i18n(I18nKey.postSyncNow)}
 								>
 									<Icon icon="material-symbols:cloud" class="btn-icon" />
-									{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}
+									<span class="btn-label"
+										>{isSyncing
+											? i18n(I18nKey.postSyncing)
+											: i18n(I18nKey.postSyncNow)}</span
+									>
 								</button>
-								<button class="ui-btn ui-btn-primary" onclick={goCreatePost}>
+								<button class="ui-btn ui-btn-primary post-create-btn" onclick={goCreatePost}>
 									<Icon icon="material-symbols:add" class="btn-icon" />
-									{i18n(I18nKey.adminNewPost)}
+									<span class="btn-label">{i18n(I18nKey.adminNewPost)}</span>
 								</button>
 							{/snippet}
 							<PostList
@@ -2149,14 +2175,20 @@ function formatDate(dateStr: string | null): string {
 			onmousedown={pauseToastOnPress}
 			ontouchstart={pauseToastOnPress}
 		>
-			<Icon
-				icon={toast.type === "success" ? "material-symbols:check" : "material-symbols:error-outline"}
-				class="text-lg"
-			/>
-			<span class="toast-message">{toast.message}</span>
-			<button class="toast-close" onclick={closeToast} aria-label="关闭通知">
-				<Icon icon="material-symbols:close" class="text-sm" />
-			</button>
+			<div class="toast-row">
+				<div class="toast-main">
+					<span class="toast-icon" aria-hidden="true">
+						<Icon
+							icon={toast.type === "success" ? "material-symbols:check" : "material-symbols:error-outline"}
+							size="md"
+						/>
+					</span>
+					<span class="toast-message">{toast.message}</span>
+				</div>
+				<button class="toast-close" onclick={closeToast} aria-label="关闭通知">
+					<Icon icon="material-symbols:close" size="sm" />
+				</button>
+			</div>
 			<div class="toast-progress" aria-hidden="true">
 				{#key toastProgressKey}
 					<div
@@ -2748,6 +2780,10 @@ function formatDate(dateStr: string | null): string {
 		text-overflow: ellipsis;
 	}
 
+	/* 汉堡按钮：无底色、无描边的纯图标按钮（MD3 icon button），
+	   只在悬停/聚焦时给一层极淡的 state layer。
+	   图标尺寸由 <Icon> 的 style 直接给（28px）——Icon 内部自带 text-base
+	   字号类，父级 font-size 传不下去，只能内联覆盖。 */
 	.menu-toggle {
 		display: none;
 		width: 2.5rem;
@@ -2755,16 +2791,22 @@ function formatDate(dateStr: string | null): string {
 		flex-shrink: 0;
 		align-items: center;
 		justify-content: center;
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-md);
-		background: var(--btn-regular-bg);
+		border: none;
+		border-radius: 50%;
+		background: transparent;
 		color: var(--deep-text);
+		line-height: 1;
 		cursor: pointer;
 		transition: background 0.15s;
 	}
 
 	.menu-toggle:hover {
-		background: var(--btn-regular-bg-hover);
+		background: var(--btn-plain-bg-hover);
+	}
+
+	.menu-toggle:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: -2px;
 	}
 
 	/* ── 设置工作区容器：对齐参考 .settings-workspace ──
@@ -4089,50 +4131,80 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	/* ── Toast ──
-	   配色随明暗主题反转：深色界面用浅底深字，浅色界面用深底浅字。
-	   做法是把状态色与 --deep-text 混：浅色主题下 --deep-text 是近黑，
-	   混出暗底；暗色主题下它是近白，混出浅底。文字取 --page-bg（与 --deep-text
-	   互为反色），因此不需要写两套 media/主题选择器。 */
+	   版式取自设计演示：图标胶囊 + 单行文案 + 右侧关闭 + 底部倒计时条。
+	   颜色按规范换算成项目 token——演示里的 #1e1e24/90 换成浮层表面
+	   --float-panel-bg，rose-500 换成 --destructive / --success。
+	   无描边：靠表面色差 + --shadow-lg 分层（状态只由图标胶囊和进度条承载）。
+	   底部居中：底部浮条是 MD3 snackbar 的标准位，也避开顶部通知区。 */
 	.toast {
 		position: fixed;
-		top: 5rem;
-		right: 2rem;
-		padding: 0.75rem 1.25rem;
-		border-radius: var(--radius-lg);
-		font-weight: 500;
+		bottom: 2rem;
+		left: 50%;
+		transform: translate(-50%, 0);
+		width: min(25rem, calc(100vw - 2rem));
+		display: flex;
+		flex-direction: column;
+		/* MD3 small 圆角写死 8px：--radius-lg 是 0.5rem，窄屏根字号 14px 时只剩 7px */
+		border-radius: 8px;
+		overflow: hidden;
+		background: var(--float-panel-bg);
+		color: var(--deep-text);
 		box-shadow: var(--shadow-lg);
-		animation: slideIn 0.3s ease-out;
+		animation: toastIn 0.3s ease-out;
 		z-index: 9999;
+	}
+
+	.toast-row {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		backdrop-filter: blur(8px);
-		overflow: hidden;
-		/* 兜底：没有状态色时也保持反色底 */
-		background: var(--deep-text);
-		color: var(--page-bg);
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.75rem 1rem;
 	}
 
-	.toast.success {
-		background: color-mix(in oklab, var(--success) 42%, var(--deep-text));
-		color: var(--page-bg);
+	.toast-main {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		min-width: 0;
 	}
 
-	.toast.error {
-		background: color-mix(in oklab, var(--destructive) 42%, var(--deep-text));
-		color: var(--page-bg);
+	/* 图标胶囊：1.5rem 圆圈 + 10% 语义色底，图标本体取语义色 */
+	.toast-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.5rem;
+		height: 1.5rem;
+		border-radius: 50%;
+		flex-shrink: 0;
+		font-size: 1rem;
 	}
 
 	.toast-message {
-		flex: 1;
 		min-width: 0;
+		font-size: 0.875rem;
+		font-weight: 500;
 		word-break: break-word;
 	}
 
-	/* 关闭按钮与进度条同样跟随反色：用文字色（--page-bg）的透明度，
-	   不再写死白色 */
+	/* 状态只走图标胶囊与进度条，不再染描边 */
+	.toast.success .toast-icon {
+		background: color-mix(in oklab, var(--success) 10%, transparent);
+		color: var(--success);
+	}
+
+	.toast.error .toast-icon {
+		background: color-mix(in oklab, var(--destructive) 10%, transparent);
+		color: var(--destructive);
+	}
+
+	/* 关闭按钮：默认只有图标（次级文字色），悬停提到主文字色。
+	   视觉 24px 圆不动，用 ::after 外扩命中区到 ≥44px（MD3 触控下限），
+  	   手机上 21px 的圆点基本点不中。 */
 	.toast-close {
-		background: color-mix(in oklab, var(--page-bg) 20%, transparent);
+		position: relative;
+		background: transparent;
 		border: none;
 		border-radius: 50%;
 		width: 1.5rem;
@@ -4141,37 +4213,59 @@ function formatDate(dateStr: string | null): string {
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
-		color: inherit;
+		color: var(--content-meta);
 		padding: 0;
 		flex-shrink: 0;
-		transition: background 0.15s;
+		transition: color 0.15s;
+	}
+
+	.toast-close::after {
+		content: "";
+		position: absolute;
+		inset: -12px;
+		border-radius: 50%;
 	}
 
 	.toast-close:hover {
-		background: color-mix(in oklab, var(--page-bg) 40%, transparent);
+		color: var(--deep-text);
 	}
 
-	.toast-close:focus {
-		outline: 2px solid currentColor;
+	.toast-close:focus-visible {
+		outline: 2px solid var(--primary);
 		outline-offset: 2px;
 	}
 
 	/* 倒计时进度条：暂停时停在满值，scaleX(1) → 0 走完即关闭提示。
-	   用 #key 重建元素重播动画，比手动改 animation-play-state 更可靠。 */
+	   用 #key 重建元素重播动画，比手动改 animation-play-state 更可靠。
+
+	   3px：比原先的 4px 细一档，又不至于像 2px 那样在高 DPI 屏上被抗锯齿
+	   抹成灰线。轨道与填充都取 4px 圆角，两端不会出现直角缺口。
+	   填充用语义色（成功/失败各一色，兜底 --primary）——中性浮层上靠颜色
+	   而非光晕拉开对比（设计规范不鼓励装饰性 glow）。 */
 	.toast-progress {
 		position: absolute;
 		left: 0;
 		right: 0;
 		bottom: 0;
-		height: 2px;
-		background: color-mix(in oklab, var(--page-bg) 25%, transparent);
+		height: 3px;
+		border-radius: 4px;
+		background: var(--line-color);
 	}
 
 	.toast-progress-bar {
 		height: 100%;
+		border-radius: 4px;
 		transform: scaleX(1);
 		transform-origin: left center;
-		background: color-mix(in oklab, var(--page-bg) 90%, transparent);
+		background: var(--primary);
+	}
+
+	.toast.success .toast-progress-bar {
+		background: var(--success);
+	}
+
+	.toast.error .toast-progress-bar {
+		background: var(--destructive);
 	}
 
 	.toast-progress-bar.running {
@@ -4189,30 +4283,53 @@ function formatDate(dateStr: string | null): string {
 		}
 	}
 
-	@keyframes slideIn {
+	/* 底部居中弹入：X 轴保持 -50% 的居中位移，只在 Y 轴上滑。
+	   若沿用旧的 translateX(100%) 帧，动画期间会把居中的浮条甩到右侧 */
+	@keyframes toastIn {
 		from {
 			opacity: 0;
-			transform: translateX(100%);
+			transform: translate(-50%, 0.75rem);
 		}
 		to {
 			opacity: 1;
-			transform: translateX(0);
+			transform: translate(-50%, 0);
 		}
 	}
 
 	/* ── 响应式 ── */
 	@media (max-width: 1023px) {
+		/* 高度基准换 dvh：100vh 在手机浏览器里取的是「地址栏收起后」的最大视口，
+		   实际可视区更矮，底部会被地址栏压住（iOS Safari 尤其明显）。
+		   窄屏 .admin-container 的上下内边距是 1rem×2，不再是桌面那 3rem。 */
+		.admin-layout {
+			/* 先给 vh 兜底，再用 dvh 覆盖：不支持的浏览器只丢后一行，
+			   不会连高度一起失效 */
+			height: calc(100vh - 2rem);
+			height: calc(100dvh - 2rem);
+			min-height: calc(100vh - 2rem);
+			min-height: calc(100dvh - 2rem);
+			/* 侧栏抽屉是 fixed 浮层，flex 里只剩内容区一个子项，gap 无意义 */
+			gap: 0;
+			/* 窄屏多了一条 .mobile-topbar，若还按视口高算，所有「整页卡片」
+			   （设置页、编辑器、历史页、同步页、通用页面壳）都会多出顶栏高度，
+			   底部被挤出屏幕。改写为 100% 后由 .admin-content 的 flex 分配决定，
+			   一处覆盖全部组件，不必逐个改。 */
+			--admin-viewport-h: 100%;
+		}
+
 		.mobile-topbar {
 			display: flex;
 		}
 
 		.admin-sidebar {
 			position: fixed;
-			top: 1rem;
-			left: 1rem;
-			bottom: 1rem;
-			/* 浮层抽屉：78vw 但不超过 20rem，四周留 1rem 露出背景 */
-			width: 78vw;
+			/* 安全区：贴边时避开刘海、圆角与手势条 */
+			top: max(0.75rem, env(safe-area-inset-top));
+			left: max(0.75rem, env(safe-area-inset-left));
+			bottom: max(0.75rem, env(safe-area-inset-bottom));
+			/* 抽屉宽度：78vw 在 390px 屏上只有 304px，长导航项（俄文/英文）会折行；
+			   放到 86vw（≈335px）后与 20rem 上限共同兜住大屏手机与小屏平板 */
+			width: min(86vw, 20rem);
 			max-width: 20rem;
 			height: auto;
 			z-index: 120;
@@ -4228,6 +4345,12 @@ function formatDate(dateStr: string | null): string {
 			box-shadow: var(--shadow-lg);
 		}
 
+		/* 抽屉里不需要「折叠成图标条」：桌面折叠是为了给内容腾宽度，
+		   抽屉本身就是浮层，再折成 92px 只会让所有文字消失、无法辨认 */
+		.sidebar-collapse {
+			display: none;
+		}
+
 		.sidebar-backdrop {
 			display: block;
 			position: fixed;
@@ -4238,8 +4361,31 @@ function formatDate(dateStr: string | null): string {
 			z-index: 110;
 		}
 
+		/* 汉堡按钮 48×48（MD3 icon button 标准热区，高于 44px 下限）。
+		   用 px：根字号在 <md 是 14px，2.75rem 只有 38.5px。 */
 		.menu-toggle {
 			display: inline-flex;
+			width: 48px;
+			height: 48px;
+		}
+
+		/* 视口高度卡片改为跟随父级 flex 分配：窄屏多了 .mobile-topbar，
+		   若仍用 --admin-viewport-h（按整个视口算）会整整多出顶栏的高度，
+		   底部保存栏/正文被挤出屏幕。 */
+		.settings-workspace {
+			height: 100%;
+			min-height: 0;
+		}
+	}
+
+	/* iOS 会在聚焦字号小于 16px 的输入框时整页放大，且退出聚焦后不一定还原。
+	   后台输入框多为 0.875rem(14px)，手机上一点就缩放，等于整个后台被放大到
+	   只能看见半个表单。这里统一抬到 16px；只作用于窄屏，桌面字号保持不变。 */
+	@media (max-width: 1023px) {
+		.admin-layout :global(input:not([type="checkbox"]):not([type="radio"]):not([type="range"])),
+		.admin-layout :global(select),
+		.admin-layout :global(textarea) {
+			font-size: 16px;
 		}
 	}
 
@@ -4254,6 +4400,16 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	@media (max-width: 768px) {
+		/* 触控目标：后台按钮多为 32~36px 高，桌面上没问题，手机上低于
+		   44px 的可点热区下限（iOS HIG / Material 都是 44~48），
+		   保存、删除这类高危操作很容易点空或点错。
+		   注意用 px 而非 rem：<md 断点根字号是 14px（Layout.astro
+		   text-[14px]），2.75rem 只有 38.5px，此前 44px 的意图被缩水。 */
+		.admin-layout :global(.ui-btn),
+		.admin-layout :global(.savebar-btn) {
+			min-height: 44px;
+		}
+
 		/* 搜索框窄屏全宽（设置索引页头内自动换行） */
 		.search-box {
 			max-width: none;
@@ -4264,11 +4420,45 @@ function formatDate(dateStr: string | null): string {
 			max-width: none;
 		}
 
+		/* 窄屏同样底部居中，只把左右留白收到 1rem */
 		.toast {
-			top: 5rem;
-			right: 1rem;
-			left: auto;
-			max-width: min(90vw, 22rem);
+			bottom: 1rem;
+			width: calc(100vw - 2rem);
+			max-width: 22rem;
+		}
+
+		/* 设置页 tab 窄屏可横向滚动，但单个 tab 触控宽度仍要保住下限 */
+		.settings-tab {
+			min-width: 44px;
+		}
+
+		/* 文章管理页头按钮（对齐「移动端文章管理」演示）：
+		   同步按钮只留图标 → 36×36 圆角方块；新建按钮收成小号。
+		   前缀 :global(.admin-shell) 是为了压过 admin.css 里
+		   `.admin-shell .ui-btn { min-height: 44px }`（同为 0,2,0，靠层级取胜）。 */
+		:global(.admin-shell) .post-sync-btn {
+			width: 36px;
+			height: 36px;
+			min-height: 36px;
+			padding: 0;
+			border-radius: 12px;
+		}
+
+		:global(.admin-shell) .post-sync-btn .btn-label {
+			display: none;
+		}
+
+		:global(.admin-shell) .post-create-btn {
+			height: 36px;
+			min-height: 36px;
+			padding: 0 0.875rem;
+			border-radius: 12px;
+			font-size: 0.875rem;
+		}
+
+		:global(.admin-shell) .post-sync-btn .btn-icon,
+		:global(.admin-shell) .post-create-btn .btn-icon {
+			font-size: 16px;
 		}
 
 		.placeholder-page {
@@ -4279,6 +4469,10 @@ function formatDate(dateStr: string | null): string {
 			flex-direction: column;
 			align-items: flex-start;
 			padding: 1.5rem;
+			/* 父级是一条受限高度的 flex 列（.admin-content → .dashboard-main-col），
+			   默认 flex-shrink: 1 会把横幅压到只剩 padding 高（实测 42px），
+			   内容被 overflow: hidden 裁掉。这里禁止压缩，让它按内容撑开。 */
+			flex-shrink: 0;
 		}
 
 		.welcome-content h2 {
@@ -4294,8 +4488,10 @@ function formatDate(dateStr: string | null): string {
 			justify-content: center;
 		}
 
+		/* 统计卡：单列会埋没首屏——手机上保持两列，
+		   每张卡只有「标题 + 数值 + 图标」，175px 宽度放得下 */
 		.stats-grid {
-			grid-template-columns: 1fr;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 
 		.actions-grid {

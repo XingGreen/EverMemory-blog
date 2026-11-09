@@ -1027,5 +1027,33 @@ $effect(() => {
 		.post-editor-title {
 			font-size: 1.75rem;
 		}
+
+		/* 历史页是「正文 + 20rem 版本栏」的横向双栏。手机上 20rem(320px)
+		   侧栏会把正文挤到只剩 70px 一条缝——正文区不可读、版本栏也装不下。
+		   改为纵向堆叠：正文在上，版本列表在下并限高，两块各自滚动。 */
+		.post-history-body {
+			flex-direction: column;
+		}
+
+		.post-history-sidebar {
+			width: 100%;
+			/* 版本栏不超过一半高度，保证正文至少还有一半可读 */
+			flex: 0 0 auto;
+			max-height: 45%;
+			border-left: none;
+			border-top: 1px solid var(--post-editor-rule);
+		}
+
+		/* 手机上不存在可拖的横向余量，10px 热区只会误触 */
+		.resize-handle {
+			display: none;
+		}
+
+		.post-editor-header {
+			padding: 0.875rem 1rem;
+			gap: 0.5rem;
+			/* 顶栏动作按钮较多，允许换行避免溢出 */
+			flex-wrap: wrap;
+		}
 	}
 </style>

@@ -120,6 +120,35 @@ let {
 		color: var(--content-meta);
 	}
 
+	/* 窄屏页头（对齐「移动端文章管理」演示）：保持「标题左 / 按钮右」同一行，
+	   但标题降到 20px、简介 12px，按钮组收窄，390px 下也不会把标题挤到折行。
+	   之前改成纵向堆叠是多占一行，演示里不是这个形态。 */
+	@media (max-width: 768px) {
+		.admin-page-heading {
+			align-items: center;
+			gap: 0.75rem;
+			padding: 1.25rem 1.25rem 1.125rem;
+		}
+
+		.heading-text {
+			gap: 0.25rem;
+		}
+
+		.admin-page-heading h1 {
+			font-size: 1.25rem;
+			font-weight: 700;
+		}
+
+		.admin-page-heading p {
+			font-size: 0.75rem;
+			line-height: 1.4;
+		}
+
+		.heading-actions {
+			gap: 0.5rem;
+		}
+	}
+
 	/* 内容区是本页唯一的滚动容器；子项 flex-shrink:0 防被压缩后
 	   看起来「滚不动」。 */
 	.admin-page-body {
