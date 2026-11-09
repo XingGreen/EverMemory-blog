@@ -120,32 +120,30 @@ let {
 		color: var(--content-meta);
 	}
 
-	/* 窄屏页头（对齐「移动端文章管理」演示）：保持「标题左 / 按钮右」同一行，
-	   但标题降到 20px、简介 12px，按钮组收窄，390px 下也不会把标题挤到折行。
-	   之前改成纵向堆叠是多占一行，演示里不是这个形态。 */
-	@media (max-width: 768px) {
+	/* 窄屏：标题与主操作都由顶部栏承担（参考项目 MobileTopBar 的分工：
+	   页面自身的 h1 与 create 按钮在 lg 以下隐藏，避免同一个标题出现两次），
+	   页头只剩计数行。只剩一行字时保留分隔线会把内容切碎，故一并去掉。 */
+	@media (max-width: 1023px) {
 		.admin-page-heading {
 			align-items: center;
-			gap: 0.75rem;
-			padding: 1.25rem 1.25rem 1.125rem;
+			gap: 0;
+			padding: 0.875rem 1.125rem 0;
+			margin-bottom: 0.5rem;
+			border-bottom: none;
 		}
 
 		.heading-text {
-			gap: 0.25rem;
+			gap: 0;
 		}
 
-		.admin-page-heading h1 {
-			font-size: 1.25rem;
-			font-weight: 700;
+		.admin-page-heading h1,
+		.heading-actions {
+			display: none;
 		}
 
 		.admin-page-heading p {
-			font-size: 0.75rem;
+			font-size: 0.8125rem;
 			line-height: 1.4;
-		}
-
-		.heading-actions {
-			gap: 0.5rem;
 		}
 	}
 
@@ -165,6 +163,15 @@ let {
 
 	.admin-page-body > :global(*) {
 		flex-shrink: 0;
+	}
+
+	/* 内容留白对齐参考项目 post-manager：窄屏收到 18px，把省下的宽度让给内容。
+	   必须写在基础规则之后——同权重下后出现的声明才生效。 */
+	@media (max-width: 1023px) {
+		.admin-page-body {
+			gap: 1rem;
+			padding: 0 1.125rem 1.125rem;
+		}
 	}
 
 	/* 页脚槽位：内容区之外的独立区块，不参与滚动。

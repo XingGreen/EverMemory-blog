@@ -1974,7 +1974,12 @@ function actionLabel(action: string, title: string): string {
 		/* Tab：gap 2rem → 1.5rem（演示 gap-6），行高收到 2.75rem（py-3） */
 		.filter-chips {
 			gap: 1.5rem;
-			margin-bottom: 1.25rem;
+			margin-bottom: 0.75rem;
+		}
+
+		/* 工具栏贴近列表：窄屏纵向空间紧，23px 留白会把第一行推得很远 */
+		.toolbar {
+			margin-bottom: 1rem;
 		}
 
 		.chip {

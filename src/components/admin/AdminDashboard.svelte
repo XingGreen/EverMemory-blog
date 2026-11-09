@@ -1842,6 +1842,22 @@ function formatDate(dateStr: string | null): string {
 					<Icon icon="material-symbols:menu-rounded" style="font-size: 28px" />
 				</button>
 				<h1 class="topbar-title">{headerTitle}</h1>
+				{#if activePage === "posts" && viewMode === "list"}
+					<!-- 主操作上移到顶栏（参考项目 MobileTopBar 的 primaryAction 槽位）：
+					     页面自身的 h1 与按钮组在窄屏已隐藏，操作不能跟着一起消失 -->
+					<button
+						class="topbar-sync"
+						onclick={() => navigate(`${DASHBOARD_PATH}sync/`)}
+						disabled={isLoading || isSyncing}
+						aria-label={i18n(I18nKey.postSyncNow)}
+					>
+						<Icon icon="material-symbols:cloud" style="font-size: 20px" />
+					</button>
+					<button class="topbar-create" onclick={goCreatePost}>
+						<Icon icon="material-symbols:add" style="font-size: 20px" />
+						<span>{i18n(I18nKey.adminNewPost)}</span>
+					</button>
+				{/if}
 			</div>
 
 			{#if storageDegraded}
@@ -2778,6 +2794,61 @@ function formatDate(dateStr: string | null): string {
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	/* 顶栏主操作：36px 高，与顶栏 60px 内容高度留出 12px 上下呼吸。
+	   图标尺寸用内联 font-size 给（Icon 自带 text-base 字号类，父级传不下去）。 */
+	.topbar-sync {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.25rem;
+		height: 2.25rem;
+		flex-shrink: 0;
+		padding: 0;
+		border: none;
+		border-radius: 0.625rem;
+		background: var(--btn-regular-bg);
+		color: var(--btn-content);
+		cursor: pointer;
+	}
+
+	.topbar-create {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		height: 2.25rem;
+		flex-shrink: 0;
+		padding: 0 0.75rem;
+		border: none;
+		border-radius: 0.625rem;
+		background: var(--primary);
+		color: #fff;
+		font-family: inherit;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		white-space: nowrap;
+		cursor: pointer;
+	}
+
+	/* 暗色下主色偏亮，黑字更可读（与 ui-base 的 .dark .ui-btn-primary 同惯例） */
+	:global(.dark) .topbar-create {
+		color: rgb(0 0 0 / 0.75);
+	}
+
+	/* 视觉 36px 低于 44px 触控下限：伪元素上下各外扩 4px 补足，
+	   两个按钮间距正好 8px，热区边界相接但不重叠 */
+	.topbar-sync,
+	.topbar-create {
+		position: relative;
+	}
+
+	.topbar-sync::after,
+	.topbar-create::after {
+		content: "";
+		position: absolute;
+		inset: -4px;
+		border-radius: inherit;
 	}
 
 	/* 汉堡按钮：无底色、无描边的纯图标按钮（MD3 icon button），
