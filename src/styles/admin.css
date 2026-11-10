@@ -20,6 +20,17 @@
   --warning: #d97706;
   --info: oklch(0.62 0.13 245);
 
+  /* 后台设计系统（docs/ADMIN_UI.md）：字号五级、间距六档。
+     组件只引用这些 token，不另立数值——第六个字号就是分歧的起点。 */
+  --admin-gutter: 1.5rem;
+  --admin-block-gap: 1.25rem;
+  --admin-fs-page: 1.75rem;
+  --admin-fs-page-dense: 1.3125rem;
+  --admin-fs-item: 1.0625rem;
+  --admin-fs-body: 0.875rem;
+  --admin-fs-meta: 0.75rem;
+  --admin-fs-data: 0.6875rem;
+
   /* 侧边栏底色必须与 --page-bg 拉开一档，否则导航栏会与页面背景完全融为一体。
      引用 --card-bg 而非写死色值：两种模式都取「比页面更亮的卡片色」保持同一套
      凸起语义，且只需在各自模式下改 --card-bg 一处，不会再出现两模式不同步。 */

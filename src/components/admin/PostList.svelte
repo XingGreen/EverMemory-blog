@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount } from "svelte";
+import PageHeader from "@/components/admin/ui/PageHeader.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import { siteConfig } from "@/config/siteConfig";
 import I18nKey from "@/i18n/i18nKey";
@@ -414,95 +415,94 @@ function actionLabel(action: string, title: string): string {
 </script>
 
 <div class="md3-list-container">
-	<!-- 页头：标题、状态轨、搜索、操作同一条基线。
-	     日期与状态已移入每行右侧的账目栏，所以这里不再需要筛选条 + 工具栏 +
-	     表头三层 chrome；第一篇文章的位置从 331px 提到了一百多像素。 -->
-	<div class="masthead">
-		<h1 class="masthead-title">{i18n(I18nKey.adminPosts)}</h1>
-
-		<div class="rail-filter" role="group" aria-label={i18n(I18nKey.postStatusFilterGroup)}>
-			<button
-				class="rail-btn"
-				class:selected={statusFilter === "all"}
-				aria-pressed={statusFilter === "all"}
-				onclick={() => (statusFilter = "all")}
-			>
-				{i18n(I18nKey.postAll)}<span class="rail-count">{posts.length}</span>
-			</button>
-			<button
-				class="rail-btn"
-				class:selected={statusFilter === "published"}
-				aria-pressed={statusFilter === "published"}
-				onclick={() => (statusFilter = "published")}
-			>
-				{i18n(I18nKey.postPublished)}<span class="rail-count"
-					>{posts.filter((p) => !p.draft).length}</span
-				>
-			</button>
-			<button
-				class="rail-btn"
-				class:selected={statusFilter === "draft"}
-				aria-pressed={statusFilter === "draft"}
-				onclick={() => (statusFilter = "draft")}
-			>
-				{i18n(I18nKey.postDraft)}<span class="rail-count"
-					>{posts.filter((p) => p.draft).length}</span
-				>
-			</button>
-			<!-- 未同步：涵盖「尚未提交到 GitHub」与「已提交但未部署」两种，计数取两者之和 -->
-			<button
-				class="rail-btn"
-				class:selected={statusFilter === "unsynced"}
-				class:attention={unsyncedCount > 0}
-				aria-pressed={statusFilter === "unsynced"}
-				onclick={() => (statusFilter = "unsynced")}
-			>
-				{i18n(I18nKey.postUnsynced)}<span class="rail-count">{unsyncedCount}</span>
-			</button>
-		</div>
-
-		<div class="masthead-spacer"></div>
-
-		<div class="ui-search search-bar">
-			<Icon icon="material-symbols:search" class="ui-search-icon" />
-			<input
-				type="search"
-				bind:value={searchTerm}
-				placeholder={i18n(I18nKey.postSearchPlaceholder)}
-				aria-label={i18n(I18nKey.postSearchLabel)}
-				class="ui-search-input"
-				data-post-list-search
-			/>
-			{#if searchTerm}
+	<!-- 页头走公共原语（docs/ADMIN_UI.md §5）：标题 + 状态轨 + 操作一条基线，
+	     内距与字号由 PageHeader 统一给，本页不再自己画。 -->
+	<PageHeader title={i18n(I18nKey.adminPosts)} dense>
+		{#snippet rail()}
+			<div class="rail-filter" role="group" aria-label={i18n(I18nKey.postStatusFilterGroup)}>
 				<button
-					class="ui-search-clear"
-					onclick={() => (searchTerm = "")}
-					aria-label={i18n(I18nKey.postSearchClear)}
+					class="rail-btn"
+					class:selected={statusFilter === "all"}
+					aria-pressed={statusFilter === "all"}
+					onclick={() => (statusFilter = "all")}
 				>
-					<Icon icon="material-symbols:close" />
+					{i18n(I18nKey.postAll)}<span class="rail-count">{posts.length}</span>
+				</button>
+				<button
+					class="rail-btn"
+					class:selected={statusFilter === "published"}
+					aria-pressed={statusFilter === "published"}
+					onclick={() => (statusFilter = "published")}
+				>
+					{i18n(I18nKey.postPublished)}<span class="rail-count"
+						>{posts.filter((p) => !p.draft).length}</span
+					>
+				</button>
+				<button
+					class="rail-btn"
+					class:selected={statusFilter === "draft"}
+					aria-pressed={statusFilter === "draft"}
+					onclick={() => (statusFilter = "draft")}
+				>
+					{i18n(I18nKey.postDraft)}<span class="rail-count"
+						>{posts.filter((p) => p.draft).length}</span
+					>
+				</button>
+				<!-- 未同步：涵盖「尚未提交到 GitHub」与「已提交但未部署」两种，计数取两者之和 -->
+				<button
+					class="rail-btn"
+					class:selected={statusFilter === "unsynced"}
+					class:attention={unsyncedCount > 0}
+					aria-pressed={statusFilter === "unsynced"}
+					onclick={() => (statusFilter = "unsynced")}
+				>
+					{i18n(I18nKey.postUnsynced)}<span class="rail-count">{unsyncedCount}</span>
+				</button>
+			</div>
+		{/snippet}
+
+		{#snippet actions()}
+			<div class="ui-search search-bar">
+				<Icon icon="material-symbols:search" class="ui-search-icon" />
+				<input
+					type="search"
+					bind:value={searchTerm}
+					placeholder={i18n(I18nKey.postSearchPlaceholder)}
+					aria-label={i18n(I18nKey.postSearchLabel)}
+					class="ui-search-input"
+					data-post-list-search
+				/>
+				{#if searchTerm}
+					<button
+						class="ui-search-clear"
+						onclick={() => (searchTerm = "")}
+						aria-label={i18n(I18nKey.postSearchClear)}
+					>
+						<Icon icon="material-symbols:close" />
+					</button>
+				{/if}
+			</div>
+
+			{#if onSync}
+				<button
+					class="ui-btn ui-btn-soft header-sync"
+					onclick={() => onOpenSync?.()}
+					disabled={isLoading || isSyncing}
+					aria-label={i18n(I18nKey.postSyncNow)}
+				>
+					<Icon icon="material-symbols:cloud" class="btn-icon" />
+					<span class="btn-label"
+						>{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}</span
+					>
 				</button>
 			{/if}
-		</div>
 
-		{#if onSync}
-			<button
-				class="ui-btn ui-btn-soft masthead-sync"
-				onclick={() => onOpenSync?.()}
-				disabled={isLoading || isSyncing}
-				aria-label={i18n(I18nKey.postSyncNow)}
-			>
-				<Icon icon="material-symbols:cloud" class="btn-icon" />
-				<span class="btn-label"
-					>{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}</span
-				>
+			<button class="ui-btn ui-btn-primary header-create" onclick={onCreate}>
+				<Icon icon="material-symbols:add" class="btn-icon" />
+				<span class="btn-label">{i18n(I18nKey.adminNewPost)}</span>
 			</button>
-		{/if}
-
-		<button class="ui-btn ui-btn-primary masthead-create" onclick={onCreate}>
-			<Icon icon="material-symbols:add" class="btn-icon" />
-			<span class="btn-label">{i18n(I18nKey.adminNewPost)}</span>
-		</button>
-	</div>
+		{/snippet}
+	</PageHeader>
 
 	<!-- 筛选：常驻但安静，三个紧凑控件，不带分隔线——页头那条已经划分了区域 -->
 	<div class="filter-row">
@@ -750,32 +750,13 @@ function actionLabel(action: string, title: string): string {
 	overflow: hidden;
 }
 
-	/* 固定区：不随列表滚动 */
-	.masthead,
+	/* 固定区：不随列表滚动（页头由 PageHeader 自己处理） */
 	.filter-row {
 		flex-shrink: 0;
 	}
 
 	/* ── 页头：标题、状态轨、搜索、操作同一条基线 ──
 	   把原来「页头 / 筛选条 / 工具栏」三层压成一层；书签式下划线只留给当前筛选项。 */
-	.masthead {
-		display: flex;
-		align-items: center;
-		gap: 1.5rem;
-		padding: 0.9375rem 1.625rem;
-		border-bottom: 1px solid var(--md-outline);
-	}
-
-	.masthead-title {
-		margin: 0;
-		font-size: 1.3125rem;
-		font-weight: 650;
-		line-height: 1.3;
-		letter-spacing: 0.01em;
-		color: var(--md-on-surface);
-		flex-shrink: 0;
-	}
-
 	/* 状态轨：文字 + 等宽计数，选中项靠底部细线，未选中只是更暗的字 */
 	.rail-filter {
 		display: flex;
@@ -839,11 +820,6 @@ function actionLabel(action: string, title: string): string {
 		color: inherit;
 	}
 
-	.masthead-spacer {
-		flex: 1 1 auto;
-		min-width: 0;
-	}
-
 	.search-bar {
 		/* 后台搜索栏对照 flare post-list-search 的「内嵌搜索槽」外观：
 		   底色 page-bg 25% + card-bg。基类 .ui-search 被前台导航搜索栏共用，
@@ -868,8 +844,8 @@ function actionLabel(action: string, title: string): string {
 		color: var(--content-meta);
 	}
 
-	.masthead-sync,
-	.masthead-create {
+	.header-sync,
+	.header-create {
 		flex-shrink: 0;
 	}
 
@@ -885,7 +861,7 @@ function actionLabel(action: string, title: string): string {
 		align-items: center;
 		gap: 0.5rem;
 		flex-wrap: wrap;
-		padding: 0.5rem 1.625rem 0.375rem;
+		padding: 0.75rem var(--admin-gutter, 1.5rem) 0.25rem;
 	}
 
 	.filter-field {
@@ -935,7 +911,7 @@ function actionLabel(action: string, title: string): string {
 		overflow-y: auto;
 		overscroll-behavior: contain;
 		scrollbar-gutter: stable;
-		padding: 0.375rem 1.625rem 0.75rem;
+		padding: 0.5rem var(--admin-gutter, 1.5rem) 0.75rem;
 	}
 
 	/* ── 状态容器 ── */
@@ -1045,8 +1021,8 @@ function actionLabel(action: string, title: string): string {
 		grid-template-columns: minmax(0, 1fr) var(--post-rail-w);
 		align-items: center;
 		gap: 1.5rem;
-		margin: 0 -1.625rem;
-		padding: 0.75rem 1.625rem;
+		margin: 0 calc(var(--admin-gutter, 1.5rem) * -1);
+		padding: 0.75rem var(--admin-gutter, 1.5rem);
 		min-height: 72px;
 		border-bottom: 1px solid var(--md-outline);
 		transition: background 0.15s;
@@ -1332,34 +1308,19 @@ function actionLabel(action: string, title: string): string {
 		.search-bar {
 			width: min(12rem, 100%);
 		}
-
-		.masthead {
-			gap: 1.125rem;
-		}
 	}
 
 	/* 窄屏：顶栏已经显示标题与主操作，页头只留状态轨与搜索 */
 	@media (max-width: 1023px) {
-		.masthead {
-			flex-wrap: wrap;
-			gap: 0.75rem 1rem;
-			padding: 0.75rem 1.125rem;
-		}
-
-		.masthead-title,
-		.masthead-create,
-		.masthead-sync {
-			display: none;
-		}
-
-		.masthead-spacer {
+		/* 窄屏：顶栏已经给了新建与同步，页头只留搜索 */
+		.header-create,
+		.header-sync {
 			display: none;
 		}
 
 		.search-bar {
-			order: 2;
-			flex: 1 1 100%;
 			width: 100%;
+			max-width: none;
 		}
 
 		.filter-row {
@@ -1434,7 +1395,7 @@ function actionLabel(action: string, title: string): string {
 			align-items: stretch;
 			gap: 0.5rem;
 			/* 桌面的负边距在这里必须复位：外壳留白只有 1rem，
-			   -1.625rem 会把文字推出卡片左缘 */
+			   负内距会把文字推出卡片左缘 */
 			margin: 0;
 			padding: 1rem 0;
 		}
@@ -1478,10 +1439,6 @@ function actionLabel(action: string, title: string): string {
 
 	/* ── 手机（≤768px）：把纵向空间还给列表 ── */
 	@media (max-width: 768px) {
-		.masthead {
-			padding: 0.625rem 1rem;
-		}
-
 		.filter-row {
 			padding: 0.375rem 1rem 0;
 		}
