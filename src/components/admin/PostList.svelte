@@ -629,7 +629,7 @@ function actionLabel(action: string, title: string): string {
 		<div class="state-container" role="alert">
 			<Icon icon="material-symbols:error-outline" class="state-icon error" />
 			<p class="state-text" id="post-list-error">{error}</p>
-			<button class="filled-btn" onclick={onRefresh} aria-describedby="post-list-error">
+			<button class="ui-btn ui-btn-soft" onclick={onRefresh} aria-describedby="post-list-error">
 				{i18n(I18nKey.postRetry)}
 			</button>
 		</div>
@@ -638,7 +638,7 @@ function actionLabel(action: string, title: string): string {
 			<Icon icon="material-symbols:folder-open" class="state-icon" />
 			<p class="state-text">{hasExtraFilter ? i18n(I18nKey.postNoMatch) : i18n(I18nKey.postNoPosts)}</p>
 			{#if hasExtraFilter}
-				<button class="text-btn" onclick={clearAllFilters}>
+				<button class="ui-btn ui-btn-ghost" onclick={clearAllFilters}>
 					{i18n(I18nKey.postClearFilter)}
 				</button>
 			{:else}
