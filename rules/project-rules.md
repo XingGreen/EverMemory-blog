@@ -36,8 +36,9 @@ request to justify touching files outside the agreed area.
 
 - **Decide and execute.** Routine code edits, file organisation, and formatting are decided and
   run directly — do not ask for permission.
-- When a standard, style, or architecture question is unclear, read the reference project
-  (Shirone) or compare the existing implementation, and follow that instead of asking.
+- When a standard, style, or architecture question is unclear, read `docs/ADMIN_UI.md` for
+  anything visual under `/admin/`, and the existing implementation for everything else. The
+  reference project is a source for how things are wired, never for how they look.
 - Stop and report only when: the instruction conflicts with the real system behaviour (would
   crash or corrupt data), or the action touches sensitive data or destructive Git operations.
 - Never invent values. Never ship placeholders: `<xxx>`, `TBD`, "to be filled in", "not

@@ -7,10 +7,17 @@ MDX files in `src/content/posts/`; frontend pages are prerendered at build time;
 and API routes run on the server adapter. Swup handles in-site navigation and skips
 `/admin/` and `/login/`. Development happens on Windows.
 
-Design, directory conventions, and code standards follow the reference project **Shirone**
-(MIT licensed). When unsure how something should be structured, read its `AGENTS.md`,
-`rules/`, and `docs/` first and match that standard. Reference projects are chosen per task
-and never hardcoded into committed files; machine paths live under `.workbuddy/` (gitignored).
+**Engineering** conventions (directory layout, naming, build wiring, test shape) follow the
+reference project **Shirone** (MIT). When unsure how something should be *wired*, read its
+`AGENTS.md`, `rules/`, and `docs/` first and match that standard. Reference projects are chosen
+per task and never hardcoded into committed files; machine paths live under `.workbuddy/`
+(gitignored).
+
+**Visual** standards are our own: [`docs/ADMIN_UI.md`](./docs/ADMIN_UI.md). The dashboard no
+longer copies the reference project's screens — copying a screen copies its result, not its
+reason, which is how the admin grew four page headers and four page-title sizes. Never borrow a
+layout, a palette, or a component skin from the reference project; borrow only how things are
+wired.
 
 ## Must-follow rules
 
@@ -27,6 +34,12 @@ and never hardcoded into committed files; machine paths live under `.workbuddy/`
   3. **Merge as soon as the work is done.** When the branch is complete and verified, squash it
      into one commit, merge, delete the branch (local and remote), switch back, and `git pull`.
      Do not park a finished branch waiting for a go-ahead.
+
+- **UI standards.** Anything under `/admin/` follows [`docs/ADMIN_UI.md`](./docs/ADMIN_UI.md):
+  five type sizes, one spacing scale, one accent colour that only means "needs you", and the
+  three primitives in `src/components/admin/ui/`. Pages fill in those primitives; they do not
+  restyle them, add a header of their own, or introduce a sixth font size. The public blog is
+  out of scope and keeps its own theme.
 
 - **Scope.** Edit `src/pages/admin/**`, `src/pages/api/admin/**`, and `src/components/admin/**`
   directly. Do not modify frontend routes (`src/pages/**` except admin), `src/layouts/**`, or
@@ -83,6 +96,9 @@ and never hardcoded into committed files; machine paths live under `.workbuddy/`
 
 - [`rules/project-rules.md`](./rules/project-rules.md) — scope table, Git policy, and delivery
   rules in full.
+- [`docs/ADMIN_UI.md`](./docs/ADMIN_UI.md) — the dashboard's design system: tokens, type scale,
+  colour jobs, the three primitives, and the forbidden list. Required before any `/admin/` UI
+  change.
 - [`rules/pitfalls.md`](./rules/pitfalls.md) — dev-server, build, and styling traps that have
   caused real breakage. Read before changing icons, styles, or the build pipeline.
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — routing, configuration, content
