@@ -278,14 +278,14 @@ export async function POST({
 
 		// 审计：认证信息变更与普通密钥变更加以区分
 		if (authUpdated.length > 0) {
-			writeAuditLog({
+			await writeAuditLog({
 				event: "secrets_credentials_updated",
 				client: getClientIp(request),
 				username: "(控制台)",
 				detail: `keys=${authUpdated.join(",")}${mismatched.length > 0 ? `; readback-fail=${mismatched.join(",")}` : ""}`,
 			});
 		} else if (updated.length > 0) {
-			writeAuditLog({
+			await writeAuditLog({
 				event: "secrets_updated",
 				client: getClientIp(request),
 				username: "(控制台)",

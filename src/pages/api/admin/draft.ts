@@ -122,7 +122,7 @@ export async function POST({
 	const store = getStore();
 	try {
 		await store.set(draftKeyFor(draft.slug), draft);
-		writeAuditLog({
+		await writeAuditLog({
 			event: "draft_saved",
 			client: getClientIp(request),
 			username: auth.payload?.username || "admin",

@@ -18,7 +18,7 @@ function auditLogPath(): string {
 }
 
 /** 追加一条审计记录；文件系统不可写时降级为仅控制台 */
-export function writeAuditLog(entry: {
+export async function writeAuditLog(entry: {
 	event:
 		| "login_success"
 		| "login_failure"
@@ -36,7 +36,7 @@ export function writeAuditLog(entry: {
 	client: string;
 	username: string;
 	detail?: string;
-}): void {
+}): Promise<void> {
 	const line = [
 		new Date().toISOString(),
 		entry.event,
@@ -55,13 +55,18 @@ export function writeAuditLog(entry: {
 	console.log(`[Admin Audit] ${line}`);
 
 	/* 写入持久化存储（KV / file / db 由 persist-store 选择）。
-	   必须 fire-and-forget：调用方多为同步路径（登录、保存），
-	   不能因为一次日志写入把请求拖慢或拖挂。失败只记 console。 */
-	void getStore()
-		.set(`audit:${Date.now()}:${randomSuffix()}`, entry, AUDIT_TTL_SECONDS)
-		.catch((err) => {
-			console.warn("[Admin Audit] 持久化失败，仅保留控制台输出:", err);
-		});
+	   **不能 fire-and-forget**：Vercel / Workers 在响应返回后会终止未完成的
+	   promise，审计记录会静默丢失——而登录失败、密钥轮换这些恰恰是最需要
+	   留痕的操作。多等一次写入（本地毫秒级、KV 几十毫秒）换记录不丢。 */
+	try {
+		await getStore().set(
+			`audit:${Date.now()}:${randomSuffix()}`,
+			entry,
+			AUDIT_TTL_SECONDS,
+		);
+	} catch (err) {
+		console.warn("[Admin Audit] 持久化失败，仅保留控制台输出:", err);
+	}
 }
 
 /** 90 天：与迁移脚本注释里的保留窗口一致 */

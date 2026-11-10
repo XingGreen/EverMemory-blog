@@ -1,7 +1,11 @@
 import { writeAuditLog } from "@/utils/audit-log";
 import { requireAuth } from "@/utils/auth";
 import { getClientIp } from "@/utils/client-ip";
-import { listSessions, revokeAllExcept, revokeSession } from "@/utils/session-store";
+import {
+	listSessions,
+	revokeAllExcept,
+	revokeSession,
+} from "@/utils/session-store";
 
 export const prerender = false;
 
@@ -38,7 +42,7 @@ export async function GET({
 			isCurrent: s.sid === auth.payload?.sid,
 		}));
 
-		writeAuditLog({
+		await writeAuditLog({
 			event: "sessions_listed",
 			client: getClientIp(request),
 			username: auth.payload?.username || "admin",
@@ -102,7 +106,7 @@ export async function DELETE({
 		);
 	}
 
-	writeAuditLog({
+	await writeAuditLog({
 		event: "session_revoked",
 		client: getClientIp(request),
 		username: auth.payload?.username || "admin",

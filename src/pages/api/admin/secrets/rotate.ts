@@ -1,12 +1,12 @@
-import { writeAuditLog } from "@/utils/audit-log";
 import { getSecretItem, isManagedSecret } from "@/utils/admin-secrets";
+import { writeAuditLog } from "@/utils/audit-log";
 import {
 	generateSessionToken,
 	hasFreshAuth,
 	requireAuth,
 	SESSION_MAX_AGE,
-	setAuthCookie,
 	STEP_UP_WINDOW_SECONDS,
+	setAuthCookie,
 	stepUpRequiredResponse,
 } from "@/utils/auth";
 import { getClientIp } from "@/utils/client-ip";
@@ -89,7 +89,10 @@ export async function POST({
 	const next = rotateManagedSecret(key);
 	if (!next) {
 		return json(
-			{ success: false, message: `轮换 ${key} 失败，请检查 .env.local 写入权限` },
+			{
+				success: false,
+				message: `轮换 ${key} 失败，请检查 .env.local 写入权限`,
+			},
 			500,
 		);
 	}
@@ -107,7 +110,7 @@ export async function POST({
 		headers,
 	);
 
-	writeAuditLog({
+	await writeAuditLog({
 		event: "secrets_rotated",
 		client: getClientIp(request),
 		username: "(控制台)",

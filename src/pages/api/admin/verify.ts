@@ -6,8 +6,8 @@ import {
 	SESSION_MAX_AGE,
 	setAuthCookie,
 } from "@/utils/auth";
-import { getAuthProviderById } from "@/utils/providers/registry";
 import { getClientIp } from "@/utils/client-ip";
+import { getAuthProviderById } from "@/utils/providers/registry";
 import { describeDevice, registerSession } from "@/utils/session-store";
 import { verifyTurnstileToken } from "@/utils/turnstile";
 
@@ -46,7 +46,7 @@ export async function POST({ request }) {
 		);
 		if (!turnstile.ok) {
 			console.warn(`[Admin Verify] Turnstile rejected: ${turnstile.reason}`);
-			writeAuditLog({
+			await writeAuditLog({
 				event: "login_failure",
 				client: clientKey,
 				username: "admin",
@@ -61,7 +61,7 @@ export async function POST({ request }) {
 
 		const verified = await provider.verifyToken?.(token);
 		if (!verified?.ok) {
-			writeAuditLog({
+			await writeAuditLog({
 				event: "login_failure",
 				client: clientKey,
 				username: "admin",
@@ -93,7 +93,7 @@ export async function POST({ request }) {
 		const headers = new Headers();
 		setAuthCookie(authToken, headers, SESSION_MAX_AGE);
 
-		writeAuditLog({
+		await writeAuditLog({
 			event: "login_success",
 			client: clientKey,
 			username: "admin",

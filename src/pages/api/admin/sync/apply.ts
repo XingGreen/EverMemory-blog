@@ -201,7 +201,7 @@ export async function POST({
 	const okCount = results.filter((r) => r.ok).length;
 	const failCount = results.length - okCount;
 
-	writeAuditLog({
+	await writeAuditLog({
 		event: "sync_applied",
 		client: "sync-panel",
 		username: String(auth.payload?.username ?? "admin"),

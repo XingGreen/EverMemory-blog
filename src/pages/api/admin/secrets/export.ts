@@ -30,7 +30,7 @@ export async function GET({
 	const content =
 		format === "vercel" ? buildVercelCliCommands() : buildEnvExport();
 
-	writeAuditLog({
+	await writeAuditLog({
 		event: "secrets_exported",
 		client: getClientIp(request),
 		username: "(控制台)",

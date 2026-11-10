@@ -172,6 +172,9 @@ $effect(() => {
 let posts = $state<Post[]>([]);
 let isLoading = $state(true);
 let error = $state("");
+/* 并发请求守卫：同一份数据被两个入口同时拉取时，只认最后一次发出的请求 */
+let postsRequestSeq = 0;
+let settingsRequestSeq = 0;
 let route = $state<Route>({ page: "login" });
 let editingPost = $state<Post | null>(null);
 let showDeleteModal = $state(false);
@@ -687,20 +690,23 @@ $effect(() => {
 });
 
 async function loadPosts() {
+	/* 请求序号：刷新按钮与首屏加载可以并发，慢的那个后到会把新结果覆盖掉 */
+	const seq = ++postsRequestSeq;
 	isLoading = true;
 	error = "";
 	try {
 		const response = await fetch("/api/admin/posts/");
 		const data: AdminPostsResponse = await response.json();
+		if (seq !== postsRequestSeq) return;
 		if (data.success) {
 			posts = data.posts;
 		} else {
 			error = data.message || "获取文章列表失败";
 		}
 	} catch {
-		error = "网络请求失败";
+		if (seq === postsRequestSeq) error = "网络请求失败";
 	} finally {
-		isLoading = false;
+		if (seq === postsRequestSeq) isLoading = false;
 	}
 }
 
@@ -738,6 +744,8 @@ function readDomConfigSnapshot(): Record<
 }
 
 async function loadSettings(key: string) {
+	/* 快速切换配置分区时，先发的慢请求后到会用旧分区的内容盖住当前页 */
+	const seq = ++settingsRequestSeq;
 	settingsLoading = true;
 	settingsError = "";
 	// 重新加载配置时回到默认的可视化表单模式
@@ -772,6 +780,7 @@ async function loadSettings(key: string) {
 		} catch {
 			throw new Error(`服务器返回异常（HTTP ${res.status}）`);
 		}
+		if (seq !== settingsRequestSeq) return;
 		if (json.success) {
 			settingsData = json.data as Record<string, any> | string | null;
 			settingsSource = json.source ?? "";
@@ -782,9 +791,10 @@ async function loadSettings(key: string) {
 			settingsError = json.message || "读取配置失败";
 		}
 	} catch (err) {
+		if (seq !== settingsRequestSeq) return;
 		settingsError = err instanceof Error ? err.message : "网络请求失败";
 	} finally {
-		settingsLoading = false;
+		if (seq === settingsRequestSeq) settingsLoading = false;
 	}
 }
 
