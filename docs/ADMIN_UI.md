@@ -86,13 +86,15 @@ Three components in `src/components/admin/ui/`. Pages import them; pages do not 
 ──────────────────────────────────────────────────────────────────────────────
 ```
 
-- Props: `title`, `meta?`, `dense?`, `rail?` (snippet), `actions?` (snippet).
+- Props: `title`, `meta?`, `dense?`, `bordered?`, `rail?` (snippet), `actions?` (snippet).
 - One line. If it wraps, the page has too many controls in it — move a control into the rail or
   into a popover.
 - `dense` exists for list pages, where the list is the content and the title is furniture.
 - Below 1023px the title and meta are hidden: the mobile top bar already shows the page name.
   Actions stay unless the page can prove the top bar duplicates them.
-- The header owns the bottom hairline. Nothing else on a page draws a full-width rule.
+- The header owns the bottom hairline, and it owns exactly one per screen. When a tab bar sits
+  directly underneath, pass `bordered={false}` and let the tab bar draw the line — otherwise two
+  hairlines end up a few dozen pixels apart.
 
 ### `Toolbar`
 

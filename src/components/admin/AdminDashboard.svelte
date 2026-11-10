@@ -29,6 +29,7 @@ import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
 import SyncPage from "./SyncPage.svelte";
 import { createPageIntroStore } from "./page-intro.svelte";
+import PageHeader from "./ui/PageHeader.svelte";
 import TaxonomyManager from "./TaxonomyManager.svelte";
 
 type Post = {
@@ -1983,10 +1984,12 @@ function formatDate(dateStr: string | null): string {
 					     详情页才包进 SettingsShell（.settings-workspace.fuwari-card-base） -->
 					{#if settingsSection && getConfigItem(settingsSection)}
 						<div class="settings-workspace card-base">
-							<header class="settings-heading">
-								<h1>{i18n(getConfigLabelKey(settingsSection))}</h1>
-								<p>{i18n(getConfigDescKey(settingsSection))}</p>
-							</header>
+							<!-- 紧接 tab 栏，分隔线由 tab 栏画，页头不再画第二条 -->
+							<PageHeader
+								title={i18n(getConfigLabelKey(settingsSection))}
+								meta={i18n(getConfigDescKey(settingsSection))}
+								bordered={false}
+							/>
 							<nav class="settings-tabs" aria-label={i18n(I18nKey.adminSettings)}>
 								{#each settingsTabs as tab (tab.id)}
 									<button
@@ -3021,7 +3024,7 @@ function formatDate(dateStr: string | null): string {
 	.settings-tabs {
 		display: flex;
 		gap: 1.75rem;
-		padding: 0 1.75rem;
+		padding: 0 var(--admin-gutter, 1.5rem);
 		border-bottom: 1px solid var(--line-divider);
 		overflow-x: auto;
 		flex-shrink: 0;
@@ -3069,29 +3072,6 @@ function formatDate(dateStr: string | null): string {
 	/* ── 工作区标题区：对齐参考 settings-heading ──
 	   28px/650 标题 + fg-50 灰字简介；位于容器顶部，左右 28px
 	   （与 AdminPage 的 .admin-page-heading 同步，对齐参考 workspace 的 28px 内边距）。 */
-	.settings-heading {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		padding: 1.75rem 1.75rem 1.25rem;
-		flex-shrink: 0;
-	}
-
-	.settings-heading h1 {
-		margin: 0;
-		font-size: 1.75rem;
-		font-weight: 650;
-		line-height: 1.4;
-		color: var(--deep-text);
-	}
-
-	.settings-heading p {
-		margin: 0;
-		font-size: 0.8125rem;
-		line-height: 1.7;
-		color: var(--content-meta);
-	}
-
 	/* ── 设置保存栏：对齐参考 settings-savebar ──
 	   顶部分隔线、左提示右动作、40px 高按钮（10px 圆角）。 */
 	.settings-savebar {

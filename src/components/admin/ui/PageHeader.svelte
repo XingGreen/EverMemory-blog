@@ -13,6 +13,7 @@ let {
 	title,
 	meta = "",
 	dense = false,
+	bordered = true,
 	rail,
 	actions,
 }: {
@@ -21,6 +22,8 @@ let {
 	meta?: string;
 	/** 列表页专用：标题降到 21，把高度让给内容 */
 	dense?: boolean;
+	/** 页头自带那条通栏细线。紧接 tab 栏的页面传 false，由 tab 栏提供那一条 */
+	bordered?: boolean;
 	/** 紧挨标题的筛选轨（状态、分面），可横滑 */
 	rail?: Snippet;
 	/** 右侧操作组：搜索、主次按钮 */
@@ -28,7 +31,7 @@ let {
 } = $props();
 </script>
 
-<header class="page-header" class:dense>
+<header class="page-header" class:dense class:bordered>
 	<div class="page-header-title">
 		<h1>{title}</h1>
 		{#if meta}
@@ -58,6 +61,10 @@ let {
 		gap: 1.5rem;
 		flex-shrink: 0;
 		padding: 1.25rem var(--admin-gutter, 1.5rem);
+	}
+
+	/* 由页头画分隔线；页面里有 tab 栏时交给 tab 栏画，避免两条线相隔几十像素 */
+	.page-header.bordered {
 		border-bottom: 1px solid var(--line-divider);
 	}
 
