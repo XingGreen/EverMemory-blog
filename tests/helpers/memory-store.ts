@@ -10,6 +10,8 @@ import type { KVStore } from "@utils/persist-store";
  */
 export function createMemoryStore(): KVStore & {
 	dump: () => Record<string, unknown>;
+	/** 声明为必选：session-store 依赖 list 列举会话，测试里也要能 spy */
+	list: (prefix: string, limit?: number) => Promise<string[]>;
 } {
 	const map = new Map<string, unknown>();
 
@@ -24,6 +26,13 @@ export function createMemoryStore(): KVStore & {
 		},
 		async del(key: string): Promise<void> {
 			map.delete(key);
+		},
+		async list(prefix: string, limit = 200): Promise<string[]> {
+			return [...map.keys()]
+				.filter((key) => key.startsWith(prefix))
+				.sort()
+				.reverse()
+				.slice(0, limit);
 		},
 		dump: () => Object.fromEntries(map),
 	};

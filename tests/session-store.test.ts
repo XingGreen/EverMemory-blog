@@ -21,14 +21,23 @@ const {
 	touchSession,
 } = await import("@utils/session-store");
 
-const SESSIONS_KEY = "admin_sessions";
+const SESSION_PREFIX = "admin_sess:";
 
-/** 读取内存双工里存的原始会话表，避免经由被测函数自证正确 */
-function rawTable(): Record<string, { exp: number; lastSeenAt: number }> {
-	return (store.dump()[SESSIONS_KEY] ?? {}) as Record<
-		string,
-		{ exp: number; lastSeenAt: number }
-	>;
+/** 直接从内存双工里取会话 sid，避免经由被测函数自证正确 */
+function rawSids(): string[] {
+	return Object.keys(store.dump())
+		.filter((key) => key.startsWith(SESSION_PREFIX))
+		.map((key) => key.slice(SESSION_PREFIX.length));
+}
+
+/** 直接改存储里的会话记录：模拟时间流逝导致过期 */
+async function patchRecord(
+	sid: string,
+	patch: Partial<{ exp: number; lastSeenAt: number }>,
+): Promise<void> {
+	const key = SESSION_PREFIX + sid;
+	const current = store.dump()[key] as Record<string, unknown>;
+	await store.set(key, { ...current, ...patch });
 }
 
 const baseOpts = {
@@ -56,13 +65,19 @@ afterEach(() => {
 describe("describeDevice", () => {
 	it("识别常见桌面浏览器与系统", () => {
 		expect(
-			describeDevice("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0.0.0"),
+			describeDevice(
+				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0.0.0",
+			),
 		).toBe("Chrome · Windows 10/11");
 		expect(
-			describeDevice("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15"),
+			describeDevice(
+				"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15",
+			),
 		).toBe("Safari · macOS");
 		expect(
-			describeDevice("Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0"),
+			describeDevice(
+				"Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0",
+			),
 		).toBe("Firefox · Linux");
 	});
 
@@ -77,10 +92,14 @@ describe("describeDevice", () => {
 
 	it("移动端追加标注，iPad 不算移动端", () => {
 		expect(
-			describeDevice("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile/15E148"),
+			describeDevice(
+				"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile/15E148",
+			),
 		).toBe("未知浏览器 · iOS（移动端）");
 		expect(
-			describeDevice("Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) Mobile/15E148"),
+			describeDevice(
+				"Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) Mobile/15E148",
+			),
 		).toBe("未知浏览器 · iOS");
 	});
 
@@ -106,21 +125,16 @@ describe("registerSession", () => {
 	it("顺带清理已过期会话，避免表无限膨胀", async () => {
 		const keep = await registerSession({ ...baseOpts, ua: uaOf("keep") });
 
-		// 先正常注册，再把exp 改到过去——这样下一次注册时的清理逻辑
+		// 先正常注册，再把 exp 改到过去——这样下一次注册时的清理逻辑
 		// 才会遇到它。不能直接用 maxAgeSeconds: -1 注册：那会让该记录
 		// 在「清理之后」才写入，测试不到清理分支。
 		const stale = await registerSession({ ...baseOpts, ua: uaOf("stale") });
-		const table = store.dump()[SESSIONS_KEY] as Record<
-			string,
-			{ exp: number }
-		>;
-		table[stale].exp = Date.now() - 1000;
-		await store.set(SESSIONS_KEY, table);
+		await patchRecord(stale, { exp: Date.now() - 1000 });
 
 		// 下一次注册触发清理
 		await registerSession({ ...baseOpts, ua: uaOf("next") });
 
-		const remaining = Object.keys(rawTable());
+		const remaining = rawSids();
 		expect(remaining).toContain(keep);
 		expect(remaining).not.toContain(stale);
 	});
@@ -155,14 +169,14 @@ describe("同设备去重", () => {
 
 		expect(await getSession(first)).toBeNull();
 		expect(await getSession(second)).not.toBeNull();
-		expect(Object.keys(rawTable())).toEqual([second]);
+		expect(rawSids()).toEqual([second]);
 	});
 
 	it("不同 UA 的会话并存", async () => {
 		const a = await registerSession({ ...baseOpts, ua: uaOf("a") });
 		const b = await registerSession({ ...baseOpts, ua: uaOf("b") });
 
-		expect(Object.keys(rawTable()).sort()).toEqual([a, b].sort());
+		expect(rawSids().sort()).toEqual([a, b].sort());
 	});
 });
 
@@ -171,16 +185,14 @@ describe("getSession", () => {
 		expect(await getSession("never-existed")).toBeNull();
 	});
 
-	it("过期会话返回 null，但本函数不负责清理表中记录", async () => {
+	it("过期会话返回 null，但本函数不负责清理记录", async () => {
 		const sid = await registerSession(baseOpts);
-		const table = store.dump()[SESSIONS_KEY] as Record<string, { exp: number }>;
-		table[sid].exp = Date.now() - 1000;
-		await store.set(SESSIONS_KEY, table);
+		await patchRecord(sid, { exp: Date.now() - 1000 });
 
 		expect(await getSession(sid)).toBeNull();
 		// 清理职责在 registerSession / listSessions，getSession 只做判定；
 		// 若这里顺带删除，会与「踢下线」的并发删除形成额外竞态。
-		expect(Object.keys(rawTable())).toContain(sid);
+		expect(rawSids()).toContain(sid);
 	});
 
 	it("优先采用更新的独立 touch 时间", async () => {
@@ -209,7 +221,7 @@ describe("revokeSession", () => {
 
 		expect(await revokeSession(sid)).toBe(true);
 		expect(await getSession(sid)).toBeNull();
-		expect(Object.keys(rawTable())).not.toContain(sid);
+		expect(rawSids()).not.toContain(sid);
 	});
 
 	it("删除不存在的会话返回 false，不写库", async () => {
@@ -249,13 +261,17 @@ describe("touchSession", () => {
 			const setSpy = vi.spyOn(store, "set");
 
 			await touchSession(sid);
-			const firstWrites = setSpy.mock.calls.filter((c) => c[0] === `admin_touch_${sid}`).length;
+			const firstWrites = setSpy.mock.calls.filter(
+				(c) => c[0] === `admin_touch_${sid}`,
+			).length;
 			expect(firstWrites).toBe(1);
 
 			// 推进到节流窗口内（30 秒）
 			vi.advanceTimersByTime(30_000);
 			await touchSession(sid);
-			const secondWrites = setSpy.mock.calls.filter((c) => c[0] === `admin_touch_${sid}`).length;
+			const secondWrites = setSpy.mock.calls.filter(
+				(c) => c[0] === `admin_touch_${sid}`,
+			).length;
 
 			// 节流生效：没有新增写入
 			expect(secondWrites).toBe(1);
@@ -309,16 +325,14 @@ describe("listSessions", () => {
 		const alive = await registerSession({ ...baseOpts, ua: uaOf("alive") });
 		const stale = await registerSession({ ...baseOpts, ua: uaOf("stale") });
 
-		// 同样先注册再改 exp，确保过期记录已进入表内（listSessions 的清理对象）
-		const table = store.dump()[SESSIONS_KEY] as Record<string, { exp: number }>;
-		table[stale].exp = Date.now() - 1000;
-		await store.set(SESSIONS_KEY, table);
+		// 同样先注册再改 exp，确保过期记录已进入存储（listSessions 的清理对象）
+		await patchRecord(stale, { exp: Date.now() - 1000 });
 
 		const list = await listSessions();
 
 		expect(list.map((s) => s.sid)).toEqual([alive]);
-		// 过期项必须已从表中删除，否则每次列表都要重复过滤
-		expect(Object.keys(rawTable())).toEqual([alive]);
+		// 过期项必须已从存储中删除，否则每次列表都要重复过滤
+		expect(rawSids()).toEqual([alive]);
 	});
 
 	it("空表返回空数组", async () => {
@@ -327,30 +341,24 @@ describe("listSessions", () => {
 });
 
 describe("删除竞态防护（verifyDeleted）", () => {
-	it("写回旧快照复活会话后，revokeSession 仍保证目标已删除", async () => {
+	it("并发写入把会话复活后，revokeSession 仍保证目标已删除", async () => {
 		const sid = await registerSession(baseOpts);
-		const snapshot = structuredClone(rawTable());
+		const key = SESSION_PREFIX + sid;
+		const snapshot = structuredClone(store.dump()[key]);
 
-		// 真实竞态时序：revokeSession「读表→删除→整表写回」完成后，
-		// 并发请求以旧快照写回，把会话复活；随后 verifyDeleted 的
-		// 重读会看到复活记录并再删一次。
-		//
-		// 注入点必须在「主流程写回之后」的那次读（即 verifyDeleted 的首次读），
-		// 且这次读要如实反映注入后的状态——否则 verifyDeleted 会因
-		// 看到「已删除」而直接返回，用例假绿（这正是初版写错的地方）。
+		/* 真实竞态时序：revokeSession 删掉键之后，另一台持有旧值的长请求
+		   把它写回来。注入点必须在删除之后的第一次读，且该次读要如实
+		   反映注入后的状态——否则 verifyDeleted 会看到「已删除」直接返回。 */
 		let injected = false;
 		const realGet = store.get.bind(store);
 		const realSet = store.set.bind(store);
-		vi.spyOn(store, "get").mockImplementation(async (key: string) => {
-			const value = await realGet(key);
-			if (key !== SESSIONS_KEY) return value;
-
-			const table = value as Record<string, unknown> | null;
-			// 主流程已把 sid 从表里删掉，此时并发写回旧快照
-			if (!injected && table && !(sid in table)) {
+		vi.spyOn(store, "get").mockImplementation(async (k: string) => {
+			const value = await realGet(k);
+			if (k !== key) return value;
+			if (!injected && value === null) {
 				injected = true;
-				await realSet(SESSIONS_KEY, structuredClone(snapshot));
-				return await realGet(key);
+				await realSet(k, structuredClone(snapshot));
+				return await realGet(k);
 			}
 			return value;
 		});
@@ -361,7 +369,7 @@ describe("删除竞态防护（verifyDeleted）", () => {
 		expect(injected).toBe(true);
 		// verifyDeleted 最多 2 轮，应把复活记录清掉
 		expect(await getSession(sid)).toBeNull();
-		expect(Object.keys(rawTable())).not.toContain(sid);
+		expect(rawSids()).not.toContain(sid);
 	});
 
 	it("无并发写入时 verifyDeleted 不会误删其他会话", async () => {
@@ -372,5 +380,72 @@ describe("删除竞态防护（verifyDeleted）", () => {
 
 		expect(await getSession(target)).toBeNull();
 		expect(await getSession(other)).not.toBeNull();
+	});
+});
+
+/**
+ * 一人一键的核心收益：任何写操作都不再整表回写。
+ * 旧实现下这两个用例都会失败——第二次写带着「读时」的旧快照，
+ * 把并发注册的会话覆盖掉。
+ */
+describe("并发写入", () => {
+	it("两台设备同时登录不会互相覆盖", async () => {
+		const realSet = store.set.bind(store);
+		let release!: () => void;
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		let held = false;
+		vi.spyOn(store, "set").mockImplementation(
+			async (key: string, value: unknown, ttl?: number) => {
+				// 卡住先到的写入，让两次注册的读窗口重叠
+				if (!held && key.startsWith(SESSION_PREFIX)) {
+					held = true;
+					await gate;
+				}
+				return realSet(key, value, ttl);
+			},
+		);
+
+		const first = registerSession({ ...baseOpts, ua: uaOf("dev1") });
+		const second = registerSession({ ...baseOpts, ua: uaOf("dev2") });
+		await new Promise((resolve) => setTimeout(resolve, 10));
+		release();
+		const [sid1, sid2] = await Promise.all([first, second]);
+
+		expect(await getSession(sid1)).not.toBeNull();
+		expect(await getSession(sid2)).not.toBeNull();
+		expect(rawSids().sort()).toEqual([sid1, sid2].sort());
+	});
+
+	it("列表只清理本次列举到的过期会话，不波及期间新注册的", async () => {
+		const stale = await registerSession({ ...baseOpts, ua: uaOf("stale") });
+		await patchRecord(stale, { exp: Date.now() - 1000 });
+
+		let release!: () => void;
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		let armed = true;
+		const realList = store.list.bind(store);
+		vi.spyOn(store, "list").mockImplementation(
+			async (prefix: string, limit?: number) => {
+				const keys = await realList(prefix, limit);
+				// 列举期间暂停：此刻新落的键不在返回的名单里
+				if (armed) {
+					armed = false;
+					await gate;
+				}
+				return keys;
+			},
+		);
+
+		const listing = listSessions();
+		const fresh = await registerSession({ ...baseOpts, ua: uaOf("fresh") });
+		release();
+		await listing;
+
+		expect(await getSession(fresh)).not.toBeNull();
+		expect(rawSids()).not.toContain(stale);
 	});
 });

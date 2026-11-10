@@ -8,17 +8,33 @@ import { getStore, isKvBackend, isKvCircuitOpen } from "./persist-store";
  * 存储位置由 persist-store 决定（本机文件 / Vercel KV），
  * 支持查看在线设备、精确踢下线、区分设备。
  *
+ * 存储形态：**每条会话一个独立键**（`admin_sess:<sid>`）。
+ * 早期版本把全部会话放在一个 key 里，任何写操作都是「读整表→改→写整表」，
+ * 并发登录会互相覆盖（后写的一方带着旧快照，把对方刚登记的会话抹掉），
+ * 列表页清理过期项时甚至会删掉刚落地的会话。改成一人一键后，
+ * 注册 / 踢出 / 清理都只操作自己那条，不再存在覆盖别人的可能。
+ *
  * 故障降级：KV 后端不可用（超时/熔断）时，会话表读写退化为「尽力而为」——
  * 读失败不阻断鉴权（由 auth.ts 回落到仅 JWT 校验），写失败不阻断登录。
  * 代价是熔断窗口内「踢下线」不能即时生效（最多延迟到 KV 恢复）。
  */
 
-const SESSIONS_KEY = "admin_sessions";
+/** 会话键前缀。键名允许 `[a-zA-Z0-9._:-]`，冒号在后端会被安全转义 */
+const SESSION_PREFIX = "admin_sess:";
+
+/** 升级前的整表键。已无读写方，注册时顺手清掉，避免旧会话残留在存储里 */
+const LEGACY_SESSIONS_KEY = "admin_sessions";
+
+/** 会话键的 TTL 余量：比会话本身多留一小时，避免临界时刻键先于会话消失 */
+const KEY_TTL_MARGIN_SECONDS = 3600;
+
+/** 列表上限。单管理员不会有这么多设备，主要防 KEYS 结果失控 */
+const LIST_LIMIT = 500;
 
 /** 会话「最后活跃」独立 key 前缀：避免 touch 整表回写覆盖并发删除 */
 const TOUCH_PREFIX = "admin_touch_";
 
-/** touch key 自动过期时间（秒），过期后回退用表内 lastSeenAt */
+/** touch key 自动过期时间（秒），过期后回退用记录内 lastSeenAt */
 const TOUCH_TTL_SECONDS = 10 * 60;
 
 /** 会话列表「最后活跃」写入节流：避免每次请求都写入存储 */
@@ -61,42 +77,69 @@ export interface SessionLookup {
 	degraded: boolean;
 }
 
-async function readAll(): Promise<Record<string, AdminSession>> {
-	const store: KVStore = getStore();
-	const data = await store.get<Record<string, AdminSession>>(SESSIONS_KEY);
-	return data && typeof data === "object" ? data : {};
+function sessionKey(sid: string): string {
+	return SESSION_PREFIX + sid;
+}
+
+/** 键的存活时间跟随会话本身，多留一小时余量 */
+function keyTtlSeconds(record: AdminSession): number {
+	const remaining = Math.ceil((record.exp - Date.now()) / 1000);
+	return Math.max(60, remaining + KEY_TTL_MARGIN_SECONDS);
+}
+
+/** 读单条会话；不存在返回 null */
+async function readRecord(sid: string): Promise<AdminSession | null> {
+	const record = await getStore().get<AdminSession>(sessionKey(sid));
+	return record && typeof record === "object" ? record : null;
+}
+
+/** 写单条会话；失败不抛给调用方，返回是否成功 */
+async function writeRecord(record: AdminSession): Promise<boolean> {
+	try {
+		await getStore().set(sessionKey(record.sid), record, keyTtlSeconds(record));
+		return true;
+	} catch (err) {
+		console.warn("[SessionStore] 写入会话失败（已降级）:", err);
+		return false;
+	}
+}
+
+/** 删除单条会话；失败不抛给调用方 */
+async function deleteRecord(sid: string): Promise<boolean> {
+	try {
+		await getStore().del(sessionKey(sid));
+		return true;
+	} catch (err) {
+		console.warn("[SessionStore] 删除会话失败:", err);
+		return false;
+	}
 }
 
 /**
- * 读会话表；存储不可用时返回 degraded=true 而非抛错。
- * 上层据此区分「会话不存在（应登出）」与「暂时读不到（应放行）」。
+ * 列出全部会话（未过滤过期）。
+ * 单条读取失败按「不存在」处理：一条坏记录不该让整张列表报错。
  */
-async function readAllSafe(): Promise<{
-	sessions: Record<string, AdminSession>;
-	degraded: boolean;
-}> {
+async function listAll(): Promise<AdminSession[]> {
+	const store: KVStore = getStore();
+	if (!store.list) return [];
+	let keys: string[];
 	try {
-		const sessions = await readAll();
-		return { sessions, degraded: isSessionStoreDegraded() };
+		keys = await store.list(SESSION_PREFIX, LIST_LIMIT);
 	} catch (err) {
-		console.warn("[SessionStore] 读取会话表失败，降级为无会话表:", err);
-		return { sessions: {}, degraded: true };
+		console.warn("[SessionStore] 列举会话失败，按空表处理:", err);
+		return [];
 	}
-}
-
-/** 写会话表；失败不抛给调用方，返回是否成功 */
-async function writeAllSafe(
-	sessions: Record<string, AdminSession>,
-	ttlSeconds?: number,
-): Promise<boolean> {
-	try {
-		const store: KVStore = getStore();
-		await store.set(SESSIONS_KEY, sessions, ttlSeconds);
-		return true;
-	} catch (err) {
-		console.warn("[SessionStore] 写入会话表失败（已降级）:", err);
-		return false;
-	}
+	const records = await Promise.all(
+		keys.map((key) =>
+			store
+				.get<AdminSession>(key)
+				.catch(() => null)
+				.then((record) =>
+					record && typeof record === "object" && record.sid ? record : null,
+				),
+		),
+	);
+	return records.filter((record): record is AdminSession => record !== null);
 }
 
 /** 解析 User-Agent 为可读设备描述（浏览器 + 操作系统） */
@@ -160,52 +203,54 @@ export async function registerSession(opts: {
 		amr: opts.amr ?? "github",
 	};
 
-	const { sessions } = await readAllSafe();
-	// 顺带清理已过期会话，避免表无限膨胀；
-	// 同设备（同 UA）只保留最新一次登录，避免反复登录在同一设备堆积会话。
-	for (const key of Object.keys(sessions)) {
-		if (sessions[key].exp <= now || sessions[key].ua === opts.ua) {
-			delete sessions[key];
-		}
-	}
-	sessions[sid] = record;
-	const ok = await writeAllSafe(sessions, 7 * 24 * 3600);
+	/* 同设备（同 UA）只保留最新一次登录，顺带清掉已过期会话。
+	   只删别人的键、只写自己的键：并发注册时不会用旧快照覆盖对方。 */
+	const existing = await listAll();
+	await Promise.all(
+		existing
+			.filter((item) => item.exp <= now || item.ua === opts.ua)
+			.map((item) => deleteRecord(item.sid)),
+	);
+
+	const ok = await writeRecord(record);
 	if (!ok) {
 		console.warn(
 			"[SessionStore] 会话未登记（存储不可用），本次登录继续，但该设备不会出现在会话列表",
 		);
 	}
+
+	// 升级前的整表已无读写方：第一次注册时顺手丢掉，防止旧会话长期残留
+	void getStore()
+		.del(LEGACY_SESSIONS_KEY)
+		.catch(() => {});
+
 	return sid;
 }
 
-/** 删除会话（踢下线）；返回是否真的存在 */
+/** 删除会话（踢下线）；返回该会话此前是否存在 */
 export async function revokeSession(sid: string): Promise<boolean> {
-	const { sessions } = await readAllSafe();
-	if (!sessions[sid]) return false;
-	delete sessions[sid];
-	const ok = await writeAllSafe(sessions, 7 * 24 * 3600);
-	if (!ok) return false;
+	const record = await readRecord(sid);
+	if (!record) return false;
+	await deleteRecord(sid);
 	await verifyDeleted(sid);
 	return true;
 }
 
 /** 删除除指定 sid 外的全部会话（「踢掉其他设备」） */
 export async function revokeAllExcept(sid: string): Promise<number> {
-	const { sessions } = await readAllSafe();
-	const others = Object.keys(sessions).filter((key) => key !== sid);
-	for (const key of others) delete sessions[key];
-	const ok = await writeAllSafe(sessions, 7 * 24 * 3600);
-	if (!ok) return 0;
-	for (const key of others) {
-		await verifyDeleted(key);
+	const others = (await listAll()).filter((item) => item.sid !== sid);
+	for (const item of others) {
+		await deleteRecord(item.sid);
+	}
+	for (const item of others) {
+		await verifyDeleted(item.sid);
 	}
 	return others.length;
 }
 
 /** 读取单个会话；不存在（被踢/过期/存储不可读）返回 null */
 export async function getSession(sid: string): Promise<AdminSession | null> {
-	const { sessions } = await readAllSafe();
-	const record = sessions[sid];
+	const record = await readRecord(sid);
 	if (!record) return null;
 	if (record.exp <= Date.now()) return null;
 	return withTouchAt(record);
@@ -216,15 +261,20 @@ export async function getSession(sid: string): Promise<AdminSession | null> {
  * auth.ts 用 degraded 决定是拒绝登录态还是仅靠 JWT 放行。
  */
 export async function getSessionState(sid: string): Promise<SessionLookup> {
-	const { sessions, degraded } = await readAllSafe();
-	const record = sessions[sid];
-	if (!record) return { session: null, degraded };
-	if (record.exp <= Date.now()) return { session: null, degraded: false };
-	return { session: await withTouchAt(record), degraded };
+	try {
+		const record = await readRecord(sid);
+		const degraded = isSessionStoreDegraded();
+		if (!record) return { session: null, degraded };
+		if (record.exp <= Date.now()) return { session: null, degraded: false };
+		return { session: await withTouchAt(record), degraded };
+	} catch (err) {
+		console.warn("[SessionStore] 读取会话失败，降级为仅 JWT 校验:", err);
+		return { session: null, degraded: true };
+	}
 }
 
 /**
- * 合并独立 touch key 的「最后活跃」时间（比表内值新时覆盖）。
+ * 合并独立 touch key 的「最后活跃」时间（比记录内值新时覆盖）。
  * 单条与会话列表共用。
  */
 async function withTouchAt(record: AdminSession): Promise<AdminSession> {
@@ -237,8 +287,8 @@ async function withTouchAt(record: AdminSession): Promise<AdminSession> {
 
 /**
  * 更新「最后活跃」时间。
- * 写入独立 key（自动过期），不整表回写——避免与「踢下线」的
- * 删除产生读-改-写竞态（旧快照整表写回会把已删除会话复活）。
+ * 写入独立 key（自动过期），不改会话记录——避免与「踢下线」的
+ * 删除产生读-改-写竞态（旧值写回会把已删除会话复活）。
  */
 export async function touchSession(sid: string): Promise<void> {
 	try {
@@ -257,34 +307,28 @@ export async function touchSession(sid: string): Promise<void> {
 /** 会话列表（已过滤过期项）；存储不可用时返回空表 */
 export async function listSessions(): Promise<AdminSession[]> {
 	const now = Date.now();
-	const { sessions } = await readAllSafe();
-	let expired = false;
-	const list: AdminSession[] = [];
-	for (const key of Object.keys(sessions)) {
-		const record = sessions[key];
-		if (record.exp <= now) {
-			delete sessions[key];
-			expired = true;
-			continue;
-		}
-		list.push(record);
+	const alive: AdminSession[] = [];
+	const expired: string[] = [];
+	for (const record of await listAll()) {
+		if (record.exp <= now) expired.push(record.sid);
+		else alive.push(record);
 	}
-	if (expired) await writeAllSafe(sessions, 7 * 24 * 3600);
+	// 清理只针对本次列举到的过期项：期间新注册的会话不在名单里，不会被误删
+	if (expired.length > 0) {
+		await Promise.all(expired.map((sid) => deleteRecord(sid)));
+	}
 	// touch 读取失败不应让整个列表接口报错
 	await Promise.all(
-		list.map((r) => withTouchAt(r).catch(() => r)),
+		alive.map((record) => withTouchAt(record).catch(() => record)),
 	);
-	return list.sort((a, b) => b.loginAt - a.loginAt);
+	return alive.sort((a, b) => b.loginAt - a.loginAt);
 }
 
-/** 同步验证删除：若并行请求以旧快照把目标写复读，则重删（最多 2 次） */
+/** 同步验证删除：并发写入把目标复活时再删一次（最多 2 轮） */
 async function verifyDeleted(sid: string): Promise<void> {
 	for (let i = 0; i < 2; i++) {
-		const { sessions: cur, degraded } = await readAllSafe();
-		if (degraded) return;
-		if (cur[sid] === undefined) return;
-		delete cur[sid];
-		const ok = await writeAllSafe(cur, 7 * 24 * 3600);
-		if (!ok) return;
+		const record = await readRecord(sid).catch(() => null);
+		if (!record) return;
+		await deleteRecord(sid);
 	}
 }
