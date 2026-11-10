@@ -1,8 +1,8 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import PostRowMenu from "@/components/admin/PostRowMenu.svelte";
-import Dropdown from "@/components/common/Dropdown.svelte";
 import Icon from "@/components/common/Icon.svelte";
+import { siteConfig } from "@/config/siteConfig";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import type { AdminPostSummary } from "@/types/adminApi";
@@ -79,80 +79,69 @@ const SORT_VALUES = new Set<string>([
 let searchTerm = $state("");
 let statusFilter = $state<StatusFilter>("all");
 
-/* ── 表项显隐（内置在列表页，不进设置页）──
-   只有次要列可隐藏；标题与操作列始终显示，否则会出现无法操作的行。
-   列宽通过 --post-grid-cols 下发，窄屏媒体查询里的单列布局优先级更高，不受影响。 */
-type HideableCol =
-	| "category"
-	| "filetype"
-	| "words"
-	| "author"
-	| "lang"
-	| "password"
-	| "date"
-	| "status";
-const HIDDEN_COLS_KEY = "admin-post-list-hidden-cols";
+/* ── 行右侧账目栏 ──
+   一列校样 + 一条页边账：状态与时间靠右成栏，取代原先「日期」「状态」两列。
+   分类与扩展名降级为标题下那行的尾注，不再是独立列。 */
+type RailState = {
+	label: string;
+	/* attention = 需要你动手（待部署 / 未同步）；palette 里只有它会用主色 */
+	tone: "attention" | "draft" | "plain";
+	hint?: string;
+};
 
-function readHiddenCols(): Record<HideableCol, boolean> {
-	const empty: Record<HideableCol, boolean> = {
-		category: false,
-		filetype: false,
-		words: true,
-		author: true,
-		lang: true,
-		password: true,
-		date: false,
-		status: false,
-	};
-	try {
-		const raw = localStorage.getItem(HIDDEN_COLS_KEY);
-		if (!raw) return empty;
-		const parsed = JSON.parse(raw) as Partial<Record<HideableCol, boolean>>;
-		return { ...empty, ...parsed };
-	} catch {
-		return empty;
+function railState(post: AdminPostSummary): RailState {
+	if (post.draft) {
+		return { label: i18n(I18nKey.postDraft), tone: "draft" };
 	}
+	if (post.syncState === "pending-deploy") {
+		return {
+			label: i18n(I18nKey.postSyncPendingDeploy),
+			tone: "attention",
+			hint: i18n(I18nKey.postSyncPendingDeployHint),
+		};
+	}
+	if (post.syncState === "not-on-github") {
+		return { label: i18n(I18nKey.postSyncNotOnGithub), tone: "attention" };
+	}
+	return { label: i18n(I18nKey.postPublished), tone: "plain" };
 }
 
-let hiddenCols = $state<Record<HideableCol, boolean>>({
-	category: false,
-	filetype: false,
-	/* 新增的四列默认收起：老用户升级后表格布局不变，需要时再从「列显示」打开 */
-	words: true,
-	author: true,
-	lang: true,
-	password: true,
-	date: false,
-	status: false,
-});
-let colsPanelOpen = $state(false);
+/* 相对时间交给 Intl：五套语言自带词形（「昨天」「3 日前」「last week」），
+   不必为它新增 i18n 词条。locale 取站点语言，下划线换连字符。 */
+const RELATIVE_LOCALE = (siteConfig.lang || "en")
+	.replace(/_/g, "-")
+	.toLowerCase();
 
-function toggleCol(key: HideableCol) {
-	hiddenCols = { ...hiddenCols, [key]: !hiddenCols[key] };
-	try {
-		localStorage.setItem(HIDDEN_COLS_KEY, JSON.stringify(hiddenCols));
-	} catch {
-		// 隐私模式忽略
-	}
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const WEEK = 7 * DAY;
+const MONTH = 30 * DAY;
+const YEAR = 365 * DAY;
+
+function timeAgo(post: TimeFields): string {
+	const ts = timeOf(post);
+	if (!ts) return "—";
+	const diff = ts - Date.now();
+	const abs = Math.abs(diff);
+	const rtf = new Intl.RelativeTimeFormat(RELATIVE_LOCALE, { numeric: "auto" });
+	if (abs < HOUR) return rtf.format(Math.round(diff / MINUTE), "minute");
+	if (abs < DAY) return rtf.format(Math.round(diff / HOUR), "hour");
+	if (abs < WEEK) return rtf.format(Math.round(diff / DAY), "day");
+	if (abs < MONTH) return rtf.format(Math.round(diff / WEEK), "week");
+	if (abs < YEAR) return rtf.format(Math.round(diff / MONTH), "month");
+	return rtf.format(Math.round(diff / YEAR), "year");
 }
 
-/** 按当前可见列拼出 grid 模板，顺序与表头一致 */
-const gridCols = $derived(
-	[
-		"2.9fr",
-		hiddenCols.category ? "" : "0.9fr",
-		hiddenCols.filetype ? "" : "0.7fr",
-		hiddenCols.words ? "" : "0.8fr",
-		hiddenCols.author ? "" : "0.9fr",
-		hiddenCols.lang ? "" : "0.7fr",
-		hiddenCols.password ? "" : "0.8fr",
-		hiddenCols.date ? "" : "1.1fr",
-		hiddenCols.status ? "" : "0.9fr",
-		"1.2fr",
-	]
-		.filter(Boolean)
-		.join(" "),
-);
+/* 悬停时用 title 给出精确时间：相对时间好读，但不能用来核对 */
+function absoluteTime(post: TimeFields): string {
+	const raw = post.updated || post.published;
+	return raw ? formatDate(raw) : "";
+}
+
+function fileExt(post: AdminPostSummary): string {
+	return post.filePath.slice(post.filePath.lastIndexOf(".")) || "";
+}
 
 let categoryFilter = $state("");
 let tagFilter = $state("");
@@ -349,7 +338,6 @@ $effect(() => {
 });
 
 onMount(() => {
-	hiddenCols = readHiddenCols();
 	const saved = restoreFilters();
 	if (saved) {
 		searchTerm = saved.q;
@@ -434,6 +422,20 @@ function ariaSortFor(
 	return sortAscending ? "ascending" : "descending";
 }
 
+/* 表头从「画了箭头的装饰」改成真的能点：
+   标题在升序/降序之间切换；日期列按「最近修改 → 最新发布 → 最早发布」轮转，
+   列名（dateColLabel）随之变化，点两下就能看懂它在做什么。 */
+function toggleTitleSort() {
+	sortKey = sortKey === "titleAsc" ? "titleDesc" : "titleAsc";
+}
+
+const DATE_SORT_CYCLE: SortKey[] = ["updated", "newest", "oldest"];
+
+function cycleDateSort() {
+	const next = (DATE_SORT_CYCLE.indexOf(sortKey) + 1) % DATE_SORT_CYCLE.length;
+	sortKey = DATE_SORT_CYCLE[next];
+}
+
 /* 日期列的表头与单元格都要跟随排序字段：按「最近修改」排序却显示发布日期，
    列表看上去是乱序的。 */
 const dateColLabel = $derived(
@@ -441,12 +443,6 @@ const dateColLabel = $derived(
 		? i18n(I18nKey.postSortUpdated)
 		: i18n(I18nKey.postColDate),
 );
-
-function dateShown(post: TimeFields): string {
-	const raw =
-		sortKey === "updated" ? post.updated || post.published : post.published;
-	return raw ? formatDate(raw) : "—";
-}
 
 function actionLabel(action: string, title: string): string {
 	return i18n(I18nKey.postActionLabel)
@@ -494,7 +490,9 @@ function actionLabel(action: string, title: string): string {
 	</div>
 	{/if}
 
-	<!-- 状态筛选（第一行，对齐参考项目 post-list-tabs） -->
+	<!-- 状态轨：一条文字轨，不画整行下边框——页头已经有一条结构线，
+	      再加一条会把列表切成三段。计数用等宽且不抢色，只有「未同步」
+	      在真有事要办时才用主色。 -->
 	<div class="filter-chips" role="group" aria-label={i18n(I18nKey.postStatusFilterGroup)}>
 		<button
 			class="chip"
@@ -527,6 +525,7 @@ function actionLabel(action: string, title: string): string {
 		<button
 			class="chip"
 			class:selected={statusFilter === "unsynced"}
+			class:attention={unsyncedCount > 0}
 			aria-pressed={statusFilter === "unsynced"}
 			onclick={() => (statusFilter = "unsynced")}
 		>
@@ -606,156 +605,24 @@ function actionLabel(action: string, title: string): string {
 	</div>
 
 	<!-- 分类栏（表头） -->
+	<!-- 表头只剩两格：标题与账目栏。两格都可点，点了真的换排序。
+	      原先九个列头里，只有标题和日期画了 aria-sort，却没有任何点击处理。 -->
 	{#snippet headerRow()}
 		<div class="header-row" role="rowgroup">
 			<div class="col col-title" role="columnheader" aria-sort={ariaSortFor("title")}>
 				<span class="head-pin-spacer" aria-hidden="true"></span>
-				{i18n(I18nKey.postColTitle)}
+				<button class="head-sort" type="button" onclick={toggleTitleSort}>
+					{i18n(I18nKey.postColTitle)}
+				</button>
 			</div>
-			{#if !hiddenCols.category}
-				<div class="col col-category" role="columnheader">{i18n(I18nKey.postColCategory)}</div>
-			{/if}
-			{#if !hiddenCols.filetype}
-				<div class="col col-filetype" role="columnheader">
-					{i18n(I18nKey.postColFileType)}
-				</div>
-			{/if}
-			{#if !hiddenCols.words}
-				<div class="col col-words" role="columnheader">{i18n(I18nKey.postColWords)}</div>
-			{/if}
-			{#if !hiddenCols.author}
-				<div class="col col-author" role="columnheader">{i18n(I18nKey.postColAuthor)}</div>
-			{/if}
-			{#if !hiddenCols.lang}
-				<div class="col col-lang" role="columnheader">{i18n(I18nKey.postColLang)}</div>
-			{/if}
-			{#if !hiddenCols.password}
-				<div class="col col-password" role="columnheader">
-					{i18n(I18nKey.postColPassword)}
-				</div>
-			{/if}
-			{#if !hiddenCols.date}
-				<div class="col col-date" role="columnheader" aria-sort={ariaSortFor("date")}>
+			<div class="col col-rail" role="columnheader" aria-sort={ariaSortFor("date")}>
+				<button class="head-sort" type="button" onclick={cycleDateSort}>
 					{dateColLabel}
-				</div>
-			{/if}
-			{#if !hiddenCols.status}
-				<div class="col col-status" role="columnheader">{i18n(I18nKey.postColStatus)}</div>
-			{/if}
-			<div class="col col-actions" role="columnheader">
-				<span class="actions-label">{i18n(I18nKey.postColActions)}</span>
-				<Dropdown
-					bind:open={colsPanelOpen}
-					align="end"
-					title={i18n(I18nKey.postColSettings)}
-				>
-					{#snippet trigger()}
-						<button
-							class="cols-trigger"
-							type="button"
-							aria-label={i18n(I18nKey.postColSettings)}
-							aria-expanded={colsPanelOpen}
-							aria-haspopup="true"
-							onclick={() => (colsPanelOpen = !colsPanelOpen)}
-						>
-							<Icon icon="material-symbols:format-align-justify" />
-						</button>
-					{/snippet}
-
-					{#snippet content()}
-						<button
-							class="ui-menu-item"
-							type="button"
-							aria-selected={!hiddenCols.category}
-							onclick={() => toggleCol("category")}
-						>
-							<span class="ui-menu-item-label">{i18n(I18nKey.postColCategory)}</span>
-							{#if !hiddenCols.category}
-								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
-							{/if}
-						</button>
-						<button
-							class="ui-menu-item"
-							type="button"
-							aria-selected={!hiddenCols.filetype}
-							onclick={() => toggleCol("filetype")}
-						>
-							<span class="ui-menu-item-label">{i18n(I18nKey.postColFileType)}</span>
-							{#if !hiddenCols.filetype}
-								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
-							{/if}
-						</button>
-						<button
-							class="ui-menu-item"
-							type="button"
-							aria-selected={!hiddenCols.words}
-							onclick={() => toggleCol("words")}
-						>
-							<span class="ui-menu-item-label">{i18n(I18nKey.postColWords)}</span>
-							{#if !hiddenCols.words}
-								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
-							{/if}
-						</button>
-						<button
-							class="ui-menu-item"
-							type="button"
-							aria-selected={!hiddenCols.author}
-							onclick={() => toggleCol("author")}
-						>
-							<span class="ui-menu-item-label">{i18n(I18nKey.postColAuthor)}</span>
-							{#if !hiddenCols.author}
-								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
-							{/if}
-						</button>
-						<button
-							class="ui-menu-item"
-							type="button"
-							aria-selected={!hiddenCols.lang}
-							onclick={() => toggleCol("lang")}
-						>
-							<span class="ui-menu-item-label">{i18n(I18nKey.postColLang)}</span>
-							{#if !hiddenCols.lang}
-								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
-							{/if}
-						</button>
-						<button
-							class="ui-menu-item"
-							type="button"
-							aria-selected={!hiddenCols.password}
-							onclick={() => toggleCol("password")}
-						>
-							<span class="ui-menu-item-label">{i18n(I18nKey.postColPassword)}</span>
-							{#if !hiddenCols.password}
-								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
-							{/if}
-						</button>
-						<button
-							class="ui-menu-item"
-							type="button"
-							aria-selected={!hiddenCols.date}
-							onclick={() => toggleCol("date")}
-						>
-							<span class="ui-menu-item-label">{dateColLabel}</span>
-							{#if !hiddenCols.date}
-								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
-							{/if}
-						</button>
-						<button
-							class="ui-menu-item"
-							type="button"
-							aria-selected={!hiddenCols.status}
-							onclick={() => toggleCol("status")}
-						>
-							<span class="ui-menu-item-label">{i18n(I18nKey.postColStatus)}</span>
-							{#if !hiddenCols.status}
-								<Icon icon="material-symbols:check" class="ui-menu-item-check" />
-							{/if}
-						</button>
-					{/snippet}
-				</Dropdown>
+				</button>
 			</div>
 		</div>
 	{/snippet}
+
 
 	<!-- 列表内容 -->
 	{#if error}
@@ -774,6 +641,12 @@ function actionLabel(action: string, title: string): string {
 				<button class="text-btn" onclick={clearAllFilters}>
 					{i18n(I18nKey.postClearFilter)}
 				</button>
+			{:else}
+				<!-- 一篇都没有的时候，唯一有意义的下一步是写第一篇 -->
+				<button class="ui-btn ui-btn-primary" onclick={onCreate}>
+					<Icon icon="material-symbols:add" class="btn-icon" />
+					{i18n(I18nKey.adminNewPost)}
+				</button>
 			{/if}
 		</div>
 	{:else}
@@ -782,7 +655,6 @@ function actionLabel(action: string, title: string): string {
 			role="table"
 			aria-label={i18n(I18nKey.postTableLabel)}
 			aria-busy={isLoading}
-			style:--post-grid-cols={gridCols}
 		>
 			{@render headerRow()}
 
@@ -790,157 +662,68 @@ function actionLabel(action: string, title: string): string {
 				<div class="md3-list skeleton-list" role="rowgroup" aria-hidden="true">
 					{#each SKELETON_ROWS as row, i (i)}
 						<div class="list-item" role="row">
-							<div class="col col-title" role="cell">
-								<div class="title-cell">
-									<div class="title-row">
-										<span class="pin-wrap" aria-hidden="true"></span>
-										<div class="title-main">
-											<span class="sk sk-title" style:width={row.titleWidth}></span>
-											{#if row.intro}
-												<span class="sk sk-intro"></span>
-											{/if}
-										</div>
+							<div class="col row-body" role="cell">
+								<div class="title-row">
+									<span class="pin-wrap" aria-hidden="true"></span>
+									<div class="title-main">
+										<span class="sk sk-title" style:width={row.titleWidth}></span>
+										{#if row.intro}
+											<span class="sk sk-intro"></span>
+										{/if}
 									</div>
 								</div>
 							</div>
-							<div class="col col-category" role="cell"><span class="sk sk-line short"></span></div>
-							<div class="col col-date" role="cell"><span class="sk sk-line"></span></div>
-							<div class="col col-status" role="cell"><span class="sk sk-chip"></span></div>
-							<div class="col col-actions" role="cell">
-								<div class="icon-actions">
-									<span class="sk sk-dot"></span>
-									<span class="sk sk-dot"></span>
-									<span class="sk sk-dot"></span>
-								</div>
+							<div class="col row-side" role="cell">
+								<span class="sk sk-line short"></span>
+								<span class="sk sk-line tiny"></span>
 							</div>
 						</div>
 					{/each}
 				</div>
 			{:else}
-			<!-- 列表项 -->
+			<!-- 列表项：一列校样 + 右侧一条账目栏。日期与状态不再是列，而是页边的一行账。 -->
 			<div class="md3-list" role="rowgroup">
 				{#each filteredPosts as post (post.id)}
+					{@const rail = railState(post)}
 					<div class="list-item" role="row">
-						<!-- 标题 -->
-						<div class="col col-title" role="cell" data-label={i18n(I18nKey.postColTitle)}>
-							<div class="title-cell">
-								<div class="title-row">
-									<span class="pin-wrap" aria-hidden={!post.pinned}>
-										{#if post.pinned}
-											<Icon icon="material-symbols:push-pin" class="pin-icon" />
-											<span class="sr-only">{i18n(I18nKey.postPinned)}</span>
+						<div class="col row-body" role="cell" data-label={i18n(I18nKey.postColTitle)}>
+							<div class="title-row">
+								<span class="pin-wrap" aria-hidden={!post.pinned}>
+									{#if post.pinned}
+										<Icon icon="material-symbols:push-pin" class="pin-icon" />
+										<span class="sr-only">{i18n(I18nKey.postPinned)}</span>
+									{/if}
+								</span>
+								<div class="title-main">
+									<span class="title-line">
+										<span class="title" title={post.title}>{post.title}</span>
+										{#if post.password}
+											<Icon icon="material-symbols:lock-outline" class="lock-icon" />
 										{/if}
 									</span>
-									<div class="title-main">
-										<span class="title-line">
-											<span class="title" title={post.title}>{post.title}</span>
-											{#if post.password}
-												<Icon icon="material-symbols:lock-outline" class="lock-icon" />
-											{/if}
-										</span>
-										<span class="intro" title={post.description || post.slug}>
-											{post.description || post.slug}
-										</span>
-									</div>
+									<span class="intro" title={post.description || post.slug}>
+										{post.description || post.slug}
+									</span>
+									<!-- 归档信息单独一层：分类与扩展名是「这篇归在哪儿」，
+									     不能和摘要共享一行行文 -->
+									<span class="meta-line">
+										{#if post.category}
+											<span class="meta-cat">{post.category}</span>
+										{/if}
+										<span class="meta-ext">{fileExt(post)}</span>
+									</span>
 								</div>
 							</div>
 						</div>
 
-						<!-- 分类 -->
-						{#if !hiddenCols.category}
-							<div class="col col-category" role="cell" data-label={i18n(I18nKey.postColCategory)}>
-								<span class="text-meta">{post.category || "—"}</span>
-							</div>
-						{/if}
-
-						<!-- 文件类型：取自 filePath 的扩展名（.md / .mdx） -->
-						{#if !hiddenCols.filetype}
-							<div
-								class="col col-filetype"
-								role="cell"
-								data-label={i18n(I18nKey.postColFileType)}
-							>
-								<span class="filetype-chip">
-									{post.filePath.slice(post.filePath.lastIndexOf(".")) || "—"}
+						<!-- 账目栏：状态在上、时间在下，都是等宽；悬停时整栏让给动作 -->
+						<div class="col row-side" role="cell">
+							<div class="ledger">
+								<span class="ledger-state" data-tone={rail.tone} title={rail.hint ?? ""}>
+									{rail.label}
 								</span>
+								<span class="ledger-time" title={absoluteTime(post)}>{timeAgo(post)}</span>
 							</div>
-						{/if}
-
-						<!-- 字数 -->
-						{#if !hiddenCols.words}
-							<div class="col col-words" role="cell" data-label={i18n(I18nKey.postColWords)}>
-								<span class="text-meta">{post.words ? post.words.toLocaleString() : "—"}</span>
-							</div>
-						{/if}
-
-						<!-- 作者 -->
-						{#if !hiddenCols.author}
-							<div class="col col-author" role="cell" data-label={i18n(I18nKey.postColAuthor)}>
-								<span class="text-meta">{post.author || "—"}</span>
-							</div>
-						{/if}
-
-						<!-- 语言代码 -->
-						{#if !hiddenCols.lang}
-							<div class="col col-lang" role="cell" data-label={i18n(I18nKey.postColLang)}>
-								{#if post.lang}
-									<span class="filetype-chip">{post.lang}</span>
-								{:else}
-									<span class="text-meta">—</span>
-								{/if}
-							</div>
-						{/if}
-
-						<!-- 是否有密码 -->
-						{#if !hiddenCols.password}
-							<div
-								class="col col-password"
-								role="cell"
-								data-label={i18n(I18nKey.postColPassword)}
-							>
-								{#if post.password}
-									<Icon
-										icon="material-symbols:lock-outline"
-										class="inline-state-icon"
-										aria-label={i18n(I18nKey.postColPasswordYes)}
-									/>
-								{:else}
-									<span class="text-meta">—</span>
-								{/if}
-							</div>
-						{/if}
-
-						<!-- 发布/修改日期，跟随当前排序字段 -->
-						{#if !hiddenCols.date}
-							<div class="col col-date" role="cell" data-label={dateColLabel}>
-								<span class="text-meta">{dateShown(post)}</span>
-							</div>
-						{/if}
-
-						<!-- 状态 -->
-						{#if !hiddenCols.status}
-							<div class="col col-status" role="cell" data-label={i18n(I18nKey.postColStatus)}>
-								{#if post.syncState === "pending-deploy"}
-								<span
-									class="sync-chip"
-									data-sync="pending"
-									title={i18n(I18nKey.postSyncPendingDeployHint)}
-								>
-									{i18n(I18nKey.postSyncPendingDeploy)}
-								</span>
-								{:else if post.syncState === "not-on-github"}
-									<span class="sync-chip" data-sync="local">
-										{i18n(I18nKey.postSyncNotOnGithub)}
-									</span>
-								{/if}
-								<span class="status-chip" data-draft={post.draft}>
-									{post.draft ? i18n(I18nKey.postDraft) : i18n(I18nKey.postPublished)}
-								</span>
-							</div>
-						{/if}
-
-						<!-- 操作（图标按钮） -->
-						<div class="col col-actions" role="cell" data-label={i18n(I18nKey.postColActions)}>
 							<div class="icon-actions">
 								<a
 									class="icon-action view"
@@ -977,21 +760,17 @@ function actionLabel(action: string, title: string): string {
 				{i18n(I18nKey.postLoading)}
 			</p>
 		{:else}
-			<div class="list-footer">
-				<div class="footer-stats">
-					<span>{i18n(I18nKey.postListCount).replace("{count}", String(filteredPosts.length))}</span>
-					{#if unsyncedCount > 0}
-						<span class="sync-summary">
-							{i18n(I18nKey.postSyncSummary).replace("{count}", String(unsyncedCount))}
-						</span>
-					{/if}
-				</div>
-				{#if hasExtraFilter}
+			<!-- 页脚只在筛选中出现：未筛选时总数已经在状态轨里，再写一遍是同一句话的第三份拷贝 -->
+			{#if hasExtraFilter}
+				<div class="list-footer">
+					<div class="footer-stats">
+						<span>{i18n(I18nKey.postListCount).replace("{count}", String(filteredPosts.length))}</span>
+					</div>
 					<button type="button" class="footer-reset" onclick={clearAllFilters}>
 						{i18n(I18nKey.postClearFilter)}
 					</button>
-				{/if}
-			</div>
+				</div>
+			{/if}
 			<p class="sr-only" role="status" aria-live="polite">
 				{i18n(I18nKey.postResultCount).replace("{count}", String(filteredPosts.length))}
 			</p>
@@ -1040,6 +819,11 @@ function actionLabel(action: string, title: string): string {
 		--md-control-h: 44px;
 		--md-control-r: 10px;
 		--md-control-gap: 0.5rem;
+
+		/* 账目栏宽度：三个 34px 图标 + 两个 12px 间隙 = 126px，
+		   留 6px 余量。图标在悬停时接管这一栏，宽度必须容得下它们，
+		   否则行会在悬停瞬间抖动。 */
+		--post-rail-w: 8.25rem;
 
 		/* flex 列容器：筛选/工具栏固定，仅列表区（.md3-table）独立滚动。
 		   高度由外层 AdminPage 的 .admin-page-body 决定（flex:1 + min-height:0），
@@ -1174,26 +958,25 @@ function actionLabel(action: string, title: string): string {
 		flex-shrink: 0;
 	}
 
-	/* 状态筛选（第一行）：文字下划线 tab，对齐参考项目 post-list-tabs。
-   不做等宽——译文长短不齐时按内容自然宽度排，选中项靠 2px 主色
-   底线指示，容器自带一条 1px 分隔线。 */
+	/* 状态轨：一条文字轨。不画整行下边框——页头已经有一条结构线，
+	   再加一条会把列表切成三段。选中靠底部细线，未选中只是更暗的文字。
+   计数用等宽、不抢色；只有「未同步」在真有事要办时才升到主色。 */
 	.filter-chips {
 		display: flex;
 		align-items: center;
-		gap: 2rem;
-		border-bottom: 1px solid var(--md-outline);
+		gap: 1.5rem;
 		/* 与工具栏间距对齐参考项目 controls 顶部 26px（flare post-manager） */
-		margin-bottom: 1.625rem;
+		margin-bottom: 1.375rem;
 	}
 
 	.chip {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.5rem;
-		min-height: 2.875rem;
-		padding: 0 0.375rem;
+		gap: 0.375rem;
+		min-height: 2.75rem;
+		padding: 0;
 		border: none;
-		border-bottom: 2px solid transparent;
+		border-bottom: 1.5px solid transparent;
 		background: transparent;
 		color: var(--md-on-surface-variant);
 		font-size: 0.875rem;
@@ -1206,7 +989,7 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.chip:hover {
-		color: var(--md-primary-text);
+		color: var(--md-on-surface);
 	}
 
 	.chip:focus-visible {
@@ -1215,7 +998,17 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.chip.selected {
-		border-bottom-color: var(--md-primary-text);
+		border-bottom-color: var(--md-on-surface);
+		color: var(--md-on-surface);
+	}
+
+	/* 「未同步」有内容时才用主色：颜色在这里表示「需要你动手」，
+	   而不是给每种状态发一枚彩色标签。 */
+	.chip.attention {
+		color: var(--md-primary-text);
+	}
+
+	.chip.attention .chip-count {
 		color: var(--md-primary-text);
 	}
 
@@ -1227,11 +1020,18 @@ function actionLabel(action: string, title: string): string {
 		white-space: nowrap;
 	}
 
-	/* 计数继承 tab 文字色，选中时随主色一起变亮 */
+	/* 计数是数据，不是文案：等宽、小一号、始终比标签暗一档 */
 	.chip-count {
-		font-size: 0.8125rem;
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: 0.6875rem;
 		line-height: 1;
+		color: var(--md-on-surface-variant);
 		font-variant-numeric: tabular-nums;
+	}
+
+	.chip.attention .chip-count,
+	.chip.selected .chip-count {
+		color: inherit;
 	}
 
 	/* ── 分类/标签/排序：常驻工具栏，label + select 同高同轴 ── */
@@ -1301,24 +1101,27 @@ function actionLabel(action: string, title: string): string {
 		border-radius: 4px;
 	}
 
+	/* 占位行的账目栏：两行短线，右对齐，与真实行的两行账目同高 */
+	.skeleton-list .row-side {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		justify-content: center;
+		gap: 0.375rem;
+		height: auto;
+	}
+
 	.sk-line {
-		width: 80%;
-		height: 12px;
+		width: 100%;
+		height: 10px;
 	}
 
 	.sk-line.short {
-		width: 55%;
+		width: 64%;
 	}
 
-	.sk-chip {
-		width: 56px;
-		height: 20px;
-	}
-
-	.sk-dot {
-		width: 34px;
-		height: 34px;
-		border-radius: 50%;
+	.sk-line.tiny {
+		width: 44%;
 	}
 
 	/* 占位行没有可点内容，响应 hover 会让人以为它能点 */
@@ -1355,16 +1158,14 @@ function actionLabel(action: string, title: string): string {
 		scrollbar-gutter: stable;
 	}
 
-	/* 表头行
-	   参考项目 th：44px 高、13px/500、灰色，仅靠一条下边框分层；
-	   背景用 --card-bg 实底，吸顶时遮住下方滚动内容。 */
+	/* 表头行：只剩两格——标题与账目栏。两格都是按钮，点了真的换排序。
+	   此前九个列头里只有标题和日期写了 aria-sort、画了箭头，却没有任何点击处理。 */
 	.header-row {
 		display: grid;
-		grid-template-columns: var(--post-grid-cols, 2.9fr 0.9fr 0.7fr 1.1fr 0.9fr 1.2fr);
+		grid-template-columns: minmax(0, 1fr) var(--post-rail-w);
 		align-items: center;
-		height: 44px;
-		/* 左缘与列表行内容同轴（list-item 左右 1rem），
-		   表头「标题」与大头针列起点对齐 */
+		height: 40px;
+		/* 左缘与列表行内容同轴（list-item 左右 1rem） */
 		padding: 0 1rem;
 		position: sticky;
 		top: 0;
@@ -1376,47 +1177,71 @@ function actionLabel(action: string, title: string): string {
 		font-weight: 500;
 	}
 
-	/* 行内状态图标（如密码锁）：与文字同高、颜色跟随次要文字 */
-	.inline-state-icon {
-		font-size: 1.125rem;
-		color: var(--content-meta);
-	}
-
 	.header-row .col {
-		/* 与列表内容列同轴：padding 对齐 .list-item .col (0 0.25rem)，
-		   表头文本与下方内容左缘完全一致 */
+		/* 与列表内容同轴：padding 对齐 .list-item .col (0 0.25rem) */
 		padding: 0 0.25rem;
 		display: flex;
 		align-items: center;
 		gap: 0.25rem;
+		min-width: 0;
 	}
 
-	/* 当前排序列给出方向箭头，aria-sort 之外的视觉冗余，
-	   避免「只靠颜色/语义」传达排序状态 */
+	/* 排序按钮：外观就是表头文字，命中区撑满整格高度。
+	   「看着能点」和「真能点」在这里统一。 */
+	.head-sort {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		height: 100%;
+		min-height: 28px;
+		padding: 0;
+		border: none;
+		background: none;
+		color: inherit;
+		font: inherit;
+		cursor: pointer;
+		transition: color 0.15s;
+	}
+
+	.head-sort:hover {
+		color: var(--md-on-surface);
+	}
+
+	.head-sort:focus-visible {
+		outline: 2px solid var(--md-primary-text);
+		outline-offset: 2px;
+	}
+
+	/* 方向箭头挂在 columnheader 上，跟着 aria-sort 走，按钮文字保持干净 */
+	.header-row [aria-sort="ascending"]::after,
+	.header-row [aria-sort="descending"]::after {
+		font-size: 0.75rem;
+		line-height: 1;
+		color: var(--md-on-surface-variant);
+	}
+
 	.header-row [aria-sort="ascending"]::after {
 		content: "↑";
-		font-size: 0.875rem;
 	}
 
 	.header-row [aria-sort="descending"]::after {
 		content: "↓";
-		font-size: 0.875rem;
 	}
 
-	/* 列表项 */
-	.md3-list {
-		display: flex;
-		flex-direction: column;
+	/* 账目栏的表头靠右，与下方那列数字同一右缘 */
+	.header-row .col-rail {
+		justify-content: flex-end;
 	}
 
-	/* 列表项：76px 行高，行间 1px 分隔线（对齐参考项目 td 行高 + border-bottom）。
-	   悬停高亮保留，分隔线不随行变色是正常现象（参考项目同样如此）。 */
+	/* 列表项：一列校样。行高由内容决定，不再用固定 76px 去撑一个
+	   已经不存在的九列表格。 */
 	.list-item {
 		display: grid;
-		grid-template-columns: var(--post-grid-cols, 2.9fr 0.9fr 0.7fr 1.1fr 0.9fr 1.2fr);
+		grid-template-columns: minmax(0, 1fr) var(--post-rail-w);
 		align-items: center;
-		padding: 0.8125rem 1rem;
-		min-height: 76px;
+		gap: 1.5rem;
+		padding: 0.75rem 1rem;
+		min-height: 72px;
 		border-bottom: 1px solid var(--md-outline);
 		transition: background 0.15s;
 		cursor: default;
@@ -1446,41 +1271,55 @@ function actionLabel(action: string, title: string): string {
 		padding-left: 20px;
 	}
 
-	/* 状态列：内容状态与同步状态可能同时存在，纵向堆叠避免挤成一行 */
-	.col-status {
+	/* ── 账目栏 ──
+	   页边的一行账：状态在上、相对时间在下，靠右成栏。
+	   等宽字体负责机器数据；中文状态词会自然回落到 CJK 正文，
+	   于是「左边人写的、右边仓库记的」这个区分不需要额外装饰就成立。 */
+	.row-side {
+		position: relative;
+		align-self: center;
+		height: 2.5rem;
+		padding: 0;
+	}
+
+	.ledger {
+		position: absolute;
+		inset: 0;
 		display: flex;
 		flex-direction: column;
+		align-items: flex-end;
 		justify-content: center;
-		align-items: flex-start;
-		gap: 0.25rem;
-	}
-
-	/* 操作列额外右内边距：仅靠 .list-item 的 1rem 容器留白时，
-	   图标组仍显得贴边，这里补一档并让按钮在该列内居中。 */
-	/* 操作列：表头左边列名、右边列显示入口；行内只有图标，统一靠右 */
-	.col-actions {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-		padding-right: 0.75rem;
-	}
-
-	.list-item .col-actions {
-		justify-content: flex-end;
-	}
-
-	.col-actions .actions-label {
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
+		gap: 0.125rem;
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-variant-numeric: tabular-nums;
+		text-align: right;
 		white-space: nowrap;
+		transition: opacity 0.13s ease;
 	}
 
-	.title-cell {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
+	.ledger-state {
+		font-size: 0.75rem;
+		font-weight: 500;
+		letter-spacing: 0.02em;
+		color: var(--md-on-surface-variant);
+	}
+
+	/* 只有「需要你动手」的状态升到主色，其余都是墨色深浅 */
+	.ledger-state[data-tone="attention"] {
+		color: var(--md-primary-text);
+	}
+
+/* 已发布是最安静的一档：它不需要你做任何事 */
+	.ledger-time {
+		font-size: 0.71875rem;
+		color: var(--md-on-surface-variant);
+	}
+
+	/* 悬停/聚焦时整栏让给动作：账目淡出，三枚按钮在同一个位置浮上来，
+	   行不会因为出现按钮而变宽。 */
+	.list-item:hover .ledger,
+	.list-item:focus-within .ledger {
+		opacity: 0;
 	}
 
 	.title-row {
@@ -1539,7 +1378,7 @@ function actionLabel(action: string, title: string): string {
 	.title-main {
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: 0.125rem;
 		min-width: 0;
 	}
 
@@ -1557,117 +1396,45 @@ function actionLabel(action: string, title: string): string {
 		flex-shrink: 0;
 	}
 
+	/* 摘要：给人读的第二行 */
 	.intro {
+		display: block;
 		font-size: 0.75rem;
 		font-weight: 400;
 		color: var(--md-on-surface-variant);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		min-width: 0;
 	}
 
-	/* 元信息文本（作者/分类/日期）
-	   调小到 12px，与 17px/600 的标题拉开两级字号层级。
-	   颜色沿用 on-surface-variant 不再压暗，也不用 opacity：opacity 会连带
-	   拉低与卡片的实际对比度（项目此前在 chip-count 上实测 0.7 只剩 4.12:1），
-	   12px 小字必须守住 4.5:1，弱化交给字号而非明度。 */
-	.text-meta {
-		font-size: 0.75rem;
-		font-weight: 400;
-		color: var(--md-on-surface-variant);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	/* 状态徽章：纯文字胶囊（对齐参考项目 post-list-status，无圆点装饰），
-	   语义由文字承载，颜色仅作辅助分层。 */
-	.status-chip {
-		display: inline-flex;
-		align-items: center;
-		min-height: 24px;
-		padding: 1px 0.625rem;
-		border-radius: 999px;
-		font-size: 0.75rem;
-		font-weight: 500;
-		white-space: nowrap;
-	}
-
-	.status-chip[data-draft="false"] {
-		background: color-mix(in srgb, var(--success) 15%, transparent);
-		color: var(--md-success-text);
-	}
-
-	.status-chip[data-draft="true"] {
-		background: color-mix(in srgb, var(--warning) 15%, transparent);
-		color: var(--md-warning-text);
-	}
-
-	/* 同步状态徽章：比内容状态小一档，避免两枚徽章抢同等的注意力。
-	   info 色表示「已提交、等构建」，warning 色表示「GitHub 上还没有」。 */
-	/* 列显示设置：触发器复用 .ui-select 观感，面板绝对定位浮在工具栏下方 */
-	.cols-wrap {
-		position: relative;
+	/* 归档信息：独立一层，小一号、等宽。它回答的是「这篇归在哪儿」，
+	   不是行文的一部分，所以不能跟摘要排在同一行里读。 */
+	.meta-line {
 		display: flex;
-		align-items: center;
+		align-items: baseline;
+		gap: 0.75rem;
+		/* 摘要与归档行之间再让开 2px：两行灰字靠太近就又读成一段了 */
+		margin-top: 0.125rem;
+		line-height: 1.3;
+		min-width: 0;
 	}
 
-	/* 列显示入口：表头里的小图标按钮，不再是和 Select 并排的大控件 */
-	.cols-trigger {
-		display: grid;
-		place-items: center;
-		width: 28px;
-		height: 28px;
-		flex-shrink: 0;
-		border: none;
-		border-radius: 0.375rem;
-		background: transparent;
-		font-size: 1.125rem;
-		color: var(--content-meta);
-		cursor: pointer;
-		transition:
-			background 0.12s ease,
-			color 0.12s ease;
+	.meta-cat {
+		font-size: 0.6875rem;
+		color: var(--md-on-surface-variant);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
-	.cols-trigger:hover {
-		background: var(--btn-plain-bg-hover);
-		color: var(--deep-text);
-	}
-
-	/* 文件类型列：等宽字体 + 低饱和底，避免和「状态」列的两个徽章抢视觉权重 */
-	.filetype-chip {
-		display: inline-flex;
-		align-items: center;
-		min-height: 20px;
-		padding: 1px 0.5rem;
-		border-radius: 6px;
-		background: var(--btn-regular-bg);
-		color: var(--btn-content);
+	.meta-ext {
 		font-family: var(--font-mono, ui-monospace, monospace);
 		font-size: 0.6875rem;
+		letter-spacing: 0.02em;
+		color: var(--md-on-surface-variant);
 		white-space: nowrap;
-	}
-
-	.sync-chip {
-		display: inline-flex;
-		align-items: center;
-		min-height: 20px;
-		padding: 1px 0.5rem;
-		border-radius: 999px;
-		font-size: 0.6875rem;
-		font-weight: 500;
-		white-space: nowrap;
-	}
-
-	.sync-chip[data-sync="pending"] {
-		background: color-mix(in srgb, var(--info) 15%, transparent);
-		color: var(--md-info-text);
-	}
-
-	.sync-chip[data-sync="local"] {
-		background: color-mix(in srgb, var(--warning) 15%, transparent);
-		color: var(--md-warning-text);
+		flex-shrink: 0;
 	}
 
 	/* 操作列 - 图标按钮
@@ -1680,12 +1447,24 @@ function actionLabel(action: string, title: string): string {
 	   触控目标达标又不撑高行。
 	   .icon-action 一族写成 :global —— ··· 触发器在 PostRowMenu 里，要同一副形状。 */
 	.icon-actions {
+		/* 与 .ledger 同一个格子：平时不占视觉，悬停/聚焦时接替它 */
+		position: absolute;
+		inset: 0;
 		display: flex;
 		align-items: center;
-		justify-content: center;
-		/* 12px 间距 + 伪元素外扩 4px：命中区之间净留 4px 间隙。
-		   原先 gap 4px 配外扩 5px，相邻命中区反而重叠 6px，确易误点。 */
+		justify-content: flex-end;
+		/* 12px 间距 + 伪元素外扩 4px：命中区之间净留 4px 间隙。 */
 		gap: 0.75rem;
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.13s ease;
+	}
+
+	/* 键盘用户同样能看到动作：focus-within 由行内任一可聚焦元素触发 */
+	.list-item:hover .icon-actions,
+	.list-item:focus-within .icon-actions {
+		opacity: 1;
+		pointer-events: auto;
 	}
 
 	:global(.icon-action) {
@@ -1755,30 +1534,13 @@ function actionLabel(action: string, title: string): string {
 		font-size: 0.75rem;
 	}
 
-	/* 左侧统计成组：总数 + 未同步计数，避免挤成三段破坏 space-between */
+	/* 左侧统计：只在筛选时出现，因此不必再分成「总数 + 未同步」两段 */
 	.footer-stats {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
 		flex-wrap: wrap;
 		min-width: 0;
-	}
-
-	.sync-summary {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		color: var(--md-warning-text);
-		white-space: nowrap;
-	}
-
-	/* 用小圆点代替图标：不引入新图标就不必重新跑图标生成 */
-	.sync-summary::before {
-		content: "";
-		width: 6px;
-		height: 6px;
-		border-radius: 999px;
-		background: currentColor;
 	}
 
 	.footer-reset {
@@ -1808,20 +1570,7 @@ function actionLabel(action: string, title: string): string {
 
 	/* ── 自适应：按可用宽度而非设备类别切换 ── */
 
-	/* 中等宽度：作者/分类列先让位给标题与操作 */
-	@media (max-width: 1100px) {
-		.header-row,
-		.list-item {
-			grid-template-columns: 2.6fr 0.9fr 0.7fr 1.1fr 0.9fr 1.2fr;
-		}
-
-		.col-category {
-			display: none;
-		}
-	}
-
-	/* 紧凑宽度：表格降级为堆叠列表项，而不是拉出 700px 横向滚动条。
-	   横向滚动会把「状态/操作」推到屏外，窄屏下等于隐藏关键操作。 */
+	/* 紧凑宽度：表格降级为堆叠列表项，而不是拉出 700px 横向滚动条。 */
 	@media (max-width: 860px) {
 		.toolbar {
 			flex-wrap: wrap;
@@ -1902,63 +1651,45 @@ function actionLabel(action: string, title: string): string {
 			display: none;
 		}
 
-		/* 卡片行（对齐演示）：第一行「标题 + 状态」，第二行「日期 + 扩展名 … 操作」；
-		   日期与 .md 并排在同一行，不再各占一行。 */
+		/* 窄屏：标题单独一行拿满宽度，账目栏与动作并到下方一条横排。
+		   触屏没有悬停，账目和按钮必须同时可见，不能靠 hover 才显形。 */
 		.list-item {
-			display: grid;
-			grid-template-columns: auto auto minmax(0, 1fr) auto;
-			grid-template-areas:
-				"title title title status"
-				"date  filetype .  actions";
+			display: flex;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 0.5rem;
+			padding: 1rem 0.25rem;
+		}
+
+		.row-side {
+			display: flex;
 			align-items: center;
-			gap: 0.625rem 0.5rem;
-			padding: 1.25rem 0.25rem;
-			min-width: 0;
+			justify-content: space-between;
+			gap: 0.75rem;
+			height: auto;
+			min-height: 32px;
+			/* 桌面网格里它是居中的单元格；这里父级变成列向 flex，
+			   center 会让它按内容宽度水平居中，必须改回撑满 */
+			align-self: stretch;
 		}
 
-		.col-title {
-			grid-area: title;
-			align-self: center;
+		.ledger {
+			position: static;
+			flex-direction: row;
+			align-items: baseline;
+			gap: 0.5rem;
 		}
 
-		.col-status {
-			grid-area: status;
-			justify-self: end;
-			align-self: center;
-			padding: 0;
+		/* 悬停换栏只对指针设备有意义；窄屏下两者并存 */
+		.list-item:hover .ledger,
+		.list-item:focus-within .ledger {
+			opacity: 1;
 		}
 
-		.col-date {
-			grid-area: date;
-			align-self: center;
-		}
-
-		.col-filetype {
-			grid-area: filetype;
-			justify-self: start;
-			align-self: center;
-			padding: 0;
-		}
-
-		.col-category,
-		.col-words,
-		.col-author,
-		.col-lang,
-		.col-password {
-			display: none;
-		}
-
-		.col-actions {
-			grid-area: actions;
-			justify-self: end;
-			align-self: center;
-			padding: 0;
-			width: auto;
-		}
-
-		/* 演示文件的元信息行只有「日期 + 扩展名」，不带列名标签 */
-		.col-date::before {
-			content: none;
+		.icon-actions {
+			position: static;
+			opacity: 1;
+			pointer-events: auto;
 		}
 
 		.title {
@@ -1984,19 +1715,6 @@ function actionLabel(action: string, title: string): string {
 
 		.chip {
 			min-height: 2.75rem;
-		}
-
-		/* 状态徽章：演示是 10px 字号 + 4px 圆角 + 2px/8px 内距 */
-		.status-chip {
-			min-height: 18px;
-			padding: 1px 0.5rem;
-			border-radius: 4px;
-			font-size: 10px;
-		}
-
-		.sync-chip {
-			border-radius: 4px;
-			font-size: 10px;
 		}
 
 		/* 标题 14px/700、摘要 12px（演示 text-sm font-bold / text-xs） */
