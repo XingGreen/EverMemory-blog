@@ -2,6 +2,22 @@
 
 Full form of the rules summarized in [`AGENTS.md`](../AGENTS.md).
 
+## Workflow (overrides everything else in this file)
+
+Set by the repository owner on 2026-11-10. Where these three rules conflict with any other
+section here, in `AGENTS.md`, in `docs/`, or with practice carried over from earlier sessions,
+these rules win and the older wording is void.
+
+1. **Fix bugs on sight.** A defect found while working on a task is fixed in that same pass.
+   Do not log it for later and do not ship it as a caveat in the report. Stop first only if the
+   fix would fall outside the scope table in §1.
+2. **Every change gets its own branch.** Create the feature branch before the first edit, however
+   small the change, and commit there. No direct commits to `master`, no finished work left
+   uncommitted.
+3. **Merge when done.** Squash the finished branch to one commit, merge, delete the branch
+   (local and remote), switch back, `git pull`. Do not park a completed branch waiting for
+   approval; only the destructive operations in §3 need a report first.
+
 ## 1. Scope of change
 
 | Area | Paths | Permission |

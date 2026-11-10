@@ -14,6 +14,20 @@ and never hardcoded into committed files; machine paths live under `.workbuddy/`
 
 ## Must-follow rules
 
+- **Workflow — supersedes every earlier rule.** If this block conflicts with anything else in
+  this file, with `rules/`, with `docs/`, or with a habit carried over from an earlier session,
+  this block wins. The older wording is void; do not try to reconcile the two.
+
+  1. **Fix bugs as they surface.** A defect found while working on a task is fixed in the same
+     pass — not logged for later, not left as a caveat in the report. Only stop first if the fix
+     would fall outside the scope table, and then say why.
+  2. **Every change lands on its own branch.** Create the feature branch before the first edit,
+     however small the change, and commit there. No direct commits to `master`, and no finished
+     work left uncommitted in the working tree.
+  3. **Merge as soon as the work is done.** When the branch is complete and verified, squash it
+     into one commit, merge, delete the branch (local and remote), switch back, and `git pull`.
+     Do not park a finished branch waiting for a go-ahead.
+
 - **Scope.** Edit `src/pages/admin/**`, `src/pages/api/admin/**`, and `src/components/admin/**`
   directly. Do not modify frontend routes (`src/pages/**` except admin), `src/layouts/**`, or
   `src/components/{layout,widget,controls}/**`. Ask before touching `src/components/common/**`,
