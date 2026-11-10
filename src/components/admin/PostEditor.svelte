@@ -32,6 +32,7 @@ let {
 	onSave,
 	onCancel,
 	onError,
+	onDelete,
 }: {
 	post: any;
 	mode: "edit" | "create";
@@ -39,6 +40,8 @@ let {
 	onSave: (message?: string) => void;
 	onCancel: () => void;
 	onError: (msg: string) => void;
+	/** 删除只在这里出现：个人博客删文章是罕见动作，不值得每行占一格 */
+	onDelete?: (trigger?: HTMLElement | null) => void;
 } = $props();
 
 /**
@@ -1752,6 +1755,16 @@ $effect(() => {
 					{i18n(I18nKey.postHistory)}
 				</button>
 			{/if}
+			{#if mode === "edit" && onDelete}
+				<button
+					class="editor-delete"
+					onclick={(e) => onDelete?.(e.currentTarget)}
+					title={i18n(I18nKey.postDelete)}
+				>
+					<Icon icon="material-symbols:delete-outline" class="text-sm" />
+					{i18n(I18nKey.postDelete)}
+				</button>
+			{/if}
 			<button class="ui-btn ui-btn-primary" onclick={handleSave} disabled={isSaving}>
 				{#if isSaving}
 					<span class="spinner"></span>
@@ -1901,6 +1914,35 @@ $effect(() => {
 	}
 
 	/* 编辑页顶栏：shell 已限高，header 作为 flex 固定项不再需要 sticky */
+	/* 删除：头部最安静的一个动作，悬停才升到红 */
+	.editor-delete {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		height: 36px;
+		padding: 0 0.625rem;
+		border: none;
+		border-radius: 8px;
+		background: none;
+		color: var(--content-meta);
+		font: inherit;
+		font-size: 0.8125rem;
+		cursor: pointer;
+		transition:
+			color 0.15s,
+			background-color 0.15s;
+	}
+
+	.editor-delete:hover {
+		color: color-mix(in srgb, var(--destructive) 88%, var(--deep-text));
+		background: color-mix(in srgb, var(--destructive) 10%, transparent);
+	}
+
+	.editor-delete:focus-visible {
+		outline: 2px solid var(--destructive);
+		outline-offset: 2px;
+	}
+
 	.editor-header {
 		position: relative;
 		display: flex;

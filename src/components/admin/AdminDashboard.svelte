@@ -1136,9 +1136,8 @@ function handleCancelEdit() {
 
 function handleDeleteClick(post: Post, trigger?: HTMLElement | null) {
 	deletingPost = post;
-	/* 删除入口是 ··· 菜单里的一项，菜单收起时该项会从 DOM 移除，
-	   所以由 PostRowMenu 直接把 ··· 触发器传过来——只要那一行还在它就在。
-	   没传触发器时退回 activeElement，保持原行为。 */
+	/* 删除入口在编辑器头部，触发器就是那颗按钮；没传时退回
+	   activeElement，模态关闭后焦点仍回到原处。 */
 	deleteTrigger =
 		trigger ??
 		(typeof document !== "undefined" &&
@@ -1950,7 +1949,6 @@ function formatDate(dateStr: string | null): string {
 								isLoading={isLoading}
 								error={error}
 								onEdit={handleEditPost}
-								onDelete={handleDeleteClick}
 								onRefresh={loadPosts}
 								onCreate={goCreatePost}
 								onSync={handleSync}
@@ -1965,6 +1963,9 @@ function formatDate(dateStr: string | null): string {
 							mode="edit"
 							onSave={handleSaveSuccess}
 							onCancel={handleCancelEdit}
+							onDelete={(trigger) => {
+								if (editingPost) handleDeleteClick(editingPost, trigger);
+							}}
 							onError={(msg) => showToast(msg, "error", 10000)}
 						/>
 					{:else if viewMode === "create"}
