@@ -20,6 +20,20 @@ const json = (body: unknown, status: number) =>
 		headers: { "Content-Type": "application/json" },
 	});
 
+/**
+ * 快照模块的条目形如 `{ data, source }`（与前端读取 HTML 内联快照的结构一致），
+ * 不是配置值本身。readConfigSnapshot 返回的是整个条目，取值必须再解一层。
+ */
+type SnapshotEntry = { data?: unknown; source?: string };
+
+async function readSnapshotEntry(
+	key: string,
+): Promise<SnapshotEntry | undefined> {
+	const entry = await readConfigSnapshot(key);
+	if (!entry || typeof entry !== "object") return undefined;
+	return entry as SnapshotEntry;
+}
+
 export async function GET({ request, params }) {
 	const auth = await requireAuth(request);
 	if (!auth.authenticated && auth.response) return auth.response;
@@ -32,39 +46,36 @@ export async function GET({ request, params }) {
 		// Serverless 环境无本地文件系统：
 		// json 配置读取构建快照（可视化表单可用），html 配置读取 GitHub 源码
 		if (isRemoteRuntime()) {
+			// 两条数据通道相互独立：表单数据来自构建快照（随产物打包，不依赖
+			// GitHub 可达性），源码只服务于「源码模式」编辑。
+			const entry = await readSnapshotEntry(params.key);
 			const source = await readConfigSourceFromGitHub(params.key);
-			if (source === null)
-				return json({ success: false, message: "从 GitHub 读取配置失败" }, 500);
+
+			// html 配置的内容就是源码本身，没有第二份可展示的数据；用构建快照
+			// 顶替会让过期内容冒充当前版本，一保存就回滚线上文件。
 			if (item.kind === "html") {
+				if (source === null)
+					return json(
+						{ success: false, message: "从 GitHub 读取配置失败" },
+						500,
+					);
 				return json(
-					{
-						success: true,
-						data: null,
-						source,
-						file: item.file,
-						remote: true,
-					},
+					{ success: true, data: null, source, file: item.file, remote: true },
 					200,
 				);
 			}
-			const snapshotData = await readConfigSnapshot(params.key);
-			if (snapshotData === undefined) {
-				// 快照缺失：降级为纯源码模式
+
+			const data = entry?.data;
+			// 表单数据与源码都拿不到才算失败；只缺源码时表单仍可读，只是不能编辑源码。
+			if (data === undefined && source === null)
 				return json(
-					{
-						success: true,
-						data: null,
-						source,
-						file: item.file,
-						remote: true,
-					},
-					200,
+					{ success: false, message: "配置快照缺失，且从 GitHub 读取配置失败" },
+					500,
 				);
-			}
 			return json(
 				{
 					success: true,
-					data: snapshotData,
+					data: data ?? null,
 					source,
 					file: item.file,
 					remote: true,
@@ -109,18 +120,18 @@ export async function POST({ request, params }) {
 		// Serverless 环境：源码或表单数据均以 GitHub 为存储（触发自动重建后生效）
 		if (isRemoteRuntime()) {
 			if (typeof body?.source === "string" && body.source.length > 0) {
-			const storage = getStorageProvider();
-			if (!storage.isConfigured()) {
-				return json(
-					{ success: false, message: "请配置 GitHub App 凭证" },
-					400,
+				const storage = getStorageProvider();
+				if (!storage.isConfigured()) {
+					return json(
+						{ success: false, message: "请配置 GitHub App 凭证" },
+						400,
+					);
+				}
+				const ok = await storage.writeFile(
+					item.file,
+					body.source,
+					`update config source (${params.key}) via admin dashboard`,
 				);
-			}
-			const ok = await storage.writeFile(
-				item.file,
-				body.source,
-				`update config source (${params.key}) via admin dashboard`,
-			);
 				if (!ok)
 					return json(
 						{ success: false, message: "GitHub 保存失败，请稍后重试" },
