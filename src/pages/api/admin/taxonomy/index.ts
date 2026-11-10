@@ -8,7 +8,7 @@ import {
 	rewriteFrontmatter,
 	type TaxonomyKind,
 	type TaxonomyRegistry,
-	writePostFile,
+	writePostFiles,
 	writeRegistry,
 } from "@/utils/taxonomy";
 
@@ -25,10 +25,14 @@ export type TaxonomyEntry = {
 	uncategorized?: boolean;
 };
 
-function json(data: unknown, status = 200): Response {
+function json(
+	data: unknown,
+	status = 200,
+	headers: Record<string, string> = {},
+): Response {
 	return new Response(JSON.stringify(data), {
 		status,
-		headers: { "Content-Type": "application/json" },
+		headers: { "Content-Type": "application/json", ...headers },
 	});
 }
 
@@ -129,15 +133,19 @@ export async function GET({ request }) {
 	try {
 		const { entries, uncategorizedCount, uncategorizedPublishedCount } =
 			await collect();
-		return json({
-			success: true,
-			entries,
-			uncategorizedCount,
-			uncategorizedPublishedCount,
-		});
+		return json(
+			{
+				success: true,
+				entries,
+				uncategorizedCount,
+				uncategorizedPublishedCount,
+			},
+			200,
+			noStore,
+		);
 	} catch (error) {
 		console.error("[Admin Taxonomy] GET failed:", error);
-		return json({ success: false, message: "获取分类/标签失败" }, 500);
+		return json({ success: false, message: "获取分类/标签失败" }, 500, noStore);
 	}
 } /**
  * 批量改写引用某分类/标签的所有文章。
@@ -189,15 +197,13 @@ async function rewriteAll(
 		return { updated: 0, failed, aborted: true };
 	}
 
-	// 阶段二：统一写盘
-	let updated = 0;
-	for (const item of pending) {
-		const ok = await writePostFile(item.slug, item.content, message);
-		if (ok) updated += 1;
-		else failed.push(item.slug);
-	}
-
-	return { updated, failed, aborted: false };
+	// 阶段二：统一写盘（远端一次提交，改多篇也只触发一次构建）
+	const written = await writePostFiles(pending, message);
+	return {
+		updated: written.updated,
+		failed: [...failed, ...written.failed],
+		aborted: false,
+	};
 }
 
 /**

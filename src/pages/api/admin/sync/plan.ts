@@ -18,8 +18,8 @@ import path from "node:path";
 import { requireAuth } from "@/utils/auth";
 import { gitBlobSha, hasCrlf } from "@/utils/git-blob";
 import { describeFetchError } from "@/utils/github-app";
-import { getStorageProvider } from "@/utils/providers/registry";
 import { slugFromPath } from "@/utils/post-slug";
+import { getStorageProvider } from "@/utils/providers/registry";
 
 export const prerender = false;
 
@@ -148,12 +148,22 @@ export async function GET({
 		filePath: string;
 		title: string;
 		draft: boolean;
+		/** 文件内容哈希，null 表示读取失败 */
+		sha: string | null;
+		crlf: boolean;
 	}> = localFiles.map((rel) => {
 		const abs = path.resolve(process.cwd(), rel);
 		let title = "";
 		let draft = false;
+		let sha: string | null = null;
+		let crlf = false;
 		try {
-			const head = readFileSync(abs, "utf-8").slice(0, 2000);
+			// 一次读全量：标题取前 2000 字符，哈希与换行判定用同一份 Buffer。
+			// 之前这里读两遍（先读全文再 slice，再读全文算 sha），每篇两倍 IO。
+			const buf = readFileSync(abs);
+			const head = buf.subarray(0, 2000).toString("utf-8");
+			sha = gitBlobSha(buf);
+			crlf = hasCrlf(buf);
 			const t = head.match(/^title:\s*(.+)$/m);
 			if (t) {
 				title = t[1]
@@ -167,7 +177,14 @@ export async function GET({
 		} catch {
 			// 读失败就留空，不影响该条目出现在列表里
 		}
-		return { slug: slugFromPath(rel), filePath: rel, title, draft };
+		return {
+			slug: slugFromPath(rel),
+			filePath: rel,
+			title,
+			draft,
+			sha,
+			crlf,
+		};
 	});
 	if (localPosts.length === 0) localAvailable = false;
 
@@ -197,15 +214,8 @@ export async function GET({
 				continue;
 			}
 
-			let localSha: string | null = null;
-			let crlf = false;
-			try {
-				const buf = readFileSync(abs);
-				localSha = gitBlobSha(buf);
-				crlf = hasCrlf(buf);
-			} catch {
-				localSha = null;
-			}
+			const localSha: string | null = post.sha;
+			const crlf = post.crlf;
 
 			let state: PlanState;
 			if (!remoteFile) state = "local-only";

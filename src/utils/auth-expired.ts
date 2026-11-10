@@ -16,6 +16,9 @@ const AUTH_EXPIRED_EVENT = "admin:auth-expired";
 /** 单例闸门：并发请求同时 401 时，只放行第一次 */
 let notified = false;
 
+/** fetch 包装是否已安装（防止重复包装叠加） */
+let guardInstalled = false;
+
 export function notifyAuthExpired() {
 	if (notified) return;
 	notified = true;
@@ -65,8 +68,13 @@ export function relogin() {
 /**
  * 包一层 fetch，旁路观察 401。
  * 返回卸载函数，AdminDashboard 销毁时还原原始 fetch。
+ *
+ * 重复调用直接返回空操作：两层包装下卸载只会还原一层，剩下的那层
+ * 会捕获一个已卸载组件的回调，HMR 反复热更后越叠越深。
  */
 export function installAuthGuard(): () => void {
+	if (guardInstalled) return () => {};
+	guardInstalled = true;
 	const original = window.fetch;
 	window.fetch = async (...args) => {
 		const res = await original(...args);
@@ -84,5 +92,6 @@ export function installAuthGuard(): () => void {
 	};
 	return () => {
 		window.fetch = original;
+		guardInstalled = false;
 	};
 }

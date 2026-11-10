@@ -12,6 +12,15 @@ const GITHUB_INSTALLATION_ID = getEnv("GITHUB_INSTALLATION_ID");
 
 let privateKeyCache: string | null = null;
 
+/**
+ * 诊断日志：只在非生产构建打印。
+ * 请求次数、文件 SHA、token 获取这些细节在线上日志里没有价值，只有噪音，
+ * 而且会把真实错误淹没；本地排查时仍然照常输出。
+ */
+function debugLog(...args: unknown[]): void {
+	if (!IS_PROD_BUILD) console.log(...args);
+}
+
 // Token 缓存：GitHub installation token 有效期 1 小时，避免频繁请求 API
 let tokenCache: { token: string; expiresAt: number } | null = null;
 const TOKEN_SAFETY_MARGIN_MS = 5 * 60 * 1000; // 提前 5 分钟过期，避免边界情况
@@ -151,7 +160,7 @@ async function getInstallationTokenFromGitHub(
 	jwt: string,
 	installationId: string,
 ): Promise<{ token: string; expiresAt: number }> {
-	console.log(
+	debugLog(
 		`[GitHub Token] Requesting installation token for app: ${GITHUB_APP_ID}, installation: ${installationId}`,
 	);
 
@@ -271,7 +280,7 @@ async function fetchWithRetry(
 
 	for (let attempt = 1; attempt <= maxRetries; attempt++) {
 		try {
-			console.log(
+			debugLog(
 				`[GitHub Fetch] Attempt ${attempt}/${maxRetries}: ${options.method || "GET"} ${url}`,
 			);
 
@@ -514,8 +523,8 @@ export async function saveFileToGitHub(
 		const token = await getInstallationToken();
 		const repoUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`;
 
-		console.log(`[GitHub Save] Attempting to save: ${filePath}`);
-		console.log(
+		debugLog(`[GitHub Save] Attempting to save: ${filePath}`);
+		debugLog(
 			`[GitHub Save] Repo: ${GITHUB_OWNER}/${GITHUB_REPO}, Branch: ${GITHUB_BRANCH}`,
 		);
 
@@ -534,7 +543,7 @@ export async function saveFileToGitHub(
 		if (getResponse.ok) {
 			const data = await getResponse.json();
 			sha = data.sha;
-			console.log(`[GitHub Save] Existing file SHA: ${sha}`);
+			debugLog(`[GitHub Save] Existing file SHA: ${sha}`);
 		} else if (getResponse.status !== 404) {
 			const errorText = await getResponse.text();
 			console.error(
@@ -542,7 +551,7 @@ export async function saveFileToGitHub(
 				errorText,
 			);
 		} else {
-			console.log("[GitHub Save] File does not exist, will create new");
+			debugLog("[GitHub Save] File does not exist, will create new");
 		}
 
 		const body = {
@@ -570,7 +579,7 @@ export async function saveFileToGitHub(
 				errorText,
 			);
 		} else {
-			console.log(`[GitHub Save] Successfully saved: ${filePath}`);
+			debugLog(`[GitHub Save] Successfully saved: ${filePath}`);
 		}
 
 		return response.ok;
@@ -590,8 +599,8 @@ export async function deleteFileFromGitHub(
 	const token = await getInstallationToken();
 	const repoUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`;
 
-	console.log(`[GitHub Delete] Attempting to delete: ${filePath}`);
-	console.log(
+	debugLog(`[GitHub Delete] Attempting to delete: ${filePath}`);
+	debugLog(
 		`[GitHub Delete] Repo: ${GITHUB_OWNER}/${GITHUB_REPO}, Branch: ${GITHUB_BRANCH}`,
 	);
 
@@ -605,7 +614,7 @@ export async function deleteFileFromGitHub(
 
 	if (!getResponse.ok) {
 		const errorText = await getResponse.text();
-		console.log(
+		debugLog(
 			`[GitHub Delete] Failed to get file SHA: ${getResponse.status}`,
 			errorText,
 		);
@@ -620,7 +629,7 @@ export async function deleteFileFromGitHub(
 	}
 
 	const data = await getResponse.json();
-	console.log(`[GitHub Delete] File SHA: ${data.sha}`);
+	debugLog(`[GitHub Delete] File SHA: ${data.sha}`);
 
 	const response = await fetchWithRetry(repoUrl, {
 		method: "DELETE",
@@ -639,7 +648,7 @@ export async function deleteFileFromGitHub(
 
 	if (!response.ok) {
 		const errorText = await response.text();
-		console.log(
+		debugLog(
 			`[GitHub Delete] Failed to delete file: ${response.status}`,
 			errorText,
 		);
@@ -648,7 +657,7 @@ export async function deleteFileFromGitHub(
 		);
 	}
 
-	console.log(`[GitHub Delete] Successfully deleted: ${filePath}`);
+	debugLog(`[GitHub Delete] Successfully deleted: ${filePath}`);
 }
 
 // ==================== 本地文件同步功能 ====================
@@ -671,7 +680,7 @@ export function saveFileLocally(
 		// 确保目录存在
 		if (!fs.existsSync(dir)) {
 			fs.mkdirSync(dir, { recursive: true });
-			console.log(`[Local Save] Created directory: ${dir}`);
+			debugLog(`[Local Save] Created directory: ${dir}`);
 		}
 
 		/* 内容未变就不写盘。
@@ -681,16 +690,16 @@ export function saveFileLocally(
 		if (fs.existsSync(fullPath)) {
 			const existing = fs.readFileSync(fullPath, "utf-8");
 			if (existing === content) {
-				console.log(`[Local Save] 内容未变化，跳过写入: ${relativePath}`);
+				debugLog(`[Local Save] 内容未变化，跳过写入: ${relativePath}`);
 				return true;
 			}
 		}
 
 		fs.writeFileSync(fullPath, content, "utf-8");
-		console.log(`[Local Save] Successfully saved: ${relativePath}`);
+		debugLog(`[Local Save] Successfully saved: ${relativePath}`);
 		return true;
 	} catch (error) {
-		console.log(
+		debugLog(
 			`[Local Save] Failed to save ${relativePath}:`,
 			error instanceof Error ? error.message : error,
 		);
@@ -706,17 +715,15 @@ export function deleteFileLocally(relativePath: string): boolean {
 		const fullPath = resolveLocalPath(relativePath);
 
 		if (!fs.existsSync(fullPath)) {
-			console.log(
-				`[Local Delete] File does not exist, skipping: ${relativePath}`,
-			);
+			debugLog(`[Local Delete] File does not exist, skipping: ${relativePath}`);
 			return true; // 文件不存在也算删除成功
 		}
 
 		fs.unlinkSync(fullPath);
-		console.log(`[Local Delete] Successfully deleted: ${relativePath}`);
+		debugLog(`[Local Delete] Successfully deleted: ${relativePath}`);
 		return true;
 	} catch (error) {
-		console.log(
+		debugLog(
 			`[Local Delete] Failed to delete ${relativePath}:`,
 			error instanceof Error ? error.message : error,
 		);

@@ -24,13 +24,13 @@ import OnboardingTour from "./OnboardingTour.svelte";
 import PostEditor from "./PostEditor.svelte";
 import PostHistoryPage from "./PostHistoryPage.svelte";
 import PostList from "./PostList.svelte";
+import { createPageIntroStore } from "./page-intro.svelte";
 import SecretManager from "./SecretManager.svelte";
 import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
 import SyncPage from "./SyncPage.svelte";
-import { createPageIntroStore } from "./page-intro.svelte";
-import PageHeader from "./ui/PageHeader.svelte";
 import TaxonomyManager from "./TaxonomyManager.svelte";
+import PageHeader from "./ui/PageHeader.svelte";
 
 type Post = {
 	id: string;
@@ -330,7 +330,10 @@ function toggleCollapseSidebar() {
  * 视觉坐标，因此用 rect 与 offsetWidth 的比值换算回本地坐标，否则波纹中心会偏。
  */
 function spawnNavRipple(e: PointerEvent) {
-	if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+	if (
+		typeof window !== "undefined" &&
+		window.matchMedia("(prefers-reduced-motion: reduce)").matches
+	) {
 		return;
 	}
 	const item = (e.target as HTMLElement | null)?.closest?.(
@@ -588,13 +591,19 @@ function applyRoute() {
 
 function startAdmin() {
 	loadPosts();
-	window.addEventListener("popstate", applyRoute);
 	applyRoute(); // 同步初始路由
 	// 首次进入控制台：自动弹出新手指引
 	if (!isTourDone()) {
 		tourOpen = true;
 	}
 }
+
+/* 浏览器前进/后退：单独一个同步 onMount，才能返回清理函数。
+   放在 startAdmin 里的话监听器生命周期与组件脱钩，HMR 下会叠加。 */
+onMount(() => {
+	window.addEventListener("popstate", applyRoute);
+	return () => window.removeEventListener("popstate", applyRoute);
+});
 
 /* 401 全局兜底：包一层 fetch 旁路观察，任意后台接口 401 时弹一次会话过期提示。
    必须是同步 onMount —— 下面那个 onMount 是 async，返回值不会被当作清理函数。 */

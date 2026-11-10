@@ -1393,6 +1393,9 @@ onDestroy(() => {
 	if (draftTimer) clearTimeout(draftTimer);
 	if (cloudTimer) clearTimeout(cloudTimer);
 	if (historyTimer) clearTimeout(historyTimer);
+	// 卸载时取消在途预览：否则服务端还会把这次 MDX evaluate 跑完
+	if (renderTimer) clearTimeout(renderTimer);
+	renderAbort?.abort();
 	if (beforeUnloadHandler) {
 		window.removeEventListener("beforeunload", beforeUnloadHandler);
 	}
@@ -1542,6 +1545,9 @@ async function handleSave() {
 // Markdown 渲染：调用服务端 API，使用与主站相同的渲染管线
 let renderTimer: ReturnType<typeof setTimeout> | null = null;
 let renderVersion = 0;
+/* 上一个预览请求的取消句柄：连续输入时服务端要真的跑 MDX evaluate，
+   只靠 renderVersion 丢弃结果并不能让旧请求停下来。 */
+let renderAbort: AbortController | null = null;
 
 async function fetchPreview(mdContent: string) {
 	if (!mdContent.trim()) {
@@ -1551,9 +1557,14 @@ async function fetchPreview(mdContent: string) {
 		return;
 	}
 
+	renderAbort?.abort();
+	const controller = new AbortController();
+	renderAbort = controller;
+
 	const currentVersion = ++renderVersion;
 	try {
 		const response = await fetch("/api/admin/preview/", {
+			signal: controller.signal,
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			/* 带上真实文件路径：服务端据此判断是否按 MDX 解析，
@@ -1570,6 +1581,8 @@ async function fetchPreview(mdContent: string) {
 			editorState.renderedHtml = data.html;
 		}
 	} catch {
+		// 主动取消不是失败：直接返回，不要把「预览失败」闪给用户
+		if (controller.signal.aborted) return;
 		if (currentVersion === renderVersion) {
 			editorState.renderedHtml = `<p class='empty-preview'>${i18n(
 				I18nKey.postPreviewFailed,

@@ -186,11 +186,7 @@ export async function writePostFile(
 	if (!relPath) return false;
 	try {
 		if (isEnvFileWritable()) {
-			fs.writeFileSync(
-				path.resolve(process.cwd(), relPath),
-				content,
-				"utf-8",
-			);
+			fs.writeFileSync(path.resolve(process.cwd(), relPath), content, "utf-8");
 			return true;
 		}
 		await getStorageProvider().writeFile(relPath, content, message);
@@ -200,8 +196,54 @@ export async function writePostFile(
 	}
 }
 
-/** 删除一篇文章文件（预留：批量清理场景） */
-export async function deletePostFile(
+/**
+ * 批量写回文章（分类重命名 / 删除时会一次改动多篇）。
+ *
+ * 本地环境逐篇写盘即可；远端必须走一次 `commitFiles`——逐篇 `writeFile`
+ * 在线上是「N 篇 = N 个 commit = N 次自动构建」，改一个分类名能把站点的
+ * 构建队列堵满。`sync/apply` 早就是这个模式，这里对齐。
+ */
+export async function writePostFiles(
+	items: Array<{ slug: string; content: string }>,
+	message: string,
+): Promise<{ updated: number; failed: string[] }> {
+	const failed: string[] = [];
+	if (items.length === 0) return { updated: 0, failed };
+
+	if (isEnvFileWritable()) {
+		let updated = 0;
+		for (const item of items) {
+			if (await writePostFile(item.slug, item.content, message)) updated += 1;
+			else failed.push(item.slug);
+		}
+		return { updated, failed };
+	}
+
+	const storage = getStorageProvider();
+	const changes: Array<{ slug: string; path: string; content: string }> = [];
+	for (const item of items) {
+		// 路径按真实扩展名探测：mdx 文章写成 .md 会另存出重复文件
+		const relPath = (await storage.resolvePath?.(item.slug)) ?? null;
+		if (!relPath) {
+			failed.push(item.slug);
+			continue;
+		}
+		changes.push({ slug: item.slug, path: relPath, content: item.content });
+	}
+	if (changes.length === 0) return { updated: 0, failed };
+
+	const commit = await storage.commitFiles(
+		changes.map(({ path, content }) => ({ path, content })),
+		{ headline: message },
+	);
+	if (!commit.ok) {
+		// 整批失败时不做部分成功判定：commit 是原子的，一个没进去就是全没进去
+		return { updated: 0, failed: [...failed, ...changes.map((c) => c.slug)] };
+	}
+	return { updated: changes.length, failed };
+}
+
+/** 删除一篇文章文件（预留：批量清理场景） */ export async function deletePostFile(
 	slug: string,
 	message: string,
 ): Promise<boolean> {
