@@ -409,41 +409,6 @@ function timeOf(post: TimeFields): number {
 	);
 }
 
-/** 当前排序落在哪一列、什么方向，供表头 aria-sort 使用 */
-const sortColumn = $derived(
-	sortKey === "titleAsc" || sortKey === "titleDesc" ? "title" : "date",
-);
-const sortAscending = $derived(sortKey === "oldest" || sortKey === "titleAsc");
-
-function ariaSortFor(
-	column: "title" | "date",
-): "ascending" | "descending" | "none" {
-	if (sortColumn !== column) return "none";
-	return sortAscending ? "ascending" : "descending";
-}
-
-/* 表头从「画了箭头的装饰」改成真的能点：
-   标题在升序/降序之间切换；日期列按「最近修改 → 最新发布 → 最早发布」轮转，
-   列名（dateColLabel）随之变化，点两下就能看懂它在做什么。 */
-function toggleTitleSort() {
-	sortKey = sortKey === "titleAsc" ? "titleDesc" : "titleAsc";
-}
-
-const DATE_SORT_CYCLE: SortKey[] = ["updated", "newest", "oldest"];
-
-function cycleDateSort() {
-	const next = (DATE_SORT_CYCLE.indexOf(sortKey) + 1) % DATE_SORT_CYCLE.length;
-	sortKey = DATE_SORT_CYCLE[next];
-}
-
-/* 日期列的表头与单元格都要跟随排序字段：按「最近修改」排序却显示发布日期，
-   列表看上去是乱序的。 */
-const dateColLabel = $derived(
-	sortKey === "updated"
-		? i18n(I18nKey.postSortUpdated)
-		: i18n(I18nKey.postColDate),
-);
-
 function actionLabel(action: string, title: string): string {
 	return i18n(I18nKey.postActionLabel)
 		.replace("{action}", action)
@@ -452,90 +417,55 @@ function actionLabel(action: string, title: string): string {
 </script>
 
 <div class="md3-list-container">
-	{#if showHeading}
-	<!-- 页头：标题(28px/700) + 副标题(总数) + 主操作（对齐参考项目 post-list-heading，
-	      桌面端不再有全局 header；按钮规格取自 flare fuwari-btn-primary/regular）。
-	      套进 AdminPage 时不渲染——标题与操作由外壳承担。 -->
-	<div class="post-list-heading">
-		<div class="heading-text">
-			<h1 class="heading-title">{i18n(I18nKey.adminPosts)}</h1>
-			<p class="heading-subtitle">
-				{i18n(I18nKey.postListCount).replace("{count}", String(posts.length))}
-				{#if isLoading}
-					<Icon
-						icon="material-symbols:progress-activity"
-						class="heading-spinner"
-						aria-hidden="true"
-					/>
-				{/if}
-			</p>
-		</div>
-		<div class="heading-actions">
-			{#if onSync}
-				<button
-					class="ui-btn ui-btn-soft"
-					onclick={() => onOpenSync?.()}
-					disabled={isLoading || isSyncing}
-					aria-label={i18n(I18nKey.postSyncNow)}
+	<!-- 页头：标题、状态轨、搜索、操作同一条基线。
+	     日期与状态已移入每行右侧的账目栏，所以这里不再需要筛选条 + 工具栏 +
+	     表头三层 chrome；第一篇文章的位置从 331px 提到了一百多像素。 -->
+	<div class="masthead">
+		<h1 class="masthead-title">{i18n(I18nKey.adminPosts)}</h1>
+
+		<div class="rail-filter" role="group" aria-label={i18n(I18nKey.postStatusFilterGroup)}>
+			<button
+				class="rail-btn"
+				class:selected={statusFilter === "all"}
+				aria-pressed={statusFilter === "all"}
+				onclick={() => (statusFilter = "all")}
+			>
+				{i18n(I18nKey.postAll)}<span class="rail-count">{posts.length}</span>
+			</button>
+			<button
+				class="rail-btn"
+				class:selected={statusFilter === "published"}
+				aria-pressed={statusFilter === "published"}
+				onclick={() => (statusFilter = "published")}
+			>
+				{i18n(I18nKey.postPublished)}<span class="rail-count"
+					>{posts.filter((p) => !p.draft).length}</span
 				>
-					<Icon icon="material-symbols:cloud" class="btn-icon" />
-					{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}
-				</button>
-			{/if}
-			<button class="ui-btn ui-btn-primary" onclick={onCreate}>
-				<Icon icon="material-symbols:add" class="btn-icon" />
-				{i18n(I18nKey.adminNewPost)}
+			</button>
+			<button
+				class="rail-btn"
+				class:selected={statusFilter === "draft"}
+				aria-pressed={statusFilter === "draft"}
+				onclick={() => (statusFilter = "draft")}
+			>
+				{i18n(I18nKey.postDraft)}<span class="rail-count"
+					>{posts.filter((p) => p.draft).length}</span
+				>
+			</button>
+			<!-- 未同步：涵盖「尚未提交到 GitHub」与「已提交但未部署」两种，计数取两者之和 -->
+			<button
+				class="rail-btn"
+				class:selected={statusFilter === "unsynced"}
+				class:attention={unsyncedCount > 0}
+				aria-pressed={statusFilter === "unsynced"}
+				onclick={() => (statusFilter = "unsynced")}
+			>
+				{i18n(I18nKey.postUnsynced)}<span class="rail-count">{unsyncedCount}</span>
 			</button>
 		</div>
-	</div>
-	{/if}
 
-	<!-- 状态轨：一条文字轨，不画整行下边框——页头已经有一条结构线，
-	      再加一条会把列表切成三段。计数用等宽且不抢色，只有「未同步」
-	      在真有事要办时才用主色。 -->
-	<div class="filter-chips" role="group" aria-label={i18n(I18nKey.postStatusFilterGroup)}>
-		<button
-			class="chip"
-			class:selected={statusFilter === "all"}
-			aria-pressed={statusFilter === "all"}
-			onclick={() => (statusFilter = "all")}
-		>
-			<span class="chip-label">{i18n(I18nKey.postAll)}</span>
-			<span class="chip-count">{posts.length}</span>
-		</button>
-		<button
-			class="chip"
-			class:selected={statusFilter === "published"}
-			aria-pressed={statusFilter === "published"}
-			onclick={() => (statusFilter = "published")}
-		>
-			<span class="chip-label">{i18n(I18nKey.postPublished)}</span>
-			<span class="chip-count">{posts.filter((p) => !p.draft).length}</span>
-		</button>
-		<button
-			class="chip"
-			class:selected={statusFilter === "draft"}
-			aria-pressed={statusFilter === "draft"}
-			onclick={() => (statusFilter = "draft")}
-		>
-			<span class="chip-label">{i18n(I18nKey.postDraft)}</span>
-			<span class="chip-count">{posts.filter((p) => p.draft).length}</span>
-		</button>
-		<!-- 未同步：涵盖「尚未提交到 GitHub」与「已提交但未部署」两种，计数取两者之和 -->
-		<button
-			class="chip"
-			class:selected={statusFilter === "unsynced"}
-			class:attention={unsyncedCount > 0}
-			aria-pressed={statusFilter === "unsynced"}
-			onclick={() => (statusFilter = "unsynced")}
-		>
-			<span class="chip-label">{i18n(I18nKey.postUnsynced)}</span>
-			<span class="chip-count">{unsyncedCount}</span>
-		</button>
-	</div>
+		<div class="masthead-spacer"></div>
 
-	<!-- 工具栏（第二行）：搜索居左，分类/标签/排序整组居右 -->
-	<div class="toolbar">
 		<div class="ui-search search-bar">
 			<Icon icon="material-symbols:search" class="ui-search-icon" />
 			<input
@@ -557,73 +487,78 @@ function actionLabel(action: string, title: string): string {
 			{/if}
 		</div>
 
-		<div class="toolbar-fields">
-			<!-- 分类、标签、排序：常驻一行直接可点，不做二次点击收折 -->
-			<label class="toolbar-field">
-				<span class="field-label">{i18n(I18nKey.postFilterCategory)}</span>
-				<Select
-					value={categoryFilter}
-					options={[
-						{ value: "", label: i18n(I18nKey.postAll) },
-						...categories.map((c) => ({ value: c, label: c })),
-					]}
-					onChange={(v) => (categoryFilter = v)}
-					disabled={categories.length === 0}
-				/>
-			</label>
+		{#if onSync}
+			<button
+				class="ui-btn ui-btn-soft masthead-sync"
+				onclick={() => onOpenSync?.()}
+				disabled={isLoading || isSyncing}
+				aria-label={i18n(I18nKey.postSyncNow)}
+			>
+				<Icon icon="material-symbols:cloud" class="btn-icon" />
+				<span class="btn-label"
+					>{isSyncing ? i18n(I18nKey.postSyncing) : i18n(I18nKey.postSyncNow)}</span
+				>
+			</button>
+		{/if}
 
-			<label class="toolbar-field">
-				<span class="field-label">{i18n(I18nKey.postFilterTag)}</span>
-				<Select
-					value={tagFilter}
-					options={[
-						{ value: "", label: i18n(I18nKey.postAll) },
-						...tags.map((t) => ({ value: t, label: t })),
-					]}
-					onChange={(v) => (tagFilter = v)}
-					disabled={tags.length === 0}
-				/>
-			</label>
-
-			<label class="toolbar-field">
-				<span class="field-label">{i18n(I18nKey.postSort)}</span>
-				<Select
-					value={sortKey}
-					options={[
-						{ value: "updated", label: i18n(I18nKey.postSortUpdated) },
-						{ value: "newest", label: i18n(I18nKey.postSortNewest) },
-						{ value: "oldest", label: i18n(I18nKey.postSortOldest) },
-						{ value: "titleAsc", label: i18n(I18nKey.postSortTitleAsc) },
-						{ value: "titleDesc", label: i18n(I18nKey.postSortTitleDesc) },
-					]}
-					onChange={(v) => (sortKey = v as typeof sortKey)}
-				/>
-			</label>
-
-
-		</div>
+		<button class="ui-btn ui-btn-primary masthead-create" onclick={onCreate}>
+			<Icon icon="material-symbols:add" class="btn-icon" />
+			<span class="btn-label">{i18n(I18nKey.adminNewPost)}</span>
+		</button>
 	</div>
 
-	<!-- 分类栏（表头） -->
-	<!-- 表头只剩两格：标题与账目栏。两格都可点，点了真的换排序。
-	      原先九个列头里，只有标题和日期画了 aria-sort，却没有任何点击处理。 -->
-	{#snippet headerRow()}
-		<div class="header-row" role="rowgroup">
-			<div class="col col-title" role="columnheader" aria-sort={ariaSortFor("title")}>
-				<span class="head-pin-spacer" aria-hidden="true"></span>
-				<button class="head-sort" type="button" onclick={toggleTitleSort}>
-					{i18n(I18nKey.postColTitle)}
-				</button>
-			</div>
-			<div class="col col-rail" role="columnheader" aria-sort={ariaSortFor("date")}>
-				<button class="head-sort" type="button" onclick={cycleDateSort}>
-					{dateColLabel}
-				</button>
-			</div>
-		</div>
-	{/snippet}
+	<!-- 筛选：常驻但安静，三个紧凑控件，不带分隔线——页头那条已经划分了区域 -->
+	<div class="filter-row">
+		<label class="filter-field">
+			<span class="filter-label">{i18n(I18nKey.postFilterCategory)}</span>
+			<Select
+				value={categoryFilter}
+				options={[
+					{ value: "", label: i18n(I18nKey.postAll) },
+					...categories.map((c) => ({ value: c, label: c })),
+				]}
+				onChange={(v) => (categoryFilter = v)}
+				disabled={categories.length === 0}
+			/>
+		</label>
 
+		<label class="filter-field">
+			<span class="filter-label">{i18n(I18nKey.postFilterTag)}</span>
+			<Select
+				value={tagFilter}
+				options={[
+					{ value: "", label: i18n(I18nKey.postAll) },
+					...tags.map((t) => ({ value: t, label: t })),
+				]}
+				onChange={(v) => (tagFilter = v)}
+				disabled={tags.length === 0}
+			/>
+		</label>
 
+		<label class="filter-field">
+			<span class="filter-label">{i18n(I18nKey.postSort)}</span>
+			<Select
+				value={sortKey}
+				options={[
+					{ value: "updated", label: i18n(I18nKey.postSortUpdated) },
+					{ value: "newest", label: i18n(I18nKey.postSortNewest) },
+					{ value: "oldest", label: i18n(I18nKey.postSortOldest) },
+					{ value: "titleAsc", label: i18n(I18nKey.postSortTitleAsc) },
+					{ value: "titleDesc", label: i18n(I18nKey.postSortTitleDesc) },
+				]}
+				onChange={(v) => (sortKey = v as typeof sortKey)}
+			/>
+		</label>
+
+		{#if hasExtraFilter}
+			<button class="filter-reset" type="button" onclick={clearAllFilters}>
+				{i18n(I18nKey.postClearFilter)}
+			</button>
+		{/if}
+	</div>
+
+	<!-- 唯一的滚动区：错误 / 空态 / 列表 / 页脚都装在这里 -->
+	<div class="list-scroll">
 	<!-- 列表内容 -->
 	{#if error}
 		<div class="state-container" role="alert">
@@ -656,24 +591,17 @@ function actionLabel(action: string, title: string): string {
 			aria-label={i18n(I18nKey.postTableLabel)}
 			aria-busy={isLoading}
 		>
-			{@render headerRow()}
-
 			{#if isLoading}
 				<div class="md3-list skeleton-list" role="rowgroup" aria-hidden="true">
 					{#each SKELETON_ROWS as row, i (i)}
 						<div class="list-item" role="row">
-							<div class="col row-body" role="cell">
-								<div class="title-row">
-									<span class="pin-wrap" aria-hidden="true"></span>
-									<div class="title-main">
-										<span class="sk sk-title" style:width={row.titleWidth}></span>
-										{#if row.intro}
-											<span class="sk sk-intro"></span>
-										{/if}
-									</div>
-								</div>
+							<div class="row-body" role="cell">
+								<span class="sk sk-title" style:width={row.titleWidth}></span>
+								{#if row.intro}
+									<span class="sk sk-intro"></span>
+								{/if}
 							</div>
-							<div class="col row-side" role="cell">
+							<div class="row-side" role="cell">
 								<span class="sk sk-line short"></span>
 								<span class="sk sk-line tiny"></span>
 							</div>
@@ -686,24 +614,20 @@ function actionLabel(action: string, title: string): string {
 				{#each filteredPosts as post (post.id)}
 					{@const rail = railState(post)}
 					<div class="list-item" role="row">
-						<div class="col row-body" role="cell" data-label={i18n(I18nKey.postColTitle)}>
-							<div class="title-row">
-								<span class="pin-wrap" aria-hidden={!post.pinned}>
-									{#if post.pinned}
-										<Icon icon="material-symbols:push-pin" class="pin-icon" />
-										<span class="sr-only">{i18n(I18nKey.postPinned)}</span>
-									{/if}
-								</span>
-								<div class="title-main">
-									<span class="title-line">
-										<span class="title" title={post.title}>{post.title}</span>
-										{#if post.password}
-											<Icon icon="material-symbols:lock-outline" class="lock-icon" />
-										{/if}
-									</span>
-									<span class="intro" title={post.description || post.slug}>
-										{post.description || post.slug}
-									</span>
+						<div class="row-body" role="cell" data-label={i18n(I18nKey.postColTitle)}>
+							<span class="title-line">
+								<span class="title" title={post.title}>{post.title}</span>
+								{#if post.pinned}
+									<Icon icon="material-symbols:push-pin" class="pin-icon" />
+									<span class="sr-only">{i18n(I18nKey.postPinned)}</span>
+								{/if}
+								{#if post.password}
+									<Icon icon="material-symbols:lock-outline" class="lock-icon" />
+								{/if}
+							</span>
+							<span class="intro" title={post.description || post.slug}>
+								{post.description || post.slug}
+							</span>
 									<!-- 归档信息单独一层：分类与扩展名是「这篇归在哪儿」，
 									     不能和摘要共享一行行文 -->
 									<span class="meta-line">
@@ -712,8 +636,6 @@ function actionLabel(action: string, title: string): string {
 										{/if}
 										<span class="meta-ext">{fileExt(post)}</span>
 									</span>
-								</div>
-							</div>
 						</div>
 
 						<!-- 账目栏：状态在上、时间在下，都是等宽；悬停时整栏让给动作 -->
@@ -776,6 +698,7 @@ function actionLabel(action: string, title: string): string {
 			</p>
 		{/if}
 	{/if}
+	</div>
 </div>
 
 <!-- 冲突检查结果：显示状态；真冲突时给出两个方向的覆盖按钮，不做自动合并 -->
@@ -825,65 +748,117 @@ function actionLabel(action: string, title: string): string {
 		   否则行会在悬停瞬间抖动。 */
 		--post-rail-w: 8.25rem;
 
-		/* flex 列容器：筛选/工具栏固定，仅列表区（.md3-table）独立滚动。
-		   高度由外层 AdminPage 的 .admin-page-body 决定（flex:1 + min-height:0），
-		   这里不再自带 card-base 外壳与 padding——内外边距统一由外壳提供。 */
-		display: flex;
-		flex-direction: column;
-		height: 100%;
-		min-height: 0;
-		overflow: hidden;
-	}
+		/* 纵向 flex：页头与筛选固定，其余交给 .list-scroll 滚动。
+	   高度由外层 .posts-shell 决定（与侧栏等高）。 */
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	overflow: hidden;
+}
 
 	/* 固定区：不随列表滚动 */
-	.post-list-heading,
-	.filter-chips,
-	.toolbar {
+	.masthead,
+	.filter-row {
 		flex-shrink: 0;
 	}
 
-	/* 视觉隐藏但保留给屏幕阅读器（置顶说明、标签溢出数、筛选结果播报） */
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		margin: -1px;
-		padding: 0;
-		border: 0;
-		margin-inline-start: -1px;
-		overflow: hidden;
+	/* ── 页头：标题、状态轨、搜索、操作同一条基线 ──
+	   把原来「页头 / 筛选条 / 工具栏」三层压成一层；书签式下划线只留给当前筛选项。 */
+	.masthead {
+		display: flex;
+		align-items: center;
+		gap: 1.5rem;
+		padding: 0.9375rem 1.625rem;
+		border-bottom: 1px solid var(--md-outline);
+	}
+
+	.masthead-title {
+		margin: 0;
+		font-size: 1.3125rem;
+		font-weight: 650;
+		line-height: 1.3;
+		letter-spacing: 0.01em;
+		color: var(--md-on-surface);
+		flex-shrink: 0;
+	}
+
+	/* 状态轨：文字 + 等宽计数，选中项靠底部细线，未选中只是更暗的字 */
+	.rail-filter {
+		display: flex;
+		align-items: center;
+		gap: 1.125rem;
+		min-width: 0;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.rail-filter::-webkit-scrollbar {
+		display: none;
+	}
+
+	.rail-btn {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.375rem;
+		padding: 0 0 0.1875rem;
+		border: none;
+		border-bottom: 1.5px solid transparent;
+		background: none;
+		font: inherit;
+		font-size: 0.8125rem;
+		color: var(--md-on-surface-variant);
 		white-space: nowrap;
+		cursor: pointer;
+		transition:
+			color 0.15s,
+			border-color 0.15s;
 	}
 
-	/* ── 工具栏 ── */
-	.toolbar {
-		display: flex;
-		align-items: center;
-		gap: var(--md-control-gap);
-		flex-wrap: wrap;
-		/* 表头上方留白对齐参考项目 controls 底部 23px（flare post-manager） */
-		margin-bottom: 1.4375rem;
+	.rail-btn:hover {
+		color: var(--md-on-surface);
 	}
 
-	.toolbar-fields {
-		display: flex;
-		align-items: center;
-		gap: var(--md-control-gap);
-		flex-wrap: wrap;
-		margin-left: auto;
+	.rail-btn:focus-visible {
+		outline: 2px solid var(--md-primary-text);
+		outline-offset: 2px;
+	}
+
+	.rail-btn.selected {
+		color: var(--md-on-surface);
+		border-bottom-color: var(--md-on-surface);
+	}
+
+	/* 「未同步」有内容时才用主色：颜色表示「需要你动手」，不是给状态发彩标 */
+	.rail-btn.attention,
+	.rail-btn.attention .rail-count {
+		color: var(--md-primary-text);
+	}
+
+	.rail-count {
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: 0.6875rem;
+		font-variant-numeric: tabular-nums;
+		color: var(--md-on-surface-variant);
+	}
+
+	.rail-btn.selected .rail-count {
+		color: inherit;
+	}
+
+	.masthead-spacer {
+		flex: 1 1 auto;
+		min-width: 0;
 	}
 
 	.search-bar {
-		/* 后台搜索栏对照 flare post-list-search 的「内嵌搜索槽」外观:
-		   底色 page-bg 25% + card-bg。基类 .ui-search 被前台导航搜索栏共用,
-		   故后台外观只在此 scoped 覆盖,不污染基类。 */
+		/* 后台搜索栏对照 flare post-list-search 的「内嵌搜索槽」外观：
+		   底色 page-bg 25% + card-bg。基类 .ui-search 被前台导航搜索栏共用，
+		   故后台外观只在此 scoped 覆盖，不污染基类。 */
 		background: color-mix(in srgb, var(--page-bg) 25%, var(--card-bg));
-		/* 放弃失焦/聚焦的宽度伸缩,改为固定宽度:
-		   对齐参考项目 post-list-search 的默认宽度 390px。
-		   不再乘 clamp(1px, 0.07vw, 1.5px)——那会随浏览器缩放反向变化，
-		   与外层 --admin-zoom 叠加后导致缩放越小搜索框反而越大。 */
+		/* 页头里它只是四个元素之一，比原来的 390px 收一档 */
 		flex: 0 1 auto;
-		width: min(390px, 100%);
+		width: min(15rem, 100%);
 	}
 
 	.search-bar:hover {
@@ -900,55 +875,8 @@ function actionLabel(action: string, title: string): string {
 		color: var(--content-meta);
 	}
 
-	/* 页头：标题 + 副标题 + 主操作（对齐参考项目 .post-list-heading）
-	   标题 28px/700 加大加粗（flare h1 规格），下方 14px 灰字承接总数、加载转圈；
-	   按钮组 align-items:flex-start 与标题首行对齐。 */
-	.post-list-heading {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		gap: 1rem;
-		margin-bottom: 1.5rem;
-	}
-
-	.heading-text {
-		min-width: 0;
-	}
-
-	.heading-title {
-		margin: 0;
-		font-size: 1.75rem;
-		font-weight: 700;
-		line-height: 1.4;
-		letter-spacing: -0.02em;
-		color: var(--deep-text);
-	}
-
-	.heading-subtitle {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin: 0.5rem 0 0;
-		font-size: 0.875rem;
-		color: var(--content-meta);
-	}
-
-	:global(.heading-spinner) {
-		font-size: 1rem;
-		color: inherit;
-		animation: headingSpin 0.9s linear infinite;
-	}
-
-	@keyframes headingSpin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.heading-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
+	.masthead-sync,
+	.masthead-create {
 		flex-shrink: 0;
 	}
 
@@ -958,99 +886,63 @@ function actionLabel(action: string, title: string): string {
 		flex-shrink: 0;
 	}
 
-	/* 状态轨：一条文字轨。不画整行下边框——页头已经有一条结构线，
-	   再加一条会把列表切成三段。选中靠底部细线，未选中只是更暗的文字。
-   计数用等宽、不抢色；只有「未同步」在真有事要办时才升到主色。 */
-	.filter-chips {
-		display: flex;
-		align-items: center;
-		gap: 1.5rem;
-		/* 与工具栏间距对齐参考项目 controls 顶部 26px（flare post-manager） */
-		margin-bottom: 1.375rem;
-	}
-
-	.chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		min-height: 2.75rem;
-		padding: 0;
-		border: none;
-		border-bottom: 1.5px solid transparent;
-		background: transparent;
-		color: var(--md-on-surface-variant);
-		font-size: 0.875rem;
-		font-weight: 500;
-		font-family: inherit;
-		cursor: pointer;
-		transition:
-			color 0.15s,
-			border-color 0.15s;
-	}
-
-	.chip:hover {
-		color: var(--md-on-surface);
-	}
-
-	.chip:focus-visible {
-		outline: 2px solid var(--md-primary-text);
-		outline-offset: 2px;
-	}
-
-	.chip.selected {
-		border-bottom-color: var(--md-on-surface);
-		color: var(--md-on-surface);
-	}
-
-	/* 「未同步」有内容时才用主色：颜色在这里表示「需要你动手」，
-	   而不是给每种状态发一枚彩色标签。 */
-	.chip.attention {
-		color: var(--md-primary-text);
-	}
-
-	.chip.attention .chip-count {
-		color: var(--md-primary-text);
-	}
-
-	.chip-label {
-		line-height: 1;
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	/* 计数是数据，不是文案：等宽、小一号、始终比标签暗一档 */
-	.chip-count {
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: 0.6875rem;
-		line-height: 1;
-		color: var(--md-on-surface-variant);
-		font-variant-numeric: tabular-nums;
-	}
-
-	.chip.attention .chip-count,
-	.chip.selected .chip-count {
-		color: inherit;
-	}
-
-	/* ── 分类/标签/排序：常驻工具栏，label + select 同高同轴 ── */
-	.toolbar-field {
+	/* ── 筛选行：常驻但不抢眼，三个紧凑控件，无分隔线 ── */
+	.filter-row {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+		flex-wrap: wrap;
+		padding: 0.5rem 1.625rem 0.375rem;
+	}
+
+	.filter-field {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
 		flex-shrink: 0;
 	}
 
-	/* 工具栏里的自定义下拉限宽：Select 默认 100%，在 flex 行里会撑满剩余空间 */
-	.toolbar-field :global(.select-root) {
-		width: 10rem;
+	/* Select 默认 100%，在 flex 行里会撑满剩余空间 */
+	.filter-field :global(.select-root) {
+		width: 8.5rem;
 	}
 
-	.field-label {
-		font-size: 0.8125rem;
+	.filter-label {
+		font-size: 0.75rem;
 		color: var(--md-on-surface-variant);
 		white-space: nowrap;
+	}
+
+	.filter-reset {
+		margin-left: auto;
+		padding: 0.25rem 0.5rem;
+		border: none;
+		border-radius: var(--radius-sm, 0.375rem);
+		background: none;
+		color: var(--md-primary-text);
+		font: inherit;
+		font-size: 0.75rem;
+		font-weight: 500;
+		cursor: pointer;
+	}
+
+	.filter-reset:hover {
+		background: color-mix(in srgb, var(--primary) 8%, transparent);
+	}
+
+	.filter-reset:focus-visible {
+		outline: 2px solid var(--md-primary-text);
+		outline-offset: -2px;
+	}
+
+	/* ── 唯一滚动区 ── */
+	.list-scroll {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		scrollbar-gutter: stable;
+		padding: 0.375rem 1.625rem 0.75rem;
 	}
 
 	/* ── 状态容器 ── */
@@ -1149,126 +1041,30 @@ function actionLabel(action: string, title: string): string {
 	/* 列表形态（对齐参考项目 post-list-table）：不叠表格边框/圆角，
 	   行间分隔线承担划分；表头轻量左对齐（13px/500 灰字），随滚动吸顶。 */
 	.md3-table {
-		/* 列表独立滚动区：表头 sticky 相对此容器吸顶，
-		   页头/筛选/工具栏与页脚保持固定不随列表滚动。 */
-		flex: 1;
-		min-height: 0;
-		overflow: auto;
-		overscroll-behavior: contain;
-		scrollbar-gutter: stable;
+		/* 滚动交给 .list-scroll；这里只是普通块，表头相对它吸顶走的是
+		   最近的滚动祖先，仍然是 .list-scroll。 */
 	}
 
-	/* 表头行：只剩两格——标题与账目栏。两格都是按钮，点了真的换排序。
-	   此前九个列头里只有标题和日期写了 aria-sort、画了箭头，却没有任何点击处理。 */
-	.header-row {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) var(--post-rail-w);
-		align-items: center;
-		height: 40px;
-		/* 左缘与列表行内容同轴（list-item 左右 1rem） */
-		padding: 0 1rem;
-		position: sticky;
-		top: 0;
-		z-index: 2;
-		background: var(--card-bg);
-		border-bottom: 1px solid var(--md-outline);
-		color: var(--md-on-surface-variant);
-		font-size: 0.8125rem;
-		font-weight: 500;
-	}
-
-	.header-row .col {
-		/* 与列表内容同轴：padding 对齐 .list-item .col (0 0.25rem) */
-		padding: 0 0.25rem;
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		min-width: 0;
-	}
-
-	/* 排序按钮：外观就是表头文字，命中区撑满整格高度。
-	   「看着能点」和「真能点」在这里统一。 */
-	.head-sort {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		height: 100%;
-		min-height: 28px;
-		padding: 0;
-		border: none;
-		background: none;
-		color: inherit;
-		font: inherit;
-		cursor: pointer;
-		transition: color 0.15s;
-	}
-
-	.head-sort:hover {
-		color: var(--md-on-surface);
-	}
-
-	.head-sort:focus-visible {
-		outline: 2px solid var(--md-primary-text);
-		outline-offset: 2px;
-	}
-
-	/* 方向箭头挂在 columnheader 上，跟着 aria-sort 走，按钮文字保持干净 */
-	.header-row [aria-sort="ascending"]::after,
-	.header-row [aria-sort="descending"]::after {
-		font-size: 0.75rem;
-		line-height: 1;
-		color: var(--md-on-surface-variant);
-	}
-
-	.header-row [aria-sort="ascending"]::after {
-		content: "↑";
-	}
-
-	.header-row [aria-sort="descending"]::after {
-		content: "↓";
-	}
-
-	/* 账目栏的表头靠右，与下方那列数字同一右缘 */
-	.header-row .col-rail {
-		justify-content: flex-end;
-	}
-
-	/* 列表项：一列校样。行高由内容决定，不再用固定 76px 去撑一个
-	   已经不存在的九列表格。 */
+	/* 列表项：一列校样。负边距让标题左缘与页头同轴，
+	   悬停底色却能一直铺到卡片边缘。 */
 	.list-item {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) var(--post-rail-w);
 		align-items: center;
 		gap: 1.5rem;
-		padding: 0.75rem 1rem;
+		margin: 0 -1.625rem;
+		padding: 0.75rem 1.625rem;
 		min-height: 72px;
 		border-bottom: 1px solid var(--md-outline);
 		transition: background 0.15s;
-		cursor: default;
 	}
 
-	/* 末行去掉分隔线，避免容器底边出现收尾的双线 */
 	.list-item:last-child {
 		border-bottom: none;
 	}
 
 	.list-item:hover {
 		background: var(--md-row-hover);
-	}
-
-	.col {
-		padding: 0 0.25rem;
-		min-width: 0;
-	}
-
-	/* 标题列 */
-	.col-title {
-		min-width: 0;
-	}
-
-	/* 行内标题前面有 20px 的置顶占位，表头不补同样的缩进就会左移一截 */
-	.header-row .col-title {
-		padding-left: 20px;
 	}
 
 	/* ── 账目栏 ──
@@ -1322,33 +1118,12 @@ function actionLabel(action: string, title: string): string {
 		opacity: 0;
 	}
 
-	.title-row {
+	/* 行正文：标题 / 摘要 / 归档信息，三层同左缘 */
+	.row-body {
 		display: flex;
-		align-items: flex-start;
-		gap: 0.75rem;
+		flex-direction: column;
+		gap: 0.125rem;
 		min-width: 0;
-	}
-
-	/* 置顶图标固定 20px 槽位，无置顶的行也占位：行标题起点一致，
-	   同时把标题向右让开，表头「标题」保持最左，两层自然错开。
-	   高度取首行标题行高（1.0625rem × line-height 1.5），图标在框内
-	   垂直居中 —— 与旁边标题文字同轴，而不是压在行顶。 */
-	.pin-wrap {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 20px;
-		height: calc(1.0625rem * 1.5);
-		flex-shrink: 0;
-	}
-
-	/* 表头占位：行内标题前面有 20px 大头针槽 + 0.75rem 间距，
-	   表头文本必须让开同样的宽度，否则「标题」二字会比下方标题左出一截。
-	   表头列自身 gap 是 0.25rem，所以这里补 0.5rem 即可凑齐 0.75rem */
-	.head-pin-spacer {
-		width: 20px;
-		flex-shrink: 0;
-		margin-right: 0.5rem;
 	}
 
 	/* 置顶图标：实心大头针（对齐参考项目 lucide Pin），
@@ -1370,15 +1145,6 @@ function actionLabel(action: string, title: string): string {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		min-width: 0;
-	}
-
-	/* 标题主区：标题 + 简介同一左缘（都从置顶图标槽之后开始），
-	   简介 12px 灰字、单行省略，对齐参考项目 title-link 的第二行。 */
-	.title-main {
-		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
 		min-width: 0;
 	}
 
@@ -1570,58 +1336,81 @@ function actionLabel(action: string, title: string): string {
 
 	/* ── 自适应：按可用宽度而非设备类别切换 ── */
 
+	/* 中等宽度：页头的搜索先让位，筛选行继续常驻 */
+	@media (max-width: 1180px) {
+		.search-bar {
+			width: min(12rem, 100%);
+		}
+
+		.masthead {
+			gap: 1.125rem;
+		}
+	}
+
+	/* 窄屏：顶栏已经显示标题与主操作，页头只留状态轨与搜索 */
+	@media (max-width: 1023px) {
+		.masthead {
+			flex-wrap: wrap;
+			gap: 0.75rem 1rem;
+			padding: 0.75rem 1.125rem;
+		}
+
+		.masthead-title,
+		.masthead-create,
+		.masthead-sync {
+			display: none;
+		}
+
+		.masthead-spacer {
+			display: none;
+		}
+
+		.search-bar {
+			order: 2;
+			flex: 1 1 100%;
+			width: 100%;
+		}
+
+		.filter-row {
+			padding: 0.5rem 1.125rem 0;
+		}
+
+		.list-scroll {
+			padding: 0 1.125rem 0.75rem;
+		}
+	}
+
 	/* 紧凑宽度：表格降级为堆叠列表项，而不是拉出 700px 横向滚动条。 */
 	@media (max-width: 860px) {
-		.toolbar {
-			flex-wrap: wrap;
-		}
-
-		/* 窄屏下搜索栏占满整行（参考项目 620px 断点的 width:100%） */
-		.search-bar {
-			width: 100%;
-		}
-
-		/* 窄屏下 tab 不被压扁，超出部分横向滚动 */
-		.filter-chips {
-			flex-wrap: nowrap;
-			min-width: 0;
+		.rail-filter {
 			overflow-x: auto;
-			padding-bottom: 0.25rem;
+			padding-bottom: 0.125rem;
 		}
 
-		/* 分类/标签/排序：按演示文件改为「横向滑动的一排胶囊」，不再一人一行。
-		   选择器必须对准 Select 实际渲染的 .select-root（基础规则的
-		   width:10rem 在窄屏只有 140px，会让下拉只占半行）。 */
-		.toolbar-fields {
-			flex-direction: row;
+		/* 分类/标签/排序：一排可横滑的胶囊，不再一人一行 */
+		.filter-row {
 			flex-wrap: nowrap;
-			align-items: center;
-			gap: 0.5rem;
-			width: 100%;
 			overflow-x: auto;
 			padding-bottom: 0.5rem;
-			/* 隐藏滚动条但保留滚动（演示 .scrollbar-hide） */
 			scrollbar-width: none;
 			-ms-overflow-style: none;
 		}
 
-		.toolbar-fields::-webkit-scrollbar {
+		.filter-row::-webkit-scrollbar {
 			display: none;
 		}
 
-		.toolbar-field {
+		.filter-field {
 			flex: 0 0 auto;
-			gap: 0.375rem;
 		}
 
-		.toolbar-field :global(.select-root) {
+		.filter-field :global(.select-root) {
 			width: auto;
 			flex: 0 0 auto;
-			min-width: 0;
 		}
 
 		/* 胶囊外观：32px 高、12px 圆角、细描边、次要面板底 */
-		.toolbar-fields .toolbar-field :global(.select-trigger) {
+		.filter-field :global(.select-trigger) {
 			position: relative;
 			width: auto;
 			height: 32px;
@@ -1635,9 +1424,8 @@ function actionLabel(action: string, title: string): string {
 			font-size: 0.75rem;
 		}
 
-		/* 视觉 32px 仍低于 44px 触控下限，用伪元素纵向外扩，
-		   横向不扩（避免相邻胶囊热区串在一起） */
-		.toolbar-fields .toolbar-field :global(.select-trigger)::after {
+		/* 视觉 32px 仍低于 44px 触控下限，用伪元素纵向外扩 */
+		.filter-field :global(.select-trigger)::after {
 			content: "";
 			position: absolute;
 			left: 0;
@@ -1647,10 +1435,6 @@ function actionLabel(action: string, title: string): string {
 			border-radius: 12px;
 		}
 
-		.header-row {
-			display: none;
-		}
-
 		/* 窄屏：标题单独一行拿满宽度，账目栏与动作并到下方一条横排。
 		   触屏没有悬停，账目和按钮必须同时可见，不能靠 hover 才显形。 */
 		.list-item {
@@ -1658,7 +1442,10 @@ function actionLabel(action: string, title: string): string {
 			flex-direction: column;
 			align-items: stretch;
 			gap: 0.5rem;
-			padding: 1rem 0.25rem;
+			/* 桌面的负边距在这里必须复位：外壳留白只有 1rem，
+			   -1.625rem 会把文字推出卡片左缘 */
+			margin: 0;
+			padding: 1rem 0;
 		}
 
 		.row-side {
@@ -1698,26 +1485,20 @@ function actionLabel(action: string, title: string): string {
 		}
 	}
 
-	/* ── 手机（≤768px）：按演示文件逐项对齐字号/内距/圆角 ──
-	   演示来源：用户提供的「移动端文章管理」HTML，颜色与尺寸一律换成本项目
-	   token（--btn-regular-bg / --line-divider / --content-meta / radius 12px）。 */
+	/* ── 手机（≤768px）：把纵向空间还给列表 ── */
 	@media (max-width: 768px) {
-		/* Tab：gap 2rem → 1.5rem（演示 gap-6），行高收到 2.75rem（py-3） */
-		.filter-chips {
-			gap: 1.5rem;
-			margin-bottom: 0.75rem;
+		.masthead {
+			padding: 0.625rem 1rem;
 		}
 
-		/* 工具栏贴近列表：窄屏纵向空间紧，23px 留白会把第一行推得很远 */
-		.toolbar {
-			margin-bottom: 1rem;
+		.filter-row {
+			padding: 0.375rem 1rem 0;
 		}
 
-		.chip {
-			min-height: 2.75rem;
+		.list-scroll {
+			padding: 0 1rem 0.5rem;
 		}
 
-		/* 标题 14px/700、摘要 12px（演示 text-sm font-bold / text-xs） */
 		.title {
 			font-size: 0.875rem;
 			font-weight: 700;
@@ -1743,10 +1524,8 @@ function actionLabel(action: string, title: string): string {
 			font-size: 1rem;
 		}
 
-		/* 底部统计：演示 px-5 py-4、12px */
 		.list-footer {
-			padding: 0.875rem 1.25rem 0;
-			font-size: 0.75rem;
+			padding: 0.875rem 0 0;
 		}
 	}
 </style>

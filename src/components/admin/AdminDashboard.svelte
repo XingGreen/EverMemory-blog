@@ -1942,32 +1942,9 @@ function formatDate(dateStr: string | null): string {
 					{@render dashboardHome()}
 				{:else if activePage === "posts"}
 					{#if viewMode === "list"}
-						<AdminPage
-							title={i18n(I18nKey.adminPosts)}
-							intro={i18n(I18nKey.postListCount).replace(
-								"{count}",
-								String(posts.length),
-							)}
-						>
-							{#snippet actions()}
-								<button
-									class="ui-btn ui-btn-soft post-sync-btn"
-									onclick={() => navigate(`${DASHBOARD_PATH}sync/`)}
-									disabled={isLoading || isSyncing}
-									aria-label={i18n(I18nKey.postSyncNow)}
-								>
-									<Icon icon="material-symbols:cloud" class="btn-icon" />
-									<span class="btn-label"
-										>{isSyncing
-											? i18n(I18nKey.postSyncing)
-											: i18n(I18nKey.postSyncNow)}</span
-									>
-								</button>
-								<button class="ui-btn ui-btn-primary post-create-btn" onclick={goCreatePost}>
-									<Icon icon="material-symbols:add" class="btn-icon" />
-									<span class="btn-label">{i18n(I18nKey.adminNewPost)}</span>
-								</button>
-							{/snippet}
+						<!-- 列表页自带页头（标题 + 状态轨 + 搜索 + 操作同一条基线），
+						     不再套 AdminPage 的「标题区 + 内容区」两段式外壳 -->
+						<div class="card-base posts-shell">
 							<PostList
 								posts={posts}
 								isLoading={isLoading}
@@ -1980,9 +1957,8 @@ function formatDate(dateStr: string | null): string {
 								onOpenDiff={(slug) => navigate(`${DASHBOARD_PATH}sync/${slug}/`)}
 								onOpenSync={() => navigate(`${DASHBOARD_PATH}sync/`)}
 								{isSyncing}
-								heading={false}
 							/>
-						</AdminPage>
+						</div>
 					{:else if viewMode === "edit" && editingPost}
 						<PostEditor
 							post={editingPost}
@@ -3001,6 +2977,17 @@ function formatDate(dateStr: string | null): string {
 	   overflow-y:auto 失效，滚动会落到外层 .admin-content 上。 */
 	/* 设置页工作区：与侧栏等高，滚动交给内部 .settings-body。
 	   保存栏因此能常驻底部而不随内容滚走。 */
+	/* 文章列表页外壳：卡片 + 限高，页头与滚动都由 PostList 自己管。
+	   与 .admin-page 保持同一套高度契约，避免和侧栏不等高。 */
+	.posts-shell {
+		display: flex;
+		flex-direction: column;
+		height: var(--admin-viewport-h, calc(100vh - 3rem));
+		min-height: 0;
+		overflow: hidden;
+		padding: 0;
+	}
+
 	.settings-workspace {
 		display: flex;
 		flex-direction: column;
