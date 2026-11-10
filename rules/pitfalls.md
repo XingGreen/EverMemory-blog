@@ -13,6 +13,13 @@ touching icons, styles, the build pipeline, or the dev server.
   unchanged.
 - **`astro check` needs a clean Vite cache in restricted shells.** If it aborts with a bulk
   delete guard, move `node_modules/.vite` aside first; Vite recreates it instead of deleting it.
+- **The dev server dies whenever Vite re-optimises dependencies in a restricted shell.** Before
+  re-bundling, Vite deletes `node_modules/.vite/deps` (70–100 files), which trips the same bulk
+  delete guard and takes the server down with an `UnhandledRejection`. Moving the whole `.vite`
+  directory makes it worse: the missing metadata counts as "vite config has changed" and it
+  tries to delete again. The working move is to relocate the two things it wants to remove —
+  `node_modules/.vite/deps` and any `deps_temp_*` siblings — somewhere else, then start the
+  server so it writes fresh ones instead of deleting. `--force` does not help.
 - **Icon names must belong to their set.** `material-symbols:book-open` is a Lucide name and
   does not exist in that collection. A wrong name renders blank and only logs "icon not found"
   in the dev server.
