@@ -22,6 +22,8 @@ interface HistoryItem {
 let loading = $state(false);
 let items = $state<HistoryItem[]>([]);
 let error = $state<string | null>(null);
+/** 只翻了有限条审计记录：更早的同步事件可能还没取到 */
+let truncated = $state(false);
 
 function fmtTime(ts: number | null): string {
 	if (!ts) return "—";
@@ -45,12 +47,14 @@ async function load() {
 		const payload = (await res.json().catch(() => null)) as {
 			success?: boolean;
 			items?: HistoryItem[];
+			truncated?: boolean;
 		} | null;
 		if (!res.ok || !payload?.success) {
 			error = `HTTP ${res.status}`;
 			return;
 		}
 		items = payload.items ?? [];
+		truncated = payload.truncated === true;
 	} catch (err) {
 		error = err instanceof Error ? err.message : String(err);
 	} finally {
@@ -110,7 +114,7 @@ $effect(() => {
 			{/if}
 
 			<footer class="history-actions">
-				<span class="hint">保留最近 90 天</span>
+				<span class="hint">{truncated ? "仅显示最近若干条，更早的记录未取出" : "保留最近 90 天"}</span>
 				<button class="ui-btn ui-btn-soft" type="button" onclick={load} disabled={loading}>
 					刷新
 				</button>

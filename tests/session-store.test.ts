@@ -298,6 +298,21 @@ describe("touchSession", () => {
 		}
 	});
 
+	it("节流窗口内重复 touch 完全不碰存储（读也不读）", async () => {
+		const sid = await registerSession(baseOpts);
+		const getSpy = vi.spyOn(store, "get");
+		const setSpy = vi.spyOn(store, "set");
+
+		await touchSession(sid);
+		await touchSession(sid);
+
+		// 旧实现每次都要先读一次 KV 才知道该不该写：鉴权每个请求都多一次往返
+		expect(getSpy).not.toHaveBeenCalled();
+		expect(
+			setSpy.mock.calls.filter((c) => c[0] === `admin_touch_${sid}`),
+		).toHaveLength(1);
+	});
+
 	it("存储异常时静默失败，不向上抛", async () => {
 		vi.spyOn(store, "set").mockRejectedValueOnce(new Error("kv down"));
 

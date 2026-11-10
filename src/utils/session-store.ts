@@ -286,21 +286,39 @@ async function withTouchAt(record: AdminSession): Promise<AdminSession> {
 }
 
 /**
+ * 进程内节流表：sid → 上次写入时间。
+ *
+ * 原来靠「先读 KV 判断有没有超过 60 秒」来节流，等于每个鉴权请求多一次读；
+ * 改成内存判定后常规路径零 IO，只有满 60 秒的第一次请求才真的写一次。
+ * 多实例各记各的，最坏情况是多写几次，不会丢数据。
+ */
+const touchWrites = new Map<string, number>();
+
+/** 内存表上限：超过就顺手清掉已经过期的条目，避免只增不减 */
+const TOUCH_MEMORY_LIMIT = 200;
+
+/**
  * 更新「最后活跃」时间。
  * 写入独立 key（自动过期），不改会话记录——避免与「踢下线」的
  * 删除产生读-改-写竞态（旧值写回会把已删除会话复活）。
  */
 export async function touchSession(sid: string): Promise<void> {
-	try {
-		const now = Date.now();
-		const store = getStore();
-		const last = await store.get<number>(TOUCH_PREFIX + sid);
-		if (typeof last === "number" && now - last < TOUCH_THROTTLE_MS) {
-			return;
+	const now = Date.now();
+	const last = touchWrites.get(sid);
+	if (last !== undefined && now - last < TOUCH_THROTTLE_MS) return;
+
+	if (touchWrites.size >= TOUCH_MEMORY_LIMIT) {
+		for (const [key, at] of touchWrites) {
+			if (now - at >= TOUCH_THROTTLE_MS) touchWrites.delete(key);
 		}
-		await store.set(TOUCH_PREFIX + sid, now, TOUCH_TTL_SECONDS);
+	}
+	touchWrites.set(sid, now);
+
+	try {
+		await getStore().set(TOUCH_PREFIX + sid, now, TOUCH_TTL_SECONDS);
 	} catch {
-		// 活跃时间更新失败不影响主流程，静默忽略
+		// 写失败就把节流记录撤掉，让下一个请求重试；失败不影响主流程
+		touchWrites.delete(sid);
 	}
 }
 

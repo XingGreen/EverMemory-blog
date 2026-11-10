@@ -265,8 +265,11 @@ export async function requireAuth(request: Request): Promise<{
 		};
 	}
 
-	// 顺手更新「最后活跃」（内部节流，不阻塞请求）
-	void touchSession(payload.sid).catch(() => {});
+	/* 顺手更新「最后活跃」：改成 await 才能让写入在响应返回前落地——
+	   Vercel / Workers 会在响应结束后终止未完成的 promise，线上「最后活跃」
+	   一直停在登录时刻就是这个原因。touchSession 内部有内存节流，
+	   常规请求不产生任何 IO，只有满 60 秒的第一次会真的写一次。 */
+	await touchSession(payload.sid);
 
 	return { authenticated: true, payload };
 }

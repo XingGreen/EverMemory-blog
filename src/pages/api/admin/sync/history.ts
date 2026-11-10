@@ -26,13 +26,18 @@ export async function GET({
 		300,
 	);
 
-	const all = await listAuditLogs(limit * 2);
+	/* 审计日志里同步事件占比低，按 limit*2 取窗口再过滤，实际条数常常不足。
+	   窗口取满就说明「更早的还没翻到」，用 truncated 如实告诉前端，
+	   而不是让面板看起来像是"只有这几条"。 */
+	const scanWindow = limit * 2;
+	const all = await listAuditLogs(scanWindow);
 	const items = all.filter((e) => SYNC_EVENTS.has(e.event)).slice(0, limit);
 
 	return new Response(
 		JSON.stringify({
 			success: true,
 			total: items.length,
+			truncated: all.length >= scanWindow,
 			items: items.map((e) => ({
 				event: e.event,
 				at: e.at ?? null,
