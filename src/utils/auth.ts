@@ -1,7 +1,11 @@
 import crypto from "node:crypto";
 
 import { getEnv } from "./env";
-import { readSecretPreview, readSecretValue, rotateManagedSecret } from "./secret-io";
+import {
+	readSecretPreview,
+	readSecretValue,
+	rotateManagedSecret,
+} from "./secret-io";
 import { getSessionState, touchSession } from "./session-store";
 
 const JWT_EXPIRY_HOURS = 12;
@@ -163,7 +167,14 @@ export async function verifySessionToken(
 			.replace(/\//g, "_")
 			.replace(/=/g, "");
 
-		if (signature !== expectedSignature) {
+		/* 常量时间比较：字符串 !== 会在首个不同字节处提前返回，
+		   理论上可被用来逐字节猜签名。与验应急令牌（下方 timingSafeEqual）保持一致。 */
+		const signatureBuf = Buffer.from(signature);
+		const expectedBuf = Buffer.from(expectedSignature);
+		if (
+			signatureBuf.length !== expectedBuf.length ||
+			!crypto.timingSafeEqual(signatureBuf, expectedBuf)
+		) {
 			return null;
 		}
 

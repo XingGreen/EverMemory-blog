@@ -617,6 +617,28 @@ describe("文件后端（真实 fs 往返）", () => {
 		expect(await getStore().get("k")).toBeNull();
 	});
 
+	it("读取失败留下 warn：损坏的会话表不能被静默当成「键不存在」", async () => {
+		const { getStore } = await loadFileStore();
+		await getStore().set("admin_sessions", { s1: { sid: "s1" } });
+		fs.writeFileSync(fileOf("admin_sessions"), "{ 坏掉", "utf-8");
+
+		await getStore().get("admin_sessions");
+
+		// 不报警就等于「所有人被静默登出且无从排查」
+		expect(console.warn).toHaveBeenCalledWith(
+			expect.stringContaining("[PersistStore] 读取失败"),
+			expect.anything(),
+		);
+	});
+
+	it("键不存在（ENOENT）不产生 warn：那是正常路径", async () => {
+		const { getStore } = await loadFileStore();
+		vi.mocked(console.warn).mockClear();
+
+		expect(await getStore().get("never_written")).toBeNull();
+		expect(console.warn).not.toHaveBeenCalled();
+	});
+
 	it("带 ttl 写入时文件内记录过期时间戳", async () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));

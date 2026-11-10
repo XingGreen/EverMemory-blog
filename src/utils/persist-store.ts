@@ -106,7 +106,13 @@ const fileStore: KVStore = {
 				return null;
 			}
 			return env.v as T;
-		} catch {
+		} catch (err) {
+			/* 文件不存在是正常路径（该键从未写入）；其余都是异常——JSON 损坏、
+			   权限不足、IO 错误。全部返回 null 会让上层当成「不存在」静默降级
+			   （会话表读失败等于把所有人踢下线），至少留一条痕迹。 */
+			if ((err as NodeJS.ErrnoException)?.code !== "ENOENT") {
+				console.warn(`[PersistStore] 读取失败 ${key}:`, err);
+			}
 			return null;
 		}
 	},

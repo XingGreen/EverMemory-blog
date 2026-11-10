@@ -87,28 +87,41 @@ function destroyWidget() {
 onMount(() => {
 	if (!siteKey) return;
 
+	/* 轮询句柄必须在卸载时清掉：脚本被 CSP 或拦截器挡掉时 load 事件永不触发，
+	   否则 100ms 定时器会一直跑到页面关闭，组件反复挂载还会叠加。 */
+	let poll: ReturnType<typeof setInterval> | null = null;
+
+	function stopPolling() {
+		if (poll === null) return;
+		clearInterval(poll);
+		poll = null;
+	}
+
+	function onExistingLoad() {
+		stopPolling();
+		mountWidget();
+	}
+
 	const existing = document.getElementById(SCRIPT_ID);
 	if (existing) {
 		// 组件重挂载时脚本已在，只可能需要直接渲染或轮询等待就绪
 		if (readApi()) {
 			mountWidget();
 		} else {
-			const poll = setInterval(() => {
+			poll = setInterval(() => {
 				if (readApi()) {
-					clearInterval(poll);
+					stopPolling();
 					mountWidget();
 				}
 			}, 100);
-			existing.addEventListener(
-				"load",
-				() => {
-					clearInterval(poll);
-					mountWidget();
-				},
-				{ once: true },
-			);
+			existing.addEventListener("load", onExistingLoad, { once: true });
 		}
-		return () => destroyWidget();
+		return () => {
+			stopPolling();
+			// load 可能发生在卸载之后：此时不该再渲染 widget
+			existing.removeEventListener("load", onExistingLoad);
+			destroyWidget();
+		};
 	}
 
 	const script = document.createElement("script");
@@ -124,7 +137,10 @@ onMount(() => {
 	};
 	document.head.appendChild(script);
 
-	return () => destroyWidget();
+	return () => {
+		stopPolling();
+		destroyWidget();
+	};
 });
 
 // 父组件每次提交后递增 resetToken：清掉旧 token 并让 widget 重新出题，
