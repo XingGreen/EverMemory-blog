@@ -31,10 +31,9 @@ let {
 		loading: boolean;
 		saving: boolean;
 		changedCount: number;
-		dirtyItems: { key: string; label: string }[];
+		/** 未保存改动的逐行 diff（新增/替换/移除），供保存栏展开显示 */
+		diffRows: SecretDiffRow[];
 		scrollToField: (key: string) => void;
-		/** 打开写入前的 diff，而不是直接保存 */
-		review: () => void;
 		save: () => void;
 		discard: () => void;
 	}) => void;
@@ -290,11 +289,6 @@ function isDirty(item: SecretItemDTO): boolean {
 
 const changedCount = $derived(items.filter(isDirty).length);
 
-/** 未保存改动的字段清单（供保存栏展开显示，label 用可读字段名） */
-const dirtyItems = $derived(
-	items.filter(isDirty).map((it) => ({ key: it.key, label: it.label })),
-);
-
 /**
  * 滚动到指定字段并短暂高亮。
  * 字段容器通过 data-secret-key 定位（见模板），滚动容器是
@@ -327,9 +321,8 @@ $effect(() => {
 		loading,
 		saving,
 		changedCount,
-		dirtyItems,
+		diffRows,
 		scrollToField,
-		review,
 		save,
 		discard: discardAll,
 	});
@@ -485,7 +478,6 @@ async function doSave(
 		});
 		const data = await res.json();
 		if (res.ok && data.success) {
-			diffOpen = false;
 			onNotify(data.message || "保存成功", "success", 10000);
 			await load();
 			return;
@@ -510,25 +502,28 @@ async function doSave(
 }
 
 /* ── 写入前 diff ──
-   主按钮不再直接写盘，而是先把「文件里会发生什么」摊开：新增（追加到末尾）、
-   替换（就地改那一行）、移除（清空即删行）。写入实现是逐行 patch，所以这三类
-   动作就是全部，不会有额外的格式变化。 */
-let diffOpen = $state(false);
+   页脚那行「还有 N 项未保存」展开后就是这个列表：新增（追加到末尾）、替换
+   （就地改那一行）、移除（清空即删行）。写入实现是逐行 patch，所以这三类动作
+   就是全部，不会有额外的格式变化。
 
-type DiffRow = {
+   行由 buildEntries() 派生——列表与真正提交的条目同源，不两处各算一遍。 */
+type SecretDiffRow = {
 	key: string;
 	label: string;
 	kind: "add" | "replace" | "remove";
-	sensitive: boolean;
-	before: string;
-	after: string;
+	/** 展示用文本：超长截断，敏感项一律留空 */
+	from: string;
+	to: string;
+	masked: boolean;
 };
 
-/* 由 buildEntries() 派生：列表与真正提交的条目同源，不两处各算一遍 */
-const diffRows = $derived.by<DiffRow[]>(() => {
+const diffRows = $derived.by<SecretDiffRow[]>(() => {
 	const byKey = new Map(items.map((i) => [i.key, i]));
+	const clip = (v: string) =>
+		!v ? "" : v.length > 40 ? `${v.slice(0, 40)}…` : v;
 	return buildEntries().map((entry) => {
 		const item = byKey.get(entry.key);
+		const masked = item?.sensitive === true;
 		return {
 			key: entry.key,
 			label: item?.label ?? entry.key,
@@ -537,34 +532,12 @@ const diffRows = $derived.by<DiffRow[]>(() => {
 				: entry.key in draftsOrigin
 					? "replace"
 					: "add",
-			sensitive: item?.sensitive === true,
-			before: draftsOrigin[entry.key] ?? "",
-			after: entry.value ?? "",
-		} satisfies DiffRow;
+			from: masked ? "" : clip(draftsOrigin[entry.key] ?? ""),
+			to: masked ? "" : clip(entry.value ?? ""),
+			masked,
+		} satisfies SecretDiffRow;
 	});
 });
-
-function review() {
-	if (diffRows.length === 0) {
-		onNotify("没有需要保存的修改", "error", 5000);
-		return;
-	}
-	diffOpen = true;
-}
-
-/** 从 diff 某一行跳回表单：关掉弹窗再滚动定位，否则弹窗盖着看不到 */
-function jumpToField(key: string) {
-	diffOpen = false;
-	setTimeout(() => scrollToField(key), 0);
-}
-
-/** diff 里一行只展示到「看得出改了什么」为止，秘密值永远不回显 */
-function diffValue(row: DiffRow, side: "before" | "after"): string {
-	if (row.sensitive) return "";
-	const v = side === "before" ? row.before : row.after;
-	if (!v) return "";
-	return v.length > 48 ? `${v.slice(0, 48)}…` : v;
-}
 
 function timestampForFilename(): string {
 	const d = new Date();
@@ -1145,83 +1118,6 @@ function answerConfirm(ok: boolean) {
 			{/if}
 		{/each}
 	{/if}
-
-	{#if diffOpen}
-	<div
-		class="modal-overlay"
-		role="dialog"
-		aria-modal="true"
-		aria-label="写入 .env.local"
-		tabindex="-1"
-		onclick={(e) => {
-			if (e.target === e.currentTarget) diffOpen = false;
-		}}
-		onkeydown={(e) => {
-			if (e.key === "Escape") diffOpen = false;
-		}}
-	>
-		<div class="modal-card card-base diff-modal">
-			<header class="diff-head">
-				<h3>写入 .env.local</h3>
-				<p>
-					{diffRows.length} 项变更，其余 {items.length - diffRows.length} 项保持不变
-				</p>
-			</header>
-
-			<ul class="diff-list">
-				{#each diffRows as row (row.key)}
-					<li>
-						<button
-							type="button"
-							class="diff-row"
-							title="跳回该字段"
-							onclick={() => jumpToField(row.key)}
-						>
-							<span class="diff-sign {row.kind}"
-								>{row.kind === "add" ? "+" : row.kind === "remove" ? "−" : "~"}</span
-							>
-							<span class="diff-key">{row.key}</span>
-							<span class="diff-change">
-								{#if row.sensitive}
-									<span class="new"
-										>{row.kind === "remove" ? "移除该行" : "值已替换（不回显）"}</span
-									>
-								{:else if row.kind === "replace"}
-									<span class="old">{diffValue(row, "before")}</span>
-									<span class="arrow">→</span>
-									<span class="new">{diffValue(row, "after")}</span>
-								{:else if row.kind === "add"}
-									<span class="new">{diffValue(row, "after")}</span>
-								{:else}
-									<span class="new">移除该行</span>
-								{/if}
-							</span>
-						</button>
-					</li>
-				{/each}
-			</ul>
-
-			<footer class="diff-foot">
-				<span class="diff-note">点任意一行可跳回该字段</span>
-				<span class="grow"></span>
-				<button class="ui-btn ui-btn-ghost" type="button" onclick={() => (diffOpen = false)}>
-					取消
-				</button>
-				<button
-					class="ui-btn ui-btn-primary"
-					type="button"
-					disabled={saving}
-					onclick={() => {
-						diffOpen = false;
-						void save();
-					}}
-				>
-					{saving ? "写入中…" : "确认写入"}
-				</button>
-			</footer>
-		</div>
-	</div>
-{/if}
 
 	{#if exportOpen}
 		<div
@@ -2201,138 +2097,6 @@ function answerConfirm(ok: boolean) {
 	   此前用 color-mix(--deep-text 45%) 是错的：--deep-text 随主题翻转，
 	   暗色下是白色，叠出来成了白蒙层。
 	   底色固定用黑（蒙层语义就是压暗），不随主题变。 */
-	/* ── 写入前 diff ── */
-	/* 选择器带上 .modal-card：外壳有 max-width: 440px，同级后写的规则才盖得住 */
-	.modal-card.diff-modal {
-		display: flex;
-		flex-direction: column;
-		width: min(680px, calc(100% - 2rem));
-		max-width: min(680px, calc(100% - 2rem));
-		max-height: min(78vh, 720px);
-		padding: 0;
-		overflow: hidden;
-	}
-
-	.diff-head {
-		flex-shrink: 0;
-		padding: 1rem var(--admin-gutter, 1.5rem) 0.75rem;
-		border-bottom: 1px solid var(--line-divider);
-	}
-
-	.diff-head h3 {
-		margin: 0;
-		font-size: var(--admin-fs-item, 1.0625rem);
-		font-weight: 650;
-		color: var(--deep-text);
-	}
-
-	.diff-head p {
-		margin: 0.25rem 0 0;
-		font-size: var(--admin-fs-meta, 0.75rem);
-		color: var(--content-meta);
-	}
-
-	.diff-list {
-		flex: 1;
-		min-height: 0;
-		margin: 0;
-		padding: 0.375rem 0;
-		list-style: none;
-		overflow-y: auto;
-	}
-
-	.diff-row {
-		display: grid;
-		grid-template-columns: 0.75rem 11rem minmax(0, 1fr);
-		gap: 0.75rem;
-		align-items: baseline;
-		width: 100%;
-		padding: 0.5rem var(--admin-gutter, 1.5rem);
-		border: none;
-		background: none;
-		font: inherit;
-		text-align: left;
-		cursor: pointer;
-		transition: background-color 0.15s ease;
-	}
-
-	.diff-row:hover {
-		background: var(--btn-plain-bg-hover);
-	}
-
-	.diff-row:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: -2px;
-	}
-
-	.diff-sign {
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: var(--admin-fs-body, 0.875rem);
-		font-weight: 700;
-		line-height: 1.4;
-	}
-
-	.diff-sign.add {
-		color: var(--success);
-	}
-
-	.diff-sign.replace {
-		color: var(--primary);
-	}
-
-	.diff-sign.remove {
-		color: var(--destructive);
-	}
-
-	.diff-key {
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: var(--admin-fs-data, 0.6875rem);
-		letter-spacing: 0.02em;
-		color: var(--deep-text);
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.diff-change {
-		min-width: 0;
-		font-size: var(--admin-fs-meta, 0.75rem);
-		line-height: 1.6;
-		color: var(--content-meta);
-		overflow-wrap: anywhere;
-	}
-
-	.diff-change .old {
-		color: var(--content-meta);
-		text-decoration: line-through;
-	}
-
-	.diff-change .arrow {
-		margin: 0 0.375rem;
-		color: var(--content-meta);
-	}
-
-	.diff-change .new {
-		color: var(--deep-text);
-	}
-
-	.diff-foot {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-shrink: 0;
-		padding: 0.75rem var(--admin-gutter, 1.5rem);
-		border-top: 1px solid var(--line-divider);
-	}
-
-	.diff-note {
-		font-size: var(--admin-fs-meta, 0.75rem);
-		color: var(--content-meta);
-	}
-
-	.diff-foot .grow {
-		flex: 1;
-	}
-
 	.modal-overlay {
 		position: fixed;
 		inset: 0;

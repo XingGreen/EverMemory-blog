@@ -200,12 +200,21 @@ let secretSaveState = $state<{
 	loading: boolean;
 	saving: boolean;
 	changedCount: number;
-	dirtyItems: { key: string; label: string }[];
+	diffRows: {
+		key: string;
+		label: string;
+		kind: "add" | "replace" | "remove";
+		from: string;
+		to: string;
+		masked: boolean;
+	}[];
 	scrollToField: (key: string) => void;
 	save: () => void;
 	discard: () => void;
 } | null>(null);
 // 保存栏改动清单是否展开
+let dirtyListOpen = $state(false);
+
 // 站内切换页面时的未保存拦截：leaveConfirmOpen 为真即弹出确认框，
 // pendingPath 记录确认后要跳转的目标路径。
 // 注意不要用「函数作 $state」——Svelte 对函数值不会触发重渲染。
@@ -2165,14 +2174,28 @@ function formatDate(dateStr: string | null): string {
 					{#if secretSaveState?.writable}
 						<div class="savebar" role="status">
 							{#if secretSaveState.changedCount > 0}
-								<!-- 只报数量：逐项清单在「写入 .env.local」的 diff 里，
-								     同一份信息不该在两个面板各有一份 -->
-								<span class="savebar-count"
-									>{i18n(I18nKey.secretsUnsavedCount).replace(
-										"{count}",
-										String(secretSaveState.changedCount),
-									)}</span
+								<!-- 点开就是逐行 diff：改了什么、文件里会新增/替换/删掉哪一行 -->
+								<button
+									class="savebar-notice"
+									type="button"
+									aria-expanded={dirtyListOpen}
+									aria-controls="dirty-list"
+									onclick={() => (dirtyListOpen = !dirtyListOpen)}
 								>
+									<Icon icon="material-symbols:error-outline" />
+									<span
+										>{i18n(I18nKey.secretsUnsavedCount).replace(
+											"{count}",
+											String(secretSaveState.changedCount),
+										)}</span
+									>
+									<Icon
+										icon={dirtyListOpen
+											? "material-symbols:keyboard-arrow-up-rounded"
+											: "material-symbols:keyboard-arrow-down-rounded"}
+										class="notice-chevron"
+									/>
+								</button>
 							{/if}
 							<div class="savebar-actions">
 								{#if secretSaveState.changedCount > 0}
@@ -2188,7 +2211,7 @@ function formatDate(dateStr: string | null): string {
 								<button
 									class="ui-btn ui-btn-primary"
 									type="button"
-									onclick={() => secretSaveState?.review()}
+									onclick={() => secretSaveState?.save()}
 									disabled={secretSaveState.saving ||
 										secretSaveState.loading ||
 										secretSaveState.changedCount === 0}
@@ -2202,6 +2225,40 @@ function formatDate(dateStr: string | null): string {
 								</button>
 							</div>
 						</div>
+						{#if dirtyListOpen && secretSaveState.changedCount > 0}
+							<div class="dirty-list" id="dirty-list">
+								{#each secretSaveState.diffRows as row (row.key)}
+									<button
+										class="dirty-item"
+										type="button"
+										title="跳回该字段"
+										onclick={() => secretSaveState?.scrollToField(row.key)}
+									>
+										<span class="dirty-sign {row.kind}"
+											>{row.kind === "add"
+												? "+"
+												: row.kind === "remove"
+													? "−"
+													: "~"}</span
+										>
+										<span class="dirty-key">{row.key}</span>
+										<span class="dirty-change">
+											{#if row.masked}
+												{row.kind === "remove" ? "移除该行" : "值已替换（不回显）"}
+											{:else if row.kind === "replace"}
+												<span class="old">{row.from}</span>
+												<span class="arrow">→</span>
+												<span class="new">{row.to}</span>
+											{:else if row.kind === "add"}
+												<span class="new">{row.to}</span>
+											{:else}
+												<span class="new">移除该行</span>
+											{/if}
+										</span>
+									</button>
+								{/each}
+							</div>
+						{/if}
 					{/if}
 				{/snippet}
 				</AdminPage>
@@ -3295,10 +3352,125 @@ function formatDate(dateStr: string | null): string {
 		background: var(--card-bg);
 	}
 
-	/* 未保存改动只在左侧报个数；逐项清单在「写入 .env.local」的 diff 里 */
-	.savebar-count {
-		font-size: var(--admin-fs-meta, 0.75rem);
+	/* 未保存改动：左侧一颗提示按钮，点开就是逐行 diff */
+	.savebar-notice {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0;
+		padding: 0.5rem 0.75rem;
+		border: none;
+		border-radius: 10px;
+		background: color-mix(in srgb, var(--primary) 12%, transparent);
 		color: var(--primary);
+		font-size: var(--admin-fs-meta, 0.75rem);
+		font-family: inherit;
+		font-weight: 500;
+		cursor: pointer;
+		transition: background-color 0.15s ease;
+	}
+
+	.savebar-notice:hover {
+		background: color-mix(in srgb, var(--primary) 20%, transparent);
+	}
+
+	.savebar-notice:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	.savebar-notice :global(.inline-icon) {
+		flex-shrink: 0;
+	}
+
+	.notice-chevron {
+		margin-left: 0.125rem;
+	}
+
+	/* 逐行 diff：符号 + 变量名 + 变更内容；行本身可点，跳回对应字段 */
+	.dirty-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		max-height: 15rem;
+		overflow-y: auto;
+		padding: 0.375rem 1.5rem 0.75rem;
+		border-top: 1px solid var(--line-divider);
+		background: var(--card-bg);
+	}
+
+	.dirty-item {
+		display: grid;
+		grid-template-columns: 0.75rem 11rem minmax(0, 1fr);
+		gap: 0.75rem;
+		align-items: baseline;
+		padding: 0.375rem 0.5rem;
+		border: none;
+		border-radius: 6px;
+		background: transparent;
+		font-family: inherit;
+		text-align: left;
+		cursor: pointer;
+		transition: background-color 0.15s ease;
+	}
+
+	.dirty-item:hover {
+		background: var(--btn-plain-bg-hover);
+	}
+
+	.dirty-item:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: -2px;
+	}
+
+	.dirty-sign {
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-body, 0.875rem);
+		font-weight: 700;
+		line-height: 1.4;
+	}
+
+	.dirty-sign.add {
+		color: var(--success);
+	}
+
+	.dirty-sign.replace {
+		color: var(--primary);
+	}
+
+	.dirty-sign.remove {
+		color: var(--destructive);
+	}
+
+	.dirty-key {
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
+		letter-spacing: 0.02em;
+		color: var(--deep-text);
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.dirty-change {
+		min-width: 0;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		line-height: 1.6;
+		color: var(--content-meta);
+		overflow-wrap: anywhere;
+	}
+
+	.dirty-change .old {
+		color: var(--content-meta);
+		text-decoration: line-through;
+	}
+
+	.dirty-change .arrow {
+		margin: 0 0.375rem;
+		color: var(--content-meta);
+	}
+
+	.dirty-change .new {
+		color: var(--deep-text);
 	}
 
 	.savebar-actions {
