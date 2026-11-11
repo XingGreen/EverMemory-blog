@@ -68,6 +68,10 @@ Two jobs, nothing else:
 Everything else is ink: `--deep-text` for titles, `--content-meta` for secondary copy, and a
 hairline (`--line-divider`) for structure.
 
+One exception: **diff lines.** In a side-by-side or unified diff, green/red encode "this line was
+added / removed" — that is content, not taxonomy, and it is the only colour convention users
+already know by heart. Use `--success` and `--destructive`; never a raw colour literal.
+
 Forbidden:
 
 - Status pills with a tinted background (the green/amber/blue badge set). Status is a word, set
@@ -175,7 +179,9 @@ pages cement them.
 
 1. `PageHeader` extracted; post list migrated (done).
 2. Settings — four-section layout, the most bespoke surface.
-3. Sync — list plus detail pane.
+3. Sync — migrated (done). Two panes inside one card: the header is the primitive, the left list
+   repeats `ListRow`'s shape (title over mono path, status word at the right edge), and the right
+   pane owns the only other horizontal rule on the screen.
 4. Taxonomy — table-ish list with inline editing.
 5. Secrets — dense forms.
 6. Links — the friend-links manager.

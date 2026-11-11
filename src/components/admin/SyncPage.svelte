@@ -11,6 +11,7 @@ import {
 import Checkbox from "./Checkbox.svelte";
 import ConfirmDialog from "./ConfirmDialog.svelte";
 import SyncHistory from "./SyncHistory.svelte";
+import PageHeader from "./ui/PageHeader.svelte";
 
 /**
  * 同步工作台（/admin/sync/）。
@@ -283,12 +284,24 @@ async function apply() {
 	}
 }
 
-function badgeClass(state: PlanState): string {
-	if (state === "same") return "same";
-	if (state === "differs") return "differs";
-	if (state === "unknown") return "unknown";
-	return "one-side";
+/* 状态只用词表示（docs/ADMIN_UI.md §4）：需要动手的上主色，其余是墨色。
+   原先绿/橙/蓝三色胶囊在给人分类，而不是在指出哪件事还没做完。 */
+const ATTENTION_STATES: PlanState[] = ["differs", "local-only", "remote-only"];
+
+function stateTone(state: PlanState): "attention" | "muted" {
+	return ATTENTION_STATES.includes(state) ? "attention" : "muted";
 }
+
+/* 页头那行说明：连接状态 + 两侧篇数，一句话，不再用彩色圆点 */
+const headMeta = $derived.by(() => {
+	if (!data) return "";
+	const parts = [
+		data.connected ? "GitHub 已连接" : "读取远端失败",
+		`本地 ${data.localTotal} 篇 / 远端 ${data.connected ? `${data.remoteTotal} 篇` : "-- 篇"}`,
+	];
+	if (!data.localAvailable) parts.push("当前环境读不到本地文件");
+	return parts.join(" · ");
+});
 
 /* ── 右栏 ── */
 let detail = $state<FilediffPayload | null>(null);
@@ -362,24 +375,8 @@ $effect(() => {
 <SyncHistory bind:open={historyOpen} />
 
 <div class="card-base sync-page">
-	<header class="sync-head">
-		<div class="head-text">
-			<h1>{i18n(I18nKey.postSyncNow)}</h1>
-			{#if data}
-				<p class="head-meta">
-					<span class="dot" class:ok={data.connected}></span>
-					{data.connected ? "GitHub 已连接" : "读取远端失败"}
-					<span class="sep">·</span>
-					本地 {data.localTotal} 篇 / 远端 {data.connected
-						? `${data.remoteTotal} 篇`
-						: "-- 篇"}
-					{#if !data.localAvailable}
-						<span class="warn">· 当前环境读不到本地文件</span>
-					{/if}
-				</p>
-			{/if}
-		</div>
-		<div class="head-actions">
+	<PageHeader title={i18n(I18nKey.postSyncNow)} meta={headMeta}>
+		{#snippet actions()}
 			<button class="ui-btn ui-btn-soft" type="button" onclick={onBack}>
 				返回文章
 			</button>
@@ -398,8 +395,8 @@ $effect(() => {
 			>
 				重新检查
 			</button>
-		</div>
-	</header>
+		{/snippet}
+	</PageHeader>
 
 	<div class="sync-split">
 		<aside class="sync-sidebar">
@@ -459,7 +456,7 @@ $effect(() => {
 								</span>
 								<span class="row-sub">{item.slug}</span>
 							</button>
-							<span class="badge {badgeClass(item.state)}">
+							<span class="badge" data-tone={stateTone(item.state)}>
 								{stateText(item.state)}
 							</span>
 						</li>
@@ -502,7 +499,7 @@ $effect(() => {
 				<div class="detail-head">
 					<h2>{activeItem?.title?.trim() || slug}</h2>
 					<div class="detail-meta">
-						<span class="badge {badgeClass(activeItem?.state ?? "unknown")}">
+						<span class="badge" data-tone={stateTone(activeItem?.state ?? "unknown")}>
 							{activeItem ? stateText(activeItem.state) : "状态未知"}
 						</span>
 						{#if activeItem?.state === "differs"}
@@ -586,58 +583,6 @@ $effect(() => {
 		overflow: hidden;
 	}
 
-	.sync-head {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 1rem;
-		flex-wrap: wrap;
-		padding: 1.75rem 1.75rem 1.625rem;
-		border-bottom: 1px solid var(--line-divider);
-		flex-shrink: 0;
-	}
-
-	.head-text h1 {
-		margin: 0;
-		font-size: 1.75rem;
-		font-weight: 650;
-		line-height: 1.4;
-		color: var(--deep-text);
-	}
-
-	.head-meta {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin: 0.375rem 0 0;
-		font-size: 0.8125rem;
-		line-height: 1.7;
-		color: var(--content-meta);
-		flex-wrap: wrap;
-	}
-
-	.dot {
-		width: 0.4375rem;
-		height: 0.4375rem;
-		border-radius: 9999px;
-		background: var(--content-meta);
-	}
-
-	.dot.ok {
-		background: oklch(0.72 0.17 145);
-	}
-
-	.warn {
-		color: oklch(0.72 0.15 70);
-	}
-
-	.head-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-shrink: 0;
-	}
-
 	.sync-split {
 		flex: 1;
 		min-height: 0;
@@ -657,27 +602,37 @@ $effect(() => {
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
-		padding: 0.75rem 1.25rem 0.5rem;
-		font-size: 0.75rem;
+		padding: 0.75rem 1rem 0.5rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 		flex-shrink: 0;
 	}
 
+	/* 待处理数是这一页唯一「需要你动手」的量，所以只有它着色 */
 	.num-warn {
-		color: oklch(0.72 0.16 45);
+		color: var(--primary);
+		font-variant-numeric: tabular-nums;
 	}
 
 	.num-ok {
-		color: oklch(0.72 0.15 145);
+		color: var(--deep-text);
+		font-variant-numeric: tabular-nums;
 	}
 
+	/* 三级动作：安静的墨色，悬停才升一档；不用主色，那是因为「需要你」才配的颜色 */
 	.link-btn {
 		padding: 0;
 		border: none;
 		background: transparent;
-		font-size: 0.75rem;
-		color: var(--primary);
+		font: inherit;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		color: var(--content-meta);
 		cursor: pointer;
+		transition: color 0.15s;
+	}
+
+	.link-btn:hover:not(:disabled) {
+		color: var(--deep-text);
 	}
 
 	.link-btn:disabled {
@@ -689,8 +644,8 @@ $effect(() => {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		padding: 0 1.25rem 0.5rem;
-		font-size: 0.75rem;
+		padding: 0 1rem 0.5rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 		cursor: pointer;
 		flex-shrink: 0;
@@ -709,7 +664,7 @@ $effect(() => {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		padding: 0.625rem 1.25rem;
+		padding: 0.5rem 1rem;
 		border-left: 2px solid transparent;
 	}
 
@@ -741,7 +696,7 @@ $effect(() => {
 	}
 
 	.row-title {
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-body, 0.875rem);
 		font-weight: 600;
 		color: var(--deep-text);
 		max-width: 100%;
@@ -750,8 +705,10 @@ $effect(() => {
 		white-space: nowrap;
 	}
 
+	/* 路径是机器数据：小一号、等宽 */
 	.row-sub {
-		font-size: 0.6875rem;
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
 		color: var(--content-meta);
 		max-width: 100%;
 		overflow: hidden;
@@ -759,42 +716,24 @@ $effect(() => {
 		white-space: nowrap;
 	}
 
+	/* 状态是一个词，不是一个彩色胶囊（docs/ADMIN_UI.md §4）。
+	   词本身已经说明是「内容不同」还是「仅本地」，颜色只用来提示要不要动手。 */
 	.badge {
 		flex-shrink: 0;
-		padding: 0.0625rem 0.375rem;
-		border-radius: 0.25rem;
-		font-size: 0.6875rem;
-		background: var(--btn-regular-bg);
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
 		color: var(--content-meta);
+		white-space: nowrap;
 	}
 
-	/* 两侧存在的差异 */
-	.badge.differs {
-		background: color-mix(in srgb, var(--primary) 16%, transparent);
+	.badge[data-tone="attention"] {
 		color: var(--primary);
-	}
-
-	/* 只有一边：橙，表示需要决定 */
-	.badge.one-side {
-		background: color-mix(in srgb, oklch(0.72 0.16 45) 16%, transparent);
-		color: oklch(0.72 0.16 45);
-	}
-
-	/* 读不到远端：灰，不下判断 */
-	.badge.unknown {
-		background: var(--btn-regular-bg);
-		color: var(--content-meta);
-	}
-
-	.badge.same {
-		background: color-mix(in srgb, oklch(0.72 0.15 145) 15%, transparent);
-		color: oklch(0.72 0.15 145);
 	}
 
 	.run-msg {
 		margin: 0;
 		padding: 0.5rem 1rem;
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--deep-text);
 		flex-shrink: 0;
 	}
@@ -808,9 +747,9 @@ $effect(() => {
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
-		padding: 0.75rem 1.25rem;
+		padding: 0.75rem 1rem;
 		border-top: 1px solid var(--line-divider);
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 		flex-shrink: 0;
 	}
@@ -820,7 +759,8 @@ $effect(() => {
 		flex-direction: column;
 		min-height: 0;
 		overflow: hidden;
-		padding: 1.25rem 1.75rem 1.75rem;
+		padding: var(--admin-block-gap, 1.25rem) var(--admin-gutter, 1.5rem)
+			var(--admin-gutter, 1.5rem);
 	}
 
 	.main-empty {
@@ -842,7 +782,7 @@ $effect(() => {
 
 	.empty-title {
 		margin: 0;
-		font-size: 0.9375rem;
+		font-size: var(--admin-fs-item, 1.0625rem);
 		font-weight: 600;
 		color: var(--deep-text);
 	}
@@ -850,7 +790,7 @@ $effect(() => {
 	.empty-hint {
 		margin: 0;
 		max-width: 26rem;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		line-height: 1.7;
 		color: var(--content-meta);
 	}
@@ -858,14 +798,14 @@ $effect(() => {
 	.hint {
 		margin: 0;
 		padding: 1rem;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 	}
 
 	.err {
 		margin: 0;
 		padding: 1rem;
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		line-height: 1.6;
 		white-space: pre-wrap;
 		word-break: break-word;
@@ -880,14 +820,14 @@ $effect(() => {
 		gap: 0.75rem;
 		flex-wrap: wrap;
 		padding-bottom: 0.75rem;
-		border-bottom: 1px solid color-mix(in srgb, var(--deep-text) 16%, transparent);
+		border-bottom: 1px solid var(--line-divider);
 		margin-bottom: 0.75rem;
 		flex-shrink: 0;
 	}
 
 	.detail-head h2 {
 		margin: 0;
-		font-size: 1.0625rem;
+		font-size: var(--admin-fs-item, 1.0625rem);
 		font-weight: 600;
 		color: var(--deep-text);
 		overflow: hidden;
@@ -898,14 +838,14 @@ $effect(() => {
 	.detail-meta {
 		display: flex;
 		align-items: center;
-		gap: 0.625rem;
-		font-size: 0.75rem;
+		gap: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 		flex-shrink: 0;
 	}
 
 	.stat-add {
-		color: oklch(0.7 0.15 145);
+		color: var(--success);
 		font-variant-numeric: tabular-nums;
 	}
 
@@ -923,7 +863,7 @@ $effect(() => {
 
 	.detail-err {
 		margin: 0 0 0.5rem;
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--destructive, #d33);
 	}
 
@@ -932,7 +872,7 @@ $effect(() => {
 		min-height: 0;
 		overflow: auto;
 		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		line-height: 1.65;
 	}
 
@@ -948,7 +888,7 @@ $effect(() => {
 		padding: 0 0.375rem 0 0.125rem;
 		text-align: right;
 		color: var(--content-meta);
-		border-right: 1px solid color-mix(in srgb, var(--deep-text) 10%, transparent);
+		border-right: 1px solid var(--line-divider);
 		font-variant-numeric: tabular-nums;
 		user-select: none;
 		/* 行号自身不换行，宽度固定，换行只发生在代码侧 */
@@ -977,11 +917,11 @@ $effect(() => {
 
 	/* 背景只染代码区：整行染色会把行号槽一起盖掉，行号就看不清了 */
 	.diff-row.add .code {
-		background: color-mix(in srgb, oklch(0.7 0.15 145) 14%, transparent);
+		background: color-mix(in srgb, var(--success) 13%, transparent);
 	}
 
 	.diff-row.add .marker {
-		color: oklch(0.7 0.15 145);
+		color: var(--success);
 	}
 
 	.diff-row.del .code {
@@ -994,7 +934,7 @@ $effect(() => {
 
 	.diff-row.gap .code {
 		color: var(--content-meta);
-		font-size: 0.6875rem;
+		font-size: var(--admin-fs-data, 0.6875rem);
 	}
 
 	.single-body {
@@ -1003,7 +943,7 @@ $effect(() => {
 		flex: 1;
 		min-height: 0;
 		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		line-height: 1.65;
 		color: var(--deep-text);
 		white-space: pre-wrap;
