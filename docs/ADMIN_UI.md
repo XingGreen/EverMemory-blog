@@ -118,6 +118,24 @@ description                                  ·  category · .md      time
 - Hover swaps the rail for the row's actions. Keyboard does the same through `:focus-within`;
   touch shows both at once.
 
+## 5a. Long navigation
+
+A page with more than about eight peer sections does not get a horizontal tab bar. Tabs that do
+not fit get clipped, and a clipped tab strip with a hidden scrollbar means sections stop
+existing for anyone without a trackpad — this happened to the settings page with 24 items.
+
+Use a vertical rail instead:
+
+- Fixed width (`13.5rem`), independent scroll, `border-right` against the content column.
+- Group headings are 11px mono, sticky at the top of the rail, and not clickable.
+- The active item gets a tinted background plus the accent colour; nothing else is tinted.
+- The rail stacks vertically only when its content needs the height; it never pushes the content
+  column wider than the remaining space.
+- Below 1023px the rail collapses into a single `Select` at the top of the content column. One
+  control, no horizontal scrolling, current item always visible.
+
+The settings page is the reference implementation (`CONFIG_GROUPS` → `settingsGroups`).
+
 ## 6. Page skeleton
 
 Every page is: `PageHeader` → optional `Toolbar` → one scroll region → optional footer.

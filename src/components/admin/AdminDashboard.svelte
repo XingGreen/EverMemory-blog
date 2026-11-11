@@ -9,8 +9,10 @@ import { i18n } from "@/i18n/translation";
 import type { AdminPostsResponse } from "@/types/adminApi";
 import { probeAdminService, runProbeWithStages } from "@/utils/admin-probe";
 import {
+	CONFIG_GROUPS,
 	CONFIG_ITEMS,
 	getConfigDescKey,
+	getConfigGroup,
 	getConfigItem,
 	getConfigLabelKey,
 } from "@/utils/admin-settings";
@@ -26,6 +28,7 @@ import PostHistoryPage from "./PostHistoryPage.svelte";
 import PostList from "./PostList.svelte";
 import { createPageIntroStore } from "./page-intro.svelte";
 import SecretManager from "./SecretManager.svelte";
+import Select from "./Select.svelte";
 import SessionManager from "./SessionManager.svelte";
 import SettingsEditor from "./SettingsEditor.svelte";
 import SyncPage from "./SyncPage.svelte";
@@ -410,6 +413,18 @@ const settingsTabs = $derived(
 		id: item.key,
 		labelKey: getConfigLabelKey(item.key),
 	})),
+);
+
+/**
+ * 设置页导航按组切分：24 个配置项平铺会溢出（曾有一行被裁掉 9 项），
+ * 分组后左侧竖排，每组一个标题，窄屏退回下拉。
+ */
+const settingsGroups = $derived(
+	CONFIG_GROUPS.map((group) => ({
+		id: group.id,
+		labelKey: group.labelKey,
+		items: settingsTabs.filter((tab) => getConfigGroup(tab.id) === group.id),
+	})).filter((group) => group.items.length > 0),
 );
 
 /** 切到某个 tab：直接跳对应配置项详情页 */
@@ -2003,25 +2018,41 @@ function formatDate(dateStr: string | null): string {
 					     详情页才包进 SettingsShell（.settings-workspace.fuwari-card-base） -->
 					{#if settingsSection && getConfigItem(settingsSection)}
 						<div class="settings-workspace card-base">
-							<!-- 紧接 tab 栏，分隔线由 tab 栏画，页头不再画第二条 -->
 							<PageHeader
 								title={i18n(getConfigLabelKey(settingsSection))}
 								meta={i18n(getConfigDescKey(settingsSection))}
-								bordered={false}
 							/>
-							<nav class="settings-tabs" aria-label={i18n(I18nKey.adminSettings)}>
-								{#each settingsTabs as tab (tab.id)}
-									<button
-										type="button"
-										class="settings-tab"
-										class:active={settingsTab === tab.id}
-										aria-current={settingsTab === tab.id ? "page" : undefined}
-										onclick={() => goSettingsTab(tab.id)}
-									>
-										{i18n(tab.labelKey)}
-									</button>
-								{/each}
-							</nav>
+							<div class="settings-main">
+								<!-- 24 个配置项竖排会占满左侧一列，分组标题给出结构；
+								     窄屏换成一个下拉，避免横向裁切（旧 tab 栏的毛病） -->
+								<nav class="settings-rail" aria-label={i18n(I18nKey.adminSettings)}>
+									{#each settingsGroups as group (group.id)}
+										<p class="settings-rail-group">{i18n(group.labelKey)}</p>
+										{#each group.items as tab (tab.id)}
+											<button
+												type="button"
+												class="settings-rail-item"
+												class:active={settingsTab === tab.id}
+												aria-current={settingsTab === tab.id ? "page" : undefined}
+												onclick={() => goSettingsTab(tab.id)}
+											>
+												{i18n(tab.labelKey)}
+											</button>
+										{/each}
+									{/each}
+								</nav>
+
+								<div class="settings-pane">
+									<div class="settings-picker">
+										<Select
+											value={settingsTab ?? ""}
+											options={settingsTabs.map((tab) => ({
+												value: tab.id,
+												label: i18n(tab.labelKey),
+											}))}
+											onChange={(v) => goSettingsTab(v)}
+										/>
+									</div>
 							<div class="settings-body">
 								{#if settingsRemote}
 									<div class="settings-remote-banner">
@@ -2040,6 +2071,8 @@ function formatDate(dateStr: string | null): string {
 									onModeChange={(m) => (settingsMode = m)}
 									onSourceChange={(s) => (settingsSource = s)}
 								/>
+								</div>
+								</div>
 							</div>
 							<footer class="settings-savebar">
 								<p>
@@ -3037,55 +3070,135 @@ function formatDate(dateStr: string | null): string {
 		flex-shrink: 0;
 	}
 
-	/* ── 设置页 tab 导航：对齐参考 .settings-tabs ──
-	   横排、底部 1px 分隔线、当前项主色下划线（2px）；
-	   窄屏横向滚动，不换行。位于容器内，左右与内容区对齐。 */
-	.settings-tabs {
+	/* ── 设置页左侧导航 ──
+	   24 个配置项横排必溢出（旧的 tab 栏被裁掉 9 项且滚动条不可见），改为竖排 + 分组：
+	   左列固定宽度独立滚动，右侧内容区自己滚，保存栏常驻底部。 */
+	.settings-main {
 		display: flex;
-		gap: 1.75rem;
-		padding: 0 var(--admin-gutter, 1.5rem);
-		border-bottom: 1px solid var(--line-divider);
-		overflow-x: auto;
+		flex: 1;
+		min-height: 0;
+	}
+
+	.settings-rail {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		width: 13.5rem;
 		flex-shrink: 0;
-		scrollbar-width: none;
+		padding: 0.75rem 0.75rem 1rem var(--admin-gutter, 1.5rem);
+		border-right: 1px solid var(--line-divider);
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		/* 24 项必然滚出可视区，滚动条必须看得见：覆盖式滚动条在桌面端
+		   等于把「下面还有内容」这件事藏起来（旧 tab 栏失败的原因） */
+		scrollbar-width: thin;
+		scrollbar-color: var(--line-color) transparent;
+		/* 末尾 20px 渐隐：滚动条在部分平台是覆盖式的、抓不到，
+		   这层渐变是「下面还有内容」的兜底提示 */
+		-webkit-mask-image: linear-gradient(
+			to bottom,
+			#000 calc(100% - 20px),
+			transparent 100%
+		);
+		mask-image: linear-gradient(
+			to bottom,
+			#000 calc(100% - 20px),
+			transparent 100%
+		);
 	}
 
-	.settings-tabs::-webkit-scrollbar {
-		display: none;
+	.settings-rail::-webkit-scrollbar {
+		width: 8px;
 	}
 
-	.settings-tab {
-		display: inline-flex;
-		align-items: center;
-		white-space: nowrap;
-		padding: 0.875rem 0.1875rem;
-		border: none;
-		border-bottom: 2px solid transparent;
-		/* 让下划线压住容器那 1px 分隔线：否则高亮只在分隔线上方画了 2px，
-		   看起来像「没画满」。-1px 之后两者共线，视觉上是一条完整的指示条 */
-		margin-bottom: -1px;
+	.settings-rail::-webkit-scrollbar-thumb {
+		border-radius: 4px;
+		background: var(--line-color);
+	}
+
+	.settings-rail::-webkit-scrollbar-track {
 		background: transparent;
-		color: color-mix(in oklab, var(--deep-text) 75%, transparent);
-		font-size: 0.875rem;
-		font-family: inherit;
-		cursor: pointer;
-		transition: color 0.22s, border-color 0.22s;
 	}
 
-	.settings-tab:hover {
+	/* 组标题：11px 数据级字号，只做结构提示，不参与点击。
+	   24 项在 900px 高下必然滚出可视区，标题吸顶让人始终知道自己在哪一组。 */
+	.settings-rail-group {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		margin: 0.625rem 0 0.1875rem;
+		padding: 0.25rem 0.5rem;
+		background: var(--card-bg);
+		font-size: var(--admin-fs-data, 0.6875rem);
+		letter-spacing: 0.04em;
+		color: var(--content-meta);
+	}
+
+	.settings-rail-group:first-child {
+		margin-top: 0.25rem;
+	}
+
+	.settings-rail-item {
+		display: flex;
+		align-items: center;
+		width: 100%;
+		padding: 0.375rem 0.5rem;
+		border: none;
+		border-radius: 8px;
+		background: none;
+		color: color-mix(in oklab, var(--deep-text) 78%, transparent);
+		font: inherit;
+		font-size: 0.8125rem;
+		text-align: left;
+		cursor: pointer;
+		transition:
+			background-color 0.15s,
+			color 0.15s;
+	}
+
+	.settings-rail-item:hover {
+		background: var(--btn-plain-bg-hover);
 		color: var(--deep-text);
 	}
 
-	.settings-tab.active {
-		border-bottom-color: var(--primary);
+	.settings-rail-item.active {
+		background: color-mix(in srgb, var(--primary) 12%, transparent);
 		color: var(--primary);
+		font-weight: 600;
 	}
 
-	/* 页签容器 overflow-x:auto 且上下零留白，外描边的上下两边会被裁掉；
-	   与侧栏导航项同理，焦点环画在内侧 */
-	.settings-tab:focus-visible {
+	.settings-rail-item:focus-visible {
 		outline: 2px solid var(--primary);
 		outline-offset: -2px;
+	}
+
+	.settings-pane {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-width: 0;
+		min-height: 0;
+	}
+
+	/* 窄屏：竖排导航收起，换成一个下拉（一行放不下 24 项，也不该横滑找） */
+	.settings-picker {
+		display: none;
+	}
+
+	@media (max-width: 1023px) {
+		.settings-rail {
+			display: none;
+		}
+
+		.settings-picker {
+			display: block;
+			flex-shrink: 0;
+			padding: 0.75rem var(--admin-gutter, 1.5rem) 0;
+		}
+
+		.settings-picker :global(.select-root) {
+			width: 100%;
+		}
 	}
 
 	/* ── 工作区标题区：对齐参考 settings-heading ──
@@ -4597,40 +4710,6 @@ function formatDate(dateStr: string | null): string {
 			bottom: 1rem;
 			width: calc(100vw - 2rem);
 			max-width: 22rem;
-		}
-
-		/* 设置页 tab 窄屏可横向滚动，但单个 tab 触控宽度仍要保住下限 */
-		.settings-tab {
-			min-width: 44px;
-		}
-
-		/* 文章管理页头按钮（对齐「移动端文章管理」演示）：
-		   同步按钮只留图标 → 36×36 圆角方块；新建按钮收成小号。
-		   前缀 :global(.admin-shell) 是为了压过 admin.css 里
-		   `.admin-shell .ui-btn { min-height: 44px }`（同为 0,2,0，靠层级取胜）。 */
-		:global(.admin-shell) .post-sync-btn {
-			width: 36px;
-			height: 36px;
-			min-height: 36px;
-			padding: 0;
-			border-radius: 12px;
-		}
-
-		:global(.admin-shell) .post-sync-btn .btn-label {
-			display: none;
-		}
-
-		:global(.admin-shell) .post-create-btn {
-			height: 36px;
-			min-height: 36px;
-			padding: 0 0.875rem;
-			border-radius: 12px;
-			font-size: 0.875rem;
-		}
-
-		:global(.admin-shell) .post-sync-btn .btn-icon,
-		:global(.admin-shell) .post-create-btn .btn-icon {
-			font-size: 16px;
 		}
 
 		.placeholder-page {
