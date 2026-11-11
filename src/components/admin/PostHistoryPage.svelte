@@ -6,7 +6,8 @@
  *   src/features/posts/components/post-editor/post-history-page.tsx
  *   src/features/posts/components/post-editor/post-editor.css（post-editor-* / post-history-*）
  *
- * 只做了一件事：把 --fuwari-* 设计变量映射到本项目同名变量，其余原样照抄。
+ * 布局沿用参考项目；顶栏高度、内距、字号与分隔线按 docs/ADMIN_UI.md 对齐后台其它页
+ * （顶栏 72px，与编辑器顶栏同高；标题 14/600；恢复按钮与编辑器保存按钮同尺寸）。
  * 不再有自创的 .history-page / .history-body 那套命名与布局。
  *
  * 参考布局要点：
@@ -16,8 +17,8 @@
  *   3. 列表项是带描边的卡片块，::before 画左侧时间轴
  */
 
-import PostMetaBar from "@/components/admin/PostMetaBar.svelte";
 import AdminPostStats from "@/components/admin/AdminPostStats.svelte";
+import PostMetaBar from "@/components/admin/PostMetaBar.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -659,8 +660,8 @@ $effect(() => {
 	/* ── 变量映射：把参考的 --fuwari-* 换成本项目同名变量，其余原样 ── */
 	.post-history-shell {
 		/* 参考 .post-editor-workspace */
-		--post-editor-rule: color-mix(in srgb, var(--deep-text) 8%, transparent);
-		--post-editor-header-height: 4.75rem;
+		--post-editor-rule: var(--line-divider);
+		--post-editor-header-height: 4.5rem;
 		position: relative;
 		display: flex;
 		flex: 1;
@@ -683,7 +684,7 @@ $effect(() => {
 		flex-shrink: 0;
 		gap: 1rem;
 		min-height: var(--post-editor-header-height);
-		padding: 1rem 1.75rem;
+		padding: 0.75rem var(--admin-gutter, 1.5rem);
 		border-bottom: 1px solid var(--post-editor-rule);
 	}
 
@@ -725,14 +726,14 @@ $effect(() => {
 
 	.post-history-context h1 {
 		margin: 0;
-		font-size: 0.875rem;
-		font-weight: 500;
+		font-size: var(--admin-fs-body, 0.875rem);
+		font-weight: 600;
 		color: var(--deep-text);
 	}
 
 	.post-history-context p {
 		margin: 0.15rem 0 0;
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 	}
 
 	/* 参考 .post-editor-header-actions */
@@ -744,17 +745,19 @@ $effect(() => {
 		margin-left: auto;
 	}
 
+	/* 恢复按钮：这是全页唯一的主操作，直接用共享主按钮 */
 	.post-editor-restore {
 		display: inline-flex;
 		align-items: center;
-		height: 2.25rem;
+		/* 与编辑器顶栏的保存按钮同尺寸，主操作在两个页面里是同一颗按钮 */
+		height: 2.75rem;
 		padding: 0 1.25rem;
 		border: none;
-		border-radius: 0.5rem;
+		border-radius: 10px;
 		background: var(--primary);
 		color: var(--primary-foreground);
 		font-family: inherit;
-		font-size: 0.875rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-weight: 500;
 		cursor: pointer;
 	}

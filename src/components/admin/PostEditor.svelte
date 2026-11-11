@@ -1658,8 +1658,7 @@ $effect(() => {
 						)
 					: undefined}
 			>
-				<span class="doc-state-dot"></span>
-				{docState === "dirty"
+					{docState === "dirty"
 					? i18n(I18nKey.postStateDirty)
 					: docState === "fresh"
 						? i18n(I18nKey.postStateFresh)
@@ -1963,7 +1962,9 @@ $effect(() => {
 		align-items: center;
 		flex-shrink: 0;
 		gap: 1rem;
-		padding: 1rem 1.5rem;
+		/* 与历史页顶栏同高：两个工作台共用一条视觉横线，切页时不该跳一下 */
+		min-height: 4.5rem;
+		padding: 0.75rem var(--admin-gutter, 1.5rem);
 		border-bottom: 1px solid var(--line-divider);
 		background: var(--card-bg);
 		border-radius: var(--radius-large) var(--radius-large) 0 0;
@@ -1982,38 +1983,21 @@ $effect(() => {
 	   这里＝编辑区的内容有没有写进正文；那里＝草稿有没有传到云端。
 	   已保存用中性灰（不必强调），有未保存改动用主色（需要留意），
 	   新建未保存用警示黄（一次都没存过，风险最高）。 */
+	/* 文档状态是一个词（docs/ADMIN_UI.md §4）。
+	   「未保存」是这一页唯一要你动手的事，所以只有它着色。 */
 	.doc-state {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.375rem;
-		padding: 0.25rem 0.625rem;
-		border-radius: 999px;
-		border: 1px solid var(--line-divider);
-		background: var(--btn-regular-bg);
 		color: var(--content-meta);
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-weight: 500;
 		white-space: nowrap;
 	}
 
-	.doc-state-dot {
-		width: 0.4375rem;
-		height: 0.4375rem;
-		border-radius: 50%;
-		background: currentColor;
-		opacity: 0.7;
-	}
-
-	.doc-state.is-dirty {
-		border-color: color-mix(in oklab, var(--primary) 40%, transparent);
-		background: color-mix(in oklab, var(--primary) 12%, transparent);
-		color: var(--primary);
-	}
-
+	.doc-state.is-dirty,
 	.doc-state.is-fresh {
-		border-color: color-mix(in oklab, var(--warning, #b8860b) 40%, transparent);
-		background: color-mix(in oklab, var(--warning, #b8860b) 12%, transparent);
-		color: var(--warning, #b8860b);
+		color: var(--primary);
 	}
 
 	/* 草稿最后一次写入的时分：与「草稿 · 未保存」并排，弱一档 */
@@ -2142,42 +2126,25 @@ $effect(() => {
 		align-items: center;
 		gap: 0.35rem;
 		max-width: min(26rem, 52vw);
-		padding: 0.2rem 0.6rem;
-		border-radius: 999px;
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-weight: 500;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		color: var(--success);
-		background: color-mix(in srgb, var(--success) 12%, transparent);
-		border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
-	}
-
-	.cloud-badge.syncing {
-		color: var(--info);
-		background: color-mix(in srgb, var(--info) 12%, transparent);
-		border-color: color-mix(in srgb, var(--info) 30%, transparent);
-	}
-
-	/* 仅本地：中性灰——没同步但也不算失败，与「同步失败」的红色区分开 */
-	.cloud-badge.local {
+		/* 「已同步」「同步中」「仅本地」都不需要你做什么，一律墨色；
+		   只有失败才配用红。 */
 		color: var(--content-meta);
-		background: color-mix(in srgb, var(--content-meta) 10%, transparent);
-		border-color: color-mix(in srgb, var(--content-meta) 28%, transparent);
 	}
 
 	.cloud-badge.error {
 		color: var(--destructive);
-		background: color-mix(in srgb, var(--destructive) 12%, transparent);
-		border-color: color-mix(in srgb, var(--destructive) 30%, transparent);
 	}
 
 	.cloud-spinner {
 		width: 0.75rem;
 		height: 0.75rem;
-		border: 2px solid color-mix(in srgb, var(--info) 25%, transparent);
-		border-top-color: var(--info);
+		border: 2px solid color-mix(in srgb, var(--content-meta) 25%, transparent);
+		border-top-color: var(--content-meta);
 		border-radius: 50%;
 		animation: cloud-spin 0.8s linear infinite;
 	}

@@ -196,7 +196,16 @@ pages cement them.
    state is accent-coloured, and leak severities are words rather than tinted pills.
 6. Links — migrated (done). Status is a word, the save bar's three coloured states collapsed into
    accent-for-unsaved and ink-for-saved, and two dead selectors were dropped.
-7. History and the editor — these have their own top bars; align them last.
+7. History and the editor — migrated (done). These keep their own workspace bars rather than
+   `PageHeader` — they hold a back button and a document title, not a page title. Both bars are
+   now 72px tall with the gutter padding and one hairline, so switching between the two does not
+   shift the layout, and their save/restore buttons are the same size.
+
+## 10. Known debt
+
+- `TaxonomyManager` still sizes everything from `--tx-unit`; it needs its own pass.
+- `AdminDashboard` (the shell) still holds page-specific styles for several screens. They move
+  into their pages as those pages are touched.
 
 Each migration is one branch, one commit, with before/after screenshots. A page is migrated
 when it imports the primitives and passes without local overrides.
