@@ -160,6 +160,9 @@ Every page is: `PageHeader` → optional `Toolbar` → one scroll region → opt
 | Tertiary | `ui-btn ui-btn-ghost` | reset, clear, cancel |
 | Destructive | quiet text button, red on hover | editor header, confirm dialogs |
 
+`ui-btn-sm` (36px) exists for a single action inside a dense row — a managed-key row, a table
+cell. It is a size, not a level: pair it with one of the three variants above.
+
 Destructive actions do not live in list rows. Deleting a post happens in the editor, where the
 decision belongs; a row is for finding things.
 
@@ -188,7 +191,9 @@ pages cement them.
 4. Taxonomy — migrated (done). Its shell `AdminPage` now delegates the heading to the primitive,
    so the sessions and env pages inherit it in the same move; the list's status pills became
    words. Remaining debt: the page still sizes everything off its own `--tx-unit`.
-5. Secrets — dense forms.
+5. Secrets — migrated (done). Nested cards are gone (the page is the card), the local `.btn`
+   vocabulary was replaced by `ui-btn`, the "all configured" bar is ink and only the unfinished
+   state is accent-coloured, and leak severities are words rather than tinted pills.
 6. Links — the friend-links manager.
 7. History and the editor — these have their own top bars; align them last.
 

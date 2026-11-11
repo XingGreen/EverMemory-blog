@@ -759,7 +759,7 @@ function answerConfirm(ok: boolean) {
 		</div>
 		<div class="action-buttons">
 			<button
-				class="btn"
+				class="ui-btn ui-btn-soft"
 				type="button"
 				title={i18n(I18nKey.secretsLeakCheck)}
 				onclick={checkLeak}
@@ -768,13 +768,18 @@ function answerConfirm(ok: boolean) {
 				<Icon icon="material-symbols:shield-lock" />
 				<span>{i18n(I18nKey.secretsLeakCheck)}</span>
 			</button>
-			<button class="btn" type="button" onclick={load} disabled={loading}>
+			<button
+				class="ui-btn ui-btn-soft"
+				type="button"
+				onclick={load}
+				disabled={loading}
+			>
 				<Icon icon="material-symbols:refresh" />
 				<span>{i18n(I18nKey.secretsReload)}</span>
 			</button>
 			{#if writable}
 				<button
-					class="btn"
+					class="ui-btn ui-btn-soft"
 					type="button"
 					title={i18n(I18nKey.secretsExport)}
 					onclick={() => (exportOpen = true)}
@@ -946,7 +951,7 @@ function answerConfirm(ok: boolean) {
 										</span>
 										<button
 											type="button"
-											class="btn btn-sm"
+											class="ui-btn ui-btn-soft ui-btn-sm"
 											disabled={!writable || loading || rotating === item.key}
 											title={writable
 												? i18n(I18nKey.secretsRotateHint)
@@ -1202,8 +1207,7 @@ function answerConfirm(ok: boolean) {
 	}
 
 	/* ── 顶部提示条 ──
-	   成功态：绿色半透明底 + 同色微边框，说清「已完成 + 写入位置」；
-	   未完成态：琥珀色，附缺失项列表。 */
+	   全部配好时没有任何事等你做，所以完成态是墨色；未完成才用主色。 */
 	.success-bar,
 	.pending-bar {
 		display: flex;
@@ -1217,9 +1221,9 @@ function answerConfirm(ok: boolean) {
 	}
 
 	.success-bar {
-		background: color-mix(in oklab, var(--success) 10%, transparent);
-		border: 1px solid color-mix(in oklab, var(--success) 20%, transparent);
-		color: var(--success);
+		border: 1px solid var(--line-divider);
+		background: var(--btn-regular-bg);
+		color: var(--deep-text);
 	}
 
 	.success-bar :global(.inline-icon) {
@@ -1240,7 +1244,7 @@ function answerConfirm(ok: boolean) {
 
 	.leak-note {
 		margin: 0;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 	}
 
@@ -1253,36 +1257,32 @@ function answerConfirm(ok: boolean) {
 
 	.leak-file {
 		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--deep-text);
 	}
 
+	/* 等级是一个词：安全就用墨色，需要处置用主色，已泄露才用红。
+	   胶囊本身不承担语义，文字承担。 */
 	.leak-badge {
-		padding: 0.125rem 0.5rem;
-		border-radius: 999px;
-		font-size: 0.75rem;
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
 		font-weight: 500;
 		line-height: 1.5;
-	}
-
-	.leak-row[data-level="safe"] .leak-badge {
-		background: color-mix(in oklab, var(--success) 15%, transparent);
-		color: var(--success);
+		color: var(--content-meta);
 	}
 
 	.leak-row[data-level="warning"] .leak-badge {
-		background: color-mix(in oklab, var(--warning) 18%, transparent);
-		color: var(--warning);
+		color: var(--primary);
 	}
 
 	.leak-row[data-level="serious"] .leak-badge {
-		background: color-mix(in oklab, var(--destructive) 15%, transparent);
-		color: var(--destructive);
+		color: var(--primary);
+		font-weight: 600;
 	}
 
 	.leak-row[data-level="danger"] .leak-badge {
-		background: var(--destructive);
-		color: var(--primary-foreground);
+		color: var(--destructive);
+		font-weight: 600;
 	}
 
 	.status-dismiss {
@@ -1296,7 +1296,7 @@ function answerConfirm(ok: boolean) {
 		border-radius: 6px;
 		background: transparent;
 		color: var(--deep-text);
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-family: inherit;
 		font-weight: 500;
 		cursor: pointer;
@@ -1304,22 +1304,22 @@ function answerConfirm(ok: boolean) {
 	}
 
 	.status-dismiss:hover {
-		background: color-mix(in oklab, var(--success) 15%, transparent);
+		background: var(--btn-plain-bg-hover);
 	}
 
 	.status-dismiss:focus-visible {
-		outline: 2px solid var(--success);
+		outline: 2px solid var(--primary);
 		outline-offset: 2px;
 	}
 
 	.pending-bar {
-		background: color-mix(in oklab, var(--warning) 10%, transparent);
-		border: 1px solid color-mix(in oklab, var(--warning) 20%, transparent);
-		color: var(--warning);
+		background: color-mix(in srgb, var(--primary) 10%, transparent);
+		border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+		color: var(--primary);
 	}
 
 	.pending-bar :global(.status-icon) {
-		color: var(--warning);
+		color: var(--primary);
 		flex-shrink: 0;
 	}
 
@@ -1333,7 +1333,7 @@ function answerConfirm(ok: boolean) {
 		align-items: center;
 		gap: 0.375rem;
 		flex-wrap: wrap;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 	}
 
@@ -1344,7 +1344,7 @@ function answerConfirm(ok: boolean) {
 		padding: 0;
 		border-radius: 0;
 		background: transparent;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 		white-space: nowrap;
 	}
@@ -1358,19 +1358,15 @@ function answerConfirm(ok: boolean) {
 		justify-content: space-between;
 		gap: 1rem;
 		flex-wrap: wrap;
-		padding: 1.5rem;
-		border: 1px solid transparent;
-		border-radius: var(--radius-large);
-		background: color-mix(in oklab, var(--card-bg) 88%, transparent);
-		-webkit-backdrop-filter: blur(12px);
-		backdrop-filter: blur(12px);
+		/* 一行说明 + 三个按钮。不再套一层半透明卡片：
+		   页面本身已经是卡片，里面再画一张卡只是多一圈圆角。 */
 	}
 
 	.action-info {
 		display: flex;
 		flex-direction: column;
 		gap: 0.125rem;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		line-height: 1.6;
 		color: var(--content-meta);
 		min-width: 0;
@@ -1388,39 +1384,6 @@ function answerConfirm(ok: boolean) {
 		flex-shrink: 0;
 	}
 
-	/* ── 按钮 ──
-	   遵循项目规范：12px 圆角（--radius-xl）、无实线边框，
-	   底色与悬停走 --btn-regular-bg 系列变量。 */
-	.btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		padding: 0.5rem 1rem;
-		border: 1px solid transparent;
-		border-radius: var(--radius-xl);
-		background: var(--btn-regular-bg);
-		color: var(--deep-text);
-		font-size: 0.8125rem;
-		font-weight: 500;
-		font-family: inherit;
-		cursor: pointer;
-		transition: background 0.2s ease, color 0.2s ease;
-	}
-
-	.btn:hover:not(:disabled) {
-		background: var(--btn-regular-bg-hover);
-	}
-
-	.btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.btn:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 2px;
-	}
-
 	/* ── 托管密钥状态行（JWT 等）──
 	   与输入框同高、同圆角，带 success 语义底色与边框，
 	   让「已由服务端托管」的状态在表单里仍是一个可见的控件位。 */
@@ -1432,11 +1395,13 @@ function answerConfirm(ok: boolean) {
 		flex-wrap: wrap;
 		min-height: 2.625rem;
 		padding: 0.5rem 0.75rem;
-		border: 1px solid color-mix(in oklab, var(--success) 30%, transparent);
+		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-xl);
-		background: color-mix(in oklab, var(--success) 10%, transparent);
-		font-size: 0.8125rem;
-		color: color-mix(in oklab, var(--success) 55%, var(--deep-text));
+		/* 透明底而不是 --btn-regular-bg：行里放着一颗 ui-btn-soft，
+		   两者同色会让按钮完全消失。 */
+		background: transparent;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		color: var(--deep-text);
 	}
 
 	.managed-state {
@@ -1447,27 +1412,13 @@ function answerConfirm(ok: boolean) {
 	}
 
 	.managed-state :global(.managed-ok) {
-		color: var(--success);
+		color: var(--content-meta);
 		flex-shrink: 0;
 	}
 
 	.managed-state :global(.managed-warn) {
-		color: var(--warning);
+		color: var(--primary);
 		flex-shrink: 0;
-	}
-
-	/* 小号按钮：设计稿里 status-pill 内的「轮换」为 4px 12px / 12px 字 */
-	.btn.btn-sm {
-		padding: 0.25rem 0.75rem;
-		font-size: 0.75rem;
-	}
-
-	.btn :global(.inline-icon) {
-		font-size: 0.875rem;
-	}
-
-	.btn.btn-sm :global(.inline-icon) {
-		font-size: 0.75rem;
 	}
 
 	/* 次按钮：对齐参考项目 .fuwari-btn-regular + .settings-button
@@ -1552,7 +1503,7 @@ function answerConfirm(ok: boolean) {
 	}
 
 	.settings-group-title .group-hint {
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-weight: 400;
 		color: var(--content-meta);
 	}
@@ -1591,10 +1542,10 @@ function answerConfirm(ok: boolean) {
 		margin: 0 0 1rem;
 		padding: 0.625rem 0.875rem;
 		border-radius: 0.5rem;
-		background: color-mix(in srgb, oklch(0.72 0.16 45) 14%, transparent);
-		font-size: 0.8125rem;
+		background: color-mix(in srgb, var(--primary) 12%, transparent);
+		font-size: var(--admin-fs-meta, 0.75rem);
 		line-height: 1.6;
-		color: oklch(0.72 0.16 45);
+		color: var(--primary);
 	}
 
 	/* 从保存栏清单跳转时的定位提示：左侧竖线加粗并呼吸两次。
@@ -1625,7 +1576,7 @@ function answerConfirm(ok: boolean) {
 		align-items: center;
 		flex-wrap: wrap;
 		gap: 0.375rem;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-weight: 500;
 		color: var(--deep-text);
 		min-width: 0;
@@ -1646,8 +1597,9 @@ function answerConfirm(ok: boolean) {
 		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
 	}
 
+	/* 必填标记：表单里唯一「必须由你补上」的东西，所以用主色 */
 	.req-star {
-		color: color-mix(in oklab, var(--warning) 85%, var(--deep-text));
+		color: var(--primary);
 	}
 
 	/* 窄屏：单列 */
@@ -1680,10 +1632,11 @@ function answerConfirm(ok: boolean) {
 	}
 
 	/* 已配置态：文字用正文色，与「未配置」的提示语气区分 */
+	/* 已配置：只是一条墨色边，不用绿色宣布它 */
 	.upload-zone.configured {
 		border-style: solid;
-		border-color: color-mix(in oklab, var(--success) 30%, transparent);
-		background: color-mix(in oklab, var(--success) 10%, transparent);
+		border-color: var(--line-divider);
+		background: var(--btn-regular-bg);
 	}
 
 	.upload-input {
@@ -1713,7 +1666,7 @@ function answerConfirm(ok: boolean) {
 	}
 
 	.upload-zone.configured .upload-text {
-		color: color-mix(in oklab, var(--success) 55%, var(--deep-text));
+		color: var(--deep-text);
 		font-weight: 500;
 	}
 
@@ -1805,7 +1758,7 @@ function answerConfirm(ok: boolean) {
 		border-radius: var(--radius-md);
 		background: transparent;
 		color: var(--deep-text);
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-family: inherit;
 		text-align: left;
 		cursor: pointer;
@@ -2005,7 +1958,7 @@ function answerConfirm(ok: boolean) {
 		border-radius: var(--radius-xl);
 		background: var(--input-bg);
 		color: var(--content-meta);
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-family: inherit;
 		cursor: pointer;
 		transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
@@ -2068,11 +2021,11 @@ function answerConfirm(ok: boolean) {
 		align-items: flex-start;
 		gap: 0.5rem;
 		padding: 0.75rem 1rem;
-		background: color-mix(in oklab, var(--warning) 10%, transparent);
+		background: color-mix(in srgb, var(--primary) 10%, transparent);
 		border: 1px solid transparent;
 		border-radius: var(--radius-md);
-		color: var(--warning);
-		font-size: 0.8125rem;
+		color: var(--primary);
+		font-size: var(--admin-fs-meta, 0.75rem);
 		line-height: 1.6;
 		margin-bottom: 1.25rem;
 	}

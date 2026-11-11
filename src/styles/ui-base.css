@@ -263,6 +263,14 @@ textarea.ui-input {
 	background: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
+/* 小一号：给密集行内的单个动作（状态行里的「轮换」这类）。
+   只改高度、内距和字号，配色沿用上面三个变体。 */
+.ui-btn-sm {
+	height: 36px;
+	padding: 0 0.75rem;
+	font-size: var(--admin-fs-meta, 0.75rem);
+}
+
 /**
  * 下拉菜单的统一样式。
  *

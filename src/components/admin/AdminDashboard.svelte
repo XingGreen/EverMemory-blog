@@ -2127,7 +2127,7 @@ function formatDate(dateStr: string | null): string {
 			{:else if activePage === "env"}
 				<AdminPage title={i18n(I18nKey.adminEnvVars)} intro={i18n(I18nKey.adminEnvVarsIntro)}>
 				{#if import.meta.env.PROD}
-					<section class="card-base secrets-guide">
+					<section class="secrets-guide">
 						<div class="guide-head">
 							<Icon icon="material-symbols:shield-lock" class="guide-icon" />
 							<div>
@@ -2191,7 +2191,7 @@ function formatDate(dateStr: string | null): string {
 							<div class="savebar-actions">
 								{#if secretSaveState.changedCount > 0}
 									<button
-										class="savebar-btn"
+										class="ui-btn ui-btn-ghost"
 										type="button"
 										disabled={secretSaveState.saving}
 										onclick={() => secretSaveState?.discard()}
@@ -2200,7 +2200,7 @@ function formatDate(dateStr: string | null): string {
 									</button>
 								{/if}
 								<button
-									class="savebar-btn primary"
+									class="ui-btn ui-btn-primary"
 									type="button"
 									onclick={() => secretSaveState?.save()}
 									disabled={secretSaveState.saving ||
@@ -3338,9 +3338,9 @@ function formatDate(dateStr: string | null): string {
 		padding: 0.5625rem 0.75rem;
 		border: none;
 		border-radius: 10px;
-		background: color-mix(in oklab, var(--warning) 12%, transparent);
-		color: var(--warning);
-		font-size: 0.8125rem;
+		background: color-mix(in srgb, var(--primary) 12%, transparent);
+		color: var(--primary);
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-family: inherit;
 		font-weight: 500;
 		cursor: pointer;
@@ -4754,9 +4754,11 @@ function formatDate(dateStr: string | null): string {
 			align-items: flex-start;
 		} */
 	}
-	/* 生产环境提示卡片 */
+	/* 生产环境引导：页面已经是卡片，这里不再套一层
+	   （原先 card-base + 28px 内距 = 卡里再画一张卡）。 */
 	.secrets-guide {
-		padding: 1.75rem;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.settings-remote-banner {
@@ -4792,7 +4794,7 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.guide-head h2 {
-		font-size: 1.1875rem;
+		font-size: var(--admin-fs-item, 1.0625rem);
 		font-weight: 600;
 		color: var(--deep-text);
 		margin-bottom: 0.375rem;
@@ -4805,7 +4807,7 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.guide-subtitle {
-		font-size: 1rem;
+		font-size: var(--admin-fs-body, 0.875rem);
 		font-weight: 600;
 		color: var(--deep-text);
 		margin-bottom: 0.875rem;
@@ -4835,9 +4837,9 @@ function formatDate(dateStr: string | null): string {
 		width: 1.5rem;
 		height: 1.5rem;
 		border-radius: 50%;
-		background: var(--primary);
-		color: #fff;
-		font-size: 0.8125rem;
+		background: var(--btn-regular-bg);
+		color: var(--deep-text);
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-weight: 600;
 	}
 
@@ -4851,19 +4853,19 @@ function formatDate(dateStr: string | null): string {
 		display: flex;
 		align-items: flex-start;
 		gap: 0.5rem;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 		line-height: 1.6;
-		background: color-mix(in srgb, var(--info) 8%, transparent);
-		border: 1px solid color-mix(in srgb, var(--info) 25%, transparent);
+		background: var(--btn-regular-bg);
+		border: 1px solid var(--line-divider);
 		border-radius: var(--radius-sm);
-		padding: 0.625rem 0.875rem;
+		padding: 0.75rem 1rem;
 	}
 
 	.guide-tip :global(svg) {
 		flex-shrink: 0;
 		margin-top: 0.125rem;
-		color: var(--info);
+		color: var(--content-meta);
 	}
 
 	/* ────────────────────────────────────────────────────────────
