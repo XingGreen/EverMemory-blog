@@ -981,6 +981,12 @@ function answerConfirm(ok: boolean) {
 												: i18n(I18nKey.secretsUploadLabel)}
 											onchange={(e) => readPemFile(e, item)}
 										/>
+										{#if drafts[item.key]}
+											<Icon
+												icon="material-symbols:check-circle-outline"
+												class="upload-ok"
+											/>
+										{/if}
 										<span class="upload-text">
 											{drafts[item.key]
 												? i18n(I18nKey.secretsUploadedConfigured)
@@ -1226,8 +1232,10 @@ function answerConfirm(ok: boolean) {
 		color: var(--deep-text);
 	}
 
-	.success-bar :global(.inline-icon) {
+	.success-bar :global(svg) {
 		flex-shrink: 0;
+		/* 唯一的绿色出现在这个勾上：它说的是「都办好了」，不铺成一条绿底 */
+		color: var(--success);
 	}
 
 	/* 「知道了」：右侧文字按钮，继承 success 色系，不与主操作抢权重 */
@@ -1384,6 +1392,13 @@ function answerConfirm(ok: boolean) {
 		flex-shrink: 0;
 	}
 
+	/* 深色底上按钮底色的 hover 只差一档亮度，指针落上去几乎看不出来；
+	   补一圈内描边，悬停才有实感 */
+	.action-buttons :global(.ui-btn:hover:not(:disabled)) {
+		box-shadow: inset 0 0 0 1px
+			color-mix(in srgb, var(--deep-text) 14%, transparent);
+	}
+
 	/* ── 托管密钥状态行（JWT 等）──
 	   与输入框同高、同圆角，带 success 语义底色与边框，
 	   让「已由服务端托管」的状态在表单里仍是一个可见的控件位。 */
@@ -1400,8 +1415,14 @@ function answerConfirm(ok: boolean) {
 		/* 透明底而不是 --btn-regular-bg：行里放着一颗 ui-btn-soft，
 		   两者同色会让按钮完全消失。 */
 		background: transparent;
+		transition: background-color 0.18s ease, border-color 0.18s ease;
 		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--deep-text);
+	}
+
+	.managed-row:hover {
+		background: var(--btn-plain-bg-hover);
+		border-color: color-mix(in srgb, var(--content-meta) 30%, transparent);
 	}
 
 	.managed-state {
@@ -1412,7 +1433,7 @@ function answerConfirm(ok: boolean) {
 	}
 
 	.managed-state :global(.managed-ok) {
-		color: var(--content-meta);
+		color: var(--success);
 		flex-shrink: 0;
 	}
 
@@ -1577,7 +1598,9 @@ function answerConfirm(ok: boolean) {
 		flex-wrap: wrap;
 		gap: 0.375rem;
 		font-size: var(--admin-fs-meta, 0.75rem);
-		font-weight: 500;
+		/* 600：字段名与下方说明同为 12px，全靠字重和颜色分开，
+		   500 在 12px 下不够看 */
+		font-weight: 600;
 		color: var(--deep-text);
 		min-width: 0;
 	}
@@ -1585,9 +1608,11 @@ function answerConfirm(ok: boolean) {
 	/* 说明：标签与输入框之间，12px 灰字 */
 	.field-note {
 		margin: 0;
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		line-height: 1.5;
-		color: color-mix(in oklab, var(--content-meta) 80%, transparent);
+		/* 不再在 --content-meta 上再乘 80%：0.6 × 0.8 = 0.48 白，
+		   12px 下与背景的对比度掉到几乎读不清 */
+		color: var(--content-meta);
 	}
 
 	/* 未配置标记：灰字，不用警示色 */
@@ -1627,7 +1652,8 @@ function answerConfirm(ok: boolean) {
 	}
 
 	.upload-zone:hover {
-		border-color: var(--primary);
+		border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+		background: color-mix(in srgb, var(--content-meta) 10%, var(--card-bg));
 		background: color-mix(in oklab, var(--content-meta) 12%, var(--card-bg));
 	}
 
@@ -1653,8 +1679,15 @@ function answerConfirm(ok: boolean) {
 		cursor: not-allowed;
 	}
 
+	/* 类落在 Icon 组件上，编译器无法静态确认，必须走 :global */
+	:global(.upload-ok) {
+		color: var(--success);
+		font-size: 1rem;
+		flex-shrink: 0;
+	}
+
 	.upload-text {
-		font-size: 0.875rem;
+		font-size: var(--admin-fs-body, 0.875rem);
 		color: var(--content-meta);
 		text-align: center;
 		pointer-events: none;
@@ -1794,11 +1827,12 @@ function answerConfirm(ok: boolean) {
 		min-width: 0;
 		min-height: 2.625rem;
 		padding: 0.5rem 0.75rem;
-		border: 1px solid transparent;
+		/* 静止时给一条可见边：原先 border 全透明，输入框像一块浮在卡片上的色块 */
+		border: 1px solid var(--input-border, rgb(255 255 255 / 0.1));
 		border-radius: var(--radius-xl);
-		background: color-mix(in srgb, var(--content-meta) 8%, var(--card-bg));
+		background: var(--input-bg, rgb(255 255 255 / 0.05));
 		color: var(--deep-text);
-		font-size: 0.875rem;
+		font-size: var(--admin-fs-body, 0.875rem);
 		font-family: inherit;
 		outline: none;
 		box-shadow: none;
@@ -1815,7 +1849,8 @@ function answerConfirm(ok: boolean) {
 	}
 
 	.secret-input:hover:not(:disabled) {
-		background: color-mix(in srgb, var(--content-meta) 12%, var(--card-bg));
+		border-color: color-mix(in srgb, var(--content-meta) 45%, transparent);
+		background: color-mix(in srgb, var(--content-meta) 10%, var(--card-bg));
 	}
 
 	.secret-input:focus {

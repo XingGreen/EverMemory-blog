@@ -55,6 +55,10 @@ Rules:
   even though the CJK glyphs would fall back to sans anyway — the intent is what matters.
 - Weight carries hierarchy before colour does. Do not use opacity to de-emphasise text; use the
   meta size or `--content-meta`.
+- **Do not stack transparency on top of `--content-meta`.** It is already the weakest ink step
+  (0.6 alpha in dark). `color-mix(content-meta 80%, transparent)` lands at 0.48 white, which at
+  12px is unreadable on a dark card. Labels get `--deep-text` at 600; notes get `--content-meta`
+  at 400. Two levers, not three.
 
 ## 4. Colour
 
@@ -67,6 +71,11 @@ Two jobs, nothing else:
 
 Everything else is ink: `--deep-text` for titles, `--content-meta` for secondary copy, and a
 hairline (`--line-divider`) for structure.
+
+Colour may also mark **state**, provided it lands on the word or the icon and never on a filled
+shape: `--success` = nothing left to do, `--primary` = waiting on you, `--destructive` = failed.
+What stays banned is the *pill* — a filled rounded block behind a label. Five pills down a column
+read as a legend nobody asked for; a green check beside 已配置 reads as a fact.
 
 One exception: **diff lines.** In a side-by-side or unified diff, green/red encode "this line was
 added / removed" — that is content, not taxonomy, and it is the only colour convention users
@@ -148,6 +157,10 @@ Every page is: `PageHeader` → optional `Toolbar` → one scroll region → opt
 `PageHeader` for its heading. It is not a header implementation of its own.
 
 - Only the scroll region scrolls. Header, toolbar and footer are fixed.
+- Every interactive element has a hover state the eye can catch. On dark surfaces a background
+  step alone (`--btn-regular-bg` → `-hover`) moves one lightness stop and reads as nothing:
+  pair it with a 1px inset ring or a border colour change. Inputs carry a resting border
+  (`--input-border`), not a transparent one.
 - A page may not add a second sticky bar, a second hairline, or its own padding overrides.
 - Empty and error states live inside the scroll region and use `ui-btn` variants.
 
