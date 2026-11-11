@@ -838,10 +838,8 @@ function answerConfirm(ok: boolean) {
 			{#if group.items.length > 0}
 				<!-- 分组：参考项目 settings-group-title（17px/600）+ 两列字段网格 -->
 				<section class="secrets-group">
-					<h2 class="settings-group-title">
-						<span>{i18n(I18nKey[group.labelKey])}</span>
-						<span class="group-hint">{i18n(I18nKey[group.descKey])}</span>
-					</h2>
+					<h2 class="settings-group-title">{i18n(I18nKey[group.labelKey])}</h2>
+					<p class="group-hint">{i18n(I18nKey[group.descKey])}</p>
 
 					<!-- 「值从哪拿」放在组上而不放在字段上：一组的值通常来自同一个页面，
 					     13 个字段各挂一条同样的入口，只是把重复换了个位置。 -->
@@ -888,7 +886,7 @@ function answerConfirm(ok: boolean) {
 							<div
 								class="settings-field"
 								class:dirty={isDirty(item)}
-								class:span-full={item.span === 12}
+								class:span-full={item.wide === true}
 								class:field-flash={flashKey === item.key}
 								data-secret-key={item.key}
 							>
@@ -1081,9 +1079,7 @@ function answerConfirm(ok: boolean) {
 											spellcheck="false"
 											name="secret-draft"
 											autocomplete="new-password"
-											placeholder={item.configured
-												? i18n(I18nKey.secretsPlaceholderConfigured)
-												: i18n(I18nKey.secretsPlaceholderEmpty)}
+											placeholder={item.example ?? ""}
 											disabled={!writable || loading}
 											oninput={(e) => {
 												drafts[item.key] = e.currentTarget.value;
@@ -1589,19 +1585,19 @@ function answerConfirm(ok: boolean) {
 	}
 
 	.settings-group-title {
-		display: flex;
-		align-items: baseline;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-		margin: 0 0 1.125rem;
-		font-size: 1.0625rem;
-		font-weight: 600;
+		margin: 0;
+		font-size: var(--admin-fs-item, 1.0625rem);
+		font-weight: 650;
+		line-height: 1.35;
 		color: var(--deep-text);
 	}
 
-	.settings-group-title .group-hint {
+	/* 说明另起一行：和标题同处一行时，两种字号会被连读成一句 */
+	.group-hint {
+		margin: 0.25rem 0 0;
 		font-size: var(--admin-fs-meta, 0.75rem);
 		font-weight: 400;
+		line-height: 1.6;
 		color: var(--content-meta);
 	}
 

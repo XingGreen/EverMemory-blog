@@ -39,12 +39,10 @@ export type AdminSecretItem = {
 	 * 其余密钥都必须从外部平台复制，无法自动生成。
 	 */
 	managed?: boolean;
-	/**
-	 * 栅格布局下的列跨度（12 栅格系统）。
-	 * 省略时按 6 处理（一行两个）。短字段用 6，长 URL/路径用 12，
-	 * 需要与相邻字段凑满 12 的场合用 8/4、7/5 这类组合。
-	 */
-	span?: 4 | 5 | 6 | 7 | 8 | 12;
+	/** 占满整行。只有多行私钥与长 URL 需要，其余一律半宽 */
+	wide?: boolean;
+	/** 输入框的格式示例（placeholder）。这里只放值长什么样，不再放「未配置」这类状态 */
+	example?: string;
 };
 
 export const SECRET_GROUPS: readonly {
@@ -84,10 +82,10 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		description: "GitHub App Settings 页顶部的数字 ID",
 		whereToGet:
 			"GitHub → Settings → Developer settings → GitHub Apps → 你的 App，页面顶部的「App ID」，纯数字。",
+		example: "4423412",
 		kind: "text",
 		sensitive: false,
 		required: true,
-		span: 6,
 	},
 	{
 		key: "GITHUB_OWNER",
@@ -95,10 +93,10 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		label: "仓库所有者",
 		description: "仓库所有者，用户名或组织名，不带 @",
 		whereToGet: "你的 GitHub 用户名，或组织名。不带 @。",
+		example: "XingGreen",
 		kind: "text",
 		sensitive: false,
 		required: true,
-		span: 6,
 	},
 	{
 		key: "GITHUB_REPO",
@@ -106,10 +104,10 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		label: "仓库名称",
 		description: "仓库名称，不带 .git 后缀",
 		whereToGet: "仓库名，不带 .git 后缀。",
+		example: "EverMemory-blog",
 		kind: "text",
 		sensitive: false,
 		required: true,
-		span: 8,
 	},
 	{
 		key: "GITHUB_BRANCH",
@@ -118,10 +116,10 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		description: "仓库分支，通常为 main 或 master",
 		whereToGet:
 			"仓库的默认分支。新建仓库通常是 main；本仓库历史原因用 master。",
+		example: "master",
 		kind: "text",
 		sensitive: false,
 		required: true,
-		span: 4,
 	},
 	{
 		key: "GITHUB_INSTALLATION_ID",
@@ -130,10 +128,10 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		description: "App 安装页 URL 末尾的数字 ID",
 		whereToGet:
 			"装好 App 后，安装页地址末尾的数字，例如 /installations/149804847。",
+		example: "149804847",
 		kind: "text",
 		sensitive: false,
 		required: true,
-		span: 7,
 	},
 	{
 		key: "GITHUB_PRIVATE_KEY",
@@ -144,10 +142,10 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 			"同一个 App 页 → Private keys → Generate a private key，下载 .pem 后转 Base64 填入。",
 		whereCommand:
 			"node -e \"console.log(require('fs').readFileSync('.key/xxx.private-key.pem').toString('base64'))\"",
+		wide: true,
 		kind: "multiline",
 		sensitive: true,
 		required: true,
-		span: 5,
 	},
 	{
 		key: "GITHUB_PRIVATE_KEY_PATH",
@@ -156,10 +154,10 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		description: "仅本地开发使用；留空时自动在 .key/ 与 .keys/ 中查找",
 		whereToGet:
 			"本地开发可以不填上面的密钥，改填 .pem 的路径；留空时自动在 .key/ 和 .keys/ 下找 *.pem。",
+		example: ".key/xxx.private-key.pem",
 		kind: "text",
 		sensitive: false,
 		required: false,
-		span: 12,
 	},
 
 	// ── 管理后台认证配置（GitHub OAuth + 应急令牌） ──
@@ -170,10 +168,10 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		description: "GitHub App 的 Client ID，与应用 ID 不同",
 		whereToGet:
 			"同一个 App 页的 Client ID，形如 Iv23li…。注意它和页面顶部的 App ID 是两个不同的值。",
+		example: "Iv23li04IMnCZn3h3u6s",
 		kind: "text",
 		sensitive: false,
 		required: true,
-		span: 6,
 	},
 	{
 		key: "GITHUB_APP_CLIENT_SECRET",
@@ -185,7 +183,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "password",
 		sensitive: true,
 		required: true,
-		span: 6,
 	},
 	{
 		key: "ADMIN_GITHUB_ID",
@@ -194,10 +191,10 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		description: "允许登录的 GitHub 账号数字 ID",
 		whereToGet:
 			"登录 GitHub 后打开 https://api.github.com/user ，取 id 字段（数字，不随用户名变化）。",
+		example: "238927366",
 		kind: "text",
 		sensitive: false,
 		required: true,
-		span: 6,
 	},
 	{
 		key: "ADMIN_BREAKGLASS_TOKEN",
@@ -207,7 +204,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "password",
 		sensitive: true,
 		required: false,
-		span: 6,
 	},
 	{
 		key: "ADMIN_JWT_SECRET",
@@ -217,7 +213,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		kind: "password",
 		sensitive: true,
 		required: true,
-		span: 7,
 		managed: true,
 	},
 	{
@@ -227,10 +222,11 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		description: "登录成功时向该 URL 发送通知，留空则不发送",
 		whereToGet:
 			"Slack 或 Discord 的 Incoming Webhook 地址；不填则登录时不发送任何告警。",
+		example: "https://hooks.slack.com/services/…",
+		wide: true,
 		kind: "text",
 		sensitive: false,
 		required: false,
-		span: 5,
 	},
 
 	// ── Cloudflare Turnstile 人机验证（可选，未配置则完全跳过） ──
@@ -241,10 +237,10 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		description: "公开值，需与 Secret Key 成对配置",
 		whereToGet:
 			"Cloudflare Dashboard → Turnstile → 创建 widget，两个 key 一起取。只配一个会让登录被拒。",
+		example: "0x4AAAAAAA…",
 		kind: "text",
 		sensitive: false,
 		required: false,
-		span: 6,
 	},
 	{
 		key: "TURNSTILE_SECRET_KEY",
@@ -252,10 +248,10 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		label: "Turnstile Secret Key",
 		description: "服务端校验用的私钥，只配 Site Key 会导致登录被拒",
 		whereToGet: "与 Site Key 出自同一个 widget，必须成对配置。",
+		example: "0x4AAAAAAA…",
 		kind: "password",
 		sensitive: true,
 		required: false,
-		span: 6,
 	},
 ];
 

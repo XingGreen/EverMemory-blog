@@ -119,10 +119,12 @@ export async function GET({
 		whereToGet: item.whereToGet,
 		whereCommand: item.whereCommand,
 		kind: item.kind,
+		// 格式示例（placeholder）：纯静态文案，同样不涉及密钥值
+		example: item.example,
 		sensitive: item.sensitive,
 		required: item.required,
-		// 栅格布局下的列跨度（12 栅格），前端据此渲染 data-span
-		span: item.span ?? 6,
+		// 是否整行（多行私钥、长 URL 用），其余半宽
+		wide: item.wide === true,
 		// 托管项：前端据此渲染「自动托管 + 轮换」而非输入框
 		managed: item.managed === true,
 		configured: states[item.key] === true,
