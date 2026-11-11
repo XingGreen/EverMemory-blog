@@ -206,7 +206,6 @@ let secretSaveState = $state<{
 	discard: () => void;
 } | null>(null);
 // 保存栏改动清单是否展开
-let dirtyListOpen = $state(false);
 // 站内切换页面时的未保存拦截：leaveConfirmOpen 为真即弹出确认框，
 // pendingPath 记录确认后要跳转的目标路径。
 // 注意不要用「函数作 $state」——Svelte 对函数值不会触发重渲染。
@@ -2166,27 +2165,14 @@ function formatDate(dateStr: string | null): string {
 					{#if secretSaveState?.writable}
 						<div class="savebar" role="status">
 							{#if secretSaveState.changedCount > 0}
-								<button
-									class="savebar-notice"
-									type="button"
-									aria-expanded={dirtyListOpen}
-									aria-controls="dirty-list"
-									onclick={() => (dirtyListOpen = !dirtyListOpen)}
+								<!-- 只报数量：逐项清单在「写入 .env.local」的 diff 里，
+								     同一份信息不该在两个面板各有一份 -->
+								<span class="savebar-count"
+									>{i18n(I18nKey.secretsUnsavedCount).replace(
+										"{count}",
+										String(secretSaveState.changedCount),
+									)}</span
 								>
-									<Icon icon="material-symbols:error-outline" />
-									<span
-										>{i18n(I18nKey.secretsUnsavedCount).replace(
-											"{count}",
-											String(secretSaveState.changedCount),
-										)}</span
-									>
-									<Icon
-										icon={dirtyListOpen
-											? "material-symbols:keyboard-arrow-up-rounded"
-											: "material-symbols:keyboard-arrow-down-rounded"}
-										class="notice-chevron"
-									/>
-								</button>
 							{/if}
 							<div class="savebar-actions">
 								{#if secretSaveState.changedCount > 0}
@@ -2202,7 +2188,7 @@ function formatDate(dateStr: string | null): string {
 								<button
 									class="ui-btn ui-btn-primary"
 									type="button"
-									onclick={() => secretSaveState?.save()}
+									onclick={() => secretSaveState?.review()}
 									disabled={secretSaveState.saving ||
 										secretSaveState.loading ||
 										secretSaveState.changedCount === 0}
@@ -2216,22 +2202,6 @@ function formatDate(dateStr: string | null): string {
 								</button>
 							</div>
 						</div>
-						{#if dirtyListOpen && secretSaveState.changedCount > 0}
-							<div class="dirty-list" id="dirty-list">
-								{#each secretSaveState.dirtyItems as item (item.key)}
-									<button
-										class="dirty-item"
-										type="button"
-										onclick={() => secretSaveState?.scrollToField(item.key)}
-									>
-										<span class="dirty-item-label">{item.label}</span>
-										<span class="dirty-item-hint">
-											{i18n(I18nKey.secretsDirtyGoto)}
-										</span>
-									</button>
-								{/each}
-							</div>
-						{/if}
 					{/if}
 				{/snippet}
 				</AdminPage>
@@ -3325,83 +3295,9 @@ function formatDate(dateStr: string | null): string {
 		background: var(--card-bg);
 	}
 
-	/* 提示条：参考项目 .settings-save-notice —— warning 底块 + 圆角 + 中等字重。
-	   做成按钮：点击展开未保存改动清单。 */
-	.savebar-notice {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5625rem;
-		margin: 0;
-		padding: 0.5625rem 0.75rem;
-		border: none;
-		border-radius: 10px;
-		background: color-mix(in srgb, var(--primary) 12%, transparent);
-		color: var(--primary);
+	/* 未保存改动只在左侧报个数；逐项清单在「写入 .env.local」的 diff 里 */
+	.savebar-count {
 		font-size: var(--admin-fs-meta, 0.75rem);
-		font-family: inherit;
-		font-weight: 500;
-		cursor: pointer;
-		transition: background 0.15s ease;
-	}
-
-	.savebar-notice:hover {
-		background: color-mix(in oklab, var(--warning) 20%, transparent);
-	}
-
-	.savebar-notice :global(.inline-icon) {
-		flex-shrink: 0;
-	}
-
-	.notice-chevron {
-		margin-left: 0.125rem;
-	}
-
-	/* 未保存改动清单：从 savebar 下方展开，逐项可点击跳转 */
-	.dirty-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
-		padding: 0.375rem 1.5rem 0.75rem;
-		border-top: 1px solid var(--line-divider);
-		background: var(--card-bg);
-	}
-
-	.dirty-item {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: 0.4375rem 0.625rem;
-		border: none;
-		border-radius: 6px;
-		background: transparent;
-		color: var(--deep-text);
-		font-size: 0.8125rem;
-		font-family: inherit;
-		text-align: left;
-		cursor: pointer;
-		transition: background 0.15s ease, color 0.15s ease;
-	}
-
-	.dirty-item:hover {
-		background: color-mix(in oklab, var(--primary) 10%, transparent);
-		color: var(--primary);
-	}
-
-	.dirty-item-label {
-		font-weight: 500;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.dirty-item-hint {
-		flex-shrink: 0;
-		font-size: 0.75rem;
-		color: var(--content-meta);
-	}
-
-	.dirty-item:hover .dirty-item-hint {
 		color: var(--primary);
 	}
 
