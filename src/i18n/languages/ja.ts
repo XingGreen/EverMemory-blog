@@ -928,7 +928,7 @@ export const ja: Translation = {
 	[Key.secretsStatusPartial]: "必須設定 {done}/{total} 件完了",
 	[Key.secretsStatusMissing]: "未設定：",
 	[Key.secretsExportInlineHint]:
-		"上部の「設定をエクスポート」から .env ファイルをダウンロードし、デプロイプラットフォーム（例: Vercel）にワンクリックでインポートできます",
+		"「設定をエクスポート」から .env ファイルをダウンロードし、デプロイプラットフォーム（例: Vercel）にワンクリックでインポートできます",
 	[Key.secretsPlaceholderConfigured]:
 		"設定済み；空欄のまま変更せず、新しく入力すると上書き",
 	[Key.secretsPlaceholderEmpty]: "未設定；ここに値を入力",

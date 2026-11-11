@@ -891,7 +891,7 @@ export const zh_CN: Translation = {
 	[Key.secretsStatusPartial]: "已完成 {done}/{total} 项必要配置",
 	[Key.secretsStatusMissing]: "还缺：",
 	[Key.secretsExportInlineHint]:
-		"也可以点上方「导出配置」下载 .env 文件，一键导入部署平台（如 Vercel）",
+		"也可以点「导出配置」下载 .env 文件，一键导入部署平台（如 Vercel）",
 	[Key.secretsPlaceholderConfigured]: "已配置；留空保持不变，输入新值将覆盖",
 	[Key.secretsPlaceholderEmpty]: "未配置；在此输入值",
 	[Key.secretsClear]: "清除该项",
