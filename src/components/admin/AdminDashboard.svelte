@@ -3201,9 +3201,6 @@ function formatDate(dateStr: string | null): string {
 		}
 	}
 
-	/* ── 工作区标题区：对齐参考 settings-heading ──
-	   28px/650 标题 + fg-50 灰字简介；位于容器顶部，左右 28px
-	   （与 AdminPage 的 .admin-page-heading 同步，对齐参考 workspace 的 28px 内边距）。 */
 	/* ── 设置保存栏：对齐参考 settings-savebar ──
 	   顶部分隔线、左提示右动作、40px 高按钮（10px 圆角）。 */
 	.settings-savebar {
@@ -3212,14 +3209,14 @@ function formatDate(dateStr: string | null): string {
 		justify-content: space-between;
 		gap: 1.25rem;
 		flex-wrap: wrap;
-		padding: 0.875rem 1.5rem;
+		padding: 0.75rem var(--admin-gutter, 1.5rem);
 		border-top: 1px solid var(--line-divider);
 		flex-shrink: 0;
 	}
 
 	.settings-savebar p {
 		margin: 0;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 		min-width: 0;
 	}
