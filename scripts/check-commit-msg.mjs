@@ -26,20 +26,20 @@ const TYPES = [
 	"revert",
 ];
 
-/** 标题上限。Conventional Commits 建议 50，这里放宽到 72（git 默认折行宽度） */
-const MAX_SUBJECT = 72;
+/** 标题上限。Conventional Commits 建议 50；这里放宽到 100：
+    上限按「字符」算，中文 72 字已经很宽裕，英文 72 字符只够一句话，
+    正常的英文描述会被误伤。100 仍然逼着写短句。 */
+const MAX_SUBJECT = 100;
 
-/** 正文里不该出现的对话痕迹 */
+/** 正文里不该出现的对话痕迹。只收「只在对话里才会出现」的词——
+    像「实测」这类有技术含义的说法不能算，否则会拦住正常的技术记录。 */
 const BANNED = [
 	"上一轮",
 	"上一版",
 	"我改",
 	"我把",
 	"我在",
-	"我的「",
-	"实测",
 	"使用者看到",
-	"关键区分",
 	"你说",
 	"你报",
 	"你看到",
@@ -47,7 +47,6 @@ const BANNED = [
 	"用户反馈",
 	"按你要求",
 	"抱歉",
-	"这才是真",
 ];
 
 const msgFile = process.argv[2];
@@ -72,8 +71,13 @@ const errors = [];
 /** 针对性的改法建议：光说「格式不符」用户还得自己猜 */
 const hints = [];
 
-/* 1. 格式：type(scope): subject —— scope 可省略 */
-const re = new RegExp(`^(${TYPES.join("|")})(\\([a-z0-9-]+\\))?: .+`);
+/* 0. git 自己生成的消息直接放行：revert / merge 的标题由 git 拼出，
+   格式不受提交者控制，拦下来只会逼人加 --no-verify。 */
+if (/^(Revert |Merge )/.test(subject)) process.exit(0);
+
+/* 1. 格式：type(scope): subject —— scope 可省略。
+      scope 允许 / . _ ：本仓库真实存在 api/admin、docs/flows 这类分层名字。 */
+const re = new RegExp(`^(${TYPES.join("|")})(\\([a-z0-9/._-]+\\))?: .+`);
 if (!re.test(subject)) {
 	errors.push(
 		`标题格式不符，应为「type(scope): 描述」，type 取 ${TYPES.join(" / ")}`,
@@ -90,7 +94,9 @@ if (!re.test(subject)) {
 	}
 	const typeGuess = subject.match(/^([a-zA-Z]+)/)?.[1]?.toLowerCase();
 	if (typeGuess && !TYPES.includes(typeGuess)) {
-		hints.push(`「${typeGuess}」不在允许的 type 里，最近的一项是 chore / docs / fix`);
+		hints.push(
+			`「${typeGuess}」不在允许的 type 里，最近的一项是 chore / docs / fix`,
+		);
 	}
 }
 
@@ -104,10 +110,10 @@ if (/—{2,}/.test(subject)) {
 	errors.push("标题含「——」，后半句请移入正文");
 }
 
-/* 4. 正文禁用词 */
+/* 4. 正文与标题都禁用对话痕迹：标题里写「上一轮漏改的」比正文里更糟 */
 for (const word of BANNED) {
-	if (body.includes(word)) {
-		errors.push(`正文含对话痕迹「${word}」，应只描述改了什么`);
+	if (subject.includes(word) || body.includes(word)) {
+		errors.push(`含对话痕迹「${word}」，应只描述改了什么`);
 	}
 }
 
@@ -121,10 +127,10 @@ if (errors.length > 0) {
 	/* 回显被拒的标题：不显示的话，用户只能对着规则猜自己哪里写错了 */
 	console.error(`  你写的标题：「${subject || "（空）"}」`);
 	console.error(`  长度 ${subject.length} 字符，上限 ${MAX_SUBJECT}\n`);
-	for (const e of errors) console.error("  × " + e);
+	for (const e of errors) console.error(`  × ${e}`);
 	if (hints.length > 0) {
 		console.error("\n  改法：");
-		for (const h of hints) console.error("  → " + h);
+		for (const h of hints) console.error(`  → ${h}`);
 	}
 	console.error("\n参考格式：");
 	console.error("  fix(sync): 远端不可达时保留条目并标记 unknown");
