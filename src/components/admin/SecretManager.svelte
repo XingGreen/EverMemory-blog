@@ -897,6 +897,19 @@ function answerConfirm(ok: boolean) {
 										{/if}
 										<span>{item.label}</span>
 										{#if item.required}<span class="req-star">*</span>{/if}
+										<!-- 变量名是这一页真正的产物：填完之后要把它复制到部署平台。
+										     原先只藏在 ⋯ 菜单里，正文从不显示。 -->
+										<button
+											type="button"
+											class="field-key"
+											title={i18n(I18nKey.secretsMenuCopyKey)}
+											onclick={() => {
+												navigator.clipboard?.writeText(item.key);
+												onNotify?.(i18n(I18nKey.secretsMenuCopied), "success", 2500);
+											}}
+										>
+											{item.key}
+										</button>
 										{#if !item.configured && !item.managed}
 											<span class="summary-warn">{i18n(I18nKey.secretsNotConfigured)}</span>
 										{/if}
@@ -1868,6 +1881,42 @@ function answerConfirm(ok: boolean) {
 
 	/* ── 字段标签行 + 三点菜单 ──
 	   菜单承载低频操作（复制变量名、显示/隐藏、撤销上传、清空值）。 */
+	/* 变量名：等宽小字，点击即复制。它是这一页唯一需要被带到别处的东西
+	   （填进部署平台、写进 .env），所以常驻可见，而不是藏在 ⋯ 菜单里。
+	   虚线底表示「这是可点的字符串」，不与字段名的实心字重争层级。 */
+	.field-key {
+		flex-shrink: 1;
+		min-width: 0;
+		max-width: 100%;
+		padding: 0;
+		border: none;
+		border-bottom: 1px dotted
+			color-mix(in srgb, var(--content-meta) 45%, transparent);
+		background: none;
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
+		font-weight: 500;
+		letter-spacing: 0.02em;
+		color: var(--content-meta);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		cursor: copy;
+		transition:
+			color 0.15s ease,
+			border-color 0.15s ease;
+	}
+
+	.field-key:hover {
+		color: var(--deep-text);
+		border-bottom-color: var(--primary);
+	}
+
+	.field-key:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
 	.field-label-row {
 		display: flex;
 		align-items: center;
