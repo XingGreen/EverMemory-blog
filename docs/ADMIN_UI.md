@@ -144,6 +144,9 @@ The settings page is the reference implementation (`CONFIG_GROUPS` → `settings
 
 Every page is: `PageHeader` → optional `Toolbar` → one scroll region → optional footer.
 
+`AdminPage` is now only a shell: card, one scroll region, optional footer, and it renders
+`PageHeader` for its heading. It is not a header implementation of its own.
+
 - Only the scroll region scrolls. Header, toolbar and footer are fixed.
 - A page may not add a second sticky bar, a second hairline, or its own padding overrides.
 - Empty and error states live inside the scroll region and use `ui-btn` variants.
@@ -182,7 +185,9 @@ pages cement them.
 3. Sync — migrated (done). Two panes inside one card: the header is the primitive, the left list
    repeats `ListRow`'s shape (title over mono path, status word at the right edge), and the right
    pane owns the only other horizontal rule on the screen.
-4. Taxonomy — table-ish list with inline editing.
+4. Taxonomy — migrated (done). Its shell `AdminPage` now delegates the heading to the primitive,
+   so the sessions and env pages inherit it in the same move; the list's status pills became
+   words. Remaining debt: the page still sizes everything off its own `--tx-unit`.
 5. Secrets — dense forms.
 6. Links — the friend-links manager.
 7. History and the editor — these have their own top bars; align them last.

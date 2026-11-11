@@ -1,32 +1,24 @@
 <script lang="ts">
 import type { Snippet } from "svelte";
 import { usePageIntroStore } from "./page-intro.svelte";
+import PageHeader from "./ui/PageHeader.svelte";
 
 /**
- * 后台页面外壳（标题区 + 内容区 + 可选页脚）
+ * 后台页面外壳（页头 + 内容区 + 可选页脚）
  *
- * 统一「卡片外壳 + 标题区 + 内容区」的结构，对应参考项目
- * settings-shell 的 settings-workspace + settings-heading 组合。
+ * 页头由 `ui/PageHeader` 提供（docs/ADMIN_UI.md §5），本组件只负责
+ * 卡片、唯一滚动区与页脚槽位。页面不再自己画标题区。
  *
- * 标题区规格与设置页 settings-heading 一致：
- * 28px/650 标题 + 13px 灰字简介、padding 28px 24px 20px。
- * 内容区自带 24px 左右留白，页面只负责内容本身。
+ * actions 槽位（可选）：透传给 PageHeader 的右侧操作按钮组。
  *
- * actions 槽位（可选）：标题区右侧的操作按钮组，
- * 用于文章列表这类「标题 + 计数 + 主操作」的页头。
- *
- * footer 槽位（可选）：放在内容区**之外**、外壳内部，
- * 不参与滚动，始终可见——对应参考项目 settings-shell 里
- * <footer class="settings-savebar"> 位于 settings-body 之外的结构。
- * 暂不含 tabs 槽位：设置页 settings-workspace 是四段结构且自带内部滚动，
- * 仍保持独立；等第二个页面需要 tabs 时再升级。
+ * footer 槽位（可选）：放在内容区**之外**、外壳内部，不参与滚动，始终可见。
  */
 let {
 	title,
 	intro,
 	children,
 	footer,
-	actions,
+	actions: actionsSnippet,
 }: {
 	title: string;
 	intro?: string;
@@ -52,19 +44,17 @@ $effect(() => {
 </script>
 
 <div class="card-base admin-page">
-	<header class="admin-page-heading">
-		<div class="heading-text">
-			<h1>{title}</h1>
-			{#if intro}
-				<p>{intro}</p>
-			{/if}
-		</div>
-		{#if actions}
-			<div class="heading-actions">
-				{@render actions()}
-			</div>
-		{/if}
-	</header>
+	<!-- 页头本身由原语提供：外壳只负责卡片、滚动区与页脚。
+	     原先这里自己画一遍 28/650 标题区，是后台第 4 种页头实现。 -->
+	{#if actionsSnippet}
+		<PageHeader {title} meta={intro ?? ""}>
+			{#snippet actions()}
+				{@render actionsSnippet()}
+			{/snippet}
+		</PageHeader>
+	{:else}
+		<PageHeader {title} meta={intro ?? ""} />
+	{/if}
 	<div class="admin-page-body">
 		{@render children()}
 	</div>
@@ -87,82 +77,6 @@ $effect(() => {
 		overflow: hidden;
 	}
 
-	/* 与 AdminDashboard 的 .settings-heading 取同一组数值，
-	     两处改动需同步。
-	     底部留白 26px + 24px 外边距 + 1px 分隔线，对齐参考项目 .taxonomy-heading：
-	     页头与内容之间需要一条结构线，之前完全缺失，两块内容糊在一起。
-	     横向布局：左侧标题/简介，右侧操作按钮组（有 actions 时）。 */
-	.admin-page-heading {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: 1.75rem 1.75rem 1.625rem;
-		margin-bottom: 1.5rem;
-		border-bottom: 1px solid
-			color-mix(in srgb, var(--content-meta) 20%, transparent);
-		flex-shrink: 0;
-	}
-
-	.heading-text {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		min-width: 0;
-	}
-
-	.heading-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-shrink: 0;
-	}
-
-	/* 28px：与参考项目 .taxonomy-heading h1 的 calc(28 * unit) 一致。
-	   上一轮据截图墨迹高度误判成 24px（那张参考截图的 DPR 不是 2，
-	   换算基准错了），此处恢复 1.75rem。 */
-	.admin-page-heading h1 {
-		margin: 0;
-		font-size: 1.75rem;
-		font-weight: 650;
-		line-height: 1.4;
-		color: var(--deep-text);
-	}
-
-	.admin-page-heading p {
-		margin: 0;
-		font-size: 0.8125rem;
-		line-height: 1.7;
-		color: var(--content-meta);
-	}
-
-	/* 窄屏：标题与主操作都由顶部栏承担（参考项目 MobileTopBar 的分工：
-	   页面自身的 h1 与 create 按钮在 lg 以下隐藏，避免同一个标题出现两次），
-	   页头只剩计数行。只剩一行字时保留分隔线会把内容切碎，故一并去掉。 */
-	@media (max-width: 1023px) {
-		.admin-page-heading {
-			align-items: center;
-			gap: 0;
-			padding: 0.875rem 1.125rem 0;
-			margin-bottom: 0.5rem;
-			border-bottom: none;
-		}
-
-		.heading-text {
-			gap: 0;
-		}
-
-		.admin-page-heading h1,
-		.heading-actions {
-			display: none;
-		}
-
-		/* 说明文字收进顶栏的问号气泡：窄屏两行说明会挤掉首屏内容 */
-		.admin-page-heading p {
-			display: none;
-		}
-	}
-
 	/* 内容区是本页唯一的滚动容器；子项 flex-shrink:0 防被压缩后
 	   看起来「滚不动」。 */
 	.admin-page-body {
@@ -173,8 +87,9 @@ $effect(() => {
 		scrollbar-gutter: stable;
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
-		padding: 0 1.75rem 1.75rem;
+		gap: var(--admin-block-gap, 1.25rem);
+		padding: var(--admin-block-gap, 1.25rem) var(--admin-gutter, 1.5rem)
+			var(--admin-gutter, 1.5rem);
 	}
 
 	.admin-page-body > :global(*) {

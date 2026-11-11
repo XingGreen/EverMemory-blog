@@ -1399,26 +1399,22 @@ $effect(() => {
 		white-space: nowrap;
 	}
 
+	/* 状态是一个词，不是带底色的胶囊（docs/ADMIN_UI.md §4）。
+	   已发布不需要你做任何事，所以它是最安静的一档；草稿用墨色区分即可。 */
 	.post-list-status {
 		display: inline-flex;
-		min-height: calc(24 * var(--tx-unit));
 		align-items: center;
-		justify-content: center;
-		padding: 1px calc(10 * var(--tx-unit));
-		font-size: calc(12 * var(--tx-unit));
-		font-weight: 500;
-		border-radius: calc(20 * var(--tx-unit));
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: calc(11 * var(--tx-unit));
 		white-space: nowrap;
 	}
 
 	.post-list-status.published {
-		background: color-mix(in oklab, var(--success) 15%, transparent);
-		color: color-mix(in oklab, var(--success) 65%, var(--deep-text));
+		color: var(--content-meta);
 	}
 
 	.post-list-status.draft {
-		background: var(--btn-regular-bg);
-		color: var(--btn-content);
+		color: var(--deep-text);
 	}
 
 	.post-list-date {
