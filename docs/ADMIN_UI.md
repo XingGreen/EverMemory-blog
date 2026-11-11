@@ -194,7 +194,8 @@ pages cement them.
 5. Secrets — migrated (done). Nested cards are gone (the page is the card), the local `.btn`
    vocabulary was replaced by `ui-btn`, the "all configured" bar is ink and only the unfinished
    state is accent-coloured, and leak severities are words rather than tinted pills.
-6. Links — the friend-links manager.
+6. Links — migrated (done). Status is a word, the save bar's three coloured states collapsed into
+   accent-for-unsaved and ink-for-saved, and two dead selectors were dropped.
 7. History and the editor — these have their own top bars; align them last.
 
 Each migration is one branch, one commit, with before/after screenshots. A page is migrated

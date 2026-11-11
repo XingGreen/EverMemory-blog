@@ -657,23 +657,21 @@ $effect(() => {
 	}
 
 	.savebar-text {
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 	}
 
-	.savebar-dirty {
+	/* 「有未保存改动」和「读取失败」都是要你动手的事，用主色；
+	   「已保存」没事可做，就只是墨色。 */
+	.savebar-dirty,
+	.savebar-warn {
 		margin-left: 0.5rem;
-		color: oklch(0.72 0.16 45);
+		color: var(--primary);
 	}
 
 	.savebar-done {
 		margin-left: 0.5rem;
-		color: oklch(0.7 0.15 145);
-	}
-
-	.savebar-warn {
-		margin-left: 0.5rem;
-		color: oklch(0.72 0.15 70);
+		color: var(--content-meta);
 	}
 
 	.savebar-actions {
@@ -690,25 +688,19 @@ $effect(() => {
 	}
 
 	.toggle-label {
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--deep-text);
 	}
 
 	.toggle-hint {
-		font-size: 0.6875rem;
+		font-size: var(--admin-fs-data, 0.6875rem);
 		line-height: 1.5;
 		color: var(--content-meta);
 	}
 
-	.notice {
-		margin: 0;
-		font-size: 0.8125rem;
-		color: oklch(0.7 0.15 145);
-	}
-
 	.state {
 		margin: 0;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 	}
 
@@ -735,7 +727,7 @@ $effect(() => {
 	.table-head {
 		padding: 0 0.75rem 0.625rem;
 		border-bottom: 1px solid var(--line-divider);
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 	}
 
@@ -776,7 +768,7 @@ $effect(() => {
 	}
 
 	.name {
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-weight: 600;
 		color: var(--deep-text);
 		overflow: hidden;
@@ -785,7 +777,7 @@ $effect(() => {
 	}
 
 	.desc {
-		font-size: 0.6875rem;
+		font-size: var(--admin-fs-data, 0.6875rem);
 		color: var(--content-meta);
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -793,7 +785,7 @@ $effect(() => {
 	}
 
 	.c-site a {
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--primary);
 		text-decoration: none;
 		overflow: hidden;
@@ -816,33 +808,32 @@ $effect(() => {
 		padding: 0.0625rem 0.375rem;
 		border-radius: 0.25rem;
 		background: var(--btn-regular-bg);
-		font-size: 0.6875rem;
+		font-size: var(--admin-fs-data, 0.6875rem);
 		color: var(--content-meta);
 	}
 
 	.muted {
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 	}
 
 	.c-weight {
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 		font-variant-numeric: tabular-nums;
 	}
 
+	/* 状态是一个词（docs/ADMIN_UI.md §4）：上线与下线都不是「待你处理」，
+	   所以两者都用墨色，靠词本身区分。 */
 	.status {
 		display: inline-block;
-		padding: 0.0625rem 0.4375rem;
-		border-radius: 0.25rem;
-		font-size: 0.6875rem;
-		background: var(--btn-regular-bg);
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
 		color: var(--content-meta);
 	}
 
 	.status.on {
-		background: color-mix(in srgb, oklch(0.72 0.15 145) 16%, transparent);
-		color: oklch(0.7 0.15 145);
+		color: var(--deep-text);
 	}
 
 	.c-actions {
@@ -949,7 +940,7 @@ $effect(() => {
 
 	/* 只给字段标签上灰：不排除提示类的话，.field > span 的特异性会压过 .field-error */
 	.field > span:not(.field-error):not(.field-hint) {
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 	}
 
@@ -959,7 +950,7 @@ $effect(() => {
 		border: 1px solid var(--line-divider);
 		border-radius: 0.375rem;
 		background: var(--float-panel-bg);
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--deep-text);
 	}
 
@@ -982,7 +973,7 @@ $effect(() => {
 		flex-direction: row;
 		align-items: flex-start;
 		gap: 0.5rem;
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 		padding-bottom: 0.5rem;
 	}
@@ -990,7 +981,7 @@ $effect(() => {
 	.dialog-notice {
 		margin: 0;
 		padding: 0 1.5rem 0.75rem;
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		line-height: 1.5;
 		color: var(--content-meta);
 		flex-shrink: 0;
@@ -999,15 +990,9 @@ $effect(() => {
 	/* 字段级提示：贴在对应输入框正下方，用户不用在弹窗里找。
 	   用 .field > 前缀压过 .field > span 的灰色。 */
 	.field > .field-error {
-		font-size: 0.6875rem;
+		font-size: var(--admin-fs-data, 0.6875rem);
 		line-height: 1.5;
 		color: var(--destructive, #d33);
-	}
-
-	.field-hint {
-		font-size: 0.6875rem;
-		line-height: 1.5;
-		color: var(--content-meta);
 	}
 
 	.field input.invalid {
