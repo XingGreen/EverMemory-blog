@@ -58,6 +58,8 @@ let drafts = $state<Record<string, string>>({});
 let draftsOrigin = $state<Record<string, string>>({});
 // 密码类输入框的显隐切换
 let showInput = $state<Record<string, boolean>>({});
+/** 「从哪拿」的展开状态：按字段 key 记，默认全部收起 */
+let whereOpen = $state<Record<string, boolean>>({});
 // 导出弹窗
 let exportOpen = $state(false);
 let exportBusy = $state(false);
@@ -806,6 +808,46 @@ function answerConfirm(ok: boolean) {
 						<span>{i18n(I18nKey[group.labelKey])}</span>
 						<span class="group-hint">{i18n(I18nKey[group.descKey])}</span>
 					</h2>
+
+					<!-- 「值从哪拿」放在组上而不放在字段上：一组的值通常来自同一个页面，
+					     13 个字段各挂一条同样的入口，只是把重复换了个位置。 -->
+					{#if group.items.some((it) => it.whereToGet)}
+						<div class="where">
+							<button
+								type="button"
+								class="where-toggle"
+								aria-expanded={whereOpen[group.id] === true}
+								onclick={() =>
+									(whereOpen = {
+										...whereOpen,
+										[group.id]: !whereOpen[group.id],
+									})}
+							>
+								<span class="where-caret" aria-hidden="true"
+									>{whereOpen[group.id] ? "▾" : "▸"}</span
+								>
+								值从哪拿
+							</button>
+
+							{#if whereOpen[group.id]}
+								<ul class="where-list">
+									{#each group.items as item (item.key)}
+										{#if item.whereToGet}
+											<li>
+												<span class="where-label">{item.label}</span>
+												<span class="where-text">
+													{item.whereToGet}
+													{#if item.whereCommand}
+														<code class="where-cmd">{item.whereCommand}</code>
+													{/if}
+												</span>
+											</li>
+										{/if}
+									{/each}
+								</ul>
+							{/if}
+						</div>
+					{/if}
 
 					<div class="settings-field-grid">
 						{#each group.items as item (item.key)}
@@ -1606,6 +1648,90 @@ function answerConfirm(ok: boolean) {
 	}
 
 	/* 说明：标签与输入框之间，12px 灰字 */
+	/* 「值从哪拿」：每组一条，默认收起 */
+	.where {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin: 0.5rem 0 0.25rem;
+	}
+
+	.where-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		align-self: flex-start;
+		padding: 0.125rem 0;
+		border: none;
+		border-radius: 4px;
+		background: none;
+		font: inherit;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		color: var(--content-meta);
+		cursor: pointer;
+		transition: color 0.15s ease;
+	}
+
+	.where-toggle:hover {
+		color: var(--deep-text);
+	}
+
+	.where-toggle:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	/* 用文字箭头而不是图标：图标集里没有的箭头会静默渲染成空白 */
+	.where-caret {
+		font-size: 0.75rem;
+		line-height: 1;
+	}
+
+	.where-list {
+		margin: 0;
+		padding: 0.5rem 0.75rem;
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		border-left: 2px solid var(--line-divider);
+	}
+
+	.where-list li {
+		display: grid;
+		grid-template-columns: 9rem minmax(0, 1fr);
+		gap: 0.75rem;
+		align-items: baseline;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		line-height: 1.6;
+		color: var(--content-meta);
+	}
+
+	.where-label {
+		color: var(--deep-text);
+		font-weight: 600;
+	}
+
+	.where-text {
+		min-width: 0;
+	}
+
+	/* 需要跑命令时：等宽、可横滚，不折行打断参数 */
+	.where-cmd {
+		display: block;
+		max-width: 100%;
+		margin-top: 0.375rem;
+		padding: 0.375rem 0.5rem;
+		border-radius: 6px;
+		background: var(--input-bg, rgb(255 255 255 / 0.05));
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
+		line-height: 1.5;
+		color: var(--deep-text);
+		overflow-x: auto;
+		white-space: pre;
+	}
+
 	.field-note {
 		margin: 0;
 		font-size: var(--admin-fs-meta, 0.75rem);

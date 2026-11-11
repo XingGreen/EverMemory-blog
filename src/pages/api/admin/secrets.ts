@@ -115,6 +115,9 @@ export async function GET({
 		group: item.group,
 		label: item.label,
 		description: item.description,
+		// 「从哪拿」：纯静态说明文字，与 description 同源，不涉及任何密钥值
+		whereToGet: item.whereToGet,
+		whereCommand: item.whereCommand,
 		kind: item.kind,
 		sensitive: item.sensitive,
 		required: item.required,
