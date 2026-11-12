@@ -836,9 +836,21 @@ function answerConfirm(ok: boolean) {
 	{:else}
 		{#each groups as group}
 			{#if group.items.length > 0}
+				{@const done = group.items.filter((it) => it.configured || it.managed).length}
+				{@const total = group.items.length}
 				<!-- 分组：参考项目 settings-group-title（17px/600）+ 两列字段网格 -->
 				<section class="secrets-group">
-					<h2 class="settings-group-title">{i18n(I18nKey[group.labelKey])}</h2>
+					<!-- 组级先给一个结论：15 个字段逐个看太慢，一组是否配齐一句话说得完。
+					     未配齐时用主色（还有事等你做），配齐后回到墨色。 -->
+					<div class="group-head">
+						<h2 class="settings-group-title">{i18n(I18nKey[group.labelKey])}</h2>
+						<span
+							class="group-count"
+							class:attention={done < total}
+							title={`${total - done} ${i18n(I18nKey.secretsNotConfigured)}`}
+							>{done} / {total}</span
+						>
+					</div>
 					<p class="group-hint">{i18n(I18nKey[group.descKey])}</p>
 
 					<!-- 「值从哪拿」放在组上而不放在字段上：一组的值通常来自同一个页面，
@@ -1595,6 +1607,27 @@ function answerConfirm(ok: boolean) {
 		border-top: 1px solid var(--line-divider);
 		padding-top: 1.5rem;
 		margin-top: 0.5rem;
+	}
+
+	.group-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	/* 组级结论：等宽数字，只有「还没配齐」才着色 */
+	.group-count {
+		flex-shrink: 0;
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
+		font-variant-numeric: tabular-nums;
+		letter-spacing: 0.02em;
+		color: var(--content-meta);
+	}
+
+	.group-count.attention {
+		color: var(--primary);
 	}
 
 	.settings-group-title {
