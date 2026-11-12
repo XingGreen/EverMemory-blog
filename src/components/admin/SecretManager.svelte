@@ -39,7 +39,7 @@ let {
 		envFile: string;
 		changedCount: number;
 		/** 未保存改动的逐行 diff（新增/替换/移除），供保存栏展开显示 */
-		diffRows: SecretDiffRow[];
+		alertRows: AlertRow[];
 		scrollToField: (key: string) => void;
 		save: () => void;
 		discard: () => void;
@@ -68,9 +68,6 @@ let drafts = $state<Record<string, string>>({});
 let draftsOrigin = $state<Record<string, string>>({});
 // 密码类输入框的显隐切换
 let showInput = $state<Record<string, boolean>>({});
-/** 「从哪拿」的展开状态：按字段 key 记，默认全部收起 */
-let whereOpen = $state<Record<string, boolean>>({});
-
 /**
  * 握手结果：拿当前配置真的去问一次 GitHub。
  * 三段的 id 由服务端给（app / repo / installation），文案也在服务端——
@@ -385,7 +382,7 @@ $effect(() => {
 		saving,
 		envFile,
 		changedCount,
-		diffRows,
+		alertRows,
 		scrollToField,
 		save,
 		discard: discardAll,
@@ -573,7 +570,7 @@ async function doSave(
    就是全部，不会有额外的格式变化。
 
    行由 buildEntries() 派生——列表与真正提交的条目同源，不两处各算一遍。 */
-type SecretDiffRow = {
+type AlertRow = {
 	key: string;
 	label: string;
 	kind: "add" | "replace" | "remove";
@@ -583,7 +580,7 @@ type SecretDiffRow = {
 	masked: boolean;
 };
 
-const diffRows = $derived.by<SecretDiffRow[]>(() => {
+const alertRows = $derived.by<AlertRow[]>(() => {
 	const byKey = new Map(items.map((i) => [i.key, i]));
 	const clip = (v: string) =>
 		!v ? "" : v.length > 40 ? `${v.slice(0, 40)}…` : v;
@@ -601,7 +598,7 @@ const diffRows = $derived.by<SecretDiffRow[]>(() => {
 			from: masked ? "" : clip(draftsOrigin[entry.key] ?? ""),
 			to: masked ? "" : clip(entry.value ?? ""),
 			masked,
-		} satisfies SecretDiffRow;
+		} satisfies AlertRow;
 	});
 });
 
@@ -924,106 +921,55 @@ function answerConfirm(ok: boolean) {
 					<span class="verdict {verdict.tone}">{verdict.text}</span>
 				</div>
 
-				<!-- 值从哪拿：整组一条清单，不开在字段上（一组的值多出自同一个页面） -->
-				{#if groupRows.some((r) => r.keys.some((k) => itemByKey.get(k)?.whereToGet))}
-					<button
-						type="button"
-						class="where-toggle"
-						aria-expanded={whereOpen[group.id] === true}
-						onclick={() =>
-							(whereOpen = { ...whereOpen, [group.id]: !whereOpen[group.id] })}
-					>
-						<span class="where-caret" aria-hidden="true"
-							>{whereOpen[group.id] ? "▾" : "▸"}</span
-						>
-						值从哪拿
-					</button>
-					{#if whereOpen[group.id]}
-						<ul class="where-list">
-							{#each groupRows as row (row.id)}
-								{#each row.keys as key (key)}
-									{@const it = itemByKey.get(key)}
-									{#if it?.whereToGet}
-										<li>
-											<span class="wl">{it.label}</span>
-											<span class="wd">
-												{it.whereToGet}
-												{#if it.whereCommand}
-													<code class="wcmd">{it.whereCommand}</code>
-												{/if}
-											</span>
-										</li>
-									{/if}
-								{/each}
-							{/each}
-						</ul>
-					{/if}
-				{/if}
-
 				{#each groupRows as row (row.id)}
 					{@const first = itemByKey.get(row.keys[0])}
 					{@const configured = rowConfigured(row)}
 					<div
 						class="prow"
 						class:locked={row.shape === "optional" && !configured}
-						class:field-flash={flashKey === row.keys[0] || flashKey === row.keys[1]}
+						class:field-flash={flashKey === row.keys[0] ||
+							flashKey === row.keys[1]}
 						data-secret-key={row.keys.join(" ")}
 					>
 						<div class="left">
 							<div class="name">{row.label}</div>
-							<p class="why">{row.why}</p>
-							<span class="key">
-								{#each row.keys as key (key)}
-									<button
-										type="button"
-										class="kbtn"
-										title={i18n(I18nKey.secretsMenuCopyKey)}
-										onclick={() => {
-											navigator.clipboard?.writeText(key);
-											onNotify?.(i18n(I18nKey.secretsMenuCopied), "success", 2500);
-										}}>{key}</button
-									>
-								{/each}
-							</span>
+							<p class="how">{row.how}</p>
 						</div>
 
 						<div class="right">
 							{#if row.shape === "address"}
-								<div class="box mono" class:invalid={addressError}>
-									<input
-										class="boxinput"
-										type="text"
-										value={addressRaw}
-										placeholder={row.format}
-										spellcheck="false"
-										autocomplete="off"
-										aria-label={row.label}
-										disabled={!writable}
-										oninput={(e) => setAddress(e.currentTarget.value)}
-									/>
-								</div>
+								<input
+									class="ui-input mono"
+									class:invalid={addressError}
+									type="text"
+									value={addressRaw}
+									placeholder={row.format}
+									spellcheck="false"
+									autocomplete="off"
+									aria-label={row.label}
+									disabled={!writable}
+									oninput={(e) => setAddress(e.currentTarget.value)}
+								/>
 								{#if addressError}
 									<p class="trace bad">{addressError}</p>
 								{/if}
 								<p class="trace">
 									{#if probeRepo}
-										<b>↑ 刚刚验过：</b>{probeRepo.detail}
+										<b>刚刚验过：</b>{probeRepo.detail}
+									{:else if probe.running}
+										正在验证…
 									{:else}
-										{#if probe.running}
-											正在验证…
-										{:else}
-											<button type="button" class="link" onclick={runProbe}
-												>验证连接</button
-											>
-											<span class="dim">· 尚未验证</span>
-										{/if}
+										<button type="button" class="link" onclick={runProbe}
+											>验证连接</button
+										>
+										<span class="dim">· 还没有验证</span>
 									{/if}
 								</p>
 							{:else if row.shape === "upload"}
 								{#if configured && !uploadNames[row.keys[0]]}
-									<div class="box">
+									<div class="field-box">
 										<span class="ok" aria-hidden="true">✓</span>
-										<span>RSA 私钥 · 已写入 {envFile}</span>
+										<span>已上传，保存在 {envFile}</span>
 										<span class="grow"></span>
 										<button
 											type="button"
@@ -1036,34 +982,28 @@ function answerConfirm(ok: boolean) {
 										<button
 											type="button"
 											class="link"
-											onclick={() => pickFile(row.keys[0])}>更换文件</button
+											onclick={() => pickFile(row.keys[0])}>更换</button
 										>
 									</div>
 								{:else if privateKeySource === "file" && !uploadNames[row.keys[0]]}
-									<!-- .env 里没有，但探测证明这份私钥可用（多半来自 .key/ 目录） -->
-									<div class="box">
+									<div class="field-box">
 										<span class="ok" aria-hidden="true">✓</span>
-										<span>私钥可用 · 已从文件读取</span>
+										<span>已从本地文件读取</span>
 										<span class="grow"></span>
 										<button
 											type="button"
 											class="link"
-											onclick={() => pickFile(row.keys[0])}>更换文件</button
+											onclick={() => pickFile(row.keys[0])}>更换</button
 										>
 									</div>
 								{:else}
-									<div class="box static">
-										<span class="dim"
-											>{uploadNames[row.keys[0]] || i18n(I18nKey.secretsPemUploadPrompt)}</span
-										>
-										<span class="grow"></span>
-										<button
-											type="button"
-											class="link"
-											onclick={() => pickFile(row.keys[0])}
-											>{uploadNames[row.keys[0]] ? "重新选择" : "选择 .pem 文件"}</button
-										>
-									</div>
+									<button
+										type="button"
+										class="upload-slot"
+										onclick={() => pickFile(row.keys[0])}
+									>
+										{uploadNames[row.keys[0]] || "选择一个 .pem 文件上传"}
+									</button>
 									<input
 										id={`pem-input-${row.keys[0]}`}
 										type="file"
@@ -1077,31 +1017,28 @@ function answerConfirm(ok: boolean) {
 								{/if}
 								<p class="trace">
 									{#if probeApp}
-										<b>↑ 刚刚验过：</b>{probeApp.detail}
+										<b>刚刚验过：</b>{probeApp.detail}
 									{:else}
-										<span class="dim">上传后需要点一次「验证连接」</span>
+										<span class="dim">上传后点一次「验证连接」</span>
 									{/if}
 								</p>
 								{#if itemByKey.get("GITHUB_PRIVATE_KEY_PATH")}
-									<div class="box mono small">
-										<span class="dim">或填路径</span>
-										<input
-											class="boxinput"
-											type="text"
-											placeholder=".key/xxx.private-key.pem"
-											spellcheck="false"
-											value={drafts["GITHUB_PRIVATE_KEY_PATH"] ?? ""}
-											disabled={!writable}
-											oninput={(e) => {
-												drafts["GITHUB_PRIVATE_KEY_PATH"] = e.currentTarget.value;
-											}}
-										/>
-									</div>
+									<input
+										class="ui-input mono small"
+										type="text"
+										placeholder="或填文件路径，例如 .key/blog.pem"
+										spellcheck="false"
+										value={drafts.GITHUB_PRIVATE_KEY_PATH ?? ""}
+										disabled={!writable}
+										oninput={(e) => {
+											drafts.GITHUB_PRIVATE_KEY_PATH = e.currentTarget.value;
+										}}
+									/>
 								{/if}
 							{:else if row.shape === "managed"}
-								<div class="box">
+								<div class="field-box">
 									<span class="ok" aria-hidden="true">✓</span>
-									<span>64 位随机 · 由服务端托管</span>
+									<span>已自动生成</span>
 									<span class="grow"></span>
 									<button
 										type="button"
@@ -1115,29 +1052,30 @@ function answerConfirm(ok: boolean) {
 								</div>
 							{:else if row.shape === "pair"}
 								<div class="pair">
-									{#each row.keys as key, i (key)}
+									{#each row.keys as key (key)}
 										{@const it = itemByKey.get(key)}
 										{#if it}
-											<div class="box mono" class:with-toggle={it.sensitive}>
-												<input
-													class="boxinput"
-													type={it.sensitive && !showInput[key] ? "password" : "text"}
-													value={drafts[key] ?? ""}
-													placeholder={it.example ?? ""}
-													spellcheck="false"
-													autocomplete="new-password"
-													aria-label={it.label}
-													disabled={!writable}
-													oninput={(e) => {
-														drafts[key] = e.currentTarget.value;
-													}}
-												/>
-												{#if it.sensitive}
+											{#if it.sensitive}
+												<div class="eye-wrap">
+													<input
+														class="ui-input mono"
+														type={showInput[key] ? "text" : "password"}
+														value={drafts[key] ?? ""}
+														placeholder={it.example ?? ""}
+														spellcheck="false"
+														autocomplete="new-password"
+														aria-label={it.label}
+														disabled={!writable}
+														oninput={(e) => {
+															drafts[key] = e.currentTarget.value;
+														}}
+													/>
 													<button
 														type="button"
 														class="eye"
 														aria-label={showInput[key] ? "隐藏" : "显示"}
-														onclick={() => (showInput[key] = !showInput[key])}
+														onclick={() =>
+															(showInput[key] = !showInput[key])}
 													>
 														<Icon
 															icon={showInput[key]
@@ -1145,34 +1083,49 @@ function answerConfirm(ok: boolean) {
 																: "material-symbols:visibility-outline-rounded"}
 														/>
 													</button>
-												{/if}
-											</div>
+												</div>
+											{:else}
+												<input
+													class="ui-input mono"
+													type="text"
+													value={drafts[key] ?? ""}
+													placeholder={it.example ?? ""}
+													spellcheck="false"
+													autocomplete="off"
+													aria-label={it.label}
+													disabled={!writable}
+													oninput={(e) => {
+														drafts[key] = e.currentTarget.value;
+													}}
+												/>
+											{/if}
 										{/if}
 									{/each}
 								</div>
 							{:else}
 								{@const it = first}
 								{#if it}
-									<div class="box mono" class:with-toggle={it.sensitive}>
-										<input
-											class="boxinput"
-											type={it.sensitive && !showInput[it.key] ? "password" : "text"}
-											value={drafts[it.key] ?? ""}
-											placeholder={it.example ?? ""}
-											spellcheck="false"
-											autocomplete="new-password"
-											aria-label={it.label}
-											disabled={!writable}
-											oninput={(e) => {
-												drafts[it.key] = e.currentTarget.value;
-											}}
-										/>
-										{#if it.sensitive}
+									{#if it.sensitive}
+										<div class="eye-wrap">
+											<input
+												class="ui-input mono"
+												type={showInput[it.key] ? "text" : "password"}
+												value={drafts[it.key] ?? ""}
+												placeholder={it.example ?? ""}
+												spellcheck="false"
+												autocomplete="new-password"
+												aria-label={it.label}
+												disabled={!writable}
+												oninput={(e) => {
+													drafts[it.key] = e.currentTarget.value;
+												}}
+											/>
 											<button
 												type="button"
 												class="eye"
 												aria-label={showInput[it.key] ? "隐藏" : "显示"}
-												onclick={() => (showInput[it.key] = !showInput[it.key])}
+												onclick={() =>
+													(showInput[it.key] = !showInput[it.key])}
 											>
 												<Icon
 													icon={showInput[it.key]
@@ -1180,12 +1133,28 @@ function answerConfirm(ok: boolean) {
 														: "material-symbols:visibility-outline-rounded"}
 												/>
 											</button>
-										{/if}
-									</div>
+										</div>
+									{:else}
+										<input
+											class="ui-input mono"
+											type="text"
+											value={drafts[it.key] ?? ""}
+											placeholder={it.example ?? ""}
+											spellcheck="false"
+											autocomplete="off"
+											aria-label={it.label}
+											disabled={!writable}
+											oninput={(e) => {
+												drafts[it.key] = e.currentTarget.value;
+											}}
+										/>
+									{/if}
 									{#if row.shape === "optional"}
 										<p class="trace dim">可选，留空不影响使用</p>
 									{:else if probeInstall && row.id === "install"}
-										<p class="trace"><b>↑ 刚刚验过：</b>{probeInstall.detail}</p>
+										<p class="trace">
+											<b>刚刚验过：</b>{probeInstall.detail}
+										</p>
 									{/if}
 								{/if}
 							{/if}
@@ -1431,125 +1400,74 @@ function answerConfirm(ok: boolean) {
 		color: var(--deep-text);
 	}
 
-	.prow .why {
-		margin: 0.125rem 0 0;
+	/* 「我该怎么做」：一句指令，不是说明文。行高放宽到 1.55 便于扫读 */
+	.prow .how {
+		margin: 0.1875rem 0 0;
 		font-size: var(--admin-fs-meta, 0.75rem);
-		line-height: 1.5;
+		line-height: 1.55;
 		color: var(--content-meta);
 	}
 
-	.prow .key {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 2px 0.75rem;
-		margin-top: 0.3125rem;
-	}
-
-	/* 变量名：等宽、虚线底、点击即复制 */
-	.kbtn {
-		padding: 0;
-		border: none;
-		border-bottom: 1px dotted
-			color-mix(in srgb, var(--content-meta) 45%, transparent);
-		background: none;
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: var(--admin-fs-data, 0.6875rem);
-		line-height: 1.5;
-		letter-spacing: 0.02em;
-		color: var(--content-meta);
-		cursor: copy;
-		transition:
-			color 0.15s ease,
-			border-color 0.15s ease;
-	}
-
-	.kbtn:hover {
-		color: var(--deep-text);
-		border-bottom-color: var(--primary);
-	}
-
-	.kbtn:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 2px;
-	}
-
-	/* 右栏控件：一个 42px 的框，静态态用虚线 */
 	.right {
 		min-width: 0;
 	}
 
-	.box {
-		display: flex;
-		align-items: center;
-		gap: 0.625rem;
-		height: 2.625rem;
-		padding: 0 0.75rem;
-		border: 1px solid var(--input-border, rgb(255 255 255 / 0.1));
-		border-radius: 10px;
-		background: var(--input-bg, rgb(255 255 255 / 0.04));
-		font-size: var(--admin-fs-body, 0.875rem);
-		color: var(--deep-text);
-		min-width: 0;
-		transition:
-			border-color 0.15s ease,
-			background-color 0.15s ease;
-	}
-
-	.box:hover {
-		border-color: color-mix(in srgb, var(--content-meta) 45%, transparent);
-	}
-
-	.box:focus-within {
-		border-color: color-mix(in srgb, var(--primary) 55%, transparent);
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 14%, transparent);
-	}
-
-	.box.mono {
+	/* 机器值（仓库地址、ID、密钥）用等宽：字号继承 .ui-input 的 15px，
+	   只换字族，不去改尺寸——尺寸归 .ui-input 管。 */
+	.ui-input.mono {
 		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: 0.8125rem;
 	}
 
-	.box.small {
-		height: 2.25rem;
-		margin-top: 0.375rem;
-		font-size: var(--admin-fs-data, 0.6875rem);
-	}
-
-	.box.static {
-		border-style: dashed;
-		background: none;
-	}
-
-	.box.invalid {
+	.ui-input.invalid {
 		border-color: var(--destructive);
 	}
 
-	.box .grow {
+	/* 只读状态框：和 .ui-input 同一套 token，只是没有光标 */
+	.field-box {
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		height: 2.25rem;
+		padding: 0 0.75rem;
+		background: var(--input-bg);
+		border: 1px solid var(--input-border);
+		border-radius: 10px;
+		font-size: 0.9375rem;
+		color: var(--deep-text);
+		min-width: 0;
+	}
+
+	.field-box .grow {
 		flex: 1;
 	}
 
-	.box .ok {
+	.field-box .ok {
 		color: var(--success);
 	}
 
-	.boxinput {
-		flex: 1;
-		min-width: 0;
-		height: 100%;
-		padding: 0;
-		border: none;
+	/* 未上传时的投放区：虚线、等宽提示，点一下开文件框 */
+	.upload-slot {
+		display: flex;
+		align-items: center;
+		width: 100%;
+		height: 2.25rem;
+		padding: 0 0.75rem;
+		border: 1px dashed var(--input-border);
+		border-radius: 10px;
 		background: none;
 		font: inherit;
-		color: inherit;
-		outline: none;
+		font-size: 0.9375rem;
+		color: var(--content-meta);
+		text-align: left;
+		cursor: pointer;
+		transition:
+			border-color 0.15s ease,
+			color 0.15s ease;
 	}
 
-	.boxinput::placeholder {
-		color: color-mix(in srgb, var(--content-meta) 80%, transparent);
-	}
-
-	.boxinput:disabled {
-		cursor: not-allowed;
+	.upload-slot:hover {
+		border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+		color: var(--deep-text);
 	}
 
 	.pair {
@@ -1558,13 +1476,25 @@ function answerConfirm(ok: boolean) {
 		gap: 0.5rem;
 	}
 
+	/* 密码框：眼睛按钮压在输入框右侧，不另起一列 */
+	.eye-wrap {
+		position: relative;
+	}
+
+	.eye-wrap .ui-input {
+		padding-right: 2.25rem;
+	}
+
 	.eye {
+		position: absolute;
+		top: 50%;
+		right: 0.5rem;
+		transform: translateY(-50%);
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		width: 1.5rem;
 		height: 1.5rem;
-		flex-shrink: 0;
 		padding: 0;
 		border: none;
 		background: none;
@@ -1634,66 +1564,6 @@ function answerConfirm(ok: boolean) {
 
 	.ok-t {
 		color: var(--success);
-	}
-
-	/* 值从哪拿 */
-	.where-toggle {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		margin-top: 0.5rem;
-		padding: 0;
-		border: none;
-		background: none;
-		font: inherit;
-		font-size: var(--admin-fs-meta, 0.75rem);
-		color: var(--content-meta);
-		cursor: pointer;
-	}
-
-	.where-toggle:hover {
-		color: var(--deep-text);
-	}
-
-	.where-list {
-		margin: 0.375rem 0 0;
-		padding: 0 0 0 1rem;
-		list-style: none;
-		border-left: 2px solid var(--line-divider);
-	}
-
-	.where-list li {
-		display: grid;
-		grid-template-columns: 9rem minmax(0, 1fr);
-		gap: 0.75rem;
-		align-items: baseline;
-		padding: 0.1875rem 0;
-		font-size: var(--admin-fs-meta, 0.75rem);
-		line-height: 1.6;
-	}
-
-	.wl {
-		color: var(--deep-text);
-		font-weight: 600;
-	}
-
-	.wd {
-		min-width: 0;
-		color: var(--content-meta);
-	}
-
-	.wcmd {
-		display: block;
-		max-width: 100%;
-		margin-top: 0.25rem;
-		padding: 0.3125rem 0.5rem;
-		border-radius: 6px;
-		background: var(--input-bg, rgb(255 255 255 / 0.05));
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: var(--admin-fs-data, 0.6875rem);
-		color: var(--deep-text);
-		overflow-x: auto;
-		white-space: pre;
 	}
 
 	/* 底部次级动作 */
@@ -1837,9 +1707,5 @@ function answerConfirm(ok: boolean) {
 			gap: 0.5rem;
 		}
 
-		.where-list li {
-			grid-template-columns: minmax(0, 1fr);
-			gap: 0.125rem;
-		}
 	}
 </style>

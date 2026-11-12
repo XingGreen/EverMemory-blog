@@ -15,16 +15,6 @@ export type AdminSecretItem = {
 	label: string;
 	/** 后台显示的密钥说明 */
 	description: string;
-	/**
-	 * 「从哪拿」：值在哪个页面、哪个位置。
-	 *
-	 * 与 description 分开：description 说明「这东西是干什么的」，这里说明
-	 * 「你去哪把它复制过来」。两件事原先挤在 description 一行里，真要填的时候
-	 * 仍然不知道点哪里。
-	 */
-	whereToGet?: string;
-	/** 需要跑命令生成时的命令行，等宽展示 */
-	whereCommand?: string;
 	/** 输入形态：text=单行 / password=单行密文输入 / multiline=多行大文本（私钥） */
 	kind: "text" | "password" | "multiline";
 	/** 是否机密：机密值不回显真实内容，仅展示已配置/未配置状态 */
@@ -72,7 +62,7 @@ export const SECRET_GROUPS: readonly {
 	{
 		id: "turnstile",
 		labelKey: "secretsGroupTurnstile",
-		sub: "可选",
+		sub: "登录防护",
 		icon: "material-symbols:verified-user",
 		descKey: "secretsGroupTurnstileDesc",
 	},
@@ -107,8 +97,8 @@ export interface SecretRow {
 	group: string;
 	/** 左栏标题，写「问题」而不是「字段名」 */
 	label: string;
-	/** 一句话说明这行在做什么，两行以内 */
-	why: string;
+	/** 「我该怎么做」：一句可直接照做的指令，不解释原理 */
+	how: string;
 	/** 这一行覆盖的环境变量，等宽列在左栏 */
 	keys: string[];
 	shape: SecretRowShape;
@@ -121,16 +111,16 @@ export const SECRET_ROWS: SecretRow[] = [
 		id: "repo",
 		group: "github",
 		label: "仓库",
-		why: "文章提交到哪里",
+		how: "填你博客所在的仓库：用户名/仓库名@分支",
 		keys: ["GITHUB_OWNER", "GITHUB_REPO", "GITHUB_BRANCH"],
 		shape: "address",
-		format: "owner/repo@branch",
+		format: "用户名/仓库名@分支",
 	},
 	{
 		id: "app-id",
 		group: "github",
 		label: "App ID",
-		why: "GitHub App 设置页顶部",
+		how: "打开 GitHub 的 GitHub Apps 页面，在你的 App 顶部复制 App ID",
 		keys: ["GITHUB_APP_ID"],
 		shape: "single",
 	},
@@ -138,7 +128,7 @@ export const SECRET_ROWS: SecretRow[] = [
 		id: "private-key",
 		group: "github",
 		label: "私钥",
-		why: "只保存在本地，不会上传",
+		how: "同一个页面点 Private keys → 生成私钥，下载后在这里上传；或填文件路径",
 		keys: ["GITHUB_PRIVATE_KEY", "GITHUB_PRIVATE_KEY_PATH"],
 		shape: "upload",
 	},
@@ -146,7 +136,7 @@ export const SECRET_ROWS: SecretRow[] = [
 		id: "install",
 		group: "github",
 		label: "安装",
-		why: "App 安装到哪个账号",
+		how: "把 App 装到你的账号，再从安装页地址末尾复制那串数字",
 		keys: ["GITHUB_INSTALLATION_ID"],
 		shape: "single",
 	},
@@ -154,7 +144,7 @@ export const SECRET_ROWS: SecretRow[] = [
 		id: "oauth",
 		group: "auth",
 		label: "GitHub OAuth",
-		why: "登录后台用的 OAuth 凭据",
+		how: "同一个页面复制 Client ID，再点生成 client secret，两个一起换",
 		keys: ["GITHUB_APP_CLIENT_ID", "GITHUB_APP_CLIENT_SECRET"],
 		shape: "pair",
 	},
@@ -162,7 +152,7 @@ export const SECRET_ROWS: SecretRow[] = [
 		id: "admin-id",
 		group: "auth",
 		label: "管理员 GitHub 用户 ID",
-		why: "白名单，只这一个能登录",
+		how: "打开 api.github.com/user（先登录 GitHub），把返回里的 id 数字填进来",
 		keys: ["ADMIN_GITHUB_ID"],
 		shape: "single",
 	},
@@ -170,7 +160,7 @@ export const SECRET_ROWS: SecretRow[] = [
 		id: "session",
 		group: "auth",
 		label: "会话签名",
-		why: "由服务端自动生成，无需填写",
+		how: "不用填，保存时会自动生成；怀疑泄露再点轮换",
 		keys: ["ADMIN_JWT_SECRET"],
 		shape: "managed",
 	},
@@ -178,7 +168,7 @@ export const SECRET_ROWS: SecretRow[] = [
 		id: "breakglass",
 		group: "auth",
 		label: "应急登录令牌",
-		why: "GitHub 不可用时的备用入口",
+		how: "一般留空。GitHub 登录出问题时，用它直接进后台",
 		keys: ["ADMIN_BREAKGLASS_TOKEN"],
 		shape: "single",
 	},
@@ -186,7 +176,7 @@ export const SECRET_ROWS: SecretRow[] = [
 		id: "webhook",
 		group: "auth",
 		label: "登录告警 Webhook",
-		why: "可选，留空则不发送",
+		how: "可选。把 Slack 或 Discord 的 webhook 地址粘进来，有登录时通知你",
 		keys: ["ADMIN_ALERT_WEBHOOK"],
 		shape: "optional",
 	},
@@ -194,7 +184,7 @@ export const SECRET_ROWS: SecretRow[] = [
 		id: "turnstile",
 		group: "turnstile",
 		label: "Turnstile 密钥对",
-		why: "只配一半会导致登录被拒",
+		how: "在 Cloudflare 的 Turnstile 里建一个站点，把两个密钥一起复制过来；不启用就都留空",
 		keys: ["TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY"],
 		shape: "pair",
 	},
@@ -207,8 +197,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "github",
 		label: "GitHub App ID",
 		description: "GitHub App Settings 页顶部的数字 ID",
-		whereToGet:
-			"GitHub → Settings → Developer settings → GitHub Apps → 你的 App，页面顶部的「App ID」，纯数字。",
 		example: "4423412",
 		kind: "text",
 		sensitive: false,
@@ -219,7 +207,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "github",
 		label: "仓库所有者",
 		description: "仓库所有者，用户名或组织名，不带 @",
-		whereToGet: "你的 GitHub 用户名，或组织名。不带 @。",
 		example: "XingGreen",
 		kind: "text",
 		sensitive: false,
@@ -230,7 +217,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "github",
 		label: "仓库名称",
 		description: "仓库名称，不带 .git 后缀",
-		whereToGet: "仓库名，不带 .git 后缀。",
 		example: "EverMemory-blog",
 		kind: "text",
 		sensitive: false,
@@ -241,8 +227,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "github",
 		label: "仓库分支",
 		description: "仓库分支，通常为 main 或 master",
-		whereToGet:
-			"仓库的默认分支。新建仓库通常是 main；本仓库历史原因用 master。",
 		example: "master",
 		kind: "text",
 		sensitive: false,
@@ -253,8 +237,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "github",
 		label: "Installation ID",
 		description: "App 安装页 URL 末尾的数字 ID",
-		whereToGet:
-			"装好 App 后，安装页地址末尾的数字，例如 /installations/149804847。",
 		example: "149804847",
 		kind: "text",
 		sensitive: false,
@@ -264,11 +246,7 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		key: "GITHUB_PRIVATE_KEY",
 		group: "github",
 		label: "GitHub App 私钥",
-		description: "用于签发 JWT 的 PEM 私钥，保存时自动转 Base64",
-		whereToGet:
-			"同一个 App 页 → Private keys → Generate a private key，下载 .pem 后转 Base64 填入。",
-		whereCommand:
-			"node -e \"console.log(require('fs').readFileSync('.key/xxx.private-key.pem').toString('base64'))\"",
+		description: "只保存在本地，不会上传",
 		wide: true,
 		kind: "multiline",
 		sensitive: true,
@@ -279,8 +257,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "github",
 		label: "私钥文件路径",
 		description: "仅本地开发使用；留空时自动在 .key/ 与 .keys/ 中查找",
-		whereToGet:
-			"本地开发可以不填上面的密钥，改填 .pem 的路径；留空时自动在 .key/ 和 .keys/ 下找 *.pem。",
 		example: ".key/xxx.private-key.pem",
 		kind: "text",
 		sensitive: false,
@@ -293,8 +269,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "auth",
 		label: "GitHub OAuth Client ID",
 		description: "GitHub App 的 Client ID，与应用 ID 不同",
-		whereToGet:
-			"同一个 App 页的 Client ID，形如 Iv23li…。注意它和页面顶部的 App ID 是两个不同的值。",
 		example: "Iv23li04IMnCZn3h3u6s",
 		kind: "text",
 		sensitive: false,
@@ -305,8 +279,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "auth",
 		label: "GitHub OAuth Client Secret",
 		description: "换取访问令牌的密钥，泄露后须重新生成",
-		whereToGet:
-			"同页 → Generate a new client secret。只显示一次，泄露后立刻重新生成。",
 		kind: "password",
 		sensitive: true,
 		required: true,
@@ -316,8 +288,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "auth",
 		label: "管理员 GitHub 用户 ID",
 		description: "允许登录的 GitHub 账号数字 ID",
-		whereToGet:
-			"登录 GitHub 后打开 https://api.github.com/user ，取 id 字段（数字，不随用户名变化）。",
 		example: "238927366",
 		kind: "text",
 		sensitive: false,
@@ -347,8 +317,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "auth",
 		label: "登录告警 Webhook",
 		description: "登录成功时向该 URL 发送通知，留空则不发送",
-		whereToGet:
-			"Slack 或 Discord 的 Incoming Webhook 地址；不填则登录时不发送任何告警。",
 		example: "https://hooks.slack.com/services/…",
 		wide: true,
 		kind: "text",
@@ -362,8 +330,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "turnstile",
 		label: "Turnstile Site Key",
 		description: "公开值，需与 Secret Key 成对配置",
-		whereToGet:
-			"Cloudflare Dashboard → Turnstile → 创建 widget，两个 key 一起取。只配一个会让登录被拒。",
 		example: "0x4AAAAAAA…",
 		kind: "text",
 		sensitive: false,
@@ -374,7 +340,6 @@ export const ADMIN_SECRETS: AdminSecretItem[] = [
 		group: "turnstile",
 		label: "Turnstile Secret Key",
 		description: "服务端校验用的私钥，只配 Site Key 会导致登录被拒",
-		whereToGet: "与 Site Key 出自同一个 widget，必须成对配置。",
 		example: "0x4AAAAAAA…",
 		kind: "password",
 		sensitive: true,

@@ -202,7 +202,7 @@ let secretSaveState = $state<{
 	/** 写入目标文件名 */
 	envFile: string;
 	changedCount: number;
-	diffRows: {
+	alertRows: {
 		key: string;
 		label: string;
 		kind: "add" | "replace" | "remove";
@@ -214,8 +214,8 @@ let secretSaveState = $state<{
 	save: () => void;
 	discard: () => void;
 } | null>(null);
-// 保存栏改动清单是否展开
-let dirtyListOpen = $state(false);
+// 紧急操作警报单是否展开
+let alertListOpen = $state(false);
 
 // 站内切换页面时的未保存拦截：leaveConfirmOpen 为真即弹出确认框，
 // pendingPath 记录确认后要跳转的目标路径。
@@ -2176,16 +2176,21 @@ function formatDate(dateStr: string | null): string {
 					{#if secretSaveState?.writable}
 						<!-- 逐行 diff 在写入栏上方就地展开：先看清写什么，再按下去。
 						     顺序不能反过来——footer 贴着卡片底边，栏之后的元素会溢出到卡片外。 -->
-						{#if dirtyListOpen && secretSaveState.changedCount > 0}
-							<div class="diffbox" id="dirty-list">
-								<div class="dh">
-									<span class="p">{secretSaveState.envFile}</span>
+						{#if alertListOpen && secretSaveState.changedCount > 0}
+							<div class="alerts" id="alert-list">
+								<div class="alerts-head">
+									<span class="p"
+										>{i18n(I18nKey.secretsWritePending).replace(
+											"{count}",
+											String(secretSaveState.alertRows.length),
+										)}</span
+									>
 									<span class="grow"></span>
-									<span>{secretSaveState.diffRows.length} 项变更</span>
+									<span class="mono">{secretSaveState.envFile}</span>
 								</div>
-								{#each secretSaveState.diffRows as row (row.key)}
+								{#each secretSaveState.alertRows as row (row.key)}
 									<button
-										class="dline {row.kind}"
+										class="alerts-row {row.kind}"
 										type="button"
 										title="跳回该字段"
 										onclick={() => secretSaveState?.scrollToField(row.key)}
@@ -2197,7 +2202,7 @@ function formatDate(dateStr: string | null): string {
 													? "−"
 													: "~"}</span
 										>
-										<span class="k">{row.key}</span>
+										<span class="k">{row.label}</span>
 										<span class="v">
 											{#if row.masked}
 												{row.kind === "remove" ? "移除该行" : "值已替换（不回显）"}
@@ -2218,9 +2223,9 @@ function formatDate(dateStr: string | null): string {
 								<button
 									class="writebar-count"
 									type="button"
-									aria-expanded={dirtyListOpen}
-									aria-controls="dirty-list"
-									onclick={() => (dirtyListOpen = !dirtyListOpen)}
+									aria-expanded={alertListOpen}
+									aria-controls="alert-list"
+									onclick={() => (alertListOpen = !alertListOpen)}
 								>
 									<span
 										>{i18n(I18nKey.secretsWritePending).replace(
@@ -2229,7 +2234,7 @@ function formatDate(dateStr: string | null): string {
 										)}</span
 									>
 									<span class="caret" aria-hidden="true"
-										>{dirtyListOpen ? "▾" : "▸"}</span
+										>{alertListOpen ? "▾" : "▸"}</span
 									>
 								</button>
 							{:else}
@@ -3397,7 +3402,7 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	/* 逐行 diff：等宽、带边框的小面板，增/删行各有底色 */
-	.diffbox {
+	.alerts {
 		margin: 0 var(--admin-gutter, 1.5rem) 0.875rem;
 		/* 改动多时自己滚，不能把写入栏顶出卡片 */
 		max-height: 40vh;
@@ -3410,7 +3415,7 @@ function formatDate(dateStr: string | null): string {
 		font-size: var(--admin-fs-meta, 0.75rem);
 	}
 
-	.diffbox .dh {
+	.alerts-head {
 		display: flex;
 		align-items: center;
 		gap: 0.625rem;
@@ -3421,15 +3426,19 @@ function formatDate(dateStr: string | null): string {
 		border-bottom: 1px solid var(--line-divider);
 	}
 
-	.diffbox .dh .p {
+	.alerts-head .p {
 		color: var(--deep-text);
 	}
 
-	.diffbox .dh .grow {
+	.alerts-head .grow {
 		flex: 1;
 	}
 
-	.dline {
+	.alerts-head .mono {
+		font-family: var(--font-mono, ui-monospace, monospace);
+	}
+
+	.alerts-row {
 		display: flex;
 		align-items: baseline;
 		gap: 0.625rem;
@@ -3442,53 +3451,53 @@ function formatDate(dateStr: string | null): string {
 		cursor: pointer;
 	}
 
-	.dline:hover {
+	.alerts-row:hover {
 		background: var(--btn-plain-bg-hover);
 	}
 
-	.dline:focus-visible {
+	.alerts-row:focus-visible {
 		outline: 2px solid var(--primary);
 		outline-offset: -2px;
 	}
 
-	.dline.add {
+	.alerts-row.add {
 		background: color-mix(in srgb, var(--success) 9%, transparent);
 	}
 
-	.dline.remove {
+	.alerts-row.remove {
 		background: color-mix(in srgb, var(--destructive) 9%, transparent);
 	}
 
-	.dline .sign {
+	.alerts-row .sign {
 		flex-shrink: 0;
 		width: 0.625rem;
 		color: var(--content-meta);
 	}
 
-	.dline.add .sign {
+	.alerts-row.add .sign {
 		color: var(--success);
 	}
 
-	.dline.remove .sign {
+	.alerts-row.remove .sign {
 		color: var(--destructive);
 	}
 
-	.dline.replace .sign {
+	.alerts-row.replace .sign {
 		color: var(--primary);
 	}
 
-	.dline .k {
+	.alerts-row .k {
 		flex-shrink: 0;
 		color: var(--content-meta);
 	}
 
-	.dline .v {
+	.alerts-row .v {
 		min-width: 0;
 		color: var(--deep-text);
 		overflow-wrap: anywhere;
 	}
 
-	.dline .old {
+	.alerts-row .old {
 		color: var(--content-meta);
 		text-decoration: line-through;
 	}

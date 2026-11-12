@@ -914,7 +914,7 @@ export const en: Translation = {
 	[Key.secretsPendingDelete]: "Pending removal",
 	[Key.secretsSave]: "Save Secrets",
 	[Key.secretsWriteEnv]: "Write .env.local",
-	[Key.secretsWritePending]: "{count} to write",
+	[Key.secretsWritePending]: "Action alerts · {count}",
 	[Key.secretsSaving]: "Saving…",
 	[Key.secretsReload]: "Refresh",
 	[Key.secretsWritableHint]:

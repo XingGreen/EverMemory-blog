@@ -907,7 +907,7 @@ export const ja: Translation = {
 	[Key.secretsPendingDelete]: "削除予定",
 	[Key.secretsSave]: "シークレットを保存",
 	[Key.secretsWriteEnv]: ".env.local に書き込む",
-	[Key.secretsWritePending]: "{count} 件を書き込み待ち",
+	[Key.secretsWritePending]: "要対応の警告 · {count} 件",
 	[Key.secretsSaving]: "保存中…",
 	[Key.secretsReload]: "更新",
 	[Key.secretsWritableHint]:

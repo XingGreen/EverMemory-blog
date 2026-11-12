@@ -875,7 +875,7 @@ export const zh_TW: Translation = {
 	[Key.secretsPendingDelete]: "待清除",
 	[Key.secretsSave]: "儲存密鑰",
 	[Key.secretsWriteEnv]: "寫入 .env.local",
-	[Key.secretsWritePending]: "{count} 項待寫入",
+	[Key.secretsWritePending]: "緊急操作警報單 · {count} 項",
 	[Key.secretsSaving]: "儲存中…",
 	[Key.secretsReload]: "重新整理",
 	[Key.secretsWritableHint]:
