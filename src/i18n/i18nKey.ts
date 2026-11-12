@@ -895,6 +895,8 @@ enum I18nKey {
 	secretsNotConfigured = "secretsNotConfigured",
 	secretsPendingDelete = "secretsPendingDelete",
 	secretsSave = "secretsSave",
+	secretsWriteEnv = "secretsWriteEnv",
+	secretsWritePending = "secretsWritePending",
 	secretsSaving = "secretsSaving",
 	secretsReload = "secretsReload",
 	secretsWritableHint = "secretsWritableHint",

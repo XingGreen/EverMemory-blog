@@ -93,7 +93,7 @@ async function checkApp(
 	signError: string,
 ): Promise<ProbeStage> {
 	if (!jwt) {
-		return { id: "app", ok: false, detail: signError || "无法签发 JWT" };
+		return { id: "app", ok: false, detail: signError || "私钥不可用" };
 	}
 	try {
 		const res = await ghFetch(`${API}/app`, jwt);
@@ -102,14 +102,14 @@ async function checkApp(
 			return {
 				id: "app",
 				ok: true,
-				detail: `GitHub 接受了这个 JWT（App：${data.slug || data.name || "未命名"}）`,
+				detail: `GitHub 已认可这组 App 身份（${data.slug || data.name || "未命名"}）`,
 			};
 		}
 		if (res.status === 401) {
 			return {
 				id: "app",
 				ok: false,
-				detail: "GitHub 拒绝了这个 JWT：App ID 与私钥不是同一对",
+				detail: "App ID 与私钥不匹配",
 			};
 		}
 		return {
@@ -152,7 +152,7 @@ async function checkRepo(): Promise<ProbeStage> {
 			return {
 				id: "repo",
 				ok: false,
-				detail: `读不到 ${owner}/${repo}@${branch}：分支或仓库不存在，或 App 未被授予该仓库权限`,
+				detail: `读不到 ${owner}/${repo}@${branch}：分支或仓库不存在，或未授权给这个 App`,
 			};
 		}
 		return {
@@ -180,7 +180,7 @@ async function checkInstallation(jwt: string | null): Promise<ProbeStage> {
 		return {
 			id: "installation",
 			ok: false,
-			detail: "JWT 无法签发，取不到安装列表",
+			detail: "App 身份未通过，取不到安装信息",
 		};
 	}
 	try {
@@ -239,7 +239,7 @@ export async function probeGitHubApp(force = false): Promise<ProbeReport> {
 			: Promise.resolve<ProbeStage>({
 					id: "repo",
 					ok: false,
-					detail: "JWT 签发失败，未尝试读取仓库",
+					detail: "App 身份未通过，未检查仓库",
 				}),
 		checkInstallation(app.ok ? jwt : null),
 	]);

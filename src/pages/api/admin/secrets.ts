@@ -18,6 +18,7 @@ import {
 	stepUpRequiredResponse,
 } from "@/utils/auth";
 import { getClientIp } from "@/utils/client-ip";
+import { getPrivateKey } from "@/utils/github-app";
 import {
 	applyEnvFileUpdates,
 	decodePrivateKey,
@@ -110,6 +111,17 @@ export async function GET({
 	if (!auth.authenticated && auth.response) return auth.response;
 
 	const states = readSecretStates();
+	// 私钥可能不在 .env 里，而是 .key/ 下的 .pem。判定「有没有可用私钥」
+	// 不能只看 .env，否则页面会说「未配置」而 App 其实工作正常。
+	let privateKeySource: "env" | "file" | "none" = "none";
+	if (states.GITHUB_PRIVATE_KEY) privateKeySource = "env";
+	else {
+		try {
+			privateKeySource = getPrivateKey().includes("BEGIN") ? "file" : "none";
+		} catch {
+			privateKeySource = "none";
+		}
+	}
 	const items = ADMIN_SECRETS.map((item) => ({
 		key: item.key,
 		group: item.group,
@@ -140,6 +152,7 @@ export async function GET({
 			file: ".env.local",
 			items,
 			audit: auditSecretFiles(),
+			privateKeySource,
 		},
 		200,
 	);

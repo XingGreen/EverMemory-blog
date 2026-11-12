@@ -919,6 +919,8 @@ export const ru: Translation = {
 	[Key.secretsNotConfigured]: "Не настроено",
 	[Key.secretsPendingDelete]: "Ожидает удаления",
 	[Key.secretsSave]: "Сохранить секреты",
+	[Key.secretsWriteEnv]: "Записать в .env.local",
+	[Key.secretsWritePending]: "К записи: {count}",
 	[Key.secretsSaving]: "Сохранение…",
 	[Key.secretsReload]: "Обновить",
 	[Key.secretsWritableHint]:

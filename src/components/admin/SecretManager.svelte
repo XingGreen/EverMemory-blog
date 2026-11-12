@@ -3,7 +3,12 @@ import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
-import { type AdminSecretItem, SECRET_GROUPS } from "@/utils/admin-secrets";
+import {
+	type AdminSecretItem,
+	SECRET_GROUPS,
+	SECRET_ROWS,
+	type SecretRow,
+} from "@/utils/admin-secrets";
 import ConfirmDialog from "./ConfirmDialog.svelte";
 
 type SecretItemDTO = AdminSecretItem & {
@@ -30,6 +35,8 @@ let {
 		writable: boolean;
 		loading: boolean;
 		saving: boolean;
+		/** 写入目标文件名，显示在写入栏右侧 */
+		envFile: string;
 		changedCount: number;
 		/** 未保存改动的逐行 diff（新增/替换/移除），供保存栏展开显示 */
 		diffRows: SecretDiffRow[];
@@ -42,6 +49,8 @@ let {
 let items = $state<SecretItemDTO[]>([]);
 let writable = $state(false);
 let envFile = $state(".env.local");
+/** 私钥来源：.env 里 / .key 文件里 / 没有 */
+let privateKeySource = $state<"env" | "file" | "none">("none");
 let loading = $state(true);
 /** 被 Git 跟踪的密钥文件：这些是真正的泄漏风险 */
 let leakedFiles = $state<string[]>([]);
@@ -236,6 +245,7 @@ function discardAll() {
 	drafts = { ...draftsOrigin };
 	uploadNames = {};
 	uploadError = {};
+	syncAddress();
 }
 
 /**
@@ -373,6 +383,7 @@ $effect(() => {
 		writable,
 		loading,
 		saving,
+		envFile,
 		changedCount,
 		diffRows,
 		scrollToField,
@@ -394,6 +405,7 @@ async function load() {
 				.map((a: { path: string }) => a.path);
 			writable = data.writable;
 			envFile = data.file || ".env.local";
+			privateKeySource = data.privateKeySource ?? "none";
 			// 本地开发环境：直接把明文回填到表单，便于查看与局部修改
 			drafts = {};
 			draftsOrigin = {};
@@ -405,6 +417,7 @@ async function load() {
 					draftsOrigin[item.key] = value;
 				}
 			}
+			syncAddress();
 		} else {
 			loadError = data.message || "读取密钥状态失败";
 		}
@@ -713,6 +726,114 @@ async function rotate(item: SecretItemDTO) {
 	}
 }
 
+/* ── 行模型 ──
+   页面按「问题」排版，不按环境变量排版：一行可能对应 1–3 个 key。
+   存储侧仍然是 ADMIN_SECRETS，保存时按 key 拆回去，两边不重复定义。 */
+const itemByKey = $derived(new Map(items.map((i) => [i.key, i])));
+
+function rowsOf(groupId: string): SecretRow[] {
+	return SECRET_ROWS.filter((r) => r.group === groupId);
+}
+
+/**
+ * 这一行算不算「配好了」。
+ *
+ * 多数行要求每个 key 都在；但私钥那行的两个 key 是**二选一**
+ * （内联 Base64 与 .pem 路径），用 every 会把它永远判成未配置。
+ */
+function rowConfigured(row: SecretRow): boolean {
+	const has = (k: string) => {
+		const it = itemByKey.get(k);
+		return it?.configured === true || it?.managed === true;
+	};
+	return row.shape === "upload" ? row.keys.some(has) : row.keys.every(has);
+}
+
+const probeApp = $derived(probe.stages.find((s) => s.id === "app") ?? null);
+const probeRepo = $derived(probe.stages.find((s) => s.id === "repo") ?? null);
+const probeInstall = $derived(
+	probe.stages.find((s) => s.id === "installation") ?? null,
+);
+
+/**
+ * 组级结论。一组只回答一个问题：
+ * GitHub 组答「能不能写进去」，认证组答「配了几项」，人机验证答「开没开」。
+ * 可选行（webhook）不参与计数——它空着也是对的。
+ */
+function verdictOf(groupId: string): {
+	text: string;
+	tone: "ok" | "warn" | "idle";
+} {
+	if (groupId === "github") {
+		if (probe.running) return { text: "验证中…", tone: "idle" };
+		if (probe.stages.length === 0) return { text: "未验证", tone: "idle" };
+		const addr = addressOf();
+		return probeRepo?.ok
+			? { text: `✓ 能写入 ${addr}`, tone: "ok" }
+			: { text: "✕ 仓库读不到", tone: "warn" };
+	}
+
+	const rows = rowsOf(groupId).filter((r) => r.shape !== "optional");
+	const done = rows.filter(rowConfigured).length;
+
+	if (groupId === "turnstile") {
+		return done === rows.length && rows.length > 0
+			? { text: "已启用", tone: "ok" }
+			: { text: "未启用", tone: "idle" };
+	}
+	return {
+		text: `${done} / ${rows.length} 已配`,
+		tone: done === rows.length ? "ok" : "warn",
+	};
+}
+
+/* ── 仓库地址 ──
+   owner / repo / branch 从来不是三个概念，是一个地址的三个片段。
+   输入框里显示 `owner/repo@branch`，解析成功才写回三个草稿；
+   解析不了就保持原样并提示格式，不把半截地址拆进草稿。 */
+let addressRaw = $state("");
+let addressError = $state("");
+
+function addressOf(): string {
+	const owner = (drafts.GITHUB_OWNER ?? "").trim();
+	const repo = (drafts.GITHUB_REPO ?? "").trim();
+	const branch = (drafts.GITHUB_BRANCH ?? "").trim();
+	if (!owner && !repo && !branch) return "";
+	return `${owner}/${repo}${branch ? `@${branch}` : ""}`;
+}
+
+function syncAddress() {
+	addressRaw = addressOf();
+	addressError = "";
+}
+
+function setAddress(raw: string) {
+	addressRaw = raw;
+	const trimmed = raw.trim();
+	if (!trimmed) {
+		addressError = "";
+		drafts.GITHUB_OWNER = "";
+		drafts.GITHUB_REPO = "";
+		drafts.GITHUB_BRANCH = "";
+		return;
+	}
+	const m = trimmed.match(/^([^/\s]+)\/([^@\s]+)(?:@(\S+))?$/);
+	if (!m) {
+		addressError = "格式：owner/repo@branch";
+		return;
+	}
+	addressError = "";
+	drafts.GITHUB_OWNER = m[1];
+	drafts.GITHUB_REPO = m[2];
+	drafts.GITHUB_BRANCH = m[3] ?? "";
+}
+
+/** 打开某一行的文件选择框（.pem 上传） */
+function pickFile(key: string) {
+	const el = document.getElementById(`pem-input-${key}`);
+	el?.click();
+}
+
 onMount(() => {
 	successDismissed = readSuccessDismissed();
 	load();
@@ -747,1195 +868,797 @@ function answerConfirm(ok: boolean) {
 	open={confirmState !== null}
 	title={confirmState?.title ?? ""}
 	body={confirmState?.body ?? ""}
-	hint={confirmState?.hint ?? ""}
-	confirmText={confirmState?.confirmText ?? "确定"}
-	cancelText={confirmState?.cancelText ?? "取消"}
+	hint={confirmState?.hint}
+	confirmText={confirmState?.confirmText ?? ""}
+	cancelText={confirmState?.cancelText ?? ""}
 	tone={confirmState?.tone ?? "default"}
 	onConfirm={() => answerConfirm(true)}
 	onCancel={() => answerConfirm(false)}
 />
 
-<svelte:window
-	onbeforeunload={onBeforeUnload}
-	onclick={closeMenuOnOutside}
-	onkeydown={closeMenuOnEsc}
-/>
-
 <div class="secrets-page">
-	{#if leakedFiles.length > 0}
-		<p class="leak-warn" role="alert">
-			<Icon icon="material-symbols:warning" />
-			有 {leakedFiles.length} 个密钥文件已被 Git 跟踪：{leakedFiles.join("、")}。
-			请把它们移出版本库并加入 .gitignore。
-		</p>
-	{/if}
-	{#if loadError}
-		<div class="status-banner error">
-			<Icon icon="material-symbols:error-outline" />
-			<span>{loadError}</span>
-			<button class="sec-btn" onclick={load}>
-				<Icon icon="material-symbols:refresh" />
-				<span>{i18n(I18nKey.secretsReload)}</span>
-			</button>
-		</div>
-	{/if}
-
-	<!-- 状态提示：一行说完「已完成配置 + 写入位置」。
-	     放在操作栏之前——先给结论，再给工具。 -->
-	{#if !loading && !loadError}
-		{#if allRequiredConfigured}
-			{#if !successDismissed}
-				<div class="success-bar">
-					<Icon icon="material-symbols:check-circle-outline" />
-					<span>{i18n(I18nKey.secretsStatusAllDone).replace("{file}", envFile)}</span>
-					<button
-						class="status-dismiss"
-						type="button"
-						onclick={dismissSuccess}
-					>
-						{i18n(I18nKey.secretsStatusGotIt)}
-					</button>
-				</div>
-			{/if}
-		{:else}
-			<div class="pending-bar">
-				<Icon icon="material-symbols:info-outline" class="status-icon" />
-				<span class="status-text">
-					{i18n(I18nKey.secretsStatusPartial)
-						.replace("{done}", String(requiredConfiguredCount))
-						.replace("{total}", String(requiredItems.length))}
-				</span>
-				<span class="status-missing">
-					{i18n(I18nKey.secretsStatusMissing)}
-					{#each missingRequired as item, i (item.key)}
-						<span class="status-key" title={item.key}>{item.label}</span>
-						{#if i < missingRequired.length - 1}、{/if}
-					{/each}
-				</span>
-			</div>
-		{/if}
-	{/if}
-
-	<!-- 泄露检测结果：判据是 git 追踪/提交/推送三层，等级与处置建议一一对应 -->
-	{#if leakChecked}
-		<div class="leak-panel">
-			{#if !leakAvailable}
-				<p class="leak-note">{leakReason || i18n(I18nKey.secretsLeakUnavailable)}</p>
-			{:else if leakResults.length === 0}
-				<p class="leak-note">{i18n(I18nKey.secretsLeakSafe)}</p>
-			{:else}
-				{#each leakResults as r (r.file)}
-					<div class="leak-row" data-level={r.level}>
-						<code class="leak-file">{r.file}</code>
-						<span class="leak-badge">{leakLabel(r.level)}</span>
-					</div>
-				{/each}
-			{/if}
-		</div>
-	{/if}
-
-	<!-- 操作栏：左说明右按钮，作为工作区顶部的工具栏（与设置页 savebar 同源） -->
-	<div class="action-bar">
-		<div class="action-info">
-			<strong>
-				{writable
-					? i18n(I18nKey.secretsWritableHint).replace("{file}", envFile)
-					: i18n(I18nKey.secretsReadonlyHint)}
-			</strong>
-			{#if writable}
-				<span>{i18n(I18nKey.secretsExportInlineHint)}</span>
-			{/if}
-		</div>
-		<div class="action-buttons">
-			<button
-				class="ui-btn ui-btn-soft"
-				type="button"
-				title={i18n(I18nKey.secretsLeakCheck)}
-				onclick={checkLeak}
-				disabled={leakBusy || loading}
-			>
-				<Icon icon="material-symbols:shield-lock" />
-				<span>{i18n(I18nKey.secretsLeakCheck)}</span>
-			</button>
-			<button
-				class="ui-btn ui-btn-soft"
-				type="button"
-				onclick={load}
-				disabled={loading}
-			>
-				<Icon icon="material-symbols:refresh" />
-				<span>{i18n(I18nKey.secretsReload)}</span>
-			</button>
-			{#if writable}
-				<button
-					class="ui-btn ui-btn-soft"
-					type="button"
-					title={i18n(I18nKey.secretsExport)}
-					onclick={() => (exportOpen = true)}
-					disabled={exportBusy || loading}
-				>
-					<Icon icon="material-symbols:download" />
-					<span>{i18n(I18nKey.secretsExport)}</span>
-				</button>
-			{/if}
-		</div>
-	</div>
-
 	{#if loading}
-		<div class="status-banner">
-			<Icon icon="material-symbols:refresh" class="spin" />
-			<span>{i18n(I18nKey.configLoading)}</span>
+		<p class="state-line">{i18n(I18nKey.configLoading)}</p>
+	{:else if loadError}
+		<div class="state-line bad">
+			<span>{loadError}</span>
+			<button type="button" class="link" onclick={() => load()}>重试</button>
 		</div>
 	{:else}
-		{#each groups as group}
-			{#if group.items.length > 0}
-				{@const done = group.items.filter((it) => it.configured || it.managed).length}
-				{@const total = group.items.length}
-				<!-- 分组：参考项目 settings-group-title（17px/600）+ 两列字段网格 -->
-				<section class="secrets-group">
-					<!-- 组级先给一个结论：15 个字段逐个看太慢，一组是否配齐一句话说得完。
-					     未配齐时用主色（还有事等你做），配齐后回到墨色。 -->
-					<div class="group-head">
-						<h2 class="settings-group-title">{i18n(I18nKey[group.labelKey])}</h2>
-						<div class="group-meta">
-							<!-- 只有 GitHub 这一组能「握手」：另外两组的密钥只在本站使用，
-							     没有第三方可以问。给它一个按钮，而不是给三组都放一个空位。 -->
-							{#if group.id === "github"}
-								<button
-									type="button"
-									class="probe-btn"
-									disabled={probe.running}
-									onclick={runProbe}
-								>
-									{probe.running
-										? i18n(I18nKey.secretsProbeRunning)
-										: i18n(I18nKey.secretsProbeCheck)}
-								</button>
-							{/if}
-							<span
-								class="group-count"
-								class:attention={done < total}
-								title={`${total - done} ${i18n(I18nKey.secretsNotConfigured)}`}
-								>{done} / {total}</span
-							>
-						</div>
-					</div>
-					<p class="group-hint">{i18n(I18nKey[group.descKey])}</p>
+		<!-- 结论条：只保留一条。全部配齐时说完成，缺东西时说是哪几项。 -->
+		{#if missingRequired.length > 0}
+			<div class="note warn">
+				<span class="note-mark" aria-hidden="true">!</span>
+				<span
+					>{i18n(I18nKey.secretsStatusMissing)}{missingRequired
+						.map((it) => it.label)
+						.join("、")}</span
+				>
+			</div>
+		{:else if !successDismissed}
+			<div class="note">
+				<span class="note-mark ok" aria-hidden="true">✓</span>
+				<span>{i18n(I18nKey.secretsStatusAllDone).replace("{file}", envFile)}</span>
+				<span class="grow"></span>
+				<span class="mono dim">{envFile}</span>
+				<button type="button" class="link" onclick={dismissSuccess}
+					>{i18n(I18nKey.secretsStatusGotIt)}</button
+				>
+			</div>
+		{/if}
 
-					<!-- 握手回执：三段各自的结论。填了不等于通了，这三行才是证据。 -->
-					{#if group.id === "github" && probe.stages.length > 0}
-						<div class="probe">
-							{#each probe.stages as stage (stage.id)}
-								<div class="probe-row" class:failed={!stage.ok}>
-									<span class="probe-mark" aria-hidden="true"
-										>{stage.ok ? "✓" : "✕"}</span
-									>
-									<span class="probe-text">{stage.detail}</span>
-								</div>
+		{#if !writable}
+			<div class="note warn">
+				<span class="note-mark" aria-hidden="true">!</span>
+				<span>{i18n(I18nKey.secretsReadonlyHint)}</span>
+			</div>
+		{/if}
+
+		{#each groups as group (group.id)}
+			{@const groupRows = rowsOf(group.id)}
+			{@const verdict = verdictOf(group.id)}
+			<section class="pgroup">
+				<div class="ghead">
+					<h3>{i18n(I18nKey[group.labelKey])}</h3>
+					<span class="sub">{group.sub}</span>
+					<span class="verdict {verdict.tone}">{verdict.text}</span>
+				</div>
+
+				<!-- 值从哪拿：整组一条清单，不开在字段上（一组的值多出自同一个页面） -->
+				{#if groupRows.some((r) => r.keys.some((k) => itemByKey.get(k)?.whereToGet))}
+					<button
+						type="button"
+						class="where-toggle"
+						aria-expanded={whereOpen[group.id] === true}
+						onclick={() =>
+							(whereOpen = { ...whereOpen, [group.id]: !whereOpen[group.id] })}
+					>
+						<span class="where-caret" aria-hidden="true"
+							>{whereOpen[group.id] ? "▾" : "▸"}</span
+						>
+						值从哪拿
+					</button>
+					{#if whereOpen[group.id]}
+						<ul class="where-list">
+							{#each groupRows as row (row.id)}
+								{#each row.keys as key (key)}
+									{@const it = itemByKey.get(key)}
+									{#if it?.whereToGet}
+										<li>
+											<span class="wl">{it.label}</span>
+											<span class="wd">
+												{it.whereToGet}
+												{#if it.whereCommand}
+													<code class="wcmd">{it.whereCommand}</code>
+												{/if}
+											</span>
+										</li>
+									{/if}
+								{/each}
 							{/each}
-							<p class="probe-at">{probeAt}</p>
-						</div>
+						</ul>
 					{/if}
+				{/if}
 
-					<!-- 「值从哪拿」放在组上而不放在字段上：一组的值通常来自同一个页面，
-					     13 个字段各挂一条同样的入口，只是把重复换了个位置。 -->
-					{#if group.items.some((it) => it.whereToGet)}
-						<div class="where">
-							<button
-								type="button"
-								class="where-toggle"
-								aria-expanded={whereOpen[group.id] === true}
-								onclick={() =>
-									(whereOpen = {
-										...whereOpen,
-										[group.id]: !whereOpen[group.id],
-									})}
-							>
-								<span class="where-caret" aria-hidden="true"
-									>{whereOpen[group.id] ? "▾" : "▸"}</span
-								>
-								值从哪拿
-							</button>
-
-							{#if whereOpen[group.id]}
-								<ul class="where-list">
-									{#each group.items as item (item.key)}
-										{#if item.whereToGet}
-											<li>
-												<span class="where-label">{item.label}</span>
-												<span class="where-text">
-													{item.whereToGet}
-													{#if item.whereCommand}
-														<code class="where-cmd">{item.whereCommand}</code>
-													{/if}
-												</span>
-											</li>
-										{/if}
-									{/each}
-								</ul>
-							{/if}
+				{#each groupRows as row (row.id)}
+					{@const first = itemByKey.get(row.keys[0])}
+					{@const configured = rowConfigured(row)}
+					<div
+						class="prow"
+						class:locked={row.shape === "optional" && !configured}
+						class:field-flash={flashKey === row.keys[0] || flashKey === row.keys[1]}
+						data-secret-key={row.keys.join(" ")}
+					>
+						<div class="left">
+							<div class="name">{row.label}</div>
+							<p class="why">{row.why}</p>
+							<span class="key">
+								{#each row.keys as key (key)}
+									<button
+										type="button"
+										class="kbtn"
+										title={i18n(I18nKey.secretsMenuCopyKey)}
+										onclick={() => {
+											navigator.clipboard?.writeText(key);
+											onNotify?.(i18n(I18nKey.secretsMenuCopied), "success", 2500);
+										}}>{key}</button
+									>
+								{/each}
+							</span>
 						</div>
-					{/if}
 
-					<div class="settings-field-grid">
-						{#each group.items as item (item.key)}
-							<div
-								class="settings-field"
-								class:dirty={isDirty(item)}
-								class:span-full={item.wide === true}
-								class:field-flash={flashKey === item.key}
-								data-secret-key={item.key}
-							>
-								<div class="field-label-row">
-									<span class="field-label">
-										{#if item.sensitive}
-											<Icon icon="material-symbols:lock-outline" class="lock-icon" />
+						<div class="right">
+							{#if row.shape === "address"}
+								<div class="box mono" class:invalid={addressError}>
+									<input
+										class="boxinput"
+										type="text"
+										value={addressRaw}
+										placeholder={row.format}
+										spellcheck="false"
+										autocomplete="off"
+										aria-label={row.label}
+										disabled={!writable}
+										oninput={(e) => setAddress(e.currentTarget.value)}
+									/>
+								</div>
+								{#if addressError}
+									<p class="trace bad">{addressError}</p>
+								{/if}
+								<p class="trace">
+									{#if probeRepo}
+										<b>↑ 刚刚验过：</b>{probeRepo.detail}
+									{:else}
+										{#if probe.running}
+											正在验证…
+										{:else}
+											<button type="button" class="link" onclick={runProbe}
+												>验证连接</button
+											>
+											<span class="dim">· 尚未验证</span>
 										{/if}
-										<span>{item.label}</span>
-										{#if item.required}<span class="req-star">*</span>{/if}
-										<!-- 变量名是这一页真正的产物：填完之后要把它复制到部署平台。
-										     原先只藏在 ⋯ 菜单里，正文从不显示。 -->
+									{/if}
+								</p>
+							{:else if row.shape === "upload"}
+								{#if configured && !uploadNames[row.keys[0]]}
+									<div class="box">
+										<span class="ok" aria-hidden="true">✓</span>
+										<span>RSA 私钥 · 已写入 {envFile}</span>
+										<span class="grow"></span>
 										<button
 											type="button"
-											class="field-key"
-											title={i18n(I18nKey.secretsMenuCopyKey)}
+											class="link"
 											onclick={() => {
-												navigator.clipboard?.writeText(item.key);
-												onNotify?.(i18n(I18nKey.secretsMenuCopied), "success", 2500);
-											}}
+												viewTarget = row.keys[0];
+												viewMode = "text";
+											}}>查看</button
 										>
-											{item.key}
-										</button>
-										{#if !item.configured && !item.managed}
-											<span class="summary-warn">{i18n(I18nKey.secretsNotConfigured)}</span>
-										{/if}
-									</span>
-
-									{#if !item.managed && writable}
-										<div class="field-menu-wrap">
-											<button
-												type="button"
-												class="field-menu-trigger"
-												aria-haspopup="menu"
-												aria-expanded={menuOpen === item.key}
-												aria-label={i18n(I18nKey.secretsFieldMenu)}
-												onclick={(e) => {
-													e.stopPropagation();
-													menuOpen = menuOpen === item.key ? "" : item.key;
-												}}
-											>
-												<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-													<circle cx="12" cy="5" r="1.8"></circle>
-													<circle cx="12" cy="12" r="1.8"></circle>
-													<circle cx="12" cy="19" r="1.8"></circle>
-												</svg>
-											</button>
-
-											{#if menuOpen === item.key}
-												<div class="field-menu" role="menu">
+										<button
+											type="button"
+											class="link"
+											onclick={() => pickFile(row.keys[0])}>更换文件</button
+										>
+									</div>
+								{:else if privateKeySource === "file" && !uploadNames[row.keys[0]]}
+									<!-- .env 里没有，但探测证明这份私钥可用（多半来自 .key/ 目录） -->
+									<div class="box">
+										<span class="ok" aria-hidden="true">✓</span>
+										<span>私钥可用 · 已从文件读取</span>
+										<span class="grow"></span>
+										<button
+											type="button"
+											class="link"
+											onclick={() => pickFile(row.keys[0])}>更换文件</button
+										>
+									</div>
+								{:else}
+									<div class="box static">
+										<span class="dim"
+											>{uploadNames[row.keys[0]] || i18n(I18nKey.secretsPemUploadPrompt)}</span
+										>
+										<span class="grow"></span>
+										<button
+											type="button"
+											class="link"
+											onclick={() => pickFile(row.keys[0])}
+											>{uploadNames[row.keys[0]] ? "重新选择" : "选择 .pem 文件"}</button
+										>
+									</div>
+									<input
+										id={`pem-input-${row.keys[0]}`}
+										type="file"
+										accept=".pem,.key,text/plain"
+										class="file-hidden"
+										onchange={(e) => first && readPemFile(e, first)}
+									/>
+								{/if}
+								{#if uploadError[row.keys[0]]}
+									<p class="trace bad">{uploadError[row.keys[0]]}</p>
+								{/if}
+								<p class="trace">
+									{#if probeApp}
+										<b>↑ 刚刚验过：</b>{probeApp.detail}
+									{:else}
+										<span class="dim">上传后需要点一次「验证连接」</span>
+									{/if}
+								</p>
+								{#if itemByKey.get("GITHUB_PRIVATE_KEY_PATH")}
+									<div class="box mono small">
+										<span class="dim">或填路径</span>
+										<input
+											class="boxinput"
+											type="text"
+											placeholder=".key/xxx.private-key.pem"
+											spellcheck="false"
+											value={drafts["GITHUB_PRIVATE_KEY_PATH"] ?? ""}
+											disabled={!writable}
+											oninput={(e) => {
+												drafts["GITHUB_PRIVATE_KEY_PATH"] = e.currentTarget.value;
+											}}
+										/>
+									</div>
+								{/if}
+							{:else if row.shape === "managed"}
+								<div class="box">
+									<span class="ok" aria-hidden="true">✓</span>
+									<span>64 位随机 · 由服务端托管</span>
+									<span class="grow"></span>
+									<button
+										type="button"
+										class="link"
+										disabled={rotating === row.keys[0]}
+										onclick={() => first && rotate(first)}
+										>{rotating === row.keys[0]
+											? "轮换中…"
+											: i18n(I18nKey.secretsRotate)}</button
+									>
+								</div>
+							{:else if row.shape === "pair"}
+								<div class="pair">
+									{#each row.keys as key, i (key)}
+										{@const it = itemByKey.get(key)}
+										{#if it}
+											<div class="box mono" class:with-toggle={it.sensitive}>
+												<input
+													class="boxinput"
+													type={it.sensitive && !showInput[key] ? "password" : "text"}
+													value={drafts[key] ?? ""}
+													placeholder={it.example ?? ""}
+													spellcheck="false"
+													autocomplete="new-password"
+													aria-label={it.label}
+													disabled={!writable}
+													oninput={(e) => {
+														drafts[key] = e.currentTarget.value;
+													}}
+												/>
+												{#if it.sensitive}
 													<button
 														type="button"
-														role="menuitem"
-														class="field-menu-item"
-														onclick={() => {
-															navigator.clipboard?.writeText(item.key);
-															menuOpen = "";
-															onNotify?.(i18n(I18nKey.secretsMenuCopied), "success", 2500);
-														}}
+														class="eye"
+														aria-label={showInput[key] ? "隐藏" : "显示"}
+														onclick={() => (showInput[key] = !showInput[key])}
 													>
-														{i18n(I18nKey.secretsMenuCopyKey)}
+														<Icon
+															icon={showInput[key]
+																? "material-symbols:visibility-off-outline-rounded"
+																: "material-symbols:visibility-outline-rounded"}
+														/>
 													</button>
-
-													{#if item.kind === "multiline"}
-														<!-- 私钥专属菜单：清空 / 重新上传 / 查看 -->
-														<button
-															type="button"
-															role="menuitem"
-															class="field-menu-item danger"
-															onclick={() => {
-																drafts[item.key] = "";
-																uploadNames[item.key] = "";
-																uploadError[item.key] = "";
-																menuOpen = "";
-															}}
-														>
-															{i18n(I18nKey.secretsMenuClearKey)}
-														</button>
-														<button
-															type="button"
-															role="menuitem"
-															class="field-menu-item"
-															onclick={() => {
-																menuOpen = "";
-																reuploadTarget = item.key;
-																// 触发该字段的文件选择框
-																queueMicrotask(() => {
-																	const el = document.getElementById(
-																		`pem-input-${item.key}`,
-																	);
-																	el?.click();
-																});
-															}}
-														>
-															{i18n(I18nKey.secretsMenuReupload)}
-														</button>
-														<button
-															type="button"
-															role="menuitem"
-															class="field-menu-item"
-															disabled={!drafts[item.key]}
-															onclick={() => {
-																menuOpen = "";
-																viewTarget = item.key;
-																viewMode = "text";
-															}}
-														>
-															{i18n(I18nKey.secretsMenuViewKey)}
-														</button>
-													{:else}
-														<!-- 不提供「显示/隐藏」菜单项：输入框右侧的眼睛按钮
-														     已经承担该功能，重复入口只会增加噪音 -->
-														{#if drafts[item.key]}
-															<button
-																type="button"
-																role="menuitem"
-																class="field-menu-item danger"
-																onclick={() => {
-																	drafts[item.key] = "";
-																	menuOpen = "";
-																}}
-															>
-																{i18n(I18nKey.secretsMenuClearValue)}
-															</button>
-														{/if}
-													{/if}
-												</div>
-											{/if}
-										</div>
-									{/if}
-								</div>
-
-								<p class="field-note">{item.description}</p>
-
-								{#if item.managed}
-									<div class="managed-row">
-										<span class="managed-state">
-											<Icon
-												icon={item.configured
-													? "material-symbols:verified-user"
-													: "material-symbols:error-outline"}
-												class={item.configured ? "managed-ok" : "managed-warn"}
-											/>
-											<span>
-												{item.configured
-													? i18n(I18nKey.secretsManagedConfigured)
-													: i18n(I18nKey.secretsManagedMissing)}
-											</span>
-										</span>
-										<button
-											type="button"
-											class="ui-btn ui-btn-soft ui-btn-sm"
-											disabled={!writable || loading || rotating === item.key}
-											title={writable
-												? i18n(I18nKey.secretsRotateHint)
-												: i18n(I18nKey.secretsRotateReadonly)}
-											onclick={() => rotate(item)}
-										>
-											<Icon icon="material-symbols:update-rounded" />
-											<span>
-												{rotating === item.key
-													? i18n(I18nKey.secretsRotating)
-													: i18n(I18nKey.secretsRotate)}
-											</span>
-										</button>
-									</div>
-								{:else if item.kind === "multiline"}
-									<!-- 私钥上传框：与输入框同尺寸的虚线框，整块可点。
-									     文案只有两态：已配置 / 暂未配置。 -->
-									<div class="upload-zone" class:configured={drafts[item.key]}>
-										<input
-											id={`pem-input-${item.key}`}
-											type="file"
-											class="upload-input"
-											accept=".pem,.key"
-											disabled={!writable || loading}
-											aria-label={drafts[item.key]
-												? i18n(I18nKey.secretsUploadReplace)
-												: i18n(I18nKey.secretsUploadLabel)}
-											onchange={(e) => readPemFile(e, item)}
-										/>
-										{#if drafts[item.key]}
-											<Icon
-												icon="material-symbols:check-circle-outline"
-												class="upload-ok"
-											/>
+												{/if}
+											</div>
 										{/if}
-										<span class="upload-text">
-											{drafts[item.key]
-												? i18n(I18nKey.secretsUploadedConfigured)
-												: i18n(I18nKey.secretsPemUploadPrompt)}
-										</span>
-									</div>
-									{#if uploadError[item.key]}
-										<span class="upload-error">{uploadError[item.key]}</span>
-									{/if}
-								{:else}
-									<div class="input-wrap">
+									{/each}
+								</div>
+							{:else}
+								{@const it = first}
+								{#if it}
+									<div class="box mono" class:with-toggle={it.sensitive}>
 										<input
-											class="secret-input"
-											type={!item.sensitive || showInput[item.key] ? "text" : "password"}
-											value={drafts[item.key] ?? ""}
+											class="boxinput"
+											type={it.sensitive && !showInput[it.key] ? "password" : "text"}
+											value={drafts[it.key] ?? ""}
+											placeholder={it.example ?? ""}
 											spellcheck="false"
-											name="secret-draft"
 											autocomplete="new-password"
-											placeholder={item.example ?? ""}
-											disabled={!writable || loading}
+											aria-label={it.label}
+											disabled={!writable}
 											oninput={(e) => {
-												drafts[item.key] = e.currentTarget.value;
+												drafts[it.key] = e.currentTarget.value;
 											}}
 										/>
-										{#if item.sensitive}
+										{#if it.sensitive}
 											<button
 												type="button"
-												class="input-toggle"
-												title={showInput[item.key]
-													? i18n(I18nKey.secretsHide)
-													: i18n(I18nKey.secretsShow)}
-												aria-label={showInput[item.key]
-													? i18n(I18nKey.secretsHide)
-													: i18n(I18nKey.secretsShow)}
-												onclick={() => toggleReveal(item)}
-												disabled={!writable}
+												class="eye"
+												aria-label={showInput[it.key] ? "隐藏" : "显示"}
+												onclick={() => (showInput[it.key] = !showInput[it.key])}
 											>
 												<Icon
-													icon={showInput[item.key]
+													icon={showInput[it.key]
 														? "material-symbols:visibility-off-outline-rounded"
 														: "material-symbols:visibility-outline-rounded"}
 												/>
 											</button>
 										{/if}
 									</div>
+									{#if row.shape === "optional"}
+										<p class="trace dim">可选，留空不影响使用</p>
+									{:else if probeInstall && row.id === "install"}
+										<p class="trace"><b>↑ 刚刚验过：</b>{probeInstall.detail}</p>
+									{/if}
 								{/if}
-							</div>
-						{/each}
+							{/if}
+						</div>
 					</div>
-				</section>
-			{/if}
+				{/each}
+			</section>
 		{/each}
-	{/if}
 
-	{#if exportOpen}
-		<div
-			class="modal-overlay"
-			role="dialog"
-			aria-modal="true"
-			aria-label={i18n(I18nKey.secretsExport)}
-			tabindex="-1"
-			onclick={(e) => {
-				if (e.target === e.currentTarget) exportOpen = false;
-			}}
-			onkeydown={(e) => {
-				if (e.key === "Escape") exportOpen = false;
-			}}
-		>
-			<div class="modal-card card-base">
-				<div class="modal-head">
-					<h3>
-						<span>{i18n(I18nKey.secretsExport)}</span>
-					</h3>
-					<button
-						class="modal-close"
-						type="button"
-						aria-label={i18n(I18nKey.secretsClose)}
-						onclick={() => (exportOpen = false)}
-					>
-						<Icon icon="material-symbols:close" />
-					</button>
-				</div>
-				<p class="modal-desc">{i18n(I18nKey.secretsExportDesc)}</p>
-				<div class="modal-warning">
-					<Icon icon="material-symbols:error-outline" />
-					<span>{i18n(I18nKey.secretsExportWarning)}</span>
-				</div>
-				<div class="modal-actions">
-					<button
-						class="sec-btn primary export-btn"
-						onclick={downloadEnv}
-						disabled={exportBusy}
-					>
-						<Icon icon="material-symbols:download" />
-						<span>{i18n(I18nKey.secretsExportDownloadEnv)}</span>
-					</button>
-					<button
-						class="sec-btn export-btn"
-						onclick={copyVercelCommands}
-						disabled={exportBusy}
-					>
-						<Icon icon="material-symbols:terminal-rounded" />
-						<span>{i18n(I18nKey.secretsExportCopyVercel)}</span>
-					</button>
-				</div>			</div>
+		<!-- 泄漏检测：只在点了之后出结论，不占常驻版面 -->
+		<div class="foot-row">
+			<button type="button" class="link" disabled={leakBusy} onclick={checkLeak}
+				>{leakBusy ? "检测中…" : i18n(I18nKey.secretsLeakCheck)}</button
+			>
+			<span class="grow"></span>
+			<button type="button" class="link" onclick={() => load()} disabled={loading}
+				>{i18n(I18nKey.secretsReload)}</button
+			>
+			<button
+				type="button"
+				class="link"
+				disabled={exportBusy}
+				onclick={copyVercelCommands}
+				>{i18n(I18nKey.secretsExportCopyVercel)}</button
+			>
+			<button type="button" class="link" disabled={exportBusy} onclick={downloadEnv}
+				>{i18n(I18nKey.secretsExport)}</button
+			>
 		</div>
-	{/if}
 
-	<!-- 私钥查看弹窗：原文 / Base64 两种视图 -->
-	{#if viewTarget}
+		{#if leakChecked}
+			<div class="leak">
+				{#if !leakAvailable}
+					<p class="trace">{leakReason || "当前环境无法检测"}</p>
+				{:else if leakResults.length === 0}
+					<p class="trace ok-t">没有发现被跟踪的密钥文件</p>
+				{:else}
+					{#each leakResults as r (r.file)}
+						<div class="leak-row" data-level={r.level}>
+							<span class="mono dim">{r.file}</span>
+							<span class="grow"></span>
+							<span class="leak-badge">{leakLabel(r.level)}</span>
+						</div>
+					{/each}
+				{/if}
+			</div>
+		{/if}
+	{/if}
+</div>
+
+
+{#if viewTarget}
+	<div class="mask">
+		<button
+			type="button"
+			class="backdrop"
+			aria-label="关闭"
+			onclick={() => (viewTarget = "")}
+		></button>
 		<div
-			class="modal-overlay"
+			class="dialog"
 			role="dialog"
 			aria-modal="true"
-			aria-label={i18n(I18nKey.secretsMenuViewKey)}
+			aria-label="私钥内容"
 			tabindex="-1"
-			onclick={(e) => {
-				if (e.target === e.currentTarget) viewTarget = "";
-			}}
 			onkeydown={(e) => {
 				if (e.key === "Escape") viewTarget = "";
 			}}
 		>
-			<div class="modal-card card-base view-modal">
-				<div class="modal-head">
-					<h3>
-						<span>{i18n(I18nKey.secretsViewTitle)}</span>
-					</h3>
-					<button
-						class="modal-close"
-						type="button"
-						aria-label={i18n(I18nKey.secretsClose)}
-						onclick={() => (viewTarget = "")}
-					>
-						<Icon icon="material-symbols:close" />
-					</button>
-				</div>
-
-				<!-- 视图切换：原文 / Base64 -->
-				<div class="view-tabs" role="tablist">
-					<button
-						type="button"
-						role="tab"
-						class="view-tab"
-						aria-selected={viewMode === "text"}
-						onclick={() => (viewMode = "text")}
-					>
-						{i18n(I18nKey.secretsViewPlain)}
-					</button>
-					<button
-						type="button"
-						role="tab"
-						class="view-tab"
-						aria-selected={viewMode === "base64"}
-						onclick={() => (viewMode = "base64")}
-					>
-						{i18n(I18nKey.secretsViewBase64)}
-					</button>
-				</div>
-
-				<pre class="view-content">{viewContent}</pre>
-
-				<div class="modal-actions">
-					<button
-						class="sec-btn primary"
-						type="button"
-						onclick={() => {
-							navigator.clipboard?.writeText(viewContent);
-							onNotify?.(i18n(I18nKey.secretsViewCopied), "success", 2500);
-						}}
-					>
-						<Icon icon="material-symbols:content-copy" />
-						<span>{i18n(I18nKey.secretsViewCopy)}</span>
-					</button>
-				</div>
+			<div class="dialog-head">
+				<span class="name">私钥内容</span>
+				<span class="grow"></span>
+				<button
+					type="button"
+					class="seg"
+					class:on={viewMode === "text"}
+					onclick={() => (viewMode = "text")}>原文</button
+				>
+				<button
+					type="button"
+					class="seg"
+					class:on={viewMode === "base64"}
+					onclick={() => (viewMode = "base64")}>Base64</button
+				>
+			</div>
+			<pre class="keybody">{viewContent}</pre>
+			<div class="dialog-foot">
+				<span class="dim mono">{viewTarget}</span>
+				<span class="grow"></span>
+				<button
+					type="button"
+					class="link"
+					onclick={() => {
+						navigator.clipboard?.writeText(viewContent);
+						onNotify?.(i18n(I18nKey.secretsMenuCopied), "success", 2500);
+					}}>复制</button
+				>
+				<button type="button" class="ui-btn ui-btn-ghost" onclick={() => (viewTarget = "")}
+					>关闭</button
+				>
 			</div>
 		</div>
-	{/if}
-</div>
+	</div>
+{/if}
 
 <style>
-	/* ── 页面内容：外壳（AdminPage 的 .admin-page）负责卡片与内边距，
-	   这里只负责纵向分段，不再自带卡片外观与 padding。
-	   保存栏已移到 AdminPage 的 footer 槽位（滚动容器之外），
-	   因此这里不需要 min-height 撑高或 padding 补偿。 */
+	/* ── 页面：一行一个问题 ──
+	   左栏是「这是什么」，右栏是「它现在怎么样」。行距 14px、分隔线 6% 白，
+	   比卡片网格轻——15 个字段排成两列时，眼睛要在四个方向来回跳。 */
 	.secrets-page {
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
 	}
 
-	/* ── 状态横幅 ── */
-	.status-banner {
+	.state-line {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 1rem 0;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		color: var(--content-meta);
+	}
+
+	.state-line.bad {
+		color: var(--deep-text);
+	}
+
+	/* 结论条：只有一条，全站只在最上面 */
+	.note {
 		display: flex;
 		align-items: center;
 		gap: 0.625rem;
-		padding: 0.875rem 1rem;
-		border-radius: var(--radius-large);
-		background: var(--btn-regular-bg);
-		color: var(--content-meta);
-		font-size: 0.875rem;
-	}
-
-	.status-banner.error {
-		background: color-mix(in oklab, var(--destructive) 10%, var(--card-bg));
-		color: var(--destructive);
-		border: 1px solid transparent;
-	}
-
-	.status-banner .sec-btn {
-		margin-left: auto;
-	}
-
-	:global(.spin) {
-		animation: secrets-spin 1s linear infinite;
-	}
-
-	@keyframes secrets-spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	/* ── 顶部提示条 ──
-	   全部配好时没有任何事等你做，所以完成态是墨色；未完成才用主色。 */
-	.success-bar,
-	.pending-bar {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-		padding: 0.75rem 1rem;
-		border-radius: var(--radius-xl);
-		font-size: 0.875rem;
-		line-height: 1.5;
-	}
-
-	.success-bar {
-		border: 1px solid var(--line-divider);
-		background: var(--btn-regular-bg);
-		color: var(--deep-text);
-	}
-
-	.success-bar :global(svg) {
-		flex-shrink: 0;
-		/* 唯一的绿色出现在这个勾上：它说的是「都办好了」，不铺成一条绿底 */
-		color: var(--success);
-	}
-
-	/* 「知道了」：右侧文字按钮，继承 success 色系，不与主操作抢权重 */
-	/* 泄露检测结果：按等级着色，danger 用实心红，其余用淡底 */
-	.leak-panel {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		padding: 0.75rem 1rem;
-		border: 1px solid var(--line-divider);
-		border-radius: 0.75rem;
-		background: var(--card-bg);
-	}
-
-	.leak-note {
-		margin: 0;
-		font-size: var(--admin-fs-meta, 0.75rem);
-		color: var(--content-meta);
-	}
-
-	.leak-row {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-	}
-
-	.leak-file {
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: var(--admin-fs-meta, 0.75rem);
-		color: var(--deep-text);
-	}
-
-	/* 等级是一个词：安全就用墨色，需要处置用主色，已泄露才用红。
-	   胶囊本身不承担语义，文字承担。 */
-	.leak-badge {
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: var(--admin-fs-data, 0.6875rem);
-		font-weight: 500;
-		line-height: 1.5;
-		color: var(--content-meta);
-	}
-
-	.leak-row[data-level="warning"] .leak-badge {
-		color: var(--primary);
-	}
-
-	.leak-row[data-level="serious"] .leak-badge {
-		color: var(--primary);
-		font-weight: 600;
-	}
-
-	.leak-row[data-level="danger"] .leak-badge {
-		color: var(--destructive);
-		font-weight: 600;
-	}
-
-	.status-dismiss {
-		margin-left: auto;
-		flex-shrink: 0;
-		padding: 0.25rem 0.625rem;
-		/* 跟随主题的黑/白：原来是 --success 绿色，与「已完成」提示条同色，
-		   按钮和说明文字混成一片、点不到重点。改用主文字色后亮色近黑、暗色近白。 */
-		border: 1px solid
-			color-mix(in oklab, var(--deep-text) 25%, transparent);
-		border-radius: 6px;
-		background: transparent;
-		color: var(--deep-text);
-		font-size: var(--admin-fs-meta, 0.75rem);
-		font-family: inherit;
-		font-weight: 500;
-		cursor: pointer;
-		transition: background 0.15s ease;
-	}
-
-	.status-dismiss:hover {
-		background: var(--btn-plain-bg-hover);
-	}
-
-	.status-dismiss:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 2px;
-	}
-
-	.pending-bar {
-		background: color-mix(in srgb, var(--primary) 10%, transparent);
-		border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
-		color: var(--primary);
-	}
-
-	.pending-bar :global(.status-icon) {
-		color: var(--primary);
-		flex-shrink: 0;
-	}
-
-	.status-text {
-		font-weight: 600;
-		white-space: nowrap;
-	}
-
-	.status-missing {
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-		flex-wrap: wrap;
-		font-size: var(--admin-fs-meta, 0.75rem);
-		color: var(--content-meta);
-	}
-
-	.status-key {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		padding: 0;
-		border-radius: 0;
-		background: transparent;
-		font-size: var(--admin-fs-meta, 0.75rem);
-		color: var(--content-meta);
-		white-space: nowrap;
-	}
-
-	/* ── 操作栏 ──
-	   遵循项目规范：不用实线边框，层级靠卡片底 + 毛玻璃表达；
-	   容器圆角 16px、内边距 24px，与其余板块卡片一致。 */
-	.action-bar {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		flex-wrap: wrap;
-		/* 一行说明 + 三个按钮。不再套一层半透明卡片：
-		   页面本身已经是卡片，里面再画一张卡只是多一圈圆角。 */
-	}
-
-	.action-info {
-		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
-		font-size: var(--admin-fs-meta, 0.75rem);
-		line-height: 1.6;
-		color: var(--content-meta);
-		min-width: 0;
-	}
-
-	.action-info strong {
-		font-weight: 600;
-		color: var(--deep-text);
-	}
-
-	.action-buttons {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		flex-shrink: 0;
-	}
-
-	/* 深色底上按钮底色的 hover 只差一档亮度，指针落上去几乎看不出来；
-	   补一圈内描边，悬停才有实感 */
-	.action-buttons :global(.ui-btn:hover:not(:disabled)) {
-		box-shadow: inset 0 0 0 1px
-			color-mix(in srgb, var(--deep-text) 14%, transparent);
-	}
-
-	/* ── 托管密钥状态行（JWT 等）──
-	   与输入框同高、同圆角，带 success 语义底色与边框，
-	   让「已由服务端托管」的状态在表单里仍是一个可见的控件位。 */
-	.managed-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-		min-height: 2.625rem;
+		margin-bottom: 0.875rem;
 		padding: 0.5rem 0.75rem;
 		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-xl);
-		/* 透明底而不是 --btn-regular-bg：行里放着一颗 ui-btn-soft，
-		   两者同色会让按钮完全消失。 */
-		background: transparent;
-		transition: background-color 0.18s ease, border-color 0.18s ease;
+		border-radius: 10px;
 		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--deep-text);
 	}
 
-	.managed-row:hover {
-		background: var(--btn-plain-bg-hover);
-		border-color: color-mix(in srgb, var(--content-meta) 30%, transparent);
-	}
-
-	.managed-state {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		min-width: 0;
-	}
-
-	.managed-state :global(.managed-ok) {
-		color: var(--success);
-		flex-shrink: 0;
-	}
-
-	.managed-state :global(.managed-warn) {
+	.note.warn {
+		border-color: color-mix(in srgb, var(--primary) 30%, transparent);
 		color: var(--primary);
-		flex-shrink: 0;
 	}
 
-	/* 次按钮：对齐参考项目 .fuwari-btn-regular + .settings-button
-	   —— 实底色 --btn-regular-bg（暗色 oklch(0.33 0.035)）、无边框、
-	   文字用 --btn-content（暗色 oklch(0.75 0.1)）。
-	   上一版改成 transparent + 描边，偏离了参考项目也导致存在感过弱：
-	   次级不等于「几乎看不见」，它只是权重低于主按钮。 */
-	.sec-btn {
+	.note-mark {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.375rem;
-		padding: 0.5rem 1rem;
-		border: 1px solid transparent;
-		border-radius: 8px;
-		background: var(--btn-regular-bg);
-		color: var(--btn-content);
-		font-size: 0.875rem;
-		font-weight: 500;
-		font-family: inherit;
-		cursor: pointer;
-		transition: background 0.2s, color 0.2s, border-color 0.2s;
-	}
-
-	.sec-btn:hover:not(:disabled) {
-		background: var(--btn-regular-bg-hover);
-	}
-
-	.sec-btn:active:not(:disabled) {
-		background: var(--btn-regular-bg-active);
-	}
-
-	.sec-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.sec-btn.primary {
-		background: var(--primary);
-		border-color: transparent;
-		/* 主按钮文字加重一档（600），次按钮保持 500——
-		   权重差 = 实心彩底 + 更重字重 + 阴影，三项叠加才够分明 */
-		color: var(--primary-foreground);
-		font-weight: 600;
-		border-radius: 8px;
-		box-shadow: var(--shadow-button);
-	}
-
-	/* 主按钮 hover 必须显式声明 background。
-	   否则 .sec-btn:hover 的 --btn-regular-bg-hover（浅灰紫）会生效，
-	   配 --primary-foreground 白字几乎不可见，看起来就是「背景消失」。
-	   取值对齐项目规范 ui-base.css 的 .ui-btn-primary:hover：
-	   主色压暗 12%，保持实心感。
-	   不用 filter: brightness() —— 它会把刚压暗的底色又提亮，互相抵消。
-	   也不做位移：后台是固定布局的工作台，按钮 hover 时位置必须稳定，
-	   否则密集点击场景下按钮会从光标下滑走。 */
-	.sec-btn.primary:hover:not(:disabled) {
-		background: color-mix(in srgb, var(--primary) 88%, #000);
-	}
-
-	/* ── 分组板块 ──
-	   参考项目 settings-group-title：17px/600，下 18px。 */
-	.secrets-group {
-		display: flex;
-		flex-direction: column;
-	}
-
-	.secrets-group + .secrets-group {
-		border-top: 1px solid var(--line-divider);
-		padding-top: 1.5rem;
-		margin-top: 0.5rem;
-	}
-
-	.group-head {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		gap: 1rem;
-	}
-
-	/* 组级结论：等宽数字，只有「还没配齐」才着色 */
-	.group-count {
+		justify-content: center;
+		width: 1rem;
+		height: 1rem;
 		flex-shrink: 0;
 		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: var(--admin-fs-data, 0.6875rem);
-		font-variant-numeric: tabular-nums;
-		letter-spacing: 0.02em;
+		font-size: 0.6875rem;
+	}
+
+	.note-mark.ok {
+		color: var(--success);
+	}
+
+	.note .grow {
+		flex: 1;
+	}
+
+	/* 分组 */
+	.pgroup {
+		margin-top: 1.75rem;
+	}
+
+	.pgroup:first-of-type {
+		margin-top: 0;
+	}
+
+	.ghead {
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		padding-bottom: 0.625rem;
+		border-bottom: 1px solid var(--line-divider);
+	}
+
+	.ghead h3 {
+		margin: 0;
+		font-size: var(--admin-fs-item, 1.0625rem);
+		font-weight: 650;
+		letter-spacing: 0.01em;
+		color: var(--deep-text);
+	}
+
+	.ghead .sub {
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 	}
 
-	.group-count.attention {
+	/* 结论靠右：一组只给一个判断，不给每个字段都发一块牌子 */
+	.verdict {
+		margin-left: auto;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		font-weight: 500;
+		white-space: nowrap;
+	}
+
+	.verdict.ok {
+		color: var(--success);
+	}
+
+	.verdict.warn {
 		color: var(--primary);
 	}
 
-	.group-meta {
-		display: flex;
-		align-items: baseline;
-		gap: 0.875rem;
-		flex-shrink: 0;
+	.verdict.idle {
+		color: var(--content-meta);
 	}
 
-	/* 握手按钮：安静的次级动作，只有悬停才升一档。
-	   它不是主操作——主操作是把这个文件写进去，这一步只是「问一下通不通」。 */
-	.probe-btn {
+	/* 行 */
+	.prow {
+		display: grid;
+		grid-template-columns: 13rem minmax(0, 1fr);
+		gap: 1.5rem;
+		align-items: start;
+		padding: 0.875rem 0;
+		border-bottom: 1px solid color-mix(in srgb, var(--deep-text) 6%, transparent);
+	}
+
+	.prow:last-of-type {
+		border-bottom: 0;
+	}
+
+	.prow.locked {
+		opacity: 0.62;
+	}
+
+	.prow .left {
+		min-width: 0;
+	}
+
+	.prow .name {
+		font-size: var(--admin-fs-body, 0.875rem);
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.prow .why {
+		margin: 0.125rem 0 0;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		line-height: 1.5;
+		color: var(--content-meta);
+	}
+
+	.prow .key {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 2px 0.75rem;
+		margin-top: 0.3125rem;
+	}
+
+	/* 变量名：等宽、虚线底、点击即复制 */
+	.kbtn {
 		padding: 0;
 		border: none;
 		border-bottom: 1px dotted
 			color-mix(in srgb, var(--content-meta) 45%, transparent);
 		background: none;
-		font: inherit;
-		font-size: var(--admin-fs-meta, 0.75rem);
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
+		line-height: 1.5;
+		letter-spacing: 0.02em;
 		color: var(--content-meta);
-		white-space: nowrap;
-		cursor: pointer;
+		cursor: copy;
 		transition:
 			color 0.15s ease,
 			border-color 0.15s ease;
 	}
 
-	.probe-btn:hover:not(:disabled) {
+	.kbtn:hover {
 		color: var(--deep-text);
 		border-bottom-color: var(--primary);
 	}
 
-	.probe-btn:disabled {
-		cursor: progress;
-		opacity: 0.7;
-	}
-
-	.probe-btn:focus-visible {
+	.kbtn:focus-visible {
 		outline: 2px solid var(--primary);
 		outline-offset: 2px;
 	}
 
-	/* 回执：三行结论，不加底色也不加边框——它是一段说明，不是一个面板 */
-	.probe {
-		margin-top: 0.5rem;
+	/* 右栏控件：一个 42px 的框，静态态用虚线 */
+	.right {
+		min-width: 0;
 	}
 
-	.probe-row {
-		display: grid;
-		grid-template-columns: 1rem minmax(0, 1fr);
-		gap: 0.5rem;
-		align-items: baseline;
-		padding: 0.0625rem 0;
-		font-size: var(--admin-fs-meta, 0.75rem);
-		line-height: 1.65;
-		color: var(--content-meta);
+	.box {
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		height: 2.625rem;
+		padding: 0 0.75rem;
+		border: 1px solid var(--input-border, rgb(255 255 255 / 0.1));
+		border-radius: 10px;
+		background: var(--input-bg, rgb(255 255 255 / 0.04));
+		font-size: var(--admin-fs-body, 0.875rem);
+		color: var(--deep-text);
+		min-width: 0;
+		transition:
+			border-color 0.15s ease,
+			background-color 0.15s ease;
 	}
 
-	.probe-mark {
+	.box:hover {
+		border-color: color-mix(in srgb, var(--content-meta) 45%, transparent);
+	}
+
+	.box:focus-within {
+		border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 14%, transparent);
+	}
+
+	.box.mono {
 		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: 0.8125rem;
+	}
+
+	.box.small {
+		height: 2.25rem;
+		margin-top: 0.375rem;
 		font-size: var(--admin-fs-data, 0.6875rem);
+	}
+
+	.box.static {
+		border-style: dashed;
+		background: none;
+	}
+
+	.box.invalid {
+		border-color: var(--destructive);
+	}
+
+	.box .grow {
+		flex: 1;
+	}
+
+	.box .ok {
 		color: var(--success);
 	}
 
-	/* 失败的那一行要更重：它才是需要读的那句 */
-	.probe-row.failed .probe-mark {
-		color: var(--destructive);
-	}
-
-	.probe-row.failed .probe-text {
-		color: var(--deep-text);
-	}
-
-	.probe-text {
-		overflow-wrap: anywhere;
-	}
-
-	.probe-at {
-		margin: 0.25rem 0 0 1.5rem;
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: var(--admin-fs-data, 0.6875rem);
-		color: var(--content-meta);
-	}
-
-	.settings-group-title {
-		margin: 0;
-		font-size: var(--admin-fs-item, 1.0625rem);
-		font-weight: 650;
-		line-height: 1.35;
-		color: var(--deep-text);
-	}
-
-	/* 说明另起一行：和标题同处一行时，两种字号会被连读成一句 */
-	.group-hint {
-		margin: 0.25rem 0 0;
-		font-size: var(--admin-fs-meta, 0.75rem);
-		font-weight: 400;
-		line-height: 1.6;
-		color: var(--content-meta);
-	}
-
-	/* ── 两列字段网格（参考 .settings-field-grid：2 列、20px 间距） ── */
-	.settings-field-grid {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 1.25rem;
-		align-items: start;
-	}
-
-	/* 长字段跨满两列（与演示稿的 grid-column: 1 / -1 等价） */
-	.settings-field.span-full {
-		grid-column: 1 / -1;
-	}
-
-	/* ── 单个字段（参考 .settings-field：纵向、8px 间距） ── */
-	.settings-field {
-		display: grid;
-		align-content: start;
-		gap: 0.5rem;
+	.boxinput {
+		flex: 1;
 		min-width: 0;
+		height: 100%;
+		padding: 0;
+		border: none;
+		background: none;
+		font: inherit;
+		color: inherit;
+		outline: none;
 	}
 
-	/* 变更态：左侧主色细竖线，不改变字段宽度 */
-	.settings-field.dirty {
-		padding-left: 0.5rem;
-		border-left: 2px solid color-mix(in oklab, var(--primary) 55%, transparent);
+	.boxinput::placeholder {
+		color: color-mix(in srgb, var(--content-meta) 80%, transparent);
 	}
 
-	.leak-warn {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.5rem;
-		margin: 0 0 1rem;
-		padding: 0.625rem 0.875rem;
-		border-radius: 0.5rem;
-		background: color-mix(in srgb, var(--primary) 12%, transparent);
-		font-size: var(--admin-fs-meta, 0.75rem);
-		line-height: 1.6;
-		color: var(--primary);
+	.boxinput:disabled {
+		cursor: not-allowed;
 	}
 
-	/* 从保存栏清单跳转时的定位提示：左侧竖线加粗并呼吸两次。
-	   竖线用伪元素画，绝对定位不占布局，不会把下方内容顶动。 */
-	/* 跳转到脏项时的高亮：复用 .dirty 已有的左边框，只让它变粗并呼吸。
-	   不额外造伪元素——每个脏字段本来就有 border-left，再叠一条就成了两根线。 */
-	.settings-field.field-flash {
-		/* 向左侧外侧补一道同色阴影：视觉上从 2px 变粗到 4px，
-		   但不改 border-width，字段内容不会被挤动。 */
-		box-shadow: -2px 0 0 var(--primary);
-		animation: field-breathe 0.8s ease-in-out 2;
-	}
-
-	/* 0.8s × 2 = 1.6s，与脚本里移除类名的时长对齐 */
-	@keyframes field-breathe {
-		0%,
-		100% {
-			box-shadow: -2px 0 0 color-mix(in oklab, var(--primary) 30%, transparent);
-		}
-		50% {
-			box-shadow: -2px 0 0 var(--primary);
-		}
-	}
-
-	/* 标签行（参考 settings-field > label：13px、与值同色） */
-	.field-label {
-		display: flex;
-		align-items: center;
-		flex-wrap: wrap;
-		gap: 0.375rem;
-		font-size: var(--admin-fs-meta, 0.75rem);
-		/* 600：字段名与下方说明同为 12px，全靠字重和颜色分开，
-		   500 在 12px 下不够看 */
-		font-weight: 600;
-		color: var(--deep-text);
-		min-width: 0;
-	}
-
-	/* 说明：标签与输入框之间，12px 灰字 */
-	/* 「值从哪拿」：每组一条，默认收起 */
-	.where {
+	.pair {
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
-		margin: 0.5rem 0 0.25rem;
 	}
 
+	.eye {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.5rem;
+		height: 1.5rem;
+		flex-shrink: 0;
+		padding: 0;
+		border: none;
+		background: none;
+		color: var(--content-meta);
+		cursor: pointer;
+	}
+
+	.eye:hover {
+		color: var(--deep-text);
+	}
+
+	.file-hidden {
+		display: none;
+	}
+
+	.link {
+		padding: 0;
+		border: none;
+		background: none;
+		font: inherit;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		font-weight: 500;
+		color: var(--primary);
+		white-space: nowrap;
+		cursor: pointer;
+	}
+
+	.link:hover:not(:disabled) {
+		text-decoration: underline;
+	}
+
+	.link:disabled {
+		color: var(--content-meta);
+		cursor: default;
+	}
+
+	.link:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	/* 验证痕迹：机器记账的一行，等宽 */
+	.trace {
+		margin: 0.375rem 0 0;
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
+		line-height: 1.6;
+		color: var(--content-meta);
+	}
+
+	.trace b {
+		color: var(--deep-text);
+		font-weight: 500;
+	}
+
+	.trace.bad {
+		color: var(--destructive);
+	}
+
+	.dim {
+		color: var(--content-meta);
+	}
+
+	.mono {
+		font-family: var(--font-mono, ui-monospace, monospace);
+	}
+
+	.ok-t {
+		color: var(--success);
+	}
+
+	/* 值从哪拿 */
 	.where-toggle {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.375rem;
-		align-self: flex-start;
-		padding: 0.125rem 0;
+		gap: 0.25rem;
+		margin-top: 0.5rem;
+		padding: 0;
 		border: none;
-		border-radius: 4px;
 		background: none;
 		font: inherit;
 		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 		cursor: pointer;
-		transition: color 0.15s ease;
 	}
 
 	.where-toggle:hover {
 		color: var(--deep-text);
 	}
 
-	.where-toggle:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 2px;
-	}
-
-	/* 用文字箭头而不是图标：图标集里没有的箭头会静默渲染成空白 */
-	.where-caret {
-		font-size: 0.75rem;
-		line-height: 1;
-	}
-
 	.where-list {
-		margin: 0;
-		padding: 0.5rem 0.75rem;
+		margin: 0.375rem 0 0;
+		padding: 0 0 0 1rem;
 		list-style: none;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
 		border-left: 2px solid var(--line-divider);
 	}
 
@@ -1944,545 +1667,179 @@ function answerConfirm(ok: boolean) {
 		grid-template-columns: 9rem minmax(0, 1fr);
 		gap: 0.75rem;
 		align-items: baseline;
+		padding: 0.1875rem 0;
 		font-size: var(--admin-fs-meta, 0.75rem);
 		line-height: 1.6;
-		color: var(--content-meta);
 	}
 
-	.where-label {
+	.wl {
 		color: var(--deep-text);
 		font-weight: 600;
 	}
 
-	.where-text {
+	.wd {
 		min-width: 0;
+		color: var(--content-meta);
 	}
 
-	/* 需要跑命令时：等宽、可横滚，不折行打断参数 */
-	.where-cmd {
+	.wcmd {
 		display: block;
 		max-width: 100%;
-		margin-top: 0.375rem;
-		padding: 0.375rem 0.5rem;
+		margin-top: 0.25rem;
+		padding: 0.3125rem 0.5rem;
 		border-radius: 6px;
 		background: var(--input-bg, rgb(255 255 255 / 0.05));
 		font-family: var(--font-mono, ui-monospace, monospace);
 		font-size: var(--admin-fs-data, 0.6875rem);
-		line-height: 1.5;
 		color: var(--deep-text);
 		overflow-x: auto;
 		white-space: pre;
 	}
 
-	.field-note {
-		margin: 0;
+	/* 底部次级动作 */
+	.foot-row {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-top: 1.25rem;
+		padding-top: 0.875rem;
+		border-top: 1px solid var(--line-divider);
+	}
+
+	.foot-row .grow {
+		flex: 1;
+	}
+
+	/* 泄漏检测结果 */
+	.leak {
+		margin-top: 0.75rem;
+	}
+
+	.leak-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.25rem 0;
 		font-size: var(--admin-fs-meta, 0.75rem);
-		line-height: 1.5;
-		/* 不再在 --content-meta 上再乘 80%：0.6 × 0.8 = 0.48 白，
-		   12px 下与背景的对比度掉到几乎读不清 */
+	}
+
+	.leak-badge {
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
 		color: var(--content-meta);
 	}
 
-	/* 未配置标记：灰字，不用警示色 */
-	.summary-warn {
-		font-size: 0.75rem;
-		font-weight: 400;
-		color: color-mix(in oklab, var(--content-meta) 70%, transparent);
-	}
-
-	/* 必填标记：表单里唯一「必须由你补上」的东西，所以用主色 */
-	.req-star {
+	.leak-row[data-level="warning"] .leak-badge {
 		color: var(--primary);
 	}
 
-	/* 窄屏：单列 */
-	@media (max-width: 900px) {
-		.settings-field-grid {
-			grid-template-columns: minmax(0, 1fr);
-		}
-	}
-
-	/* ── 私钥上传框 ──
-	   与普通输入框同尺寸（42px 高、12px 圆角），整块可点。
-	   虚线是上传语义的必要表达，底色/边框沿用项目变量。 */
-	.upload-zone {
-		position: relative;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 100%;
-		min-height: 2.625rem;
-		padding: 0.5rem 0.75rem;
-		border: 1px dashed color-mix(in oklab, var(--content-meta) 35%, transparent);
-		border-radius: var(--radius-xl);
-		background: color-mix(in srgb, var(--content-meta) 8%, var(--card-bg));
-		transition: border-color 0.2s ease, background 0.2s ease;
-	}
-
-	.upload-zone:hover {
-		border-color: color-mix(in srgb, var(--primary) 55%, transparent);
-		background: color-mix(in srgb, var(--content-meta) 10%, var(--card-bg));
-		background: color-mix(in oklab, var(--content-meta) 12%, var(--card-bg));
-	}
-
-	/* 已配置态：文字用正文色，与「未配置」的提示语气区分 */
-	/* 已配置：只是一条墨色边，不用绿色宣布它 */
-	.upload-zone.configured {
-		border-style: solid;
-		border-color: var(--line-divider);
-		background: var(--btn-regular-bg);
-	}
-
-	.upload-input {
-		position: absolute;
-		inset: 0;
-		width: 100%;
-		height: 100%;
-		opacity: 0;
-		cursor: pointer;
-		z-index: 1;
-	}
-
-	.upload-input:disabled {
-		cursor: not-allowed;
-	}
-
-	/* 类落在 Icon 组件上，编译器无法静态确认，必须走 :global */
-	:global(.upload-ok) {
-		color: var(--success);
-		font-size: 1rem;
-		flex-shrink: 0;
-	}
-
-	.upload-text {
-		font-size: var(--admin-fs-body, 0.875rem);
-		color: var(--content-meta);
-		text-align: center;
-		pointer-events: none;
-		transition: color 0.2s ease;
-	}
-
-	.upload-zone:hover .upload-text {
-		color: var(--deep-text);
-	}
-
-	.upload-zone.configured .upload-text {
-		color: var(--deep-text);
-		font-weight: 500;
-	}
-
-	.upload-error {
-		margin-top: 0.25rem;
-		font-size: 0.75rem;
+	.leak-row[data-level="serious"] .leak-badge,
+	.leak-row[data-level="danger"] .leak-badge {
 		color: var(--destructive);
-		align-self: flex-start;
+		font-weight: 600;
 	}
 
-	/* ── 字段标签行 + 三点菜单 ──
-	   菜单承载低频操作（复制变量名、显示/隐藏、撤销上传、清空值）。 */
-	/* 变量名：等宽小字，点击即复制。它是这一页唯一需要被带到别处的东西
-	   （填进部署平台、写进 .env），所以常驻可见，而不是藏在 ⋯ 菜单里。
-	   虚线底表示「这是可点的字符串」，不与字段名的实心字重争层级。 */
-	.field-key {
-		flex-shrink: 1;
-		min-width: 0;
-		max-width: 100%;
-		padding: 0;
-		border: none;
-		border-bottom: 1px dotted
-			color-mix(in srgb, var(--content-meta) 45%, transparent);
-		background: none;
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: var(--admin-fs-data, 0.6875rem);
-		font-weight: 500;
-		letter-spacing: 0.02em;
-		color: var(--content-meta);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		cursor: copy;
-		transition:
-			color 0.15s ease,
-			border-color 0.15s ease;
-	}
-
-	.field-key:hover {
-		color: var(--deep-text);
-		border-bottom-color: var(--primary);
-	}
-
-	.field-key:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 2px;
-	}
-
-	.field-label-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-		min-width: 0;
-	}
-
-	.field-menu-wrap {
-		position: relative;
-		flex-shrink: 0;
-	}
-
-	.field-menu-trigger {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.5rem;
-		height: 1.5rem;
-		padding: 0;
-		border: none;
-		border-radius: var(--radius-md);
-		background: transparent;
-		color: var(--content-meta);
-		cursor: pointer;
-		opacity: 0.6;
-		transition: opacity 0.15s ease, background 0.15s ease;
-		/* 视觉 24px（手机上 1.5rem=21px）太小，伪元素外扩命中区到 45px */
-		position: relative;
-	}
-
-	.field-menu-trigger::after {
-		content: "";
-		position: absolute;
-		inset: -12px;
-		border-radius: var(--radius-md);
-	}
-
-	.field-menu-trigger svg {
-		width: 1rem;
-		height: 1rem;
-	}
-
-	.field-menu-trigger:hover,
-	.field-menu-trigger[aria-expanded="true"] {
-		opacity: 1;
-		background: var(--btn-plain-bg-hover);
-		color: var(--deep-text);
-	}
-
-	.field-menu-trigger:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 2px;
-	}
-
-	.field-menu {
-		position: absolute;
-		top: calc(100% + 0.25rem);
-		right: 0;
-		z-index: 40;
-		display: flex;
-		flex-direction: column;
-		min-width: 11rem;
-		padding: 0.25rem;
-		border: 1px solid var(--line-divider);
-		border-radius: var(--radius-xl);
-		background: var(--float-panel-bg);
-		box-shadow: var(--shadow-card-hover);
-	}
-
-	.field-menu-item {
-		display: flex;
-		align-items: center;
-		width: 100%;
-		padding: 0.5rem 0.625rem;
-		border: none;
-		border-radius: var(--radius-md);
-		background: transparent;
-		color: var(--deep-text);
-		font-size: var(--admin-fs-meta, 0.75rem);
-		font-family: inherit;
-		text-align: left;
-		cursor: pointer;
-		white-space: nowrap;
-		transition: background 0.15s ease;
-	}
-
-	.field-menu-item:hover {
-		background: var(--btn-plain-bg-hover);
-	}
-
-	.field-menu-item.danger {
-		color: var(--destructive);
-	}
-
-	.field-menu-item.danger:hover {
-		background: color-mix(in oklab, var(--destructive) 10%, transparent);
-	}
-
-	/* 输入框：可见边框（WCAG 1.4.11 要求界面组件边界对相邻背景 ≥ 3:1）。
-	   此前 border 透明、底色与卡片仅差 1.11:1，未聚焦时几乎看不出输入框边界。
-	   实测结论：加深底色对这条标准没有帮助（仍 1.07:1），只能靠边框本身。
-	   注意 --content-meta 本身带 alpha（暗色白 0.6 / 亮色黑 0.5），叠加 75% 后
-	   最终 alpha 约 0.45，合成色为暗 rgb(130,130,135)=4.44:1、亮 rgb(139,140,140)=3.36:1，
-	   两种模式均满足 AA。 */
-	/* 完全对照参考项目 input.settings-input（settings.css:400-440）
-	   + SETTINGS_FIELD_CLASS 的 px-3 / rounded-xl / text-sm：
-	   42px 高、12px 圆角、左右 12px 内边距、14px 字号。
-	   底色用「前景色 8% 混卡片色」——比卡片略亮，而非比卡片更暗；
-	   静态态边框为 transparent，边界靠底色与 hover/focus 的逐级提亮表达。 */
-	.secret-input {
-		width: 100%;
-		min-width: 0;
-		min-height: 2.625rem;
-		padding: 0.5rem 0.75rem;
-		/* 静止时给一条可见边：原先 border 全透明，输入框像一块浮在卡片上的色块 */
-		border: 1px solid var(--input-border, rgb(255 255 255 / 0.1));
-		border-radius: var(--radius-xl);
-		background: var(--input-bg, rgb(255 255 255 / 0.05));
-		color: var(--deep-text);
-		font-size: var(--admin-fs-body, 0.875rem);
-		font-family: inherit;
-		outline: none;
-		box-shadow: none;
-		transition:
-			background-color 240ms ease,
-			border-color 240ms ease,
-			box-shadow 240ms ease;
-		box-sizing: border-box;
-	}
-
-	.secret-input::placeholder {
-		color: var(--content-meta);
-		opacity: 0.65;
-	}
-
-	.secret-input:hover:not(:disabled) {
-		border-color: color-mix(in srgb, var(--content-meta) 45%, transparent);
-		background: color-mix(in srgb, var(--content-meta) 10%, var(--card-bg));
-	}
-
-	.secret-input:focus {
-		outline: none;
-		border-color: color-mix(in srgb, var(--primary) 45%, transparent);
-		background: color-mix(in srgb, var(--primary) 7%, var(--card-bg));
-		box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
-	}
-
-	.secret-input:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.secret-input {
-			transition: none;
-		}
-	}
-
-	/* 输入框容器：为眼睛按钮提供定位基准。
-	   缺少 position:relative 时，绝对定位的按钮会跑到最近的定位祖先
-	   （页面容器右上角），这是按钮错位的根因。 */
-	.input-wrap {
-		position: relative;
-		display: flex;
-		align-items: center;
-		width: 100%;
-		min-width: 0;
-	}
-
-	/* 只有真正带显隐按钮的密码框才需要右侧留位。
-	   .input-wrap 包裹了所有输入框，若用后代选择器会让普通输入框也
-	   平白多出 40px 右内边距（光标区与文字缩进异常）。 */
-	.input-wrap:has(.input-toggle) .secret-input {
-		padding-right: 2.5rem;
-	}
-
-	/* 密码显隐按钮：对齐参考页 .settings-secret-input > button
-	   （32x32，水平靠右、垂直居中于输入框）。
-	   默认低透明度，不抢输入内容的注意力，悬停才提亮。 */
-	.input-toggle {
-		position: absolute;
-		right: 0.25rem;
-		top: 50%;
-		transform: translateY(-50%);
-		width: 2rem;
-		height: 2rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border: none;
-		border-radius: var(--radius-md);
-		background: transparent;
-		color: var(--content-meta);
-		opacity: 0.45;
-		cursor: pointer;
-		transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
-	}
-
-	/* 视觉 2rem（手机上 28px）低于 44px 触控下限；
-	   伪元素外扩到 44px，按钮绝对定位在输入框右侧，外扩不会压到别的控件 */
-	.input-toggle::after {
-		content: "";
-		position: absolute;
-		inset: -8px;
-		border-radius: var(--radius-md);
-	}
-
-	.input-toggle:hover:not(:disabled) {
-		opacity: 1;
-		background: var(--btn-plain-bg-hover);
-		color: var(--deep-text);
-	}
-
-	.input-toggle:disabled {
-		cursor: not-allowed;
-		opacity: 0.25;
-	}
-
-	/* ── 弹窗（导出 / 当前密码确认） ── */
-	/* 蒙层：对齐参考项目 .fuwari-modal::backdrop ——
-	   rgb(0 0 0 / 0.25) 黑底 + blur(4px)。
-	   此前用 color-mix(--deep-text 45%) 是错的：--deep-text 随主题翻转，
-	   暗色下是白色，叠出来成了白蒙层。
-	   底色固定用黑（蒙层语义就是压暗），不随主题变。 */
-	.modal-overlay {
+	/* 私钥查看弹层：只读、等宽、可复制 */
+	.mask {
 		position: fixed;
 		inset: 0;
-		z-index: 9999;
+		z-index: 60;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgb(0 0 0 / 0.25);
-		-webkit-backdrop-filter: blur(4px);
-		backdrop-filter: blur(4px);
-		padding: 1rem;
+		padding: 2rem;
 	}
 
-	.modal-card {
-		width: 100%;
-		max-width: 440px;
-		padding: 1.5rem;
-		/* 浮动模态用前台 --float-panel-bg，与下拉/悬浮面板同档，暗色比承载卡片高一级 */
-		background: var(--float-panel-bg);
-		box-shadow: var(--shadow-card);
-		border-radius: var(--radius-large);
+	/* 铺满的按钮当遮罩：点击关闭，且天然可聚焦 */
+	.backdrop {
+		position: absolute;
+		inset: 0;
+		padding: 0;
+		border: none;
+		background: rgb(0 0 0 / 0.55);
+		cursor: default;
 	}
 
-	.modal-head {
+	.dialog {
+		position: relative;
 		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 0.75rem;
+		flex-direction: column;
+		width: min(46rem, 100%);
+		max-height: min(76vh, 40rem);
+		border: 1px solid var(--line-divider);
+		border-radius: 14px;
+		background: var(--card-bg);
+		overflow: hidden;
 	}
 
-	.modal-head h3 {
+	.dialog-head {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		font-size: 1.0625rem;
+		padding: 0.75rem 1rem;
+		border-bottom: 1px solid var(--line-divider);
+	}
+
+	.dialog-head .name {
+		font-size: var(--admin-fs-body, 0.875rem);
 		font-weight: 600;
 		color: var(--deep-text);
 	}
 
-	/* ── 私钥查看弹窗 ── */
-	.view-modal {
-		max-width: 720px;
-	}
-
-	.view-tabs {
-		display: flex;
-		gap: 0.5rem;
-		margin-bottom: 0.75rem;
-	}
-
-	.view-tab {
-		padding: 0.375rem 0.875rem;
-		border: 1px solid var(--input-border);
-		border-radius: var(--radius-xl);
-		background: var(--input-bg);
-		color: var(--content-meta);
-		font-size: var(--admin-fs-meta, 0.75rem);
-		font-family: inherit;
-		cursor: pointer;
-		transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-	}
-
-	.view-tab:hover {
-		color: var(--deep-text);
-	}
-
-	.view-tab[aria-selected="true"] {
-		background: color-mix(in oklab, var(--primary) 15%, transparent);
-		border-color: color-mix(in oklab, var(--primary) 35%, transparent);
-		color: var(--primary);
-	}
-
-	.view-content {
-		margin: 0;
-		padding: 0.75rem;
-		max-height: 46vh;
-		overflow: auto;
-		border: 1px solid var(--input-border);
-		border-radius: var(--radius-xl);
-		background: var(--input-bg);
-		color: var(--deep-text);
-		font-family: var(--font-mono);
-		font-size: 0.75rem;
-		line-height: 1.6;
-		white-space: pre-wrap;
-		word-break: break-all;
-	}
-
-	.modal-close {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2rem;
-		height: 2rem;
-		border: none;
-		border-radius: var(--radius-md);
-		background: transparent;
-		color: var(--content-meta);
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.modal-close:hover {
-		background: var(--btn-plain-bg-hover);
-		color: var(--deep-text);
-	}
-
-	.modal-desc {
-		font-size: 0.875rem;
-		color: var(--content-meta);
-		line-height: 1.7;
-		margin-bottom: 1rem;
-	}
-
-	.modal-warning {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.5rem;
-		padding: 0.75rem 1rem;
-		background: color-mix(in srgb, var(--primary) 10%, transparent);
-		border: 1px solid transparent;
-		border-radius: var(--radius-md);
-		color: var(--primary);
-		font-size: var(--admin-fs-meta, 0.75rem);
-		line-height: 1.6;
-		margin-bottom: 1.25rem;
-	}
-
-	.modal-warning :global(svg) {
-		flex-shrink: 0;
-		margin-top: 0.125rem;
-	}
-
-	.modal-actions {
-		display: flex;
-		align-items: center;
-		justify-content: flex-end;
-		gap: 0.625rem;
-	}
-
-	.export-btn {
+	.dialog-head .grow,
+	.dialog-foot .grow {
 		flex: 1;
-		justify-content: center;
+	}
+
+	.seg {
+		padding: 0.1875rem 0.5rem;
+		border: 1px solid var(--line-divider);
+		border-radius: 7px;
+		background: none;
+		font: inherit;
+		font-size: var(--admin-fs-data, 0.6875rem);
+		color: var(--content-meta);
+		cursor: pointer;
+	}
+
+	.seg.on {
+		border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+		color: var(--primary);
+	}
+
+	.keybody {
+		flex: 1;
+		min-height: 0;
+		margin: 0;
+		padding: 0.875rem 1rem;
+		overflow: auto;
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
+		line-height: 1.65;
+		color: var(--deep-text);
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+
+	.dialog-foot {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.625rem 1rem;
+		border-top: 1px solid var(--line-divider);
+		font-size: var(--admin-fs-data, 0.6875rem);
+	}
+
+	/* 窄屏：左栏收到标题上方，控件拿满一行 */
+	@media (max-width: 860px) {
+		.prow {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 0.5rem;
+		}
+
+		.where-list li {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 0.125rem;
+		}
 	}
 </style>

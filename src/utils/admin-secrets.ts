@@ -49,6 +49,8 @@ export const SECRET_GROUPS: readonly {
 	id: SecretGroup;
 	/** 分组标题文案 key（i18n key 名，组件侧直接取用，避免三元判断漏组） */
 	labelKey: "secretsGroupGithub" | "secretsGroupAuth" | "secretsGroupTurnstile";
+	/** 标题右侧的短标签：两个字说明这组管什么 */
+	sub: string;
 	icon: string;
 	/** 分组用途说明，作为大板块副标题 */
 	descKey: string;
@@ -56,20 +58,145 @@ export const SECRET_GROUPS: readonly {
 	{
 		id: "github",
 		labelKey: "secretsGroupGithub",
+		sub: "写入仓库",
 		icon: "material-symbols:cloud",
 		descKey: "secretsGroupGithubDesc",
 	},
 	{
 		id: "auth",
 		labelKey: "secretsGroupAuth",
+		sub: "后台登录",
 		icon: "material-symbols:shield-lock",
 		descKey: "secretsGroupAuthDesc",
 	},
 	{
 		id: "turnstile",
 		labelKey: "secretsGroupTurnstile",
+		sub: "可选",
 		icon: "material-symbols:verified-user",
 		descKey: "secretsGroupTurnstileDesc",
+	},
+];
+
+/**
+ * 页面的行。
+ *
+ * 一个字段一个输入框是「配置文件视角」；用户真正面对的是几个问题：
+ * 「仓库在哪」「私钥有效吗」「装到账号上了吗」。所以行是展示单位，
+ * `ADMIN_SECRETS` 仍是存储单位——一行可以吃掉 1–3 个环境变量，
+ * 保存时拆回各自的 key，页面不因此少写任何一行 .env。
+ *
+ * `shape` 决定控件：
+ * - address  三个 key 合成一个地址（owner/repo@branch）
+ * - single   单输入框
+ * - pair     两个 key 并排（成对才有意义的那类）
+ * - upload   .pem 文件上传 +「更换文件」
+ * - managed  服务端托管，只给「轮换」
+ * - optional 可留空，空着显示静态提示
+ */
+export type SecretRowShape =
+	| "address"
+	| "single"
+	| "pair"
+	| "upload"
+	| "managed"
+	| "optional";
+
+export interface SecretRow {
+	id: string;
+	group: string;
+	/** 左栏标题，写「问题」而不是「字段名」 */
+	label: string;
+	/** 一句话说明这行在做什么，两行以内 */
+	why: string;
+	/** 这一行覆盖的环境变量，等宽列在左栏 */
+	keys: string[];
+	shape: SecretRowShape;
+	/** address 行的格式提示 */
+	format?: string;
+}
+
+export const SECRET_ROWS: SecretRow[] = [
+	{
+		id: "repo",
+		group: "github",
+		label: "仓库",
+		why: "文章提交到哪里",
+		keys: ["GITHUB_OWNER", "GITHUB_REPO", "GITHUB_BRANCH"],
+		shape: "address",
+		format: "owner/repo@branch",
+	},
+	{
+		id: "app-id",
+		group: "github",
+		label: "App ID",
+		why: "GitHub App 设置页顶部",
+		keys: ["GITHUB_APP_ID"],
+		shape: "single",
+	},
+	{
+		id: "private-key",
+		group: "github",
+		label: "私钥",
+		why: "只保存在本地，不会上传",
+		keys: ["GITHUB_PRIVATE_KEY", "GITHUB_PRIVATE_KEY_PATH"],
+		shape: "upload",
+	},
+	{
+		id: "install",
+		group: "github",
+		label: "安装",
+		why: "App 安装到哪个账号",
+		keys: ["GITHUB_INSTALLATION_ID"],
+		shape: "single",
+	},
+	{
+		id: "oauth",
+		group: "auth",
+		label: "GitHub OAuth",
+		why: "登录后台用的 OAuth 凭据",
+		keys: ["GITHUB_APP_CLIENT_ID", "GITHUB_APP_CLIENT_SECRET"],
+		shape: "pair",
+	},
+	{
+		id: "admin-id",
+		group: "auth",
+		label: "管理员 GitHub 用户 ID",
+		why: "白名单，只这一个能登录",
+		keys: ["ADMIN_GITHUB_ID"],
+		shape: "single",
+	},
+	{
+		id: "session",
+		group: "auth",
+		label: "会话签名",
+		why: "由服务端自动生成，无需填写",
+		keys: ["ADMIN_JWT_SECRET"],
+		shape: "managed",
+	},
+	{
+		id: "breakglass",
+		group: "auth",
+		label: "应急登录令牌",
+		why: "GitHub 不可用时的备用入口",
+		keys: ["ADMIN_BREAKGLASS_TOKEN"],
+		shape: "single",
+	},
+	{
+		id: "webhook",
+		group: "auth",
+		label: "登录告警 Webhook",
+		why: "可选，留空则不发送",
+		keys: ["ADMIN_ALERT_WEBHOOK"],
+		shape: "optional",
+	},
+	{
+		id: "turnstile",
+		group: "turnstile",
+		label: "Turnstile 密钥对",
+		why: "只配一半会导致登录被拒",
+		keys: ["TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY"],
+		shape: "pair",
 	},
 ];
 

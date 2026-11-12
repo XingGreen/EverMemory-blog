@@ -913,6 +913,8 @@ export const en: Translation = {
 	[Key.secretsNotConfigured]: "Not configured",
 	[Key.secretsPendingDelete]: "Pending removal",
 	[Key.secretsSave]: "Save Secrets",
+	[Key.secretsWriteEnv]: "Write .env.local",
+	[Key.secretsWritePending]: "{count} to write",
 	[Key.secretsSaving]: "Saving…",
 	[Key.secretsReload]: "Refresh",
 	[Key.secretsWritableHint]:

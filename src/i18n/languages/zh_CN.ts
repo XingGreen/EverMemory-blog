@@ -872,6 +872,8 @@ export const zh_CN: Translation = {
 	[Key.secretsNotConfigured]: "未配置",
 	[Key.secretsPendingDelete]: "待清除",
 	[Key.secretsSave]: "保存密钥",
+	[Key.secretsWriteEnv]: "写入 .env.local",
+	[Key.secretsWritePending]: "{count} 项待写入",
 	[Key.secretsSaving]: "保存中…",
 	[Key.secretsReload]: "刷新",
 	[Key.secretsWritableHint]: "修改将写入项目根目录的 {file}，重启服务后生效",
