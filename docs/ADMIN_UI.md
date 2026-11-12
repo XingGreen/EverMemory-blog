@@ -203,6 +203,17 @@ These are the specific patterns this document exists to stop:
 5. Opacity used to de-emphasise text.
 6. Coloured icons that encode a category rather than an action.
 7. Icons without text in a header action group (kill the icon-only toolbar).
+8. **Explanatory copy about the work itself.** Any sentence that only makes sense to whoever built
+   the page: design rationale, refactor notes, review findings, mechanism names, "this replaces…",
+   "not three fields", "it gates the next step". A screen carries three things and nothing else —
+   **what this is, what to do, what happened**. Everything else goes in a code comment, a commit
+   message, or this document.
+
+   Bad → good:
+   - 「一个地址，不是三个字段」→「文章提交到哪里」
+   - 「前两环通了才能取」→「App 安装到哪个账号」
+   - 「用于签发 JWT 的私钥」→「只保存在本地，不会上传」
+   - 「用它签出的 JWT 会被 GitHub 校验」→「上传后需要点一次『验证连接』」
 
 ## 9. Migration
 

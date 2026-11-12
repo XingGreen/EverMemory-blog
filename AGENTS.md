@@ -40,6 +40,10 @@ wired.
   three primitives in `src/components/admin/ui/`. Pages fill in those primitives; they do not
   restyle them, add a header of their own, or introduce a sixth font size. The public blog is
   out of scope and keeps its own theme.
+- **Copy.** Anything a user can read — public pages and `/admin/` alike — carries only what the
+  user came for: what this is, what to do, what happened. Design rationale, refactor notes,
+  review findings, mechanism names (`JWT`, `12-column grid`, "this replaces the old table") and
+  any other inside-baseball explanation belong in code comments or `docs/`, never on screen.
 
 - **Scope.** Edit `src/pages/admin/**`, `src/pages/api/admin/**`, and `src/components/admin/**`
   directly. Do not modify frontend routes (`src/pages/**` except admin), `src/layouts/**`, or
