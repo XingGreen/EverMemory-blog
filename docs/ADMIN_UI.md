@@ -59,6 +59,15 @@ Rules:
   (0.6 alpha in dark). `color-mix(content-meta 80%, transparent)` lands at 0.48 white, which at
   12px is unreadable on a dark card. Labels get `--deep-text` at 600; notes get `--content-meta`
   at 400. Two levers, not three.
+- **A heading never shares a line with its own description.** Two sizes on one baseline read as one
+  sentence that was cut in half (「管理员认证 决定谁能登录后台」). Title, then description on the
+  next line.
+- **A placeholder holds an example, never a status.** Placeholders vanish on focus and cannot be
+  selected; anything a reader needs to know must live in text. `4423412` is a placeholder,
+  「未配置」 is not.
+- **The machine identifier is part of the row.** Where a field's value will be copied elsewhere
+  (env var names, slugs, file paths), show it in mono beside the label and copy on click. Do not
+  bury it in an overflow menu — it is the page's output, not a hidden convenience.
 
 ## 4. Colour
 
@@ -206,7 +215,10 @@ pages cement them.
    words. Remaining debt: the page still sizes everything off its own `--tx-unit`.
 5. Secrets — migrated (done). Nested cards are gone (the page is the card), the local `.btn`
    vocabulary was replaced by `ui-btn`, the "all configured" bar is ink and only the unfinished
-   state is accent-coloured, and leak severities are words rather than tinted pills.
+   state is accent-coloured, and leak severities are words rather than tinted pills. The form
+   itself: a group title never shares a line with its hint, each group carries a `done / total`
+   count, each field shows its env var name in mono (click to copy), and placeholders hold
+   format examples only — never status.
 6. Links — migrated (done). Status is a word, the save bar's three coloured states collapsed into
    accent-for-unsaved and ink-for-saved, and two dead selectors were dropped.
 7. History and the editor — migrated (done). These keep their own workspace bars rather than
