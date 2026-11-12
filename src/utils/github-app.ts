@@ -128,7 +128,13 @@ export async function verifyPrivateKey(
 	}
 }
 
-function createJwt(privateKey: string, appId: string): string {
+/**
+ * 用私钥签一个 GitHub App JWT（RS256，10 分钟有效）。
+ *
+ * 导出是为了让「握手探测」能直接验证这组凭据——探测需要的是
+ * 「GitHub 认不认这个 JWT」，而不是再去换一次 installation token。
+ */
+export function createJwt(privateKey: string, appId: string): string {
 	const header = { alg: "RS256", typ: "JWT" };
 	const now = Math.floor(Date.now() / 1000);
 	const payload = {

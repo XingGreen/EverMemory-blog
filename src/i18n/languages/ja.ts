@@ -916,6 +916,8 @@ export const ja: Translation = {
 		"必要な設定はすべて完了しています！変更はプロジェクト直下の {file} に書き込まれます",
 	[Key.secretsStatusGotIt]: "了解しました",
 	[Key.secretsLeakCheck]: "鍵の漏洩を確認",
+	[Key.secretsProbeCheck]: "接続を確認",
+	[Key.secretsProbeRunning]: "確認中…",
 	[Key.secretsLeakSafe]: "安全：git に追跡されていません",
 	[Key.secretsLeakWarning]:
 		"警告：追跡済みだが未コミット。git rm --cached で除外してください",

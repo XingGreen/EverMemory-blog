@@ -929,6 +929,8 @@ export const ru: Translation = {
 		"Все обязательные настройки выполнены! Изменения записываются в {file} в корне проекта",
 	[Key.secretsStatusGotIt]: "Понятно",
 	[Key.secretsLeakCheck]: "Проверить утечку ключей",
+	[Key.secretsProbeCheck]: "Проверить подключение",
+	[Key.secretsProbeRunning]: "Проверка…",
 	[Key.secretsLeakSafe]: "Безопасно: файл не отслеживается git",
 	[Key.secretsLeakWarning]:
 		"Внимание: отслеживается, но не закоммичен — выполните git rm --cached",

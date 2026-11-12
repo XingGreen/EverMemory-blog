@@ -923,6 +923,8 @@ export const en: Translation = {
 		"All required configuration is complete! Changes are written to {file} at the project root",
 	[Key.secretsStatusGotIt]: "Got it",
 	[Key.secretsLeakCheck]: "Check for leaked secrets",
+	[Key.secretsProbeCheck]: "Check connection",
+	[Key.secretsProbeRunning]: "Checking…",
 	[Key.secretsLeakSafe]: "Safe: not tracked by git",
 	[Key.secretsLeakWarning]:
 		"Warning: tracked but not committed yet — run git rm --cached",

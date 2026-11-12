@@ -903,6 +903,8 @@ enum I18nKey {
 	secretsStatusGotIt = "secretsStatusGotIt",
 	/** 密钥泄露检测：按钮与四级结论（判据见 docs/todo 下的凭据安全设计） */
 	secretsLeakCheck = "secretsLeakCheck",
+	secretsProbeCheck = "secretsProbeCheck",
+	secretsProbeRunning = "secretsProbeRunning",
 	secretsLeakSafe = "secretsLeakSafe",
 	secretsLeakWarning = "secretsLeakWarning",
 	secretsLeakSerious = "secretsLeakSerious",

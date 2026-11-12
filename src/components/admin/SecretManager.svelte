@@ -61,6 +61,21 @@ let draftsOrigin = $state<Record<string, string>>({});
 let showInput = $state<Record<string, boolean>>({});
 /** 「从哪拿」的展开状态：按字段 key 记，默认全部收起 */
 let whereOpen = $state<Record<string, boolean>>({});
+
+/**
+ * 握手结果：拿当前配置真的去问一次 GitHub。
+ * 三段的 id 由服务端给（app / repo / installation），文案也在服务端——
+ * 那些句子要带上 App 名、仓库名、提交日期，在前端拼不回来。
+ */
+type ProbeStageView = { id: string; ok: boolean; detail: string };
+let probe = $state<{ running: boolean; at: number; stages: ProbeStageView[] }>({
+	running: false,
+	at: 0,
+	stages: [],
+});
+const probeAt = $derived(
+	probe.at ? new Date(probe.at).toLocaleTimeString() : "",
+);
 // 导出弹窗
 let exportOpen = $state(false);
 let exportBusy = $state(false);
@@ -221,6 +236,44 @@ function discardAll() {
 	drafts = { ...draftsOrigin };
 	uploadNames = {};
 	uploadError = {};
+}
+
+/**
+ * 跑一轮握手。刻意用 `force=1`：用户点了按钮就是要一次新的结论，
+ * 拿 60s 内的缓存告诉他「通了」没有意义——他很可能刚改完某个字段。
+ *
+ * 失败不抛错：三段结论由服务端逐段给出，网络层失败才提示一次 toast。
+ */
+async function runProbe() {
+	probe = { ...probe, running: true };
+	try {
+		const res = await fetch("/api/admin/secrets/probe/?force=1", {
+			cache: "no-store",
+		});
+		const data = (await res.json()) as {
+			success?: boolean;
+			message?: string;
+			checkedAt?: number;
+			stages?: ProbeStageView[];
+		};
+		if (data.success && Array.isArray(data.stages)) {
+			probe = {
+				running: false,
+				at: data.checkedAt ?? Date.now(),
+				stages: data.stages,
+			};
+			return;
+		}
+		onNotify?.(data.message || "验证失败", "error", 8000);
+	} catch (error) {
+		onNotify?.(
+			error instanceof Error ? error.message : "验证失败",
+			"error",
+			8000,
+		);
+	} finally {
+		probe = { ...probe, running: false };
+	}
 }
 
 /** 有未保存改动时，离开页面前拦截（对应参考项目 enableBeforeUnload） */
@@ -844,14 +897,45 @@ function answerConfirm(ok: boolean) {
 					     未配齐时用主色（还有事等你做），配齐后回到墨色。 -->
 					<div class="group-head">
 						<h2 class="settings-group-title">{i18n(I18nKey[group.labelKey])}</h2>
-						<span
-							class="group-count"
-							class:attention={done < total}
-							title={`${total - done} ${i18n(I18nKey.secretsNotConfigured)}`}
-							>{done} / {total}</span
-						>
+						<div class="group-meta">
+							<!-- 只有 GitHub 这一组能「握手」：另外两组的密钥只在本站使用，
+							     没有第三方可以问。给它一个按钮，而不是给三组都放一个空位。 -->
+							{#if group.id === "github"}
+								<button
+									type="button"
+									class="probe-btn"
+									disabled={probe.running}
+									onclick={runProbe}
+								>
+									{probe.running
+										? i18n(I18nKey.secretsProbeRunning)
+										: i18n(I18nKey.secretsProbeCheck)}
+								</button>
+							{/if}
+							<span
+								class="group-count"
+								class:attention={done < total}
+								title={`${total - done} ${i18n(I18nKey.secretsNotConfigured)}`}
+								>{done} / {total}</span
+							>
+						</div>
 					</div>
 					<p class="group-hint">{i18n(I18nKey[group.descKey])}</p>
+
+					<!-- 握手回执：三段各自的结论。填了不等于通了，这三行才是证据。 -->
+					{#if group.id === "github" && probe.stages.length > 0}
+						<div class="probe">
+							{#each probe.stages as stage (stage.id)}
+								<div class="probe-row" class:failed={!stage.ok}>
+									<span class="probe-mark" aria-hidden="true"
+										>{stage.ok ? "✓" : "✕"}</span
+									>
+									<span class="probe-text">{stage.detail}</span>
+								</div>
+							{/each}
+							<p class="probe-at">{probeAt}</p>
+						</div>
+					{/if}
 
 					<!-- 「值从哪拿」放在组上而不放在字段上：一组的值通常来自同一个页面，
 					     13 个字段各挂一条同样的入口，只是把重复换了个位置。 -->
@@ -1628,6 +1712,88 @@ function answerConfirm(ok: boolean) {
 
 	.group-count.attention {
 		color: var(--primary);
+	}
+
+	.group-meta {
+		display: flex;
+		align-items: baseline;
+		gap: 0.875rem;
+		flex-shrink: 0;
+	}
+
+	/* 握手按钮：安静的次级动作，只有悬停才升一档。
+	   它不是主操作——主操作是把这个文件写进去，这一步只是「问一下通不通」。 */
+	.probe-btn {
+		padding: 0;
+		border: none;
+		border-bottom: 1px dotted
+			color-mix(in srgb, var(--content-meta) 45%, transparent);
+		background: none;
+		font: inherit;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		color: var(--content-meta);
+		white-space: nowrap;
+		cursor: pointer;
+		transition:
+			color 0.15s ease,
+			border-color 0.15s ease;
+	}
+
+	.probe-btn:hover:not(:disabled) {
+		color: var(--deep-text);
+		border-bottom-color: var(--primary);
+	}
+
+	.probe-btn:disabled {
+		cursor: progress;
+		opacity: 0.7;
+	}
+
+	.probe-btn:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	/* 回执：三行结论，不加底色也不加边框——它是一段说明，不是一个面板 */
+	.probe {
+		margin-top: 0.5rem;
+	}
+
+	.probe-row {
+		display: grid;
+		grid-template-columns: 1rem minmax(0, 1fr);
+		gap: 0.5rem;
+		align-items: baseline;
+		padding: 0.0625rem 0;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		line-height: 1.65;
+		color: var(--content-meta);
+	}
+
+	.probe-mark {
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
+		color: var(--success);
+	}
+
+	/* 失败的那一行要更重：它才是需要读的那句 */
+	.probe-row.failed .probe-mark {
+		color: var(--destructive);
+	}
+
+	.probe-row.failed .probe-text {
+		color: var(--deep-text);
+	}
+
+	.probe-text {
+		overflow-wrap: anywhere;
+	}
+
+	.probe-at {
+		margin: 0.25rem 0 0 1.5rem;
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
+		color: var(--content-meta);
 	}
 
 	.settings-group-title {

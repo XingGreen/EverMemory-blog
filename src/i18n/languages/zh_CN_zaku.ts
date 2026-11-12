@@ -874,6 +874,8 @@ export const zaku: Translation = {
 	[Key.secretsStatusAllDone]: "该有的全齐了！改动会写进项目根目录的 {file}",
 	[Key.secretsStatusGotIt]: "晓得啦",
 	[Key.secretsLeakCheck]: "检测密钥泄露",
+	[Key.secretsProbeCheck]: "驗證連線",
+	[Key.secretsProbeRunning]: "驗證中…",
 	[Key.secretsLeakSafe]: "安全：该文件未被 git 追踪",
 	[Key.secretsLeakWarning]:
 		"警告：已被 git 追踪但尚未提交，执行 git rm --cached 移出索引",
