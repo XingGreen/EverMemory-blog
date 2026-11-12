@@ -68,6 +68,10 @@ Rules:
 - **The machine identifier is part of the row.** Where a field's value will be copied elsewhere
   (env var names, slugs, file paths), show it in mono beside the label and copy on click. Do not
   bury it in an overflow menu — it is the page's output, not a hidden convenience.
+- **A form that talks to a third party owes the user a check.** "Filled in" is not "works":
+  a wrong key pair, a revoked install and a renamed branch all look identical in a form. Where
+  the page holds credentials for something external, give it one action that really asks, and
+  report each stage separately so the failing link is visible.
 
 ## 4. Colour
 
@@ -218,7 +222,9 @@ pages cement them.
    state is accent-coloured, and leak severities are words rather than tinted pills. The form
    itself: a group title never shares a line with its hint, each group carries a `done / total`
    count, each field shows its env var name in mono (click to copy), and placeholders hold
-   format examples only — never status.
+   format examples only — never status. The GitHub group can also **check the credentials against
+   GitHub** (`POST`-free `GET /api/admin/secrets/probe`, 60s cache): sign a JWT, read the branch
+   with an installation token, list installations, report each stage separately.
 6. Links — migrated (done). Status is a word, the save bar's three coloured states collapsed into
    accent-for-unsaved and ink-for-saved, and two dead selectors were dropped.
 7. History and the editor — migrated (done). These keep their own workspace bars rather than
@@ -231,6 +237,9 @@ pages cement them.
 - `TaxonomyManager` still sizes everything from `--tx-unit`; it needs its own pass.
 - `AdminDashboard` (the shell) still holds page-specific styles for several screens. They move
   into their pages as those pages are touched.
+- The handshake receipt is written server-side and is Chinese-only, same as the `description`
+  fields in `admin-secrets.ts`. Localising it means returning structured facts instead of a
+  sentence — worth doing only if the admin is ever meant to run in another language.
 
 Each migration is one branch, one commit, with before/after screenshots. A page is migrated
 when it imports the primitives and passes without local overrides.
