@@ -1387,7 +1387,6 @@ function answerConfirm(ok: boolean) {
 	/* 从保存栏清单跳过来的定位提示：整行背景亮两次，左缘压一道主色。
 	   只用背景与内阴影，不动 border 与 padding，行高和分栏线都不会跳。 */
 	.prow.field-flash {
-		border-radius: 8px;
 		box-shadow: inset 3px 0 0 var(--primary);
 		animation: field-breathe 0.8s ease-in-out 2;
 	}
