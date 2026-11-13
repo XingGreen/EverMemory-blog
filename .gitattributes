@@ -1,2 +1,5 @@
 *.js linguist-language=astro
 * text=auto eol=lf
+
+# Windows batch files need CRLF to run when double-clicked
+*.bat text eol=crlf
