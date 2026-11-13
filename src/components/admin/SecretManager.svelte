@@ -70,7 +70,13 @@ let showInput = $state<Record<string, boolean>>({});
  * 三段的 id 由服务端给（app / repo / installation），文案也在服务端——
  * 那些句子要带上 App 名、仓库名、提交日期，在前端拼不回来。
  */
-type ProbeStageView = { id: string; ok: boolean; detail: string };
+type ProbeStageView = {
+	id: string;
+	ok: boolean;
+	detail: string;
+	/** 服务端已经拿到、只等用户选的候选值（目前只有安装阶段会给） */
+	candidates?: { id: string; account: string }[];
+};
 let probe = $state<{ running: boolean; at: number; stages: ProbeStageView[] }>({
 	running: false,
 	at: 0,
@@ -410,6 +416,7 @@ async function load() {
 				}
 			}
 			syncAddress();
+			await prefillFromLocalRepo();
 		} else {
 			loadError = data.message || "读取密钥状态失败";
 		}
@@ -799,6 +806,32 @@ function syncAddress() {
 	addressError = "";
 }
 
+/**
+ * 地址还空着时，用本地 `.git` 的 remote 预填。
+ *
+ * 只在可写环境做：线上读不到 `.git`，也不该凭空改草稿。
+ * 预填出来的值同样算「未保存改动」，仍然要按保存才落盘。
+ * 失败不提示——预填是省事，不是必需。
+ */
+async function prefillFromLocalRepo() {
+	if (!writable || addressOf()) return;
+	try {
+		const res = await fetch("/api/admin/secrets/discover/", {
+			cache: "no-store",
+		});
+		const data = (await res.json()) as {
+			success?: boolean;
+			repo?: { owner: string; repo: string; branch: string } | null;
+		};
+		if (!data.success || !data.repo) return;
+		const { owner, repo, branch } = data.repo;
+		if (!owner || !repo || !branch) return;
+		setAddress(`${owner}/${repo}@${branch}`);
+	} catch {
+		/* 拿不到就留空，不打扰 */
+	}
+}
+
 function setAddress(raw: string) {
 	addressRaw = raw;
 	const trimmed = raw.trim();
@@ -1149,6 +1182,21 @@ function answerConfirm(ok: boolean) {
 										<p class="trace">
 											<b>刚刚验过：</b>{probeInstall.detail}
 										</p>
+										{#if probeInstall.candidates?.length}
+											<p class="trace">
+												{#each probeInstall.candidates as candidate (candidate.id)}
+													<button
+														type="button"
+														class="link"
+														onclick={() => {
+															drafts.GITHUB_INSTALLATION_ID = candidate.id;
+														}}
+														>用 {candidate.id}（{candidate.account}）</button
+													>
+												{/each}
+												<span class="dim">· 填入后先保存，再验证一次</span>
+											</p>
+										{/if}
 									{/if}
 								{/if}
 							{/if}

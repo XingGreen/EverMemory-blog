@@ -25,11 +25,22 @@ import {
 
 export type ProbeStageId = "app" | "repo" | "installation";
 
+/** 能从 GitHub 取回、但当前配置还没采用的值。只有安装阶段会带。 */
+export interface ProbeCandidate {
+	id: string;
+	account: string;
+}
+
 export interface ProbeStage {
 	id: ProbeStageId;
 	ok: boolean;
 	/** 一句话结论，成功与失败都直接显示，不做二次翻译 */
 	detail: string;
+	/**
+	 * 候选值。带了它就说明「我拿到了正确答案，只是你还没选」——
+	 * 前端据此给一键填入，避免让人回到 GitHub 页面手抄。
+	 */
+	candidates?: ProbeCandidate[];
 }
 
 export interface ProbeReport {
@@ -173,9 +184,6 @@ async function checkRepo(): Promise<ProbeStage> {
 /** 第 3 段：App 被装在哪几个账号上，配置的 Installation ID 在不在其中 */
 async function checkInstallation(jwt: string | null): Promise<ProbeStage> {
 	const { installationId } = getConfig();
-	if (!installationId) {
-		return { id: "installation", ok: false, detail: "Installation ID 为空" };
-	}
 	if (!jwt) {
 		return {
 			id: "installation",
@@ -196,6 +204,30 @@ async function checkInstallation(jwt: string | null): Promise<ProbeStage> {
 			id?: number;
 			account?: { login?: string };
 		}>;
+		const candidates: ProbeCandidate[] = list
+			.filter((it) => it.id != null)
+			.slice(0, 5)
+			.map((it) => ({
+				id: String(it.id),
+				account: it.account?.login || "未知账号",
+			}));
+
+		// 没填也能给答案：列表本身就是答案，缺的只是谁来选
+		if (!installationId) {
+			return candidates.length > 0
+				? {
+						id: "installation",
+						ok: false,
+						detail: `App 已安装到 ${list.length} 个账号，还没选用哪一个`,
+						candidates,
+					}
+				: {
+						id: "installation",
+						ok: false,
+						detail: "App 还没有安装到任何账号",
+					};
+		}
+
 		const hit = list.find((it) => String(it.id) === String(installationId));
 		if (hit) {
 			return {
@@ -215,6 +247,7 @@ async function checkInstallation(jwt: string | null): Promise<ProbeStage> {
 			detail: names
 				? `配置的 ID 不在安装列表里（现有：${names}）`
 				: "App 还没有安装到任何账号",
+			...(candidates.length > 0 ? { candidates } : {}),
 		};
 	} catch (error) {
 		return { id: "installation", ok: false, detail: transportError(error) };
