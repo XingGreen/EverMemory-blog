@@ -1384,6 +1384,35 @@ function answerConfirm(ok: boolean) {
 		opacity: 0.62;
 	}
 
+	/* 从保存栏清单跳过来的定位提示：整行背景亮两次，左缘压一道主色。
+	   只用背景与内阴影，不动 border 与 padding，行高和分栏线都不会跳。 */
+	.prow.field-flash {
+		border-radius: 8px;
+		box-shadow: inset 3px 0 0 var(--primary);
+		animation: field-breathe 0.8s ease-in-out 2;
+	}
+
+	/* 0.8s × 2 = 1.6s，与 scrollToField 里移除类名的时长一致 */
+	@keyframes field-breathe {
+		0%,
+		100% {
+			background: color-mix(in oklab, var(--primary) 6%, transparent);
+			box-shadow: inset 3px 0 0 color-mix(in oklab, var(--primary) 35%, transparent);
+		}
+		50% {
+			background: color-mix(in oklab, var(--primary) 14%, transparent);
+			box-shadow: inset 3px 0 0 var(--primary);
+		}
+	}
+
+	/* 关掉动效也保留定位：静态底色 + 左缘主色，1.6s 后照常消失 */
+	@media (prefers-reduced-motion: reduce) {
+		.prow.field-flash {
+			animation: none;
+			background: color-mix(in oklab, var(--primary) 12%, transparent);
+		}
+	}
+
 	.prow .left {
 		min-width: 0;
 	}
