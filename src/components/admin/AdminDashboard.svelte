@@ -212,7 +212,7 @@ let secretSaveState = $state<{
 	save: () => void;
 	discard: () => void;
 } | null>(null);
-// 紧急操作警报单是否展开
+// 保存栏改动清单是否展开
 let dirtyListOpen = $state(false);
 
 // 站内切换页面时的未保存拦截：leaveConfirmOpen 为真即弹出确认框，
