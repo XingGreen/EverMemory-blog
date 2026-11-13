@@ -199,10 +199,8 @@ let secretSaveState = $state<{
 	writable: boolean;
 	loading: boolean;
 	saving: boolean;
-	/** 写入目标文件名 */
-	envFile: string;
 	changedCount: number;
-	alertRows: {
+	diffRows: {
 		key: string;
 		label: string;
 		kind: "add" | "replace" | "remove";
@@ -215,7 +213,7 @@ let secretSaveState = $state<{
 	discard: () => void;
 } | null>(null);
 // 紧急操作警报单是否展开
-let alertListOpen = $state(false);
+let dirtyListOpen = $state(false);
 
 // 站内切换页面时的未保存拦截：leaveConfirmOpen 为真即弹出确认框，
 // pendingPath 记录确认后要跳转的目标路径。
@@ -2174,102 +2172,93 @@ function formatDate(dateStr: string | null): string {
 				{/if}
 				{#snippet footer()}
 					{#if secretSaveState?.writable}
-						<!-- 逐行 diff 在写入栏上方就地展开：先看清写什么，再按下去。
-						     顺序不能反过来——footer 贴着卡片底边，栏之后的元素会溢出到卡片外。 -->
-						{#if alertListOpen && secretSaveState.changedCount > 0}
-							<div class="alerts" id="alert-list">
-								<div class="alerts-head">
-									<span class="p"
-										>{i18n(I18nKey.secretsWritePending).replace(
+						<div class="savebar" role="status">
+							{#if secretSaveState.changedCount > 0}
+								<!-- 点开就是逐行 diff：改了什么、文件里会新增/替换/删掉哪一行 -->
+								<button
+									class="savebar-notice"
+									type="button"
+									aria-expanded={dirtyListOpen}
+									aria-controls="dirty-list"
+									onclick={() => (dirtyListOpen = !dirtyListOpen)}
+								>
+									<Icon icon="material-symbols:error-outline" />
+									<span
+										>{i18n(I18nKey.secretsUnsavedCount).replace(
 											"{count}",
-											String(secretSaveState.alertRows.length),
+											String(secretSaveState.changedCount),
 										)}</span
 									>
-									<span class="grow"></span>
-									<span class="mono">{secretSaveState.envFile}</span>
-								</div>
-								{#each secretSaveState.alertRows as row (row.key)}
+									<Icon
+										icon={dirtyListOpen
+											? "material-symbols:keyboard-arrow-up-rounded"
+											: "material-symbols:keyboard-arrow-down-rounded"}
+										class="notice-chevron"
+									/>
+								</button>
+							{/if}
+							<div class="savebar-actions">
+								{#if secretSaveState.changedCount > 0}
 									<button
-										class="alerts-row {row.kind}"
+										class="ui-btn ui-btn-ghost"
+										type="button"
+										disabled={secretSaveState.saving}
+										onclick={() => secretSaveState?.discard()}
+									>
+										{i18n(I18nKey.secretsDiscard)}
+									</button>
+								{/if}
+								<button
+									class="ui-btn ui-btn-primary"
+									type="button"
+									onclick={() => secretSaveState?.save()}
+									disabled={secretSaveState.saving ||
+										secretSaveState.loading ||
+										secretSaveState.changedCount === 0}
+								>
+									<Icon icon="material-symbols:save-outline" />
+									<span
+										>{secretSaveState.saving
+											? i18n(I18nKey.secretsSaving)
+											: i18n(I18nKey.secretsSave)}</span
+									>
+								</button>
+							</div>
+						</div>
+						{#if dirtyListOpen && secretSaveState.changedCount > 0}
+							<div class="dirty-list" id="dirty-list">
+								{#each secretSaveState.diffRows as row (row.key)}
+									<button
+										class="dirty-item"
 										type="button"
 										title="跳回该字段"
 										onclick={() => secretSaveState?.scrollToField(row.key)}
 									>
-										<span class="sign"
+										<span class="dirty-sign {row.kind}"
 											>{row.kind === "add"
 												? "+"
 												: row.kind === "remove"
 													? "−"
 													: "~"}</span
 										>
-										<span class="k">{row.label}</span>
-										<span class="v">
+										<span class="dirty-key">{row.key}</span>
+										<span class="dirty-change">
 											{#if row.masked}
 												{row.kind === "remove" ? "移除该行" : "值已替换（不回显）"}
 											{:else if row.kind === "replace"}
-												<span class="old">{row.from}</span> → {row.to}
+												<span class="old">{row.from}</span>
+												<span class="arrow">→</span>
+												<span class="new">{row.to}</span>
 											{:else if row.kind === "add"}
-												{row.to}
+												<span class="new">{row.to}</span>
 											{:else}
-												移除该行
+												<span class="new">移除该行</span>
 											{/if}
 										</span>
 									</button>
 								{/each}
 							</div>
 						{/if}
-						<div class="writebar" role="status">
-							{#if secretSaveState.changedCount > 0}
-								<button
-									class="writebar-count"
-									type="button"
-									aria-expanded={alertListOpen}
-									aria-controls="alert-list"
-									onclick={() => (alertListOpen = !alertListOpen)}
-								>
-									<span
-										>{i18n(I18nKey.secretsWritePending).replace(
-											"{count}",
-											String(secretSaveState.changedCount),
-										)}</span
-									>
-									<span class="caret" aria-hidden="true"
-										>{alertListOpen ? "▾" : "▸"}</span
-									>
-								</button>
-							{:else}
-								<span class="writebar-count idle"
-									>{i18n(I18nKey.secretsWritePending).replace(
-										"{count}",
-										"0",
-									)}</span
-								>
-							{/if}
-							<span class="grow"></span>
-							<span class="writebar-file">{secretSaveState.envFile}</span>
-							{#if secretSaveState.changedCount > 0}
-								<button
-									class="ui-btn ui-btn-ghost"
-									type="button"
-									disabled={secretSaveState.saving}
-									onclick={() => secretSaveState?.discard()}
-								>
-									{i18n(I18nKey.secretsDiscard)}
-								</button>
-							{/if}
-							<button
-								class="ui-btn ui-btn-primary"
-								type="button"
-								onclick={() => secretSaveState?.save()}
-								disabled={secretSaveState.saving ||
-									secretSaveState.loading ||
-									secretSaveState.changedCount === 0}
-							>
-								{secretSaveState.saving
-									? i18n(I18nKey.secretsSaving)
-									: i18n(I18nKey.secretsWriteEnv)}
-							</button>
-						</div>
 					{/if}
 				{/snippet}
 				</AdminPage>
@@ -3349,157 +3338,147 @@ function formatDate(dateStr: string | null): string {
 		line-height: 1.5;
 	}
 
-	/* ── 环境变量页写入栏（渲染在 AdminPage footer，位于滚动容器之外）──
-	   左侧报「几项待写」，右侧是目标文件与唯一动作；逐行 diff 就地展开在栏上方。 */
-	.writebar {
+	/* ── 环境变量页保存栏（渲染在 AdminPage footer，位于滚动容器之外）──
+	   对齐参考项目 .settings-savebar：容器页脚，靠 border-top 与内容分隔。
+	   因为不在滚动容器内，无需 sticky —— 它天然不参与内容滚动。 */
+	.savebar {
 		display: flex;
 		align-items: center;
-		gap: 0.875rem;
-		padding: 0.875rem var(--admin-gutter, 1.5rem);
+		justify-content: space-between;
+		gap: 1.25rem;
+		flex-wrap: wrap;
+		padding: 0.875rem 1.5rem;
 		border-top: 1px solid var(--line-divider);
 		background: var(--card-bg);
 	}
 
-	.writebar .grow {
-		flex: 1;
-	}
-
-	.writebar-count {
+	/* 未保存改动：左侧一颗提示按钮，点开就是逐行 diff */
+	.savebar-notice {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.375rem;
-		padding: 0;
+		gap: 0.5rem;
+		margin: 0;
+		padding: 0.5rem 0.75rem;
 		border: none;
-		background: none;
-		font: inherit;
-		font-size: var(--admin-fs-meta, 0.75rem);
-		font-weight: 500;
+		border-radius: 10px;
+		background: color-mix(in srgb, var(--primary) 12%, transparent);
 		color: var(--primary);
+		font-size: var(--admin-fs-meta, 0.75rem);
+		font-family: inherit;
+		font-weight: 500;
 		cursor: pointer;
+		transition: background-color 0.15s ease;
 	}
 
-	.writebar-count.idle {
-		color: var(--content-meta);
-		font-weight: 400;
-		cursor: default;
+	.savebar-notice:hover {
+		background: color-mix(in srgb, var(--primary) 20%, transparent);
 	}
 
-	.writebar-count .caret {
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: 0.6875rem;
-	}
-
-	.writebar-count:focus-visible {
+	.savebar-notice:focus-visible {
 		outline: 2px solid var(--primary);
 		outline-offset: 2px;
 	}
 
-	/* 目标文件：等宽、最弱的一档，它只是说明「写去哪」 */
-	.writebar-file {
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: var(--admin-fs-data, 0.6875rem);
-		color: var(--content-meta);
+	.savebar-notice :global(.inline-icon) {
+		flex-shrink: 0;
 	}
 
-	/* 逐行 diff：等宽、带边框的小面板，增/删行各有底色 */
-	.alerts {
-		margin: 0 var(--admin-gutter, 1.5rem) 0.875rem;
-		/* 改动多时自己滚，不能把写入栏顶出卡片 */
-		max-height: 40vh;
+	.notice-chevron {
+		margin-left: 0.125rem;
+	}
+
+	/* 逐行 diff：符号 + 变量名 + 变更内容；行本身可点，跳回对应字段 */
+	.dirty-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		max-height: 15rem;
 		overflow-y: auto;
-		border: 1px solid var(--line-divider);
-		border-radius: 12px;
-		overflow: hidden;
+		padding: 0.375rem 1.5rem 0.75rem;
+		border-top: 1px solid var(--line-divider);
 		background: var(--card-bg);
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: var(--admin-fs-meta, 0.75rem);
 	}
 
-	.alerts-head {
-		display: flex;
-		align-items: center;
-		gap: 0.625rem;
-		padding: 0.5rem 0.875rem;
-		background: var(--btn-regular-bg);
-		font-size: var(--admin-fs-data, 0.6875rem);
-		color: var(--content-meta);
-		border-bottom: 1px solid var(--line-divider);
-	}
-
-	.alerts-head .p {
-		color: var(--deep-text);
-	}
-
-	.alerts-head .grow {
-		flex: 1;
-	}
-
-	.alerts-head .mono {
-		font-family: var(--font-mono, ui-monospace, monospace);
-	}
-
-	.alerts-row {
-		display: flex;
+	.dirty-item {
+		display: grid;
+		grid-template-columns: 0.75rem 11rem minmax(0, 1fr);
+		gap: 0.75rem;
 		align-items: baseline;
-		gap: 0.625rem;
-		width: 100%;
-		padding: 0.1875rem 0.875rem;
+		padding: 0.375rem 0.5rem;
 		border: none;
-		background: none;
-		font: inherit;
+		border-radius: 6px;
+		background: transparent;
+		font-family: inherit;
 		text-align: left;
 		cursor: pointer;
+		transition: background-color 0.15s ease;
 	}
 
-	.alerts-row:hover {
+	.dirty-item:hover {
 		background: var(--btn-plain-bg-hover);
 	}
 
-	.alerts-row:focus-visible {
+	.dirty-item:focus-visible {
 		outline: 2px solid var(--primary);
 		outline-offset: -2px;
 	}
 
-	.alerts-row.add {
-		background: color-mix(in srgb, var(--success) 9%, transparent);
+	.dirty-sign {
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-body, 0.875rem);
+		font-weight: 700;
+		line-height: 1.4;
 	}
 
-	.alerts-row.remove {
-		background: color-mix(in srgb, var(--destructive) 9%, transparent);
-	}
-
-	.alerts-row .sign {
-		flex-shrink: 0;
-		width: 0.625rem;
-		color: var(--content-meta);
-	}
-
-	.alerts-row.add .sign {
+	.dirty-sign.add {
 		color: var(--success);
 	}
 
-	.alerts-row.remove .sign {
-		color: var(--destructive);
-	}
-
-	.alerts-row.replace .sign {
+	.dirty-sign.replace {
 		color: var(--primary);
 	}
 
-	.alerts-row .k {
-		flex-shrink: 0;
-		color: var(--content-meta);
+	.dirty-sign.remove {
+		color: var(--destructive);
 	}
 
-	.alerts-row .v {
-		min-width: 0;
+	.dirty-key {
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
+		letter-spacing: 0.02em;
 		color: var(--deep-text);
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.dirty-change {
+		min-width: 0;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		line-height: 1.6;
+		color: var(--content-meta);
 		overflow-wrap: anywhere;
 	}
 
-	.alerts-row .old {
+	.dirty-change .old {
 		color: var(--content-meta);
 		text-decoration: line-through;
+	}
+
+	.dirty-change .arrow {
+		margin: 0 0.375rem;
+		color: var(--content-meta);
+	}
+
+	.dirty-change .new {
+		color: var(--deep-text);
+	}
+
+	.savebar-actions {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.625rem;
+		flex-shrink: 0;
+		margin-left: auto;
 	}
 
 	/* ── 未保存确认弹窗 ── */

@@ -478,8 +478,7 @@ export const ru: Translation = {
 	[Key.adminBackHome]: "На сайт",
 	[Key.adminCategoriesAndTags]: "Категории и теги",
 	[Key.adminEnvVars]: "Переменные среды",
-	[Key.adminEnvVarsIntro]:
-		"Здесь управляются секреты и переменные среды сайта; изменения записываются в файл конфигурации в корне проекта",
+	[Key.adminEnvVarsIntro]: "Только для локальной разработки: изменения записываются в .env.local и никуда не отправляются. Готовую конфигурацию переносите в продакшн через «Экспорт конфигурации».",
 	[Key.adminCategories]: "Категории",
 	[Key.adminCategoriesIntro]:
 		"Управление категориями: создание, переименование и удаление обновляют связанные статьи",
@@ -919,16 +918,13 @@ export const ru: Translation = {
 	[Key.secretsNotConfigured]: "Не настроено",
 	[Key.secretsPendingDelete]: "Ожидает удаления",
 	[Key.secretsSave]: "Сохранить секреты",
-	[Key.secretsWriteEnv]: "Записать в .env.local",
-	[Key.secretsWritePending]: "Срочные действия · {count}",
 	[Key.secretsSaving]: "Сохранение…",
 	[Key.secretsReload]: "Обновить",
 	[Key.secretsWritableHint]:
 		"Изменения будут записаны в {file} в корне проекта. Применятся после перезапуска.",
 	[Key.secretsReadonlyHint]:
 		"В продакшене файловая система доступна только для чтения. Настройте переменные окружения на платформе развёртывания (например, Vercel).",
-	[Key.secretsStatusAllDone]:
-		"Все обязательные настройки выполнены! Изменения записываются в {file} в корне проекта",
+	[Key.secretsStatusAllDone]: "Все обязательные настройки заполнены",
 	[Key.secretsStatusGotIt]: "Понятно",
 	[Key.secretsLeakCheck]: "Проверить утечку ключей",
 	[Key.secretsProbeCheck]: "Проверить подключение",

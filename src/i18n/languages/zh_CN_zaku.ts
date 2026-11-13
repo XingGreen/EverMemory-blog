@@ -866,8 +866,6 @@ export const zaku: Translation = {
 	[Key.secretsNotConfigured]: "未配置",
 	[Key.secretsPendingDelete]: "待清除",
 	[Key.secretsSave]: "保存密钥",
-	[Key.secretsWriteEnv]: "寫入 .env.local",
-	[Key.secretsWritePending]: "緊急操作警報單 · {count} 項",
 	[Key.secretsSaving]: "儲存中…",
 	[Key.secretsReload]: "刷新",
 	[Key.secretsWritableHint]: "修改将写入项目根目录的 {file}，重启服务后生效",

@@ -463,8 +463,7 @@ export const zh_TW: Translation = {
 	[Key.adminBackHome]: "返回前台",
 	[Key.adminCategoriesAndTags]: "分类与标签管理",
 	[Key.adminEnvVars]: "環境變數",
-	[Key.adminEnvVarsIntro]:
-		"此處管理站點運行所需的密鑰與環境變數，修改會寫入專案根目錄的設定檔",
+	[Key.adminEnvVarsIntro]: "僅供本機開發：改動會儲存到 .env.local，不會上傳。設定好後用「匯出配置」帶到線上。",
 	[Key.adminCategories]: "分類管理",
 	[Key.adminCategoriesIntro]:
 		"管理文章分類：新建、重新命名、刪除會同步更新相關文章",
@@ -874,16 +873,13 @@ export const zh_TW: Translation = {
 	[Key.secretsNotConfigured]: "未設定",
 	[Key.secretsPendingDelete]: "待清除",
 	[Key.secretsSave]: "儲存密鑰",
-	[Key.secretsWriteEnv]: "寫入 .env.local",
-	[Key.secretsWritePending]: "緊急操作警報單 · {count} 項",
 	[Key.secretsSaving]: "儲存中…",
 	[Key.secretsReload]: "重新整理",
 	[Key.secretsWritableHint]:
 		"修改將寫入專案根目錄的 {file}，重新啟動服務後生效",
 	[Key.secretsReadonlyHint]:
 		"目前為正式環境建置，檔案系統唯讀；請到部署平台（如 Vercel）的環境變數設定中設定",
-	[Key.secretsStatusAllDone]:
-		"你已完成所有必要設定！修改將寫入專案根目錄的 {file}",
+	[Key.secretsStatusAllDone]: "所有必要設定都已完成",
 	[Key.secretsStatusGotIt]: "知道了",
 	[Key.secretsLeakCheck]: "检测密钥泄露",
 	[Key.secretsProbeCheck]: "驗證連線",

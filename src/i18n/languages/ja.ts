@@ -474,8 +474,7 @@ export const ja: Translation = {
 	[Key.adminBackHome]: "サイトに戻る",
 	[Key.adminCategoriesAndTags]: "カテゴリとタグ管理",
 	[Key.adminEnvVars]: "環境変数",
-	[Key.adminEnvVarsIntro]:
-		"サイトの実行に必要なシークレットと環境変数を管理します。変更はプロジェクト直下の設定ファイルに書き込まれます",
+	[Key.adminEnvVarsIntro]: "ローカル開発専用です。変更は .env.local に保存され、アップロードされません。設定後は「設定をエクスポート」で本番環境へ。",
 	[Key.adminCategories]: "カテゴリ管理",
 	[Key.adminCategoriesIntro]:
 		"記事カテゴリを管理します。作成・名前変更・削除は関連記事にも反映されます",
@@ -906,16 +905,13 @@ export const ja: Translation = {
 	[Key.secretsNotConfigured]: "未設定",
 	[Key.secretsPendingDelete]: "削除予定",
 	[Key.secretsSave]: "シークレットを保存",
-	[Key.secretsWriteEnv]: ".env.local に書き込む",
-	[Key.secretsWritePending]: "要対応の警告 · {count} 件",
 	[Key.secretsSaving]: "保存中…",
 	[Key.secretsReload]: "更新",
 	[Key.secretsWritableHint]:
 		"変更はプロジェクトルートの {file} に書き込まれます。再起動後に有効になります",
 	[Key.secretsReadonlyHint]:
 		"本番ビルドではファイルシステムは読み取り専用です。デプロイプラットフォーム（Vercel など）の環境変数で設定してください",
-	[Key.secretsStatusAllDone]:
-		"必要な設定はすべて完了しています！変更はプロジェクト直下の {file} に書き込まれます",
+	[Key.secretsStatusAllDone]: "必要な設定はすべて完了しています",
 	[Key.secretsStatusGotIt]: "了解しました",
 	[Key.secretsLeakCheck]: "鍵の漏洩を確認",
 	[Key.secretsProbeCheck]: "接続を確認",

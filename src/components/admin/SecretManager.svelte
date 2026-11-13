@@ -35,11 +35,9 @@ let {
 		writable: boolean;
 		loading: boolean;
 		saving: boolean;
-		/** 写入目标文件名，显示在写入栏右侧 */
-		envFile: string;
 		changedCount: number;
 		/** 未保存改动的逐行 diff（新增/替换/移除），供保存栏展开显示 */
-		alertRows: AlertRow[];
+		diffRows: SecretDiffRow[];
 		scrollToField: (key: string) => void;
 		save: () => void;
 		discard: () => void;
@@ -48,7 +46,6 @@ let {
 
 let items = $state<SecretItemDTO[]>([]);
 let writable = $state(false);
-let envFile = $state(".env.local");
 /** 私钥来源：.env 里 / .key 文件里 / 没有 */
 let privateKeySource = $state<"env" | "file" | "none">("none");
 let loading = $state(true);
@@ -380,9 +377,8 @@ $effect(() => {
 		writable,
 		loading,
 		saving,
-		envFile,
 		changedCount,
-		alertRows,
+		diffRows,
 		scrollToField,
 		save,
 		discard: discardAll,
@@ -401,7 +397,6 @@ async function load() {
 				.filter((a: { tracked: boolean }) => a.tracked)
 				.map((a: { path: string }) => a.path);
 			writable = data.writable;
-			envFile = data.file || ".env.local";
 			privateKeySource = data.privateKeySource ?? "none";
 			// 本地开发环境：直接把明文回填到表单，便于查看与局部修改
 			drafts = {};
@@ -570,7 +565,7 @@ async function doSave(
    就是全部，不会有额外的格式变化。
 
    行由 buildEntries() 派生——列表与真正提交的条目同源，不两处各算一遍。 */
-type AlertRow = {
+type SecretDiffRow = {
 	key: string;
 	label: string;
 	kind: "add" | "replace" | "remove";
@@ -580,7 +575,7 @@ type AlertRow = {
 	masked: boolean;
 };
 
-const alertRows = $derived.by<AlertRow[]>(() => {
+const diffRows = $derived.by<SecretDiffRow[]>(() => {
 	const byKey = new Map(items.map((i) => [i.key, i]));
 	const clip = (v: string) =>
 		!v ? "" : v.length > 40 ? `${v.slice(0, 40)}…` : v;
@@ -598,7 +593,7 @@ const alertRows = $derived.by<AlertRow[]>(() => {
 			from: masked ? "" : clip(draftsOrigin[entry.key] ?? ""),
 			to: masked ? "" : clip(entry.value ?? ""),
 			masked,
-		} satisfies AlertRow;
+		} satisfies SecretDiffRow;
 	});
 });
 
@@ -895,9 +890,8 @@ function answerConfirm(ok: boolean) {
 		{:else if !successDismissed}
 			<div class="note">
 				<span class="note-mark ok" aria-hidden="true">✓</span>
-				<span>{i18n(I18nKey.secretsStatusAllDone).replace("{file}", envFile)}</span>
+				<span>{i18n(I18nKey.secretsStatusAllDone)}</span>
 				<span class="grow"></span>
-				<span class="mono dim">{envFile}</span>
 				<button type="button" class="link" onclick={dismissSuccess}
 					>{i18n(I18nKey.secretsStatusGotIt)}</button
 				>
@@ -969,7 +963,7 @@ function answerConfirm(ok: boolean) {
 								{#if configured && !uploadNames[row.keys[0]]}
 									<div class="field-box">
 										<span class="ok" aria-hidden="true">✓</span>
-										<span>已上传，保存在 {envFile}</span>
+										<span>已上传</span>
 										<span class="grow"></span>
 										<button
 											type="button"
@@ -1410,6 +1404,12 @@ function answerConfirm(ok: boolean) {
 
 	.right {
 		min-width: 0;
+	}
+
+	/* 后台容器不限宽，输入框不能跟着容器一直拉长：
+	   控件与结果行统一封在 32rem，行分隔线仍走满宽。 */
+	.prow .right > * {
+		max-width: 32rem;
 	}
 
 	/* 机器值（仓库地址、ID、密钥）用等宽：字号继承 .ui-input 的 15px，

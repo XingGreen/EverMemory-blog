@@ -478,8 +478,7 @@ export const en: Translation = {
 	[Key.adminBackHome]: "Back to site",
 	[Key.adminCategoriesAndTags]: "Categories & tags",
 	[Key.adminEnvVars]: "Env Vars",
-	[Key.adminEnvVarsIntro]:
-		"Manage the secrets and environment variables this site needs; changes are written to the config file in the project root",
+	[Key.adminEnvVarsIntro]: "Local development only: changes go to .env.local and are never uploaded. Use Export Config to take them to production.",
 	[Key.adminCategories]: "Categories",
 	[Key.adminCategoriesIntro]:
 		"Manage post categories: create, rename and delete update related posts",
@@ -913,16 +912,13 @@ export const en: Translation = {
 	[Key.secretsNotConfigured]: "Not configured",
 	[Key.secretsPendingDelete]: "Pending removal",
 	[Key.secretsSave]: "Save Secrets",
-	[Key.secretsWriteEnv]: "Write .env.local",
-	[Key.secretsWritePending]: "Action alerts · {count}",
 	[Key.secretsSaving]: "Saving…",
 	[Key.secretsReload]: "Refresh",
 	[Key.secretsWritableHint]:
 		"Changes are written to {file} in the project root. Restart the service to apply.",
 	[Key.secretsReadonlyHint]:
 		"Read-only in production. Configure these in your deploy platform's environment variables (e.g. Vercel).",
-	[Key.secretsStatusAllDone]:
-		"All required configuration is complete! Changes are written to {file} at the project root",
+	[Key.secretsStatusAllDone]: "All required settings are in place",
 	[Key.secretsStatusGotIt]: "Got it",
 	[Key.secretsLeakCheck]: "Check for leaked secrets",
 	[Key.secretsProbeCheck]: "Check connection",
