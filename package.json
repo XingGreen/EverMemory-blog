@@ -20,7 +20,7 @@
     "pagefind": "npx tsx scripts/run-pagefind.ts",
     "type-check": "tsc --noEmit --isolatedDeclarations",
     "new-post": "node scripts/new-post.js",
-    "env:tool": "node tools/env-tool/server.mjs",
+    "env:tool": "node scripts/env-tool.mjs",
     "format": "biome format --write ./src",
     "lint": "biome check --write ./src",
     "preinstall": "npx only-allow pnpm",
