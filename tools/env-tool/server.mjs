@@ -303,6 +303,11 @@ const server = createServer(async (req, res) => {
 			return;
 		}
 
+		if (url.pathname === "/api/health") {
+			json(res, { ok: true, tool: "env-tool", target: TARGET });
+			return;
+		}
+
 		if (url.pathname === "/api/state") {
 			let text = "";
 			try {
@@ -359,22 +364,61 @@ const server = createServer(async (req, res) => {
 	}
 });
 
-server.on("error", (error) => {
-	if (error.code === "EADDRINUSE") {
-		console.error(`端口 ${PORT_START} 被占用，换一个：set ENV_TOOL_PORT=8790 && node tools/env-tool/server.mjs`);
-	} else {
-		console.error(error.message);
-	}
-	process.exit(1);
-});
+/**
+ * 端口策略：从 8788 起找第一个可用端口；若那个端口上已经有一个本工具在跑，
+ * 不再起第二个，直接把浏览器指过去。这样重复双击、或上一次没关干净，都不会失败。
+ */
+const PORT_MAX = PORT_START + 9;
 
-server.listen(PORT_START, HOST, () => {
-	const url = `http://${HOST}:${PORT_START}/`;
-	console.log(`环境变量工具已启动：${url}`);
-	console.log(`写入目标：${TARGET}`);
-	console.log("关闭窗口即停止。");
-	openBrowser(url);
-});
+async function alreadyRunning(port) {
+	try {
+		const res = await fetch(`http://${HOST}:${port}/api/health`, {
+			signal: AbortSignal.timeout(400),
+		});
+		const data = await res.json();
+		return data?.tool === "env-tool";
+	} catch {
+		return false;
+	}
+}
+
+function tryListen(port) {
+	return new Promise((resolve) => {
+		const onError = () => {
+			server.removeListener("listening", onListening);
+			resolve(false);
+		};
+		const onListening = () => {
+			server.removeListener("error", onError);
+			resolve(true);
+		};
+		server.once("error", onError);
+		server.once("listening", onListening);
+		server.listen(port, HOST);
+	});
+}
+
+async function start() {
+	for (let port = PORT_START; port <= PORT_MAX; port++) {
+		if (await alreadyRunning(port)) {
+			console.log(`端口 ${port} 上已经有一个在跑，直接打开它。`);
+			openBrowser(`http://${HOST}:${port}/`);
+			return;
+		}
+		const ok = await tryListen(port);
+		if (!ok) continue;
+		const url = `http://${HOST}:${port}/`;
+		console.log(`环境变量工具已启动：${url}`);
+		console.log(`写入目标：${TARGET}`);
+		console.log("关闭窗口即停止。");
+		openBrowser(url);
+		return;
+	}
+	console.error(`端口 ${PORT_START}-${PORT_MAX} 都不可用。用 ENV_TOOL_PORT 指定一个空闲端口。`);
+	process.exit(1);
+}
+
+start();
 
 /** 起服务再开浏览器，避免浏览器先到一步看到「拒绝连接」 */
 function openBrowser(url) {

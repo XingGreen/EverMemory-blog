@@ -55,6 +55,57 @@ body {
 h1 { margin: 0; font-size: var(--fs-page); font-weight: 650; line-height: 1.35; }
 .lede { margin: 4px 0 0; color: var(--content-meta); font-size: var(--fs-meta); max-width: 56ch; }
 
+.head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+}
+.head .total {
+	margin-top: 6px;
+	font-size: var(--fs-meta);
+	color: var(--content-meta);
+	white-space: nowrap;
+}
+.head .total b {
+	font-family: var(--font-mono);
+	font-size: var(--fs-data);
+	font-weight: 500;
+	color: var(--deep-text);
+}
+.notice {
+	margin: 12px 0 0;
+	padding: 10px 12px;
+	border: 1px dashed var(--input-border);
+	border-radius: 10px;
+	font-size: var(--fs-meta);
+	color: var(--content-meta);
+}
+.key-saved {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: 36px;
+	padding: 0 12px;
+	border: 1px solid var(--input-border);
+	border-radius: 10px;
+	background: var(--input-bg);
+	font-size: var(--fs-meta);
+}
+.key-saved .ok { color: var(--success); }
+.key-saved .grow { flex: 1; }
+.ghost-toggle {
+	border: 0;
+	background: none;
+	padding: 0;
+	min-height: 24px;
+	color: var(--primary);
+	font-family: inherit;
+	font-size: var(--fs-meta);
+	cursor: pointer;
+	margin-left: 8px;
+}
+
 .card {
 	margin-top: 16px;
 	background: var(--card-bg);
@@ -144,8 +195,14 @@ textarea.ui-input {
 </head>
 <body class="dark">
 <div class="wrap">
-	<h1>环境变量</h1>
-	<p class="lede">保存到项目根目录的 .env.local。本页只在本机运行，不需要登录后台，也不会上传任何值。</p>
+	<div class="head">
+		<div>
+			<h1>环境变量</h1>
+			<p class="lede">保存到项目根目录的 .env.local。本页只在本机运行，不需要登录后台，也不会上传任何值。</p>
+		</div>
+		<span class="total" id="total"></span>
+	</div>
+	<p class="notice" id="notice" hidden>还没有 .env.local。填完下面几项、点保存时就会创建它。</p>
 	<div class="card" id="card"></div>
 </div>
 
@@ -161,7 +218,7 @@ textarea.ui-input {
 const GROUPS = [
 	{ id: "github", title: "GitHub App 凭据", sub: "写入仓库", hint: "都在 GitHub 的 App 设置页" },
 	{ id: "auth", title: "管理员认证", sub: "后台登录", hint: "OAuth 凭据在同一个 App 页面，用户 ID 来自你的 GitHub 账号" },
-	{ id: "turnstile", title: "人机验证", sub: "可选", hint: "在 Cloudflare 的 Turnstile 里创建站点后填写" },
+	{ id: "turnstile", title: "人机验证", sub: "可选", hint: "在 Cloudflare 的 Turnstile 里创建站点后填写", optionalGroup: true },
 ];
 
 const FIELDS = [
@@ -184,9 +241,14 @@ const FIELDS = [
 
 const values = {};
 const original = {};
+const state = { exists: true, collapsed: { turnstile: true } };
+let keyEditing = false;
+let keyBackup = "";
 const card = document.getElementById("card");
 const dirtyEl = document.getElementById("dirty");
 const saveBtn = document.getElementById("save");
+const totalEl = document.getElementById("total");
+const noticeEl = document.getElementById("notice");
 
 const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const filled = (f) => (values[f.key] || "").trim().length > 0;
@@ -197,31 +259,48 @@ function render() {
 		const req = items.filter((f) => f.required);
 		const done = req.filter(filled).length;
 		const tone = done === req.length && req.length > 0 ? "count done" : "count";
+		const collapsed = Boolean(state.collapsed[g.id]);
+		const counter = g.optionalGroup ? "可选" : `${done} / ${req.length} 已配`;
 		return `
 		<section class="group">
 			<div class="ghead">
 				<h2>${escapeHtml(g.title)}</h2>
 				<span class="sub">${escapeHtml(g.sub)}</span>
-				<span class="${tone}">${done} / ${req.length} 已配</span>
+				<span class="${tone}">${counter}</span>
+				${g.optionalGroup ? `<button type="button" class="ghost-toggle" data-toggle="${g.id}">${collapsed ? "展开" : "收起"}</button>` : ""}
 			</div>
 			<p class="ghint">${escapeHtml(g.hint)}</p>
-			${items.map(row).join("")}
+			${collapsed ? "" : items.map(row).join("")}
 		</section>`;
 	}).join("");
 	bind();
 	refreshDirty();
 }
 
+function refreshTotal() {
+	const req = FIELDS.filter((f) => f.required);
+	const done = req.filter(filled).length;
+	if (totalEl) totalEl.innerHTML = `必要项 <b>${done}</b> / ${req.length}`;
+}
+
 function row(f) {
 	const value = values[f.key] || "";
 	const attrs = `data-key="${f.key}" spellcheck="false" placeholder="${escapeHtml(f.example || "")}"`;
-	const control = f.multiline
-		? `<textarea class="ui-input" ${attrs} rows="4">${escapeHtml(value)}</textarea>`
-		: `<input class="ui-input${f.secret ? "" : " mono"}" ${attrs} type="${f.secret ? "password" : "text"}" value="${escapeHtml(value)}" />`;
+	const saved = f.multiline && !keyEditing && value.length > 200;
+
+	let control;
+	if (saved) {
+		control = `<div class="key-saved"><span class="ok">✓</span><span>已保存 · ${value.length} 个字符</span><span class="grow"></span><button type="button" class="link" data-replace="${f.key}">替换</button></div>`;
+	} else if (f.multiline) {
+		control = `<textarea class="ui-input" ${attrs} rows="4" placeholder="-----BEGIN … PRIVATE KEY----- 整段粘贴">${escapeHtml(value)}</textarea>`;
+	} else {
+		control = `<input class="ui-input${f.secret ? "" : " mono"}" ${attrs} type="${f.secret ? "password" : "text"}" value="${escapeHtml(value)}" />`;
+	}
 
 	const extra = [];
 	if (f.generate) extra.push(`<button type="button" class="ui-btn ui-btn-sm ui-btn-soft" data-generate="${f.key}">生成</button>`);
 	if (f.probe) extra.push(`<button type="button" class="ui-btn ui-btn-sm ui-btn-soft" data-probe="1">从 GitHub 获取</button>`);
+	if (f.multiline && keyEditing) extra.push(`<button type="button" class="ui-btn ui-btn-sm ui-btn-ghost" data-cancel-key="1">取消</button>`);
 
 	return `
 	<div class="row">
@@ -242,6 +321,30 @@ function bind() {
 			values[e.target.dataset.key] = e.target.value;
 			refreshDirty();
 			updateCount(el.closest(".group"));
+		});
+	});
+
+	card.querySelectorAll("[data-toggle]").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			state.collapsed[btn.dataset.toggle] = !state.collapsed[btn.dataset.toggle];
+			render();
+		});
+	});
+
+	card.querySelectorAll("[data-replace]").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			keyBackup = original[btn.dataset.replace] || "";
+			values[btn.dataset.replace] = "";
+			keyEditing = true;
+			render();
+		});
+	});
+
+	card.querySelectorAll("[data-cancel-key]").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			values.GITHUB_PRIVATE_KEY = keyBackup;
+			keyEditing = false;
+			render();
 		});
 	});
 
@@ -327,11 +430,14 @@ function refreshDirty() {
 	const n = changedKeys().length;
 	dirtyEl.textContent = n === 0 ? "没有改动" : `还有 ${n} 项未保存`;
 	saveBtn.disabled = n === 0;
+	refreshTotal();
 }
 
 async function load() {
 	const res = await fetch("/api/state");
 	const data = await res.json();
+	state.exists = Boolean(data.exists);
+	if (noticeEl) noticeEl.hidden = state.exists;
 	for (const f of FIELDS) {
 		const v = data.values?.[f.key] ?? "";
 		values[f.key] = v;
