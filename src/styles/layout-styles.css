@@ -828,3 +828,13 @@ html[data-wallpaper-mode="fullscreen"] body:not(.wallpaper-initialized) .w-full.
         transition: top 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s !important;
     }
 }
+
+/* 右侧边栏：页面被缩小（67%~90% 缩放）时保持可见。
+   接近或等于 100% 缩放时不命中本规则，仍按原有的 xl 宽度阈值隐藏。
+   下限与 xl 断点同为 1280px，避免在两列布局里强行插出第三列。
+   选择器只命中右栏容器，不改栅格列数、不影响左栏与其它组件。 */
+@media (min-width: 1280px) and (max-resolution: 0.99dppx) {
+    #right-sidebar {
+        display: block !important;
+    }
+}
