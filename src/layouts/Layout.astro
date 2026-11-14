@@ -460,7 +460,7 @@ const siteLogo = await getSiteLogo();
             if (wallpaperWrapper) {
               wallpaperWrapper.classList.remove("wallpaper-overlay");
               wallpaperWrapper.classList.add("wallpaper-fullscreen");
-              const isMobile = window.innerWidth < 1024;
+              const isMobile = window.innerWidth < 768;
               // 移动端非首页时隐藏壁纸（与横幅模式一致）
               if (isMobile && !isHomePage) {
                 wallpaperWrapper.style.display = "none";
@@ -483,7 +483,7 @@ const siteLogo = await getSiteLogo();
             if (wallpaperWrapper) {
               wallpaperWrapper.classList.remove("wallpaper-overlay");
               wallpaperWrapper.classList.remove("wallpaper-fullscreen");
-              const isMobile = window.innerWidth < 1024;
+              const isMobile = window.innerWidth < 768;
               // 移动端非首页时隐藏banner（初始状态直接隐藏，不需要动画）
               // 桌面端始终显示banner
               if (isMobile && !isHomePage) {
@@ -503,7 +503,7 @@ const siteLogo = await getSiteLogo();
           if (mainContentWrapper) {
             // 初始化期间禁用过渡动画，防止内容位置跳动
             mainContentWrapper.style.setProperty("transition", "none", "important");
-            const isMobile = window.innerWidth < 1024;
+            const isMobile = window.innerWidth < 768;
             // 只在移动端非首页时调整主内容位置
             if (isMobile && !isHomePage) {
               mainContentWrapper.classList.add("mobile-main-no-banner");
@@ -511,7 +511,7 @@ const siteLogo = await getSiteLogo();
               mainContentWrapper.classList.remove("mobile-main-no-banner");
             }
             // 全屏壁纸模式：用 relative 定位让内容紧跟壁纸（移动端非首页除外，壁纸已隐藏）
-            const isMobileNonHome = window.innerWidth < 1024 && !isHomePage;
+            const isMobileNonHome = window.innerWidth < 768 && !isHomePage;
             if (wallpaperMode === WALLPAPER_FULLSCREEN && !isMobileNonHome) {
               mainContentWrapper.style.position = "relative";
               mainContentWrapper.style.top = "0";
@@ -775,7 +775,7 @@ const siteLogo = await getSiteLogo();
     }
   }
 
-  @media (max-width: 1023px) {
+  @media (max-width: 767px) {
     body.enable-banner:not(.lg\:is-home) #main-grid {
       transform: none !important;
     }
@@ -1058,7 +1058,7 @@ function disableAnimation() {
     window.swup.hooks.on("content:replace", () => {
       const isHome = pathsEqual(window.location.pathname, url("/"));
       const currentMode = document.documentElement.getAttribute("data-wallpaper-mode");
-      const isMobileForBanner = window.innerWidth < 1024;
+      const isMobileForBanner = window.innerWidth < 768;
       const mainEl = document.querySelector(".w-full.z-30.pointer-events-none") as HTMLElement | null;
 
       // 移动端 banner/全屏模式非首页：隐藏壁纸并调整内容位置（首页由 visit:start 和 page:view 处理）
@@ -1198,8 +1198,8 @@ function disableAnimation() {
       }
 
       // Control mobile banner visibility based on page with improved staging animation
-      // 只在移动端（1024px以下）处理banner隐藏
-      const isMobile = window.innerWidth < 1024;
+      // 只在移动端（767px以下）处理banner隐藏
+      const isMobile = window.innerWidth < 768;
 
       // 在移动端禁用文章列表容器的过渡动画，防止与主内容区位置变化冲突
       if (isMobile) {
@@ -1327,7 +1327,7 @@ function disableAnimation() {
       // 移动端 banner/全屏模式：非首页隐藏壁纸，首页恢复
       const isHome = pathsEqual(window.location.pathname, url("/"));
       const currentMode = document.documentElement.getAttribute("data-wallpaper-mode");
-      const isMobileForBanner = window.innerWidth < 1024;
+      const isMobileForBanner = window.innerWidth < 768;
       const wrapper = document.getElementById("wallpaper-wrapper") as HTMLElement | null;
       const mainEl = document.querySelector(".w-full.z-30.pointer-events-none") as HTMLElement | null;
       if (isMobileForBanner && (currentMode === "banner" || currentMode === "fullscreen")) {
@@ -1375,7 +1375,7 @@ function disableAnimation() {
       }
 
       // 在移动端恢复文章列表容器的过渡动画（在主内容区位置动画完成后）
-      const isMobile = window.innerWidth < 1024;
+      const isMobile = window.innerWidth < 768;
       if (isMobile) {
         setTimeout(() => {
           const postListContainer = document.getElementById("post-list-container");

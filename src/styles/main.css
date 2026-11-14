@@ -420,7 +420,7 @@ html {
     }
 
     /* 响应式隐藏 */
-    @media (max-width: 768px) {
+    @media (max-width: 767px) {
         .dropdown-container {
             @apply hidden;
         }

@@ -267,7 +267,7 @@ const archiveUrl = url("/archive/");
 
   function shouldDeferCategoryScroll(bar: HTMLElement, currentUrl: URL) {
     const { isHome } = getCategoryBarState(bar, currentUrl);
-    const isMobile = window.innerWidth < 1024;
+    const isMobile = window.innerWidth < 768;
     const isBannerMode = document.body.classList.contains("enable-banner");
     return isMobile && isBannerMode && !isHome;
   }
