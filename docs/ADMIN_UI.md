@@ -165,7 +165,6 @@ The settings page is the reference implementation (`CONFIG_GROUPS` → `settings
 ## 6. Page skeleton
 
 Every page is: `PageHeader` → optional `Toolbar` → one scroll region → optional footer.
-
 `AdminPage` is now only a shell: card, one scroll region, optional footer, and it renders
 `PageHeader` for its heading. It is not a header implementation of its own.
 
@@ -176,6 +175,19 @@ Every page is: `PageHeader` → optional `Toolbar` → one scroll region → opt
   (`--input-border`), not a transparent one.
 - A page may not add a second sticky bar, a second hairline, or its own padding overrides.
 - Empty and error states live inside the scroll region and use `ui-btn` variants.
+
+### Width
+
+The whole admin surface — sidebar included — is capped at `--admin-max-width`, which
+resolves to the frontend's `--page-width` (default `100rem` / 1600px) and is centred with
+`margin-inline: auto`. One column, both columns inside it; no page sets its own max-width.
+
+The page background still spans the viewport, so on a 2560px screen the result is a
+1600px work area with background either side, not a stretched form.
+
+Because the column no longer grows with the viewport, the old viewport-proportional
+`zoom` tiers were removed: scaling past the cap only pushed content out of it. Density
+comes from the type and spacing scale; browser zoom remains the user's control.
 
 ## 7. Actions
 

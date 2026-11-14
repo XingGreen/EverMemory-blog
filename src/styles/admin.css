@@ -31,6 +31,10 @@
   --admin-fs-meta: 0.75rem;
   --admin-fs-data: 0.6875rem;
 
+  /* 后台宽度上界：直接取前台同一份 --page-width（默认 100rem / 1600px），
+     站长在前台改 pageWidth 时后台跟着变，两边永远同宽。 */
+  --admin-max-width: var(--page-width, 100rem);
+
   /* 侧边栏底色必须与 --page-bg 拉开一档，否则导航栏会与页面背景完全融为一体。
      引用 --card-bg 而非写死色值：两种模式都取「比页面更亮的卡片色」保持同一套
      凸起语义，且只需在各自模式下改 --card-bg 一处，不会再出现两模式不同步。 */
@@ -67,6 +71,18 @@
   --font-mono: "JetBrains Mono", "Monaco", "Consolas", monospace;
 
   font-family: var(--font-sans);
+}
+
+/* 后台的宽度上界。
+ *
+ * 侧栏与主内容区都在这一层之内，一起被约束并整列居中：超宽屏上不再是
+ * 一条拉满 2560px 的表单/表格，而是与前台正文同宽的 1600px 工作区。
+ * 页面底色仍铺满整屏（背景挂在 .admin-shell 上），所以两侧留白只是留白。
+ * 窄屏不受影响：max-width 只在可用宽度大于上界时生效。 */
+.admin-container {
+  width: 100%;
+  max-width: var(--admin-max-width);
+  margin-inline: auto;
 }
 
 .dark .admin-shell {

@@ -960,8 +960,8 @@ $effect(() => {
 {/if}
 
 <style>
-	/* 尺寸单位固定 1px：外层 .admin-content 已经用 --admin-zoom 统一缩放，
-	   这里若再用 0.07vw 会因为浏览器缩放反向变化而与外层叠加成双重增益。 */
+	/* 尺寸单位固定 1px：后台不再做视口缩放，密度由字号/间距阶梯决定，
+	   这里若用 0.07vw，会因为浏览器缩放而反向变化。 */
 	.taxonomy-browser {
 		--tx-unit: 1px;
 		--tx-rule: color-mix(in srgb, var(--content-meta) 20%, transparent);

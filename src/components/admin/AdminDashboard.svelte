@@ -2472,17 +2472,10 @@ function formatDate(dateStr: string | null): string {
 />
 
 <style>
-	/* 后台统一视口高度：给 zoom 容器内部的卡片用。
-	   .admin-content 带 zoom，其子元素的高度会被放大，
-	   所以这里预先除以 zoom，让卡片渲染后正好等于 (100vh - 3rem)。 */
+	/* 后台统一视口高度：给容器内部的卡片用，
+	   减去上下 1.5rem 内边距后正好等于 (100vh - 3rem)。 */
 	.admin-layout {
-		/* 基准缩放 1：与参考项目保持一致。参考的 --taxonomy-unit 是
-		   clamp(1px, 0.07vw, 1.5px)，在 1080 视口下正好取到 1px，且全程没有额外 zoom；
-		   之前这里压到 0.85 会让圆角、行高、间距一并缩掉 15%，视觉上明显更"紧"。
-		   只在超宽视口分档放大，且每档的放大幅度都小于视口增幅，保证缩放单调：
-		   1500→1900 视口 +27% 对 zoom +9.5%；1900→2400 +26% 对 +13%。 */
-		--admin-zoom: 1;
-		--admin-viewport-h: calc((100vh - 3rem) / var(--admin-zoom));
+		--admin-viewport-h: calc(100vh - 3rem);
 		display: flex;
 		align-items: stretch;
 		gap: 1.25rem;
@@ -3689,46 +3682,25 @@ function formatDate(dateStr: string | null): string {
 	.admin-content {
 		flex: 1;
 		min-width: 0;
-		/* 高度由受限的 .admin-layout（height: 100vh-3rem）通过 flex 分配。
-		   这里不再写死 calc，避免 zoom 容器内基准不一致。 */
+		/* 高度由受限的 .admin-layout（height: 100vh-3rem）通过 flex 分配 */
 		min-height: 0;
-		/* 内容区铺满可用宽度，不再设置 max-width 限制 */
+		/* 铺满容器：宽度上界统一在 .admin-container 上，这里不单独限宽 */
 		width: 100%;
 		display: flex;
 		flex-direction: column;
-		/* 与参考项目 --dashboard-unit / --settings-unit 同源的视口自适应，
-		   但改为固定分档（见 .admin-layout 的 --admin-zoom）：
-		   0.07vw 那种连续计算会与浏览器缩放反向耦合，缩放越小页面反而越大。
-		   0.85 解决 1024~1428 窗口里固定 px 显得过大的问题；≥1800 恢复 1，
-		   ≥2400 放大到 1.15，让超宽屏不至于过稀。 */
-		zoom: var(--admin-zoom);
 	}
 
-	/* 分档与 .admin-layout 上的变量定义配套；放这里是因为 zoom 只作用于本元素 */
-	/* 展开态宽度分档：与 .admin-sidebar 的 16rem 配套，≥1280 时对齐参考项目的 20rem */
+	/* 展开态宽度：与 .admin-sidebar 的 16rem 配套，≥1280 时对齐参考项目的 20rem */
 	@media (min-width: 1280px) {
 		.admin-sidebar {
 			width: 20rem;
 		}
 	}
 
-	@media (min-width: 1500px) {
-		.admin-layout {
-			--admin-zoom: 1.05;
-		}
-	}
-
-	@media (min-width: 1900px) {
-		.admin-layout {
-			--admin-zoom: 1.15;
-		}
-	}
-
-	@media (min-width: 2400px) {
-		.admin-layout {
-			--admin-zoom: 1.3;
-		}
-	}
+	/* 超宽屏不再放大 zoom。
+	   页面宽度已有 1600px 上界（.admin-container 的 --admin-max-width），
+	   可用宽度不会再随视口增长，此时再按视口放大只会让内容溢出上界、
+	   右侧留白吃掉。密度由固定的字号/间距阶梯决定，交给浏览器缩放。 */
 
 	/* 设置详情页：页面本身不滚动，滚动交给内部 .settings-body */
 	.admin-content.content-fixed {
