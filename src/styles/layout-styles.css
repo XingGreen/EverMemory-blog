@@ -829,11 +829,14 @@ html[data-wallpaper-mode="fullscreen"] body:not(.wallpaper-initialized) .w-full.
     }
 }
 
-/* 右侧边栏：页面被缩小（67%~90% 缩放）时保持可见。
-   接近或等于 100% 缩放时不命中本规则，仍按原有的 xl 宽度阈值隐藏。
-   下限与 xl 断点同为 1280px，避免在两列布局里强行插出第三列。
+/* 右侧边栏：三列宽度下保持可见，不再被缩放状态误判为「小屏」而隐藏。
+   缩小页面会放大 CSS 视口，67%~90% 缩放都落在 1280px 以上，右栏照常显示；
+   接近 100% 缩放且视口确实窄（<1280px）时不命中，仍按原断点隐藏。
+   下限与 xl 断点一致，避免在两列布局里强行插出第三列。
+   不用 devicePixelRatio 判断：系统显示缩放会改变它的基准（120% 显示缩放为 1.2），
+   任何写死的 dpr 阈值在部分机器上恒不成立。
    选择器只命中右栏容器，不改栅格列数、不影响左栏与其它组件。 */
-@media (min-width: 1280px) and (max-resolution: 0.99dppx) {
+@media (min-width: 1280px) {
     #right-sidebar {
         display: block !important;
     }
