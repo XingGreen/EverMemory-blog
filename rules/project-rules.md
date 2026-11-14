@@ -86,3 +86,14 @@ request to justify touching files outside the agreed area.
 - All language versions share the same structure: same heading count, same table rows, same
   bullet count, same link targets. Translate text only.
 - Write documentation in English. Chinese remains in user-facing copy and `src/i18n/`.
+
+## 6. CSS
+
+- `!important` must not appear in project stylesheets or `<style>` blocks. It breaks the
+  cascade, prevents declarations from being overridden normally, and increases maintenance
+  cost and conflict risk.
+- Every style override must be achieved by raising selector specificity or by changing the DOM
+  structure. Never use `!important` to work around a layout problem, including ones caused by
+  runtime class changes from scripts.
+- This rule covers the public theme and `/admin/` alike.
+- When reviewing a style change, grep the diff for `!important` and reject it if present.

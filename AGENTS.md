@@ -44,6 +44,10 @@ wired.
   user came for: what this is, what to do, what happened. Design rationale, refactor notes,
   review findings, mechanism names (`JWT`, `12-column grid`, "this replaces the old table") and
   any other inside-baseball explanation belong in code comments or `docs/`, never on screen.
+- **CSS.** `!important` is banned in project stylesheets and `<style>` blocks. It breaks the
+  cascade and makes declarations impossible to override, which raises maintenance cost and
+  conflict risk. Every override must be achieved by raising selector specificity or by changing
+  the DOM structure. Applies to the public theme and `/admin/` alike.
 
 - **Scope.** Edit `src/pages/admin/**`, `src/pages/api/admin/**`, and `src/components/admin/**`
   directly. Do not modify frontend routes (`src/pages/**` except admin), `src/layouts/**`, or
@@ -98,8 +102,8 @@ wired.
 
 ## Required documents
 
-- [`rules/project-rules.md`](./rules/project-rules.md) — scope table, Git policy, and delivery
-  rules in full.
+- [`rules/project-rules.md`](./rules/project-rules.md) — scope table, Git policy, CSS rules, and
+  delivery rules in full.
 - [`docs/ADMIN_UI.md`](./docs/ADMIN_UI.md) — the dashboard's design system: tokens, type scale,
   colour jobs, the three primitives, and the forbidden list. Required before any `/admin/` UI
   change.
