@@ -292,6 +292,17 @@ const server = createServer(async (req, res) => {
 			return;
 		}
 
+		// 直接复用主项目的控件样式，避免出现「第二套输入框」
+		if (url.pathname === "/assets/ui-base.css") {
+			const css = await readFile(path.join(ROOT, "src", "styles", "ui-base.css"));
+			res.writeHead(200, {
+				"Content-Type": "text/css; charset=utf-8",
+				"Cache-Control": "no-store",
+			});
+			res.end(css);
+			return;
+		}
+
 		if (url.pathname === "/api/state") {
 			let text = "";
 			try {
