@@ -1,5 +1,9 @@
-import { getAuthTokenFromRequest, verifySessionToken } from "@/utils/auth";
-import { isBreakglassConfigured } from "@/utils/auth";
+import {
+	getAuthTokenFromRequest,
+	isBreakglassConfigured,
+	verifySessionToken,
+} from "@/utils/auth";
+import { canBootstrap } from "@/utils/bootstrap-mode";
 import { isOAuthConfigured } from "@/utils/github-oauth";
 import { isKvBackend } from "@/utils/persist-store";
 import { isSessionStoreDegraded } from "@/utils/session-store";
@@ -13,10 +17,14 @@ export const prerender = false;
 export async function GET({ request }) {
 	const token = getAuthTokenFromRequest(request);
 	const payload = token ? await verifySessionToken(token) : null;
+	// 还没有任何会话、但密钥没配齐且来自本机：进入引导模式，让配置页能打开
+	const bootstrap = !payload && canBootstrap(request);
 
 	const body: {
 		success: boolean;
 		username?: string;
+		/** 引导模式：尚未登录，正在完成首次配置 */
+		bootstrap?: boolean;
 		oauthEnabled: boolean;
 		breakglassEnabled: boolean;
 		storage: {
@@ -25,7 +33,7 @@ export async function GET({ request }) {
 			degraded: boolean;
 		};
 	} = {
-		success: Boolean(payload),
+		success: Boolean(payload) || bootstrap,
 		oauthEnabled: isOAuthConfigured(),
 		breakglassEnabled: isBreakglassConfigured(),
 		storage: {
@@ -35,6 +43,9 @@ export async function GET({ request }) {
 	};
 	if (payload) {
 		body.username = payload.username || "admin";
+	} else if (bootstrap) {
+		body.username = "初始化";
+		body.bootstrap = true;
 	}
 
 	return new Response(JSON.stringify(body), {

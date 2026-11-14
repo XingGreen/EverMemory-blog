@@ -124,6 +124,11 @@ let isVerified = $state(
 		: false,
 );
 let adminUsername = $state("");
+/**
+ * 引导模式：密钥还没配齐、又来自本机时，服务端允许未登录进入本页。
+ * 此时只保留环境变量页，其余入口依赖的接口都会 401。
+ */
+let bootstrapMode = $state(false);
 // 存储降级：KV 熔断时后台仍可用（仅 JWT 鉴权），但会话表能力受限
 let storageDegraded = $state(false);
 
@@ -656,6 +661,7 @@ onMount(async () => {
 		const data = await res.json();
 		if (!data.success) throw new Error("session invalid");
 		isVerified = true;
+		bootstrapMode = Boolean(data.bootstrap);
 		sessionStorage.setItem("admin_verified", "true");
 		if (typeof data.username === "string" && data.username) {
 			adminUsername = data.username;
@@ -1721,6 +1727,8 @@ function formatDate(dateStr: string | null): string {
 			></button>
 		{/if}
 
+		<!-- 引导模式下不渲染导航：其它页面此时都取不到数据 -->
+		{#if !bootstrapMode}
 		<!-- 左侧导航栏 -->
 		<aside
 			class="admin-sidebar"
@@ -1895,9 +1903,15 @@ function formatDate(dateStr: string | null): string {
 				</button>
 			</div>
 		</aside>
+		{/if}
 
 		<!-- 主内容区 -->
 		<div class="admin-main">
+			{#if bootstrapMode}
+				<p class="bootstrap-tip">
+					还在初始化：下面这些项填好并保存，然后用 GitHub 登录即可进入后台。
+				</p>
+			{/if}
 			<div class="card-base mobile-topbar">
 				<button class="menu-toggle" onclick={() => (isSidebarOpen = true)} aria-label="打开菜单">
 					<Icon icon="material-symbols:menu-rounded" style="font-size: 28px" />
@@ -2862,6 +2876,17 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	/* ── 主内容区 ── */
+	.bootstrap-tip {
+		margin: 0 0 12px;
+		padding: 10px 14px;
+		border: 1px solid color-mix(in oklab, var(--primary) 28%, transparent);
+		border-radius: 10px;
+		background: color-mix(in oklab, var(--primary) 8%, transparent);
+		color: var(--deep-text);
+		font-size: 0.75rem;
+		line-height: 1.5;
+	}
+
 	.admin-main {
 		flex: 1;
 		min-width: 0;

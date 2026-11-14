@@ -17,6 +17,7 @@ import {
 	setAuthCookie,
 	stepUpRequiredResponse,
 } from "@/utils/auth";
+import { BOOTSTRAP_KEYS, canBootstrap } from "@/utils/bootstrap-mode";
 import { getClientIp } from "@/utils/client-ip";
 import { getPrivateKey } from "@/utils/github-app";
 import {
@@ -108,7 +109,9 @@ export async function GET({
 	request: Request;
 }): Promise<Response> {
 	const auth = await requireAuth(request);
-	if (!auth.authenticated && auth.response) return auth.response;
+	// 引导模式：只有「本机 + 密钥未配齐 + 非生产」三条同时成立才放行
+	const boot = !auth.authenticated && canBootstrap(request);
+	if (!auth.authenticated && !boot && auth.response) return auth.response;
 
 	const states = readSecretStates();
 	// 私钥可能不在 .env 里，而是 .key/ 下的 .pem。判定「有没有可用私钥」
@@ -161,7 +164,8 @@ export async function POST({
 	request: Request;
 }): Promise<Response> {
 	const auth = await requireAuth(request);
-	if (!auth.authenticated && auth.response) return auth.response;
+	const boot = !auth.authenticated && canBootstrap(request);
+	if (!auth.authenticated && !boot && auth.response) return auth.response;
 
 	if (!isEnvFileWritable()) {
 		return json(
@@ -186,6 +190,11 @@ export async function POST({
 		const managedRejected: string[] = [];
 		for (const entry of entries) {
 			const key = typeof entry?.key === "string" ? entry.key : "";
+			// 引导期只收必要项，可选字段留给登录后
+			if (boot && !BOOTSTRAP_KEYS.includes(key)) {
+				ignored.push(key || "(未知)");
+				continue;
+			}
 			if (!getSecretItem(key)) {
 				ignored.push(key || "(未知)");
 				continue;
@@ -230,7 +239,7 @@ export async function POST({
 		const touchesProtected = valid.some((entry) =>
 			requiresFreshAuth(entry.key),
 		);
-		if (touchesProtected && !hasFreshAuth(auth.payload)) {
+		if (!boot && touchesProtected && !hasFreshAuth(auth.payload)) {
 			return stepUpRequiredResponse();
 		}
 
