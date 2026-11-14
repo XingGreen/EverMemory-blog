@@ -829,25 +829,6 @@ html[data-wallpaper-mode="fullscreen"] body:not(.wallpaper-initialized) .w-full.
     }
 }
 
-/* 右侧边栏的显示门槛从 xl (1280px) 下调到 1024px。
-   页面缩小时 CSS 视口会放大，但带 DevTools 的窗口在 67% 缩放下仍可能落在
-   1024–1279px 区间，原来的 xl:block / xl:grid-cols 会把它当成窄屏隐藏。
-   这里同时补出第三列栅格，否则右栏显示出来却没有列位，会被排到主内容下方。
-   用 ID 选择器提升权重覆盖 Tailwind 工具类，不提升声明优先级。
-   上限 1279px 保证 xl 及以上仍走原有断点，其它组件不受影响。 */
-@media (min-width: 1024px) and (max-width: 1279px) {
-    #main-grid {
-        grid-template-columns: 17.5rem minmax(0, 1fr) 17.5rem;
-    }
-
-    #main-grid #right-sidebar {
-        display: block;
-        max-width: 17.5rem;
-        grid-column: 3;
-        grid-row: 1 / span 2;
-    }
-}
-
 /* 768–1023px 的三列栅格把导航中间列压到约 250px，五个链接会被拆成竖排。
    只在这一档收紧链接内边距与字号，logo 与右侧按钮保持原样。
    用 ID 选择器提升权重覆盖 Tailwind 工具类，不提升声明优先级。 */
