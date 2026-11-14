@@ -13,6 +13,7 @@ import {
 	invalidatePostTitles,
 	loadPostTitles,
 } from "@/utils/admin-post-titles";
+import { isLoggedOut } from "@/utils/auth-expired";
 import { buildEncryptedTitle } from "@/utils/encrypted-title";
 import { countWords } from "@/utils/reading-stats";
 import DraftConflictDialog from "./DraftConflictDialog.svelte";
@@ -1341,7 +1342,9 @@ function discardDraftAndReload() {
 function registerBeforeUnload() {
 	if (typeof window === "undefined") return;
 	beforeUnloadHandler = (e: BeforeUnloadEvent) => {
-		if (!dirty) return;
+		/* 主动退出登录不拦：那个原生确认框挡在退出路上，用户只能反复点，
+		   看起来就像退出死循环。草稿仍在本地，下次进来会照常询问恢复。 */
+		if (!dirty || isLoggedOut()) return;
 		e.preventDefault();
 		e.returnValue = "";
 	};

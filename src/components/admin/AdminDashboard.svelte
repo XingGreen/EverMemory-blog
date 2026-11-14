@@ -16,7 +16,14 @@ import {
 	getConfigItem,
 	getConfigLabelKey,
 } from "@/utils/admin-settings";
-import { installAuthGuard, onAuthExpired, relogin } from "@/utils/auth-expired";
+import {
+	clearLoggedOut,
+	installAuthGuard,
+	isLoggedOut,
+	logout,
+	onAuthExpired,
+	relogin,
+} from "@/utils/auth-expired";
 import { isTourDone, resetTour } from "@/utils/onboarding";
 import AdminPage from "./AdminPage.svelte";
 import ConfirmDialog from "./ConfirmDialog.svelte";
@@ -633,7 +640,18 @@ function startAdmin() {
    放在 startAdmin 里的话监听器生命周期与组件脱钩，HMR 下会叠加。 */
 onMount(() => {
 	window.addEventListener("popstate", applyRoute);
-	return () => window.removeEventListener("popstate", applyRoute);
+	/* 从往返缓存（bfcache）恢复时 onMount 不会重跑，状态是退出前那一份。
+	   不处理的话「退出 → 后退」会看到一个仍然登录着的后台。 */
+	const onPageShow = (event: PageTransitionEvent) => {
+		if (event.persisted && isLoggedOut()) {
+			window.location.replace("/login/");
+		}
+	};
+	window.addEventListener("pageshow", onPageShow);
+	return () => {
+		window.removeEventListener("popstate", applyRoute);
+		window.removeEventListener("pageshow", onPageShow);
+	};
 });
 
 /* 401 全局兜底：包一层 fetch 旁路观察，任意后台接口 401 时弹一次会话过期提示。
@@ -660,6 +678,10 @@ onMount(async () => {
 		const res = await fetch("/api/admin/session/");
 		const data = await res.json();
 		if (!data.success) throw new Error("session invalid");
+		/* 退出标记只在「引导模式那种假会话」下继续生效，真正的会话（Cookie 有效，
+		   例如刚走完 OAuth 回调直接落到这里）优先于它 —— 否则退出过一次的人
+		   重新登录也进不来。 */
+		if (isLoggedOut() && !data.bootstrap) clearLoggedOut();
 		isVerified = true;
 		bootstrapMode = Boolean(data.bootstrap);
 		sessionStorage.setItem("admin_verified", "true");
@@ -1067,17 +1089,10 @@ function handleLogout() {
 
 async function performLogout() {
 	logoutConfirmOpen = false;
+	/* 先卸掉后台树再清理：这样各页的 beforeunload / 定时请求都随卸载停掉，
+	   不会在退出途中弹「确定离开」或 401 提示。真正的清理与跳转在 logout()。 */
 	isVerified = false;
-	sessionStorage.removeItem("admin_verified");
-	// 退出后回到独立登录页，同时清掉深链记录，避免下次登录被带回旧页
-	sessionStorage.removeItem("admin_redirect");
-	// 清除服务端会话 Cookie（含"记住我"的 7 天 Cookie），否则退出后仍会免登录
-	try {
-		await fetch("/api/admin/verify/", { method: "DELETE" });
-	} catch {
-		// 忽略清理失败
-	}
-	window.location.replace("/login/");
+	await logout();
 }
 
 // ── 导航（History API 真实路径路由） ──

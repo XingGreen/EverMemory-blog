@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount } from "svelte";
+import { clearLoggedOut, shouldAutoEnter } from "@/utils/auth-expired";
 import VerifyScreen from "./VerifyScreen.svelte";
 
 let { avatarUrl = "" }: { avatarUrl?: string } = $props();
@@ -9,6 +10,8 @@ let oauthEnabled = $state(false);
 let breakglassEnabled = $state(false);
 
 function enterDashboard(target?: string) {
+	// 只有真正登录成功才恢复「进后台即视为已登录」，退出标记到此才失效
+	clearLoggedOut();
 	sessionStorage.setItem("admin_verified", "true");
 	// 后台主体是独立页面，登录成功后整页跳转，登录页的代码不再携带后台。
 	// 若未登录时访问过后台深链（/admin/settings/…），登录后回跳原目标。
@@ -31,6 +34,16 @@ onMount(async () => {
 		oauthEnabled = Boolean(data.oauthEnabled);
 		breakglassEnabled = Boolean(data.breakglassEnabled);
 		if (data.success) {
+			/* 退出与引导模式的冲突点：密钥没配齐时，服务端对回环请求也回 success，
+			   它表示「允许未登录改配置」，不是「你已登录」。照旧自动进后台，用户
+			   点完退出就被弹回来，表现为退不出去。
+			   真会话（有 Cookie、非 bootstrap）则照常进入，退出过一次不会把人锁在门外。 */
+			if (!shouldAutoEnter(data)) {
+				sessionStorage.removeItem("admin_verified");
+				sessionStorage.removeItem("admin_redirect");
+				view = "login";
+				return;
+			}
 			sessionStorage.setItem("admin_verified", "true");
 			enterDashboard();
 			return;
