@@ -5,13 +5,16 @@
  * 与 probe 的分工：这个回答「本地仓库是什么」，那个回答「GitHub 通不通」。
  */
 import { requireAuth } from "@/utils/auth";
+import { canBootstrap } from "@/utils/bootstrap-mode";
 import { detectLocalRepo } from "@/utils/repo-locator";
 
 export const prerender = false;
 
 export const GET = async ({ request }: { request: Request }) => {
 	const auth = await requireAuth(request);
-	if (!auth.authenticated && auth.response) return auth.response;
+	// 引导模式也要能预填仓库地址：它只读本地 .git，不涉及任何密钥
+	const boot = !auth.authenticated && canBootstrap(request);
+	if (!auth.authenticated && !boot && auth.response) return auth.response;
 
 	const repo = await detectLocalRepo();
 	return new Response(JSON.stringify({ success: true, repo }), {

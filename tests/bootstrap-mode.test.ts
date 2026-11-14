@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { ADMIN_SECRETS } from "@/utils/admin-secrets";
+import { ADMIN_SECRETS, SECRET_ROWS } from "@/utils/admin-secrets";
 import {
 	BOOTSTRAP_KEYS,
 	bootstrapNeeded,
 	isLoopbackRequest,
 } from "@/utils/bootstrap-mode";
 
-const required = ADMIN_SECRETS.filter((item) => item.required && !item.managed).map(
-	(item) => item.key,
-);
+const required = ADMIN_SECRETS.filter(
+	(item) => item.required && !item.managed,
+).map((item) => item.key);
 
 afterEach(() => {
 	for (const key of required) delete process.env[key];
@@ -30,6 +30,15 @@ describe("bootstrap mode", () => {
 		expect(BOOTSTRAP_KEYS).not.toContain("ADMIN_ALERT_WEBHOOK");
 		expect(BOOTSTRAP_KEYS).not.toContain("TURNSTILE_SECRET_KEY");
 		expect(BOOTSTRAP_KEYS).not.toContain("ADMIN_JWT_SECRET");
+	});
+
+	it("引导页要显示的必填项，都能在字段行里找到落点", () => {
+		// 引导页面按 SECRET_ROWS 渲染：某个必填键没有对应的行，用户就永远填不上，
+		// 引导页也永远不会关闭。这条守住 UI 过滤规则与服务端白名单同源。
+		for (const key of BOOTSTRAP_KEYS) {
+			const covered = SECRET_ROWS.some((row) => row.keys.includes(key));
+			expect(covered, `字段行里缺少 ${key}`).toBe(true);
+		}
 	});
 
 	it("只认回环地址", () => {

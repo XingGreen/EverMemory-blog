@@ -589,6 +589,11 @@ function applyRoute() {
 		window.location.replace("/login/");
 		return;
 	}
+	// 引导模式：只有环境变量页可取数据，其余地址一律回到那里
+	if (bootstrapMode) {
+		enterBootstrapRoute();
+		return;
+	}
 	const next = parseRoute(window.location.pathname);
 	// 无效路径在后台内渲染 404（保留地址，不跳走）
 	route = next.page === "login" ? { page: "dashboard" } : next;
@@ -627,7 +632,26 @@ function applyRoute() {
 	}
 }
 
+/**
+ * 引导模式只开放环境变量页。
+ *
+ * 其余页面的接口全部要求会话，缺密钥时必然 401；真去请求就会弹出「会话已过期」，
+ * 点确认又跳回登录页、被引导模式送回后台 —— 401 与弹窗就这么叠成死循环。
+ * 所以引导模式下只认 /admin/env/，也不拉文章列表。
+ */
+function enterBootstrapRoute() {
+	const target = `${DASHBOARD_PATH}env/`;
+	if (window.location.pathname !== target) {
+		window.history.replaceState({}, "", target);
+	}
+	route = { page: "env" };
+}
+
 function startAdmin() {
+	if (bootstrapMode) {
+		enterBootstrapRoute();
+		return;
+	}
 	loadPosts();
 	applyRoute(); // 同步初始路由
 	// 首次进入控制台：自动弹出新手指引
@@ -659,6 +683,10 @@ onMount(() => {
 onMount(() => {
 	const uninstall = installAuthGuard();
 	const off = onAuthExpired(() => {
+		/* 引导期本来就没有会话，任何后台接口 401 都是预期结果，
+		   不是「会话过期」。照常弹窗只会把用户推向登录页，再被引导模式
+		   送回后台，形成弹窗循环。 */
+		if (bootstrapMode) return;
 		authExpiredOpen = true;
 	});
 	return () => {
@@ -1924,7 +1952,8 @@ function formatDate(dateStr: string | null): string {
 		<div class="admin-main">
 			{#if bootstrapMode}
 				<p class="bootstrap-tip">
-					还在初始化：下面这些项填好并保存，然后用 GitHub 登录即可进入后台。
+					填完下面必需的几项就能登录，其余配置登录后再改。
+					<a href="/login/">去登录</a>
 				</p>
 			{/if}
 			<div class="card-base mobile-topbar">
@@ -2197,6 +2226,7 @@ function formatDate(dateStr: string | null): string {
 						onNotify={(message, type, duration) =>
 							showToast(message, type, duration)}
 						onStateChange={(s) => (secretSaveState = s)}
+						bootstrap={bootstrapMode}
 					/>
 				{/if}
 				{#snippet footer()}
@@ -2900,6 +2930,16 @@ function formatDate(dateStr: string | null): string {
 		color: var(--deep-text);
 		font-size: 0.75rem;
 		line-height: 1.5;
+	}
+
+	.bootstrap-tip a {
+		margin-left: 4px;
+		color: var(--primary);
+		text-decoration: none;
+	}
+
+	.bootstrap-tip a:hover {
+		text-decoration: underline;
 	}
 
 	.admin-main {

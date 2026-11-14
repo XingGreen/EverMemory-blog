@@ -20,6 +20,7 @@ type SecretItemDTO = AdminSecretItem & {
 let {
 	onNotify,
 	onStateChange,
+	bootstrap = false,
 }: {
 	onNotify: (
 		message: string,
@@ -42,6 +43,12 @@ let {
 		save: () => void;
 		discard: () => void;
 	}) => void;
+	/**
+	 * 引导期（尚未登录）：只展示完成登录所必需的那几项。
+	 * 可选字段此时既用不上、又会被服务端的写入白名单拒收，
+	 * 摆出来只会让人以为「必须全填」。登录后是同一个组件的完整形态。
+	 */
+	bootstrap?: boolean;
 } = $props();
 
 let items = $state<SecretItemDTO[]>([]);
@@ -294,15 +301,35 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 	}
 }
 
+/**
+ * 引导期要显示的键：必填且非托管。
+ * 托管项（会话签名）由服务端自动生成，摆出来只会让人以为还得自己填。
+ */
+function isBootstrapKey(key: string): boolean {
+	const item = items.find((it) => it.key === key);
+	return Boolean(item?.required && !item?.managed);
+}
+
+/** 一行里只要有一个键是登录必需项，这一行在引导期就要出现 */
+function rowVisibleInBootstrap(row: SecretRow): boolean {
+	return row.keys.some(isBootstrapKey);
+}
+
 const groups = $derived(
 	SECRET_GROUPS.map((g) => ({
 		...g,
 		items: items.filter((item) => item.group === g.id),
-	})),
+	})).filter(
+		(g) =>
+			!bootstrap ||
+			SECRET_ROWS.some((r) => r.group === g.id && rowVisibleInBootstrap(r)),
+	),
 );
 
-// 配置完成度：只统计 required 必配项
-const requiredItems = $derived(items.filter((item) => item.required));
+// 配置完成度：只统计 required 必配项，托管项不算（它自己会生成）
+const requiredItems = $derived(
+	items.filter((item) => item.required && !item.managed),
+);
 const requiredConfiguredCount = $derived(
 	requiredItems.filter((item) => item.configured).length,
 );
@@ -731,7 +758,9 @@ async function rotate(item: SecretItemDTO) {
 const itemByKey = $derived(new Map(items.map((i) => [i.key, i])));
 
 function rowsOf(groupId: string): SecretRow[] {
-	return SECRET_ROWS.filter((r) => r.group === groupId);
+	return SECRET_ROWS.filter(
+		(r) => r.group === groupId && (!bootstrap || rowVisibleInBootstrap(r)),
+	);
 }
 
 /**

@@ -276,10 +276,7 @@ function goBack() {
 			{:else if !oauthEnabled}
 				<div class="error-message">
 					<Icon icon="material-symbols:error-outline" class="text-base" />
-					<span
-						>未配置任何登录方式！请在 .env.local 配置 GitHub OAuth 凭据或
-						ADMIN_BREAKGLASS_TOKEN。</span
-					>
+					<span>还没有可用的登录方式。先完成初始化配置，再回来登录。</span>
 				</div>
 			{/if}
 		</div>

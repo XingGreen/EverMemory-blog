@@ -35,8 +35,10 @@ export function isLoopbackRequest(request: Request): boolean {
 /** 必要项是否仍缺（缺 = 还没配好，登录不了） */
 export function bootstrapNeeded(): boolean {
 	if (IS_PROD_BUILD) return false;
+	/* 托管项（会话签名）不算缺：它在首次认证时由服务端自动生成。
+	   算进来的话，用户把九项都填完门也关不上，等于永远进不了登录。 */
 	return ADMIN_SECRETS.some(
-		(item) => item.required && !getEnv(item.key).trim(),
+		(item) => item.required && !item.managed && !getEnv(item.key).trim(),
 	);
 }
 
