@@ -340,6 +340,16 @@ const allRequiredConfigured = $derived(
 	requiredItems.length > 0 && requiredConfiguredCount === requiredItems.length,
 );
 
+/** 引导期缺项按屏幕上那几行来报，登录后才展开成逐键清单 */
+function missingLabelList(): string {
+	const labels = bootstrap
+		? SECRET_ROWS.filter(
+				(r) => rowVisibleInBootstrap(r) && !rowConfigured(r),
+			).map((r) => r.label)
+		: missingRequired.map((it) => it.label);
+	return labels.join("、");
+}
+
 /**
  * 配置状态从「未完成」变为「全部完成」时，重置关闭标记，
  * 让成功提示重新出现——否则用户点过一次「知道了」后，
@@ -939,15 +949,12 @@ function answerConfirm(ok: boolean) {
 			<button type="button" class="link" onclick={() => load()}>重试</button>
 		</div>
 	{:else}
-		<!-- 结论条：只保留一条。全部配齐时说完成，缺东西时说是哪几项。 -->
+		<!-- 结论条：只保留一条。全部配齐时说完成，缺东西时说是哪几项。
+		     引导期按「字段行」报，不按底层键报：页面只有六行，报九个键名会对不上。 -->
 		{#if missingRequired.length > 0}
 			<div class="note warn">
 				<span class="note-mark" aria-hidden="true">!</span>
-				<span
-					>{i18n(I18nKey.secretsStatusMissing)}{missingRequired
-						.map((it) => it.label)
-						.join("、")}</span
-				>
+				<span>{i18n(I18nKey.secretsStatusMissing)}{missingLabelList()}</span>
 			</div>
 		{:else if !successDismissed}
 			<div class="note">
@@ -1235,25 +1242,36 @@ function answerConfirm(ok: boolean) {
 			</section>
 		{/each}
 
-		<!-- 泄漏检测：只在点了之后出结论，不占常驻版面 -->
+		<!-- 引导期只留一个动作：配置完去登录。
+		     泄漏检测、导出、CLI 命令都是登录后的事，摆在这儿只会让人以为还得再做什么。 -->
 		<div class="foot-row">
-			<button type="button" class="link" disabled={leakBusy} onclick={checkLeak}
-				>{leakBusy ? "检测中…" : i18n(I18nKey.secretsLeakCheck)}</button
-			>
-			<span class="grow"></span>
-			<button type="button" class="link" onclick={() => load()} disabled={loading}
-				>{i18n(I18nKey.secretsReload)}</button
-			>
-			<button
-				type="button"
-				class="link"
-				disabled={exportBusy}
-				onclick={copyVercelCommands}
-				>{i18n(I18nKey.secretsExportCopyVercel)}</button
-			>
-			<button type="button" class="link" disabled={exportBusy} onclick={downloadEnv}
-				>{i18n(I18nKey.secretsExport)}</button
-			>
+			{#if bootstrap}
+				<a class="link" href="/login/">去登录</a>
+			{:else}
+				<button type="button" class="link" disabled={leakBusy} onclick={checkLeak}
+					>{leakBusy ? "检测中…" : i18n(I18nKey.secretsLeakCheck)}</button
+				>
+				<span class="grow"></span>
+				<button
+					type="button"
+					class="link"
+					onclick={() => load()}
+					disabled={loading}>{i18n(I18nKey.secretsReload)}</button
+				>
+				<button
+					type="button"
+					class="link"
+					disabled={exportBusy}
+					onclick={copyVercelCommands}
+					>{i18n(I18nKey.secretsExportCopyVercel)}</button
+				>
+				<button
+					type="button"
+					class="link"
+					disabled={exportBusy}
+					onclick={downloadEnv}>{i18n(I18nKey.secretsExport)}</button
+				>
+			{/if}
 		</div>
 
 		{#if leakChecked}
@@ -1616,6 +1634,9 @@ function answerConfirm(ok: boolean) {
 	}
 
 	.link {
+		display: inline-flex;
+		align-items: center;
+		min-height: 24px;
 		padding: 0;
 		border: none;
 		background: none;
@@ -1623,6 +1644,7 @@ function answerConfirm(ok: boolean) {
 		font-size: var(--admin-fs-meta, 0.75rem);
 		font-weight: 500;
 		color: var(--primary);
+		text-decoration: none;
 		white-space: nowrap;
 		cursor: pointer;
 	}

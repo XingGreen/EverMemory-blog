@@ -1950,12 +1950,6 @@ function formatDate(dateStr: string | null): string {
 
 		<!-- 主内容区 -->
 		<div class="admin-main">
-			{#if bootstrapMode}
-				<p class="bootstrap-tip">
-					填完下面必需的几项就能登录，其余配置登录后再改。
-					<a href="/login/">去登录</a>
-				</p>
-			{/if}
 			<div class="card-base mobile-topbar">
 				<button class="menu-toggle" onclick={() => (isSidebarOpen = true)} aria-label="打开菜单">
 					<Icon icon="material-symbols:menu-rounded" style="font-size: 28px" />
@@ -2191,7 +2185,12 @@ function formatDate(dateStr: string | null): string {
 					<SessionManager onNotify={(msg, type) => showToast(msg, type)} />
 				</AdminPage>
 			{:else if activePage === "env"}
-				<AdminPage title={i18n(I18nKey.adminEnvVars)} intro={i18n(I18nKey.adminEnvVarsIntro)}>
+				<AdminPage
+					title={i18n(I18nKey.adminEnvVars)}
+					intro={bootstrapMode
+						? "填好下面几项，保存后就能登录。"
+						: i18n(I18nKey.adminEnvVarsIntro)}
+				>
 				{#if import.meta.env.PROD}
 					<section class="secrets-guide">
 						<div class="guide-head">
@@ -2914,27 +2913,6 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	/* ── 主内容区 ── */
-	.bootstrap-tip {
-		margin: 0 0 12px;
-		padding: 10px 14px;
-		border: 1px solid color-mix(in oklab, var(--primary) 28%, transparent);
-		border-radius: 10px;
-		background: color-mix(in oklab, var(--primary) 8%, transparent);
-		color: var(--deep-text);
-		font-size: 0.75rem;
-		line-height: 1.5;
-	}
-
-	.bootstrap-tip a {
-		margin-left: 4px;
-		color: var(--primary);
-		text-decoration: none;
-	}
-
-	.bootstrap-tip a:hover {
-		text-decoration: underline;
-	}
-
 	.admin-main {
 		flex: 1;
 		min-width: 0;
