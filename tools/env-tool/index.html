@@ -55,57 +55,6 @@ body {
 h1 { margin: 0; font-size: var(--fs-page); font-weight: 650; line-height: 1.35; }
 .lede { margin: 4px 0 0; color: var(--content-meta); font-size: var(--fs-meta); max-width: 56ch; }
 
-.head {
-	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
-	gap: 16px;
-}
-.head .total {
-	margin-top: 6px;
-	font-size: var(--fs-meta);
-	color: var(--content-meta);
-	white-space: nowrap;
-}
-.head .total b {
-	font-family: var(--font-mono);
-	font-size: var(--fs-data);
-	font-weight: 500;
-	color: var(--deep-text);
-}
-.notice {
-	margin: 12px 0 0;
-	padding: 10px 12px;
-	border: 1px dashed var(--input-border);
-	border-radius: 10px;
-	font-size: var(--fs-meta);
-	color: var(--content-meta);
-}
-.key-saved {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	min-height: 36px;
-	padding: 0 12px;
-	border: 1px solid var(--input-border);
-	border-radius: 10px;
-	background: var(--input-bg);
-	font-size: var(--fs-meta);
-}
-.key-saved .ok { color: var(--success); }
-.key-saved .grow { flex: 1; }
-.ghost-toggle {
-	border: 0;
-	background: none;
-	padding: 0;
-	min-height: 24px;
-	color: var(--primary);
-	font-family: inherit;
-	font-size: var(--fs-meta);
-	cursor: pointer;
-	margin-left: 8px;
-}
-
 .card {
 	margin-top: 16px;
 	background: var(--card-bg);
@@ -167,6 +116,48 @@ textarea.ui-input {
 }
 .link:hover { text-decoration: underline; }
 
+.upload-btn {
+	display: inline-flex;
+	align-items: center;
+	height: 36px;
+	padding: 0 12px;
+	border: 1px dashed var(--input-border);
+	border-radius: 10px;
+	background: none;
+	color: var(--deep-text);
+	font-size: var(--fs-meta);
+	font-family: inherit;
+	cursor: pointer;
+}
+.upload-btn:hover { border-color: var(--primary); color: var(--primary); }
+.file-chip {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: 36px;
+	padding: 0 12px;
+	border: 1px solid var(--input-border);
+	border-radius: 10px;
+	background: var(--input-bg);
+	font-size: var(--fs-meta);
+}
+.file-chip .ok { color: var(--success); }
+.file-chip .grow { flex: 1; }
+.link {
+	border: none;
+	background: none;
+	padding: 0;
+	min-height: 24px;
+	color: var(--primary);
+	font-family: inherit;
+	font-size: var(--fs-meta);
+	cursor: pointer;
+}
+.link:hover { text-decoration: underline; }
+.row.flash {
+	background: color-mix(in oklab, var(--primary) 8%, transparent);
+	box-shadow: inset 3px 0 0 var(--primary);
+}
 .savebar {
 	position: fixed;
 	left: 0;
@@ -186,6 +177,41 @@ textarea.ui-input {
 }
 .savebar .state { font-size: var(--fs-meta); color: var(--content-meta); }
 .savebar .grow { flex: 1; }
+.dirty-toggle {
+	border: 0;
+	background: none;
+	padding: 0;
+	min-height: 24px;
+	font-family: inherit;
+	font-size: var(--fs-meta);
+	color: var(--content-meta);
+	cursor: pointer;
+}
+.dirty-toggle[data-open="true"] { color: var(--deep-text); }
+.dirty-list {
+	border-top: 1px solid var(--line-divider);
+	background: var(--card-bg);
+	max-height: 40vh;
+	overflow: auto;
+	padding: 6px 0;
+}
+.dirty-item {
+	display: flex;
+	align-items: baseline;
+	gap: 12px;
+	width: 100%;
+	padding: 6px var(--gutter);
+	border: 0;
+	background: none;
+	color: var(--content-meta);
+	font-family: inherit;
+	font-size: var(--fs-meta);
+	text-align: left;
+	cursor: pointer;
+}
+.dirty-item:hover { background: color-mix(in oklab, var(--primary) 8%, transparent); }
+.dirty-item .k { font-weight: 600; color: var(--deep-text); white-space: nowrap; }
+.dirty-item .v { font-family: var(--font-mono); font-size: var(--fs-data); }
 
 @media (max-width: 720px) {
 	.row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
@@ -195,20 +221,15 @@ textarea.ui-input {
 </head>
 <body class="dark">
 <div class="wrap">
-	<div class="head">
-		<div>
-			<h1>环境变量</h1>
-			<p class="lede">保存到项目根目录的 .env.local。本页只在本机运行，不需要登录后台，也不会上传任何值。</p>
-		</div>
-		<span class="total" id="total"></span>
-	</div>
-	<p class="notice" id="notice" hidden>还没有 .env.local。填完下面几项、点保存时就会创建它。</p>
+	<h1>环境变量</h1>
+	<p class="lede">保存到项目根目录的 .env.local。本页只在本机运行，不需要登录后台，也不会上传任何值。</p>
 	<div class="card" id="card"></div>
 </div>
 
 <div class="savebar">
+	<div class="dirty-list" id="dirtyList" hidden></div>
 	<div class="inner">
-		<span class="state" id="dirty">读取中…</span>
+		<button type="button" class="dirty-toggle" id="dirty" data-open="false">读取中…</button>
 		<span class="grow"></span>
 		<button class="ui-btn ui-btn-sm ui-btn-primary" id="save">保存</button>
 	</div>
@@ -218,7 +239,7 @@ textarea.ui-input {
 const GROUPS = [
 	{ id: "github", title: "GitHub App 凭据", sub: "写入仓库", hint: "都在 GitHub 的 App 设置页" },
 	{ id: "auth", title: "管理员认证", sub: "后台登录", hint: "OAuth 凭据在同一个 App 页面，用户 ID 来自你的 GitHub 账号" },
-	{ id: "turnstile", title: "人机验证", sub: "可选", hint: "在 Cloudflare 的 Turnstile 里创建站点后填写", optionalGroup: true },
+	{ id: "turnstile", title: "人机验证", sub: "可选", hint: "在 Cloudflare 的 Turnstile 里创建站点后填写" },
 ];
 
 const FIELDS = [
@@ -227,7 +248,7 @@ const FIELDS = [
 	{ key: "GITHUB_BRANCH", group: "github", label: "仓库分支", hint: "通常是 master 或 main", required: true, example: "master" },
 	{ key: "GITHUB_APP_ID", group: "github", label: "App ID", hint: "App 设置页顶部的数字", required: true, example: "4423412" },
 	{ key: "GITHUB_INSTALLATION_ID", group: "github", label: "安装 ID", hint: "填了 App ID 与私钥后可以自动获取", required: true, example: "149804847", probe: true },
-	{ key: "GITHUB_PRIVATE_KEY", group: "github", label: "App 私钥", hint: "下载 .pem 后整段粘贴，保存时自动压成单行", required: true, multiline: true },
+	{ key: "GITHUB_PRIVATE_KEY", group: "github", label: "App 私钥", hint: "下载 .pem 文件后在这里上传", required: true, upload: true },
 	{ key: "GITHUB_PRIVATE_KEY_PATH", group: "github", label: "私钥文件路径", hint: "可选。不填则用上面粘贴的私钥", required: false, example: ".key/blog.pem" },
 	{ key: "GITHUB_APP_CLIENT_ID", group: "auth", label: "OAuth Client ID", hint: "同一个 App 页面里的 Client ID", required: true, example: "Iv23li…" },
 	{ key: "GITHUB_APP_CLIENT_SECRET", group: "auth", label: "OAuth Client Secret", hint: "点 Generate 生成，只显示一次", required: true, secret: true },
@@ -241,14 +262,12 @@ const FIELDS = [
 
 const values = {};
 const original = {};
-const state = { exists: true, collapsed: { turnstile: true } };
-let keyEditing = false;
-let keyBackup = "";
 const card = document.getElementById("card");
 const dirtyEl = document.getElementById("dirty");
 const saveBtn = document.getElementById("save");
-const totalEl = document.getElementById("total");
-const noticeEl = document.getElementById("notice");
+const dirtyList = document.getElementById("dirtyList");
+const uploadNames = {};
+const uploadErrors = {};
 
 const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const filled = (f) => (values[f.key] || "").trim().length > 0;
@@ -259,40 +278,30 @@ function render() {
 		const req = items.filter((f) => f.required);
 		const done = req.filter(filled).length;
 		const tone = done === req.length && req.length > 0 ? "count done" : "count";
-		const collapsed = Boolean(state.collapsed[g.id]);
-		const counter = g.optionalGroup ? "可选" : `${done} / ${req.length} 已配`;
 		return `
 		<section class="group">
 			<div class="ghead">
 				<h2>${escapeHtml(g.title)}</h2>
 				<span class="sub">${escapeHtml(g.sub)}</span>
-				<span class="${tone}">${counter}</span>
-				${g.optionalGroup ? `<button type="button" class="ghost-toggle" data-toggle="${g.id}">${collapsed ? "展开" : "收起"}</button>` : ""}
+				<span class="${tone}">${done} / ${req.length} 已配</span>
 			</div>
 			<p class="ghint">${escapeHtml(g.hint)}</p>
-			${collapsed ? "" : items.map(row).join("")}
+			${items.map(row).join("")}
 		</section>`;
 	}).join("");
 	bind();
 	refreshDirty();
 }
 
-function refreshTotal() {
-	const req = FIELDS.filter((f) => f.required);
-	const done = req.filter(filled).length;
-	if (totalEl) totalEl.innerHTML = `必要项 <b>${done}</b> / ${req.length}`;
-}
-
 function row(f) {
 	const value = values[f.key] || "";
 	const attrs = `data-key="${f.key}" spellcheck="false" placeholder="${escapeHtml(f.example || "")}"`;
-	const saved = f.multiline && !keyEditing && value.length > 200;
 
 	let control;
-	if (saved) {
-		control = `<div class="key-saved"><span class="ok">✓</span><span>已保存 · ${value.length} 个字符</span><span class="grow"></span><button type="button" class="link" data-replace="${f.key}">替换</button></div>`;
-	} else if (f.multiline) {
-		control = `<textarea class="ui-input" ${attrs} rows="4" placeholder="-----BEGIN … PRIVATE KEY----- 整段粘贴">${escapeHtml(value)}</textarea>`;
+	if (f.upload) {
+		control = value
+			? `<div class="file-chip"><span class="ok">✓</span><span>已上传${uploadNames[f.key] ? ` · ${escapeHtml(uploadNames[f.key])}` : ""}</span><span class="grow"></span><button type="button" class="link" data-upload="${f.key}">更换</button><button type="button" class="link" data-remove="${f.key}">移除</button></div>`
+			: `<button type="button" class="upload-btn" data-upload="${f.key}">上传 .pem 文件</button>`;
 	} else {
 		control = `<input class="ui-input${f.secret ? "" : " mono"}" ${attrs} type="${f.secret ? "password" : "text"}" value="${escapeHtml(value)}" />`;
 	}
@@ -300,10 +309,9 @@ function row(f) {
 	const extra = [];
 	if (f.generate) extra.push(`<button type="button" class="ui-btn ui-btn-sm ui-btn-soft" data-generate="${f.key}">生成</button>`);
 	if (f.probe) extra.push(`<button type="button" class="ui-btn ui-btn-sm ui-btn-soft" data-probe="1">从 GitHub 获取</button>`);
-	if (f.multiline && keyEditing) extra.push(`<button type="button" class="ui-btn ui-btn-sm ui-btn-ghost" data-cancel-key="1">取消</button>`);
 
 	return `
-	<div class="row">
+	<div class="row" data-row="${f.key}">
 		<div>
 			<div class="name">${escapeHtml(f.label)}${f.required ? '<span class="req">*</span>' : ""}</div>
 			<p class="hint">${escapeHtml(f.hint)}</p>
@@ -311,8 +319,58 @@ function row(f) {
 		<div>
 			<div class="control">${control}${extra.join("")}</div>
 			${f.probe ? '<p class="trace" data-probe-result></p>' : ""}
+			${f.upload && uploadErrors[f.key] ? `<p class="trace bad">${escapeHtml(uploadErrors[f.key])}</p>` : ""}
 		</div>
 	</div>`;
+}
+
+/** 选文件后读成文本存进草稿；校验与后台一致：扩展名不限，但必须是 PEM */
+async function uploadPem(key, file) {
+	uploadErrors[key] = "";
+	if (!file) return;
+	if (file.size > 100 * 1024) {
+		uploadErrors[key] = "文件超过 100KB，确认是私钥文件";
+		render();
+		return;
+	}
+	let text = "";
+	try {
+		text = await file.text();
+	} catch {
+		uploadErrors[key] = "读取文件失败，重试一次";
+		render();
+		return;
+	}
+	if (!text.includes("-----BEGIN")) {
+		uploadErrors[key] = "这不是 PEM 私钥";
+		render();
+		return;
+	}
+	values[key] = text;
+	uploadNames[key] = file.name;
+	render();
+}
+
+function pickPem(key) {
+	const input = document.createElement("input");
+	input.type = "file";
+	input.accept = ".pem,.key,text/plain";
+	input.addEventListener("change", () => uploadPem(key, input.files?.[0]));
+	input.click();
+}
+
+function removePem(key) {
+	values[key] = "";
+	delete uploadNames[key];
+	render();
+}
+
+function flashRow(key) {
+	const rowEl = card.querySelector(`[data-row="${key}"]`);
+	if (!rowEl) return;
+	rowEl.scrollIntoView({ block: "center", behavior: "smooth" });
+	rowEl.classList.add("flash");
+	setTimeout(() => rowEl.classList.remove("flash"), 1600);
 }
 
 function bind() {
@@ -324,28 +382,12 @@ function bind() {
 		});
 	});
 
-	card.querySelectorAll("[data-toggle]").forEach((btn) => {
-		btn.addEventListener("click", () => {
-			state.collapsed[btn.dataset.toggle] = !state.collapsed[btn.dataset.toggle];
-			render();
-		});
+	card.querySelectorAll("[data-upload]").forEach((btn) => {
+		btn.addEventListener("click", () => pickPem(btn.dataset.upload));
 	});
 
-	card.querySelectorAll("[data-replace]").forEach((btn) => {
-		btn.addEventListener("click", () => {
-			keyBackup = original[btn.dataset.replace] || "";
-			values[btn.dataset.replace] = "";
-			keyEditing = true;
-			render();
-		});
-	});
-
-	card.querySelectorAll("[data-cancel-key]").forEach((btn) => {
-		btn.addEventListener("click", () => {
-			values.GITHUB_PRIVATE_KEY = keyBackup;
-			keyEditing = false;
-			render();
-		});
+	card.querySelectorAll("[data-remove]").forEach((btn) => {
+		btn.addEventListener("click", () => removePem(btn.dataset.remove));
 	});
 
 	card.querySelectorAll("[data-generate]").forEach((btn) => {
@@ -426,18 +468,54 @@ function changedKeys() {
 	return FIELDS.map((f) => f.key).filter((k) => (values[k] || "") !== (original[k] || ""));
 }
 
+const clip = (v) => (v.length > 26 ? `${v.slice(0, 24)}…` : v);
+
+/** 未保存清单：与后台「脏列表」同一套语义——逐项说明改了什么，点一下跳到那一行 */
+function changedRows() {
+	return FIELDS.filter((f) => (values[f.key] || "") !== (original[f.key] || "")).map((f) => {
+		const before = original[f.key] || "";
+		const after = values[f.key] || "";
+		let text;
+		if (!before && after) text = f.secret || f.upload ? "已填写" : `已填写 ${clip(after)}`;
+		else if (before && !after) text = "已清空";
+		else text = f.secret || f.upload ? "已替换" : `${clip(before)} → ${clip(after)}`;
+		return { key: f.key, label: f.label, text };
+	});
+}
+
+function renderDirtyList() {
+	dirtyList.innerHTML = changedRows()
+		.map(
+			(r) =>
+				`<button type="button" class="dirty-item" data-goto="${r.key}"><span class="k">${escapeHtml(r.label)}</span><span class="v">${escapeHtml(r.text)}</span></button>`,
+		)
+		.join("");
+	dirtyList.querySelectorAll("[data-goto]").forEach((btn) => {
+		btn.addEventListener("click", () => flashRow(btn.dataset.goto));
+	});
+}
+
 function refreshDirty() {
 	const n = changedKeys().length;
 	dirtyEl.textContent = n === 0 ? "没有改动" : `还有 ${n} 项未保存`;
 	saveBtn.disabled = n === 0;
-	refreshTotal();
+	dirtyEl.disabled = n === 0;
+	if (n === 0) {
+		dirtyEl.dataset.open = "false";
+		dirtyList.hidden = true;
+		return;
+	}
+	if (dirtyEl.dataset.open === "true") {
+		dirtyList.hidden = false;
+		renderDirtyList();
+	} else {
+		dirtyList.hidden = true;
+	}
 }
 
 async function load() {
 	const res = await fetch("/api/state");
 	const data = await res.json();
-	state.exists = Boolean(data.exists);
-	if (noticeEl) noticeEl.hidden = state.exists;
 	for (const f of FIELDS) {
 		const v = data.values?.[f.key] ?? "";
 		values[f.key] = v;
@@ -460,6 +538,12 @@ async function load() {
 		}
 	}
 }
+
+dirtyEl.addEventListener("click", () => {
+	if (saveBtn.disabled) return;
+	dirtyEl.dataset.open = dirtyEl.dataset.open === "true" ? "false" : "true";
+	refreshDirty();
+});
 
 saveBtn.addEventListener("click", async () => {
 	saveBtn.disabled = true;

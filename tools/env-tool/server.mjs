@@ -327,9 +327,12 @@ const server = createServer(async (req, res) => {
 				if (!ALLOWED.has(key)) continue;
 				updates[key] = String(value ?? "").replace(/\r?\n/g, "\n");
 			}
-			// 私钥统一压成单行，与后台保存行为一致
+			// 私钥与后台保存格式一致：PEM 文本转 Base64 存一行
 			if (updates.GITHUB_PRIVATE_KEY) {
-				updates.GITHUB_PRIVATE_KEY = updates.GITHUB_PRIVATE_KEY.replace(/\s+/g, "");
+				const pem = updates.GITHUB_PRIVATE_KEY.trim();
+				updates.GITHUB_PRIVATE_KEY = pem.includes("BEGIN")
+					? Buffer.from(pem, "utf8").toString("base64")
+					: pem.replace(/\s+/g, "");
 			}
 			let text = "";
 			try {
