@@ -134,7 +134,7 @@ export const SECRET_ROWS: SecretRow[] = [
 		id: "private-key",
 		group: "github",
 		label: "私钥",
-		how: "粘贴 Private key 内容，保存后写入本机 .env.local",
+		how: "GitHub App 设置页下载的 .pem 文件，或其在服务器上的路径",
 		keys: ["GITHUB_PRIVATE_KEY", "GITHUB_PRIVATE_KEY_PATH"],
 		shape: "content",
 	},

@@ -37,6 +37,10 @@ let fileEl = $state<HTMLInputElement | null>(null);
 const itemByKey = $derived(new Map(items.map((item) => [item.key, item])));
 const itemOf = (key: string) => itemByKey.get(key);
 
+/** 字段说明与后台同源：按 key 找到所属行，取该行的 how 文案 */
+const howOf = (key: string) =>
+	SECRET_ROWS.find((row) => row.keys.includes(key))?.how ?? "";
+
 /** 私钥草稿是否有内容——有则显示摘要态，不回显明文 */
 const hasKey = $derived(Boolean((drafts.GITHUB_PRIVATE_KEY ?? "").trim()));
 
@@ -111,15 +115,21 @@ async function load() {
 	}
 }
 
-async function save() {
+/**
+ * 统一保存：落盘动作只在「下一步」「完成」两个向导节点发生。
+ * 成功后直接把 configured 同步到本地状态——不再全量 load()，
+ * 否则整份草稿重建会让所有输入框重渲染（页面重载的元凶）。
+ * 返回是否成功，调用方据此决定是否前进到下一步。
+ */
+async function save(goDone: boolean): Promise<boolean> {
 	if (addressError) {
 		notice = "请先修正仓库地址格式";
-		return;
+		return false;
 	}
 	const entries = buildEntries(items, drafts, draftsOrigin);
 	if (entries.length === 0) {
-		notice = "没有需要保存的修改";
-		return;
+		if (goDone) step = 3;
+		return true;
 	}
 	saving = true;
 	notice = "";
@@ -131,26 +141,29 @@ async function save() {
 		});
 		const data = await res.json();
 		if (res.ok && data.success) {
-			await load();
-			// 服务端重新判定：配齐后引导通道自动关闭，这里展示完成屏再送去登录
-			if (step === 2) step = 3;
-			return;
+			// 本地同步：草稿非空即已配置，派生态随之更新，无需网络往返
+			for (const item of items) {
+				item.configured = Boolean((drafts[item.key] ?? "").trim());
+			}
+			if (goDone) step = 3;
+			return true;
 		}
 		notice = data.message || "保存失败";
+		return false;
 	} catch (err) {
 		notice = `保存请求失败: ${err instanceof Error ? err.message : String(err)}`;
+		return false;
 	} finally {
 		saving = false;
 	}
 }
 
-/** 选择私钥文件：本地读取后填入草稿并立即自动保存 */
+/** 选择私钥文件：本地读取后只进草稿（摘要态立即出现），落盘交给向导节点 */
 async function handleKeyFile(file: File) {
 	uploadError = "";
 	try {
 		const content = await readPrivateKeyFile(file);
 		drafts.GITHUB_PRIVATE_KEY = content;
-		await save();
 	} catch (err) {
 		uploadError = err instanceof Error ? err.message : "读取文件失败";
 	}
@@ -208,7 +221,7 @@ onMount(load);
 				{#if addressError}
 					<p class="field-error" role="alert">{addressError}</p>
 				{:else}
-					<p class="field-hint">所有者/仓库名@分支</p>
+					<p class="field-hint">{howOf("GITHUB_OWNER")}</p>
 				{/if}
 
 				<FloatField
@@ -218,6 +231,7 @@ onMount(load);
 					mono
 					oninput={(v) => (drafts.GITHUB_APP_ID = v)}
 				/>
+				<p class="field-hint">{howOf("GITHUB_APP_ID")}</p>
 
 				<FloatField
 					id="fld-install"
@@ -226,10 +240,10 @@ onMount(load);
 					mono
 					oninput={(v) => (drafts.GITHUB_INSTALLATION_ID = v)}
 				/>
+				<p class="field-hint">{howOf("GITHUB_INSTALLATION_ID")}</p>
 
 				<!-- 私钥：只通过文件上传，内容不回显到任何输入框。
-				     有值时只显示摘要态，查看走弹窗；更换复用同一个文件选择器。
-				     上传成功即自动保存，用户不需要理解「草稿/落盘」的分层。 -->
+				     查看走弹窗；更换复用同一个文件选择器。落盘在向导节点统一发生。 -->
 				{#if hasKey}
 					<div class="key-summary">
 						<span class="key-summary-word">私钥已就绪</span>
@@ -257,6 +271,7 @@ onMount(load);
 							选择私钥文件
 						</button>
 					</div>
+					<p class="field-hint">{howOf("GITHUB_PRIVATE_KEY")}</p>
 				{/if}
 				{#if uploadError}
 					<p class="field-error" role="alert">{uploadError}</p>
@@ -282,6 +297,7 @@ onMount(load);
 					mono
 					oninput={(v) => (drafts.GITHUB_PRIVATE_KEY_PATH = v)}
 				/>
+				<p class="field-hint">可选。私钥文件存在服务器上时填路径</p>
 			</div>
 
 			<!-- 步骤二：后台登录 -->
@@ -296,6 +312,7 @@ onMount(load);
 					mono
 					oninput={(v) => (drafts.GITHUB_APP_CLIENT_ID = v)}
 				/>
+				<p class="field-hint">{howOf("GITHUB_APP_CLIENT_ID")}</p>
 
 				<FloatField
 					id="fld-client-secret"
@@ -304,6 +321,7 @@ onMount(load);
 					value={drafts.GITHUB_APP_CLIENT_SECRET ?? ""}
 					oninput={(v) => (drafts.GITHUB_APP_CLIENT_SECRET = v)}
 				/>
+				<p class="field-hint">{howOf("GITHUB_APP_CLIENT_SECRET")}</p>
 
 				<FloatField
 					id="fld-admin-id"
@@ -312,6 +330,7 @@ onMount(load);
 					mono
 					oninput={(v) => (drafts.ADMIN_GITHUB_ID = v)}
 				/>
+				<p class="field-hint">{howOf("ADMIN_GITHUB_ID")}</p>
 			</div>
 
 			{#if notice}
@@ -324,7 +343,10 @@ onMount(load);
 					type="button"
 					class="ghost-btn"
 					class:show={step === 2}
-					onclick={() => (step = 1)}
+					onclick={async () => {
+						// 回退前先保存本步改动，避免返回修改仓库配置时丢失登录字段
+						if (await save(false)) step = 1;
+					}}
 				>
 					上一步
 				</button>
@@ -334,15 +356,28 @@ onMount(load);
 					<span class="dot" class:active={step === 2}></span>
 				</div>
 
-				{#if step === 1}
-					<button type="button" class="primary-btn" onclick={() => (step = 2)}>
-						下一步
-					</button>
-				{:else}
-					<button type="button" class="primary-btn" disabled={saving} onclick={save}>
-						{saving ? "保存中…" : "保存并完成"}
-					</button>
-				{/if}
+			{#if step === 1}
+				<!-- 下一步 = 保存仓库配置并进入第二步；失败留在本步修正 -->
+				<button
+					type="button"
+					class="primary-btn"
+					disabled={saving}
+					onclick={async () => {
+						if (await save(false)) step = 2;
+					}}
+				>
+					{saving ? "保存中…" : "下一步"}
+				</button>
+			{:else}
+				<button
+					type="button"
+					class="primary-btn"
+					disabled={saving}
+					onclick={() => save(true)}
+				>
+					{saving ? "保存中…" : "完成"}
+				</button>
+			{/if}
 			</footer>
 		{/if}
 	</article>
