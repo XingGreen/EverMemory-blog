@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount } from "svelte";
+import Icon from "@/components/common/Icon.svelte";
 import { clearLoggedOut, shouldAutoEnter } from "@/utils/auth-expired";
 import VerifyScreen from "./VerifyScreen.svelte";
 
@@ -8,6 +9,8 @@ let { avatarUrl = "" }: { avatarUrl?: string } = $props();
 let view = $state<"loading" | "login">("loading");
 let oauthEnabled = $state(false);
 let breakglassEnabled = $state(false);
+/** 服务端配置错误（如缺签名密钥）：显示原因而不是反复尝试登录 */
+let configError = $state("");
 
 function enterDashboard(target?: string) {
 	// 只有真正登录成功才恢复「进后台即视为已登录」，退出标记到此才失效
@@ -33,6 +36,13 @@ onMount(async () => {
 		const data = await res.json();
 		oauthEnabled = Boolean(data.oauthEnabled);
 		breakglassEnabled = Boolean(data.breakglassEnabled);
+		/* 服务端配置错误：登录页也停下来说明原因。照旧渲染登录表单只会让
+		   用户反复试、每次都失败，看不到真正的问题在环境变量。 */
+		if (typeof data.configError === "string" && data.configError) {
+			configError = data.configError;
+			view = "login";
+			return;
+		}
 		if (data.success) {
 			/* 退出与引导模式的冲突点：密钥没配齐时，服务端对回环请求也回 success，
 			   它表示「允许未登录改配置」，不是「你已登录」。照旧自动进后台，用户
@@ -60,6 +70,15 @@ onMount(async () => {
 
 {#if view === "loading"}
 	<div class="login-loading"></div>
+{:else if configError}
+	<div class="config-error-card">
+		<Icon icon="material-symbols:error-outline" class="config-error-icon" />
+		<h2>无法登录</h2>
+		<p>{configError}</p>
+		<p class="config-error-hint">
+			配置完成后重启服务（本地）或重新部署（线上）即可恢复。
+		</p>
+	</div>
 {:else}
 	<VerifyScreen {avatarUrl} onVerify={handleVerify} {oauthEnabled} {breakglassEnabled} />
 {/if}
@@ -67,5 +86,35 @@ onMount(async () => {
 <style>
 	.login-loading {
 		min-height: 50vh;
+	}
+
+	.config-error-card {
+		max-width: 34rem;
+		margin: 12vh auto 0;
+		padding: 1.5rem;
+		border: 1px solid var(--line-divider, rgb(0 0 0 / 0.12));
+		border-radius: 0.75rem;
+		text-align: center;
+	}
+
+	.config-error-icon {
+		font-size: 2rem;
+		color: var(--destructive, #c0392b);
+	}
+
+	.config-error-card h2 {
+		margin: 0.5rem 0 0.75rem;
+		font-size: 1.0625rem;
+	}
+
+	.config-error-card p {
+		margin: 0;
+		font-size: 0.875rem;
+		line-height: 1.6;
+	}
+
+	.config-error-hint {
+		margin-top: 0.75rem;
+		opacity: 0.75;
 	}
 </style>

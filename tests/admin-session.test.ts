@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 /** 登录方式开关：只 mock「是否已配置」这一层 */
 let oauthConfigured = true;
 let breakglassConfigured = true;
+/** 签名密钥是否可用：缺密钥时应回 configError 而不是把人踢回登录页 */
+let secretAvailable = true;
 vi.mock("@utils/github-oauth", () => ({
 	isOAuthConfigured: () => oauthConfigured,
 }));
@@ -18,6 +20,7 @@ vi.mock("@utils/auth", () => ({
 	verifySessionToken: async (token: string) =>
 		token === "valid-token" ? { sid: "s1", username: "EverMemory" } : null,
 	isBreakglassConfigured: () => breakglassConfigured,
+	isJwtSecretAvailable: () => secretAvailable,
 }));
 
 const loadEndpoint = () => import("@/pages/api/admin/session");
@@ -32,6 +35,7 @@ describe("GET /api/admin/session", () => {
 		vi.resetModules();
 		oauthConfigured = true;
 		breakglassConfigured = true;
+		secretAvailable = true;
 	});
 
 	it("未登录：success=false 且不回传用户名", async () => {
@@ -67,5 +71,18 @@ describe("GET /api/admin/session", () => {
 
 		expect(body.oauthEnabled).toBe(false);
 		expect(body.breakglassEnabled).toBe(false);
+	});
+
+	it("签名密钥不可用：回 configError，且不把有效 Cookie 当作已登录", async () => {
+		secretAvailable = false;
+		const { GET } = await loadEndpoint();
+		const res = await GET({
+			request: requestWith("admin_session=valid-token"),
+		});
+		const body = await res.json();
+
+		// 不能返回 success=true：否则后台照常渲染、每个接口 401，形成回弹
+		expect(body.success).toBe(false);
+		expect(body.configError).toContain("ADMIN_JWT_SECRET");
 	});
 });

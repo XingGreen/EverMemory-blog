@@ -1,6 +1,7 @@
 import {
 	getAuthTokenFromRequest,
 	isBreakglassConfigured,
+	isJwtSecretAvailable,
 	verifySessionToken,
 } from "@/utils/auth";
 import { canBootstrap } from "@/utils/bootstrap-mode";
@@ -15,7 +16,11 @@ export const prerender = false;
 // oauthEnabled / breakglassEnabled 与登录态无关，始终回传，供登录页决定渲染哪些入口。
 // storage 字段告知前端当前持久化后端与降级状态，供后台展示「降级模式」提示。
 export async function GET({ request }) {
-	const token = getAuthTokenFromRequest(request);
+	/* 签名密钥不可用时不进验签：否则每个请求都得到「令牌无效」，
+	   前端被当成未登录反复弹回登录页，真正的原因（缺环境变量）永远不会显示。 */
+	const secretAvailable = isJwtSecretAvailable();
+
+	const token = secretAvailable ? getAuthTokenFromRequest(request) : null;
 	const payload = token ? await verifySessionToken(token) : null;
 	// 还没有任何会话、但密钥没配齐且来自本机：进入引导模式，让配置页能打开
 	const bootstrap = !payload && canBootstrap(request);
@@ -25,6 +30,8 @@ export async function GET({ request }) {
 		username?: string;
 		/** 引导模式：尚未登录，正在完成首次配置 */
 		bootstrap?: boolean;
+		/** 服务端配置错误：前端据此显示原因，而不是跳回登录页 */
+		configError?: string;
 		oauthEnabled: boolean;
 		breakglassEnabled: boolean;
 		storage: {
@@ -46,6 +53,9 @@ export async function GET({ request }) {
 	} else if (bootstrap) {
 		body.username = "初始化";
 		body.bootstrap = true;
+	} else if (!secretAvailable) {
+		body.configError =
+			"服务器缺少 ADMIN_JWT_SECRET，无法校验登录状态。请在部署平台配置该环境变量（32 字节以上随机串）后重新部署。";
 	}
 
 	return new Response(JSON.stringify(body), {

@@ -1,10 +1,9 @@
 import crypto from "node:crypto";
 
-import { getEnv } from "./env";
 import {
+	ensureManagedSecret,
 	readSecretPreview,
 	readSecretValue,
-	rotateManagedSecret,
 } from "./secret-io";
 import { getSessionState, touchSession } from "./session-store";
 
@@ -55,10 +54,15 @@ function getTokenVersion(): string {
 function getJwtSecret(): string {
 	if (cachedSecret) return cachedSecret;
 
-	const envSecret = getEnv("ADMIN_JWT_SECRET");
-	if (envSecret) {
-		cachedSecret = envSecret;
-		return envSecret;
+	/* 文件优先读：自动生成的密钥只落在 .env.local 里，而 getEnv() 读的是
+	   process.env / import.meta.env 的**启动快照**，看不见运行期写入的值。
+	   只查 getEnv 会让每个新进程都判定「未配置」，于是重新生成一把 ——
+	   之前签发的 token 立刻全部验签失败，后台 401、前端在登录页与后台之间打转。
+	   readSecretValue 走「.env.local → 平台环境变量」两级，先文件后环境。 */
+	const stored = readSecretValue("ADMIN_JWT_SECRET");
+	if (stored) {
+		cachedSecret = stored;
+		return stored;
 	}
 
 	if (import.meta.env.PROD) {
@@ -68,14 +72,17 @@ function getJwtSecret(): string {
 		throw new Error(msg);
 	}
 
-	// 开发环境：自动生成并持久化到 .env.local，保证重启后会话不失效
-	const generated = rotateManagedSecret("ADMIN_JWT_SECRET");
+	/* 开发环境：仅当缺失时生成一次。之前这里用的是 rotateManagedSecret ——
+	   它是「无条件换一把」的轮换接口，被误当成初始化用了，
+	   于是每次冷启动都会覆盖已有密钥。 */
+	ensureManagedSecret("ADMIN_JWT_SECRET");
+	const generated = readSecretValue("ADMIN_JWT_SECRET");
 	if (generated) {
 		cachedSecret = generated;
 		console.warn(
 			"[Auth] ADMIN_JWT_SECRET 未配置，已自动生成并写入 .env.local。可在后台「用户中心 → 密钥配置」中轮换。",
 		);
-		return cachedSecret;
+		return generated;
 	}
 
 	// 落盘失败（如目录不可写）时的兜底：进程内临时密钥，重启后失效
@@ -84,6 +91,22 @@ function getJwtSecret(): string {
 		"[Auth] ADMIN_JWT_SECRET 未配置且写入 .env.local 失败，已使用临时密钥。会话将在进程重启后失效，请检查目录写入权限。",
 	);
 	return cachedSecret;
+}
+
+/**
+ * 会话签名密钥是否可用。
+ *
+ * 生产环境缺 ADMIN_JWT_SECRET 时 getJwtSecret 会抛错，而 verifySessionToken
+ * 把它吞成「令牌无效」，表现就是所有人被踢回登录页、又永远登不进来。
+ * 会话接口据此回一条明确的配置错误，让后台停下来说清原因而不是反复跳转。
+ */
+export function isJwtSecretAvailable(): boolean {
+	try {
+		getJwtSecret();
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 interface JwtPayload {
