@@ -1,6 +1,6 @@
 ---
 import AdminDashboard from "@/components/admin/AdminDashboard.svelte";
-import { profileConfig, siteConfig } from "@/config";
+import { adminConfig, profileConfig, siteConfig } from "@/config";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import { resolveAdminLogo } from "@/utils/admin-logo";
 import { resolveAvatarUrl } from "@/utils/avatar-url";
@@ -26,7 +26,7 @@ const logo = await resolveAdminLogo();
 ---
 
 <AdminLayout title={title} description={description}>
-	<div class="admin-container">
+	<div class="admin-container" data-flush={adminConfig.sidebarFlush ? "on" : "off"}>
 		<AdminDashboard
 			client:load
 			avatarUrl={avatarUrl}
@@ -41,8 +41,14 @@ const logo = await resolveAdminLogo();
 </AdminLayout>
 
 <style is:global>
-	/* 紧贴模式：与 admin/index.astro 保持同一基准（零内距 + 整视口高）。 */
+	/* 与 admin/index.astro 保持同一基准：默认悬浮布局四周 1.5rem，紧贴模式零内距。 */
 	.admin-container {
+		padding: 1.5rem;
+		min-height: calc(100vh - 3rem);
+		min-height: calc(100dvh - 3rem);
+	}
+
+	.admin-container[data-flush="on"] {
 		padding: 0;
 		min-height: 100vh;
 		min-height: 100dvh;
@@ -50,6 +56,11 @@ const logo = await resolveAdminLogo();
 
 	@media (max-width: 1023px) {
 		.admin-container {
+			padding: 1rem;
+			min-height: calc(100dvh - 2rem);
+		}
+
+		.admin-container[data-flush="on"] {
 			padding: 0;
 			min-height: 100dvh;
 		}

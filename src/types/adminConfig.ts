@@ -25,6 +25,13 @@ export type AdminConfig = {
 	 */
 	appearanceStrategy?: "inherit" | "custom";
 
+	/**
+	 * 侧边栏紧贴模式
+	 * - true：侧栏贴屏幕左缘、全高、四角直角；内容区保持画布式空隙
+	 * - false：侧栏与内容区均为悬浮卡片布局（四周留白 + 大圆角）
+	 */
+	sidebarFlush?: boolean;
+
 	/** 页面切换动画 */
 	pageTransition?: {
 		/** 是否开启 */

@@ -1,6 +1,6 @@
 ---
 import AdminDashboard from "@/components/admin/AdminDashboard.svelte";
-import { profileConfig, siteConfig } from "@/config";
+import { adminConfig, profileConfig, siteConfig } from "@/config";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import { resolveAdminLogo } from "@/utils/admin-logo";
 import { resolveAvatarUrl } from "@/utils/avatar-url";
@@ -19,7 +19,7 @@ const logo = await resolveAdminLogo();
 ---
 
 <AdminLayout title={title} description={description}>
-	<div class="admin-container">
+	<div class="admin-container" data-flush={adminConfig.sidebarFlush ? "on" : "off"}>
 		<AdminDashboard
 			client:load
 			avatarUrl={avatarUrl}
@@ -34,13 +34,20 @@ const logo = await resolveAdminLogo();
 </AdminLayout>
 
 <style is:global>
-	/* 紧贴模式：后台与屏幕边缘零间距（对齐前台导航栏的贴边语言）。
-	   侧边栏自身贴左缘、全高；高度基准因此从「视口减双倍内距」改为整视口。 */
+	/* 默认（悬浮卡片布局）：容器四周 1.5rem，高度为视口减去上下内距。
+	   紧贴模式（data-flush="on"）：容器零内距，侧栏贴左缘全高，
+	   内容区的画布空隙改由 .admin-main 的 margin 提供（AdminDashboard 内）。 */
 	.admin-container {
-		padding: 0;
-		min-height: 100vh;
+		padding: 1.5rem;
+		min-height: calc(100vh - 3rem);
 		/* dvh 跟随浏览器地址栏收放，避免手机上下拖动时高度跳变。
 		   不支持的浏览器沿用上一行的 vh 值。 */
+		min-height: calc(100dvh - 3rem);
+	}
+
+	.admin-container[data-flush="on"] {
+		padding: 0;
+		min-height: 100vh;
 		min-height: 100dvh;
 	}
 
@@ -48,6 +55,11 @@ const logo = await resolveAdminLogo();
 	   两处内边距与高度基准不一致时，1024 边缘附近会出现纵向溢出。 */
 	@media (max-width: 1023px) {
 		.admin-container {
+			padding: 1rem;
+			min-height: calc(100dvh - 2rem);
+		}
+
+		.admin-container[data-flush="on"] {
 			padding: 0;
 			min-height: 100dvh;
 		}
