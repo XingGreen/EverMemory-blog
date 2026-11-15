@@ -39,30 +39,28 @@ export const SECRET_GROUPS: readonly {
 	id: SecretGroup;
 	/** 分组标题文案 key（i18n key 名，组件侧直接取用，避免三元判断漏组） */
 	labelKey: "secretsGroupGithub" | "secretsGroupAuth" | "secretsGroupTurnstile";
-	/** 标题右侧的短标签：两个字说明这组管什么 */
-	sub: string;
 	icon: string;
-	/** 分组用途说明，作为大板块副标题 */
-	descKey: string;
+	/** 分组用途说明，渲染在标题下方 */
+	descKey:
+		| "secretsGroupGithubDesc"
+		| "secretsGroupAuthDesc"
+		| "secretsGroupTurnstileDesc";
 }[] = [
 	{
 		id: "github",
 		labelKey: "secretsGroupGithub",
-		sub: "写入仓库",
 		icon: "material-symbols:cloud",
 		descKey: "secretsGroupGithubDesc",
 	},
 	{
 		id: "auth",
 		labelKey: "secretsGroupAuth",
-		sub: "后台登录",
 		icon: "material-symbols:shield-lock",
 		descKey: "secretsGroupAuthDesc",
 	},
 	{
 		id: "turnstile",
 		labelKey: "secretsGroupTurnstile",
-		sub: "登录防护",
 		icon: "material-symbols:verified-user",
 		descKey: "secretsGroupTurnstileDesc",
 	},
@@ -79,16 +77,16 @@ export const SECRET_GROUPS: readonly {
  * `shape` 决定控件：
  * - address  三个 key 合成一个地址（owner/repo@branch）
  * - single   单输入框
- * - pair     两个 key 并排（成对才有意义的那类）
- * - upload   .pem 文件上传 +「更换文件」
+ * - content  多行内容（私钥）；已写入时只读，未写入时粘贴
  * - managed  服务端托管，只给「轮换」
  * - optional 可留空，空着显示静态提示
+ *
+ * 一项一行：成对凭据（ID 与 Secret）拆成两行，各自带标签。
  */
 export type SecretRowShape =
 	| "address"
 	| "single"
-	| "pair"
-	| "upload"
+	| "content"
 	| "managed"
 	| "optional";
 
@@ -110,17 +108,17 @@ export const SECRET_ROWS: SecretRow[] = [
 	{
 		id: "repo",
 		group: "github",
-		label: "仓库",
-		how: "填你博客所在的仓库：用户名/仓库名@分支",
+		label: "仓库地址",
+		how: "所有者/仓库名@分支，作为单一地址填写",
 		keys: ["GITHUB_OWNER", "GITHUB_REPO", "GITHUB_BRANCH"],
 		shape: "address",
-		format: "用户名/仓库名@分支",
+		format: "所有者/仓库名@分支",
 	},
 	{
 		id: "app-id",
 		group: "github",
 		label: "App ID",
-		how: "打开 GitHub 的 GitHub Apps 页面，在你的 App 顶部复制 App ID",
+		how: "位于 GitHub App 设置页顶部",
 		keys: ["GITHUB_APP_ID"],
 		shape: "single",
 	},
@@ -128,31 +126,39 @@ export const SECRET_ROWS: SecretRow[] = [
 		id: "private-key",
 		group: "github",
 		label: "私钥",
-		how: "同一个页面点 Private keys → 生成私钥，下载后在这里上传；或填文件路径",
+		how: "粘贴 Private key 内容，保存后写入本机 .env.local",
 		keys: ["GITHUB_PRIVATE_KEY", "GITHUB_PRIVATE_KEY_PATH"],
-		shape: "upload",
+		shape: "content",
 	},
 	{
 		id: "install",
 		group: "github",
-		label: "安装",
-		how: "把 App 装到你的账号，再从安装页地址末尾复制那串数字",
+		label: "安装 ID",
+		how: "位于 App 安装页地址末尾",
 		keys: ["GITHUB_INSTALLATION_ID"],
 		shape: "single",
 	},
 	{
-		id: "oauth",
+		id: "oauth-id",
 		group: "auth",
-		label: "GitHub OAuth",
-		how: "同一个页面复制 Client ID，再点生成 client secret，两个一起换",
-		keys: ["GITHUB_APP_CLIENT_ID", "GITHUB_APP_CLIENT_SECRET"],
-		shape: "pair",
+		label: "OAuth Client ID",
+		how: "与 App ID 不是同一个值",
+		keys: ["GITHUB_APP_CLIENT_ID"],
+		shape: "single",
+	},
+	{
+		id: "oauth-secret",
+		group: "auth",
+		label: "OAuth Client Secret",
+		how: "生成后只显示一次；更换须与上一项同时进行",
+		keys: ["GITHUB_APP_CLIENT_SECRET"],
+		shape: "single",
 	},
 	{
 		id: "admin-id",
 		group: "auth",
 		label: "管理员 GitHub 用户 ID",
-		how: "打开 api.github.com/user（先登录 GitHub），把返回里的 id 数字填进来",
+		how: "仅该账号可登录；打开 api.github.com/user 取返回里的 id",
 		keys: ["ADMIN_GITHUB_ID"],
 		shape: "single",
 	},
@@ -160,33 +166,41 @@ export const SECRET_ROWS: SecretRow[] = [
 		id: "session",
 		group: "auth",
 		label: "会话签名",
-		how: "不用填，保存时会自动生成；怀疑泄露再点轮换",
+		how: "无需填写，保存时自动生成；怀疑泄露再轮换",
 		keys: ["ADMIN_JWT_SECRET"],
 		shape: "managed",
 	},
 	{
 		id: "breakglass",
 		group: "auth",
-		label: "应急登录令牌",
-		how: "一般留空。GitHub 登录出问题时，用它直接进后台",
+		label: "应急令牌",
+		how: "可选。GitHub 登录不可用时使用",
 		keys: ["ADMIN_BREAKGLASS_TOKEN"],
 		shape: "single",
 	},
 	{
 		id: "webhook",
 		group: "auth",
-		label: "登录告警 Webhook",
-		how: "可选。把 Slack 或 Discord 的 webhook 地址粘进来，有登录时通知你",
+		label: "登录通知",
+		how: "可选。登录成功时向 Slack 或 Discord 发送通知",
 		keys: ["ADMIN_ALERT_WEBHOOK"],
 		shape: "optional",
 	},
 	{
-		id: "turnstile",
+		id: "turnstile-site",
 		group: "turnstile",
-		label: "Turnstile 密钥对",
-		how: "在 Cloudflare 的 Turnstile 里建一个站点，把两个密钥一起复制过来；不启用就都留空",
-		keys: ["TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY"],
-		shape: "pair",
+		label: "Site Key",
+		how: "公开值，位于 Cloudflare Turnstile 站点设置中",
+		keys: ["TURNSTILE_SITE_KEY"],
+		shape: "single",
+	},
+	{
+		id: "turnstile-secret",
+		group: "turnstile",
+		label: "Secret Key",
+		how: "用于服务端校验，仅填其中一项会导致登录被拒绝",
+		keys: ["TURNSTILE_SECRET_KEY"],
+		shape: "single",
 	},
 ];
 

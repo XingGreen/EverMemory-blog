@@ -53,8 +53,6 @@ let {
 
 let items = $state<SecretItemDTO[]>([]);
 let writable = $state(false);
-/** 私钥来源：.env 里 / .key 文件里 / 没有 */
-let privateKeySource = $state<"env" | "file" | "none">("none");
 let loading = $state(true);
 /** 被 Git 跟踪的密钥文件：这些是真正的泄漏风险 */
 let leakedFiles = $state<string[]>([]);
@@ -250,8 +248,7 @@ function closeMenuOnEsc(e: KeyboardEvent) {
  */
 function discardAll() {
 	drafts = { ...draftsOrigin };
-	uploadNames = {};
-	uploadError = {};
+	replacing = {};
 	syncAddress();
 }
 
@@ -397,6 +394,9 @@ const changedCount = $derived(items.filter(isDirty).length);
 function scrollToField(key: string) {
 	const field = document.querySelector(`[data-secret-key="${key}"]`);
 	if (!field) return;
+	// 字段可能收在折叠区里：先展开，否则 scrollIntoView 对隐藏节点无效
+	const disc = field.closest("details");
+	if (disc && !disc.open) disc.open = true;
 	const body = document.querySelector(".admin-page-body");
 	field.scrollIntoView({ behavior: "smooth", block: "center" });
 	// 高亮：加类后 1.6s 移除，与 CSS 过渡时长对应
@@ -440,7 +440,6 @@ async function load() {
 				.filter((a: { tracked: boolean }) => a.tracked)
 				.map((a: { path: string }) => a.path);
 			writable = data.writable;
-			privateKeySource = data.privateKeySource ?? "none";
 			// 本地开发环境：直接把明文回填到表单，便于查看与局部修改
 			drafts = {};
 			draftsOrigin = {};
@@ -495,49 +494,11 @@ $effect(() => {
 	};
 });
 
-/** 上传文件名（仅用于回显，不参与保存） */
-let uploadNames = $state<Record<string, string>>({});
-/** 上传校验错误 */
-let uploadError = $state<Record<string, string>>({});
-
-const PEM_MAX_BYTES = 100 * 1024;
-
 /**
- * 读取上传的 PEM 私钥文件并写入草稿。
- * 不做格式强校验（只拦明显错误），真正的语法校验交给保存接口；
- * 这里重点拦住「选错文件」与「文件过大」两类常见失误。
+ * 已写入的私钥点了「替换」后，该行从只读态切回输入态。
+ * 只影响界面，草稿本身仍是原值，不点保存就不落盘。
  */
-async function readPemFile(
-	event: Event & { currentTarget: HTMLInputElement },
-	item: SecretItemDTO,
-) {
-	const file = event.currentTarget.files?.[0];
-	// 允许重复选择同一文件：清空 value，否则 change 不再触发
-	event.currentTarget.value = "";
-	if (!file) return;
-
-	uploadError[item.key] = "";
-	if (file.size > PEM_MAX_BYTES) {
-		uploadError[item.key] = i18n(I18nKey.secretsUploadTooLarge);
-		return;
-	}
-
-	let text = "";
-	try {
-		text = await file.text();
-	} catch {
-		uploadError[item.key] = i18n(I18nKey.secretsUploadReadFailed);
-		return;
-	}
-
-	if (!text.includes("-----BEGIN")) {
-		uploadError[item.key] = i18n(I18nKey.secretsUploadInvalid);
-		return;
-	}
-
-	drafts[item.key] = text;
-	uploadNames[item.key] = file.name;
-}
+let replacing = $state<Record<string, boolean>>({});
 
 function buildEntries(): { key: string; value?: string; delete?: boolean }[] {
 	const entries: { key: string; value?: string; delete?: boolean }[] = [];
@@ -784,7 +745,43 @@ function rowConfigured(row: SecretRow): boolean {
 		const it = itemByKey.get(k);
 		return it?.configured === true || it?.managed === true;
 	};
-	return row.shape === "upload" ? row.keys.some(has) : row.keys.every(has);
+	return row.shape === "content" ? row.keys.some(has) : row.keys.every(has);
+}
+
+/**
+ * 这一行有没有未保存的改动。
+ * 左缘那条竖线只回答这一个问题；分节与展开状态都不靠它表达。
+ */
+function rowDirty(row: SecretRow): boolean {
+	return row.keys.some((key) => {
+		const item = itemByKey.get(key);
+		return item ? isDirty(item) : false;
+	});
+}
+
+/**
+ * 折叠区的展开状态。
+ * 只在数据到手时算一次「默认开到哪些组」，之后交给用户：
+ * 若把 open 直接绑成 groupOpen(...)，每次输入都会重新求值，
+ * 用户刚收起的分组会被顶开。
+ */
+let openGroups = $state<Record<string, boolean>>({});
+
+$effect(() => {
+	if (loading || items.length === 0) return;
+	if (Object.keys(openGroups).length > 0) return;
+	const next: Record<string, boolean> = {};
+	for (const g of SECRET_GROUPS) next[g.id] = groupOpen(g.id);
+	openGroups = next;
+});
+
+/** 默认展开：这一组有未保存改动，或还缺必填项 */
+function groupOpen(groupId: string): boolean {
+	const rows = rowsOf(groupId);
+	return (
+		rows.some(rowDirty) ||
+		rows.some((r) => r.shape !== "optional" && !rowConfigured(r))
+	);
 }
 
 const probeApp = $derived(probe.stages.find((s) => s.id === "app") ?? null);
@@ -794,34 +791,61 @@ const probeInstall = $derived(
 );
 
 /**
- * 组级结论。一组只回答一个问题：
- * GitHub 组答「能不能写进去」，认证组答「配了几项」，人机验证答「开没开」。
+ * 组级结论。一组只回答一个问题：这一组现在是什么状态。
+ * word 是一个词，receipt 是机器记账的一行（等宽小字）。
  * 可选行（webhook）不参与计数——它空着也是对的。
  */
 function verdictOf(groupId: string): {
-	text: string;
-	tone: "ok" | "warn" | "idle";
+	word: string;
+	receipt: string;
+	tone: "ok" | "todo" | "idle";
 } {
 	if (groupId === "github") {
-		if (probe.running) return { text: "验证中…", tone: "idle" };
-		if (probe.stages.length === 0) return { text: "未验证", tone: "idle" };
+		if (probe.running) {
+			return {
+				word: i18n(I18nKey.secretsCheckRunning),
+				receipt: "",
+				tone: "idle",
+			};
+		}
+		if (probe.stages.length === 0) {
+			return {
+				word: i18n(I18nKey.secretsCheckIdle),
+				receipt: "",
+				tone: "idle",
+			};
+		}
 		const addr = addressOf();
 		return probeRepo?.ok
-			? { text: `✓ 能写入 ${addr}`, tone: "ok" }
-			: { text: "✕ 仓库读不到", tone: "warn" };
+			? {
+					word: i18n(I18nKey.secretsCheckPassed),
+					receipt: `${probeAt} · ${addr}`,
+					tone: "ok",
+				}
+			: {
+					word: i18n(I18nKey.secretsCheckFailed),
+					receipt: probeRepo?.detail ?? "",
+					tone: "todo",
+				};
 	}
 
 	const rows = rowsOf(groupId).filter((r) => r.shape !== "optional");
 	const done = rows.filter(rowConfigured).length;
+	const total = rows.length;
 
 	if (groupId === "turnstile") {
-		return done === rows.length && rows.length > 0
-			? { text: "已启用", tone: "ok" }
-			: { text: "未启用", tone: "idle" };
+		return done === total && total > 0
+			? { word: i18n(I18nKey.secretsStatusDone), receipt: "", tone: "ok" }
+			: { word: i18n(I18nKey.secretsStatusUnset), receipt: "", tone: "idle" };
 	}
+
 	return {
-		text: `${done} / ${rows.length} 已配`,
-		tone: done === rows.length ? "ok" : "warn",
+		word:
+			done === total
+				? i18n(I18nKey.secretsStatusDone)
+				: i18n(I18nKey.secretsStatusIncomplete),
+		receipt: `${done} / ${total}`,
+		tone: done === total ? "ok" : "todo",
 	};
 }
 
@@ -890,12 +914,6 @@ function setAddress(raw: string) {
 	drafts.GITHUB_OWNER = m[1];
 	drafts.GITHUB_REPO = m[2];
 	drafts.GITHUB_BRANCH = m[3] ?? "";
-}
-
-/** 打开某一行的文件选择框（.pem 上传） */
-function pickFile(key: string) {
-	const el = document.getElementById(`pem-input-${key}`);
-	el?.click();
 }
 
 onMount(() => {
@@ -978,18 +996,58 @@ function answerConfirm(ok: boolean) {
 			{@const groupRows = rowsOf(group.id)}
 			{@const verdict = verdictOf(group.id)}
 			<section class="pgroup">
-				<div class="ghead">
-					<h3>{i18n(I18nKey[group.labelKey])}</h3>
-					<span class="sub">{group.sub}</span>
-					<span class="verdict {verdict.tone}">{verdict.text}</span>
+				<div class="shead">
+					<div class="shead-text">
+						<h3>{i18n(I18nKey[group.labelKey])}</h3>
+						<p class="sdesc">{i18n(I18nKey[group.descKey])}</p>
+					</div>
+					<div class="state" data-tone={verdict.tone}>
+						<span class="word">{verdict.word}</span>
+						{#if verdict.receipt}
+							<span class="receipt">{verdict.receipt}</span>
+						{/if}
+					</div>
+					{#if group.id === "github"}
+						<button
+							type="button"
+							class="ui-btn ui-btn-soft ui-btn-sm"
+							onclick={runProbe}
+							disabled={probe.running || loading}
+						>
+							{probe.running
+								? i18n(I18nKey.secretsCheckRunning)
+								: i18n(I18nKey.secretsProbeCheck)}
+						</button>
+					{/if}
 				</div>
 
-				{#each groupRows as row (row.id)}
+				<details class="disc" open={openGroups[group.id] ?? false}>
+					<summary>
+						<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+							<path
+								d="M6 3.5L10.5 8L6 12.5"
+								stroke="currentColor"
+								stroke-width="1.6"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+						<span class="label-closed"
+							>{i18n(I18nKey.secretsExpandSettings).replace(
+								"{count}",
+								String(groupRows.length),
+							)}</span
+						>
+						<span class="label-open">{i18n(I18nKey.secretsCollapseSettings)}</span>
+					</summary>
+
+					<div class="prows">
+						{#each groupRows as row (row.id)}
 					{@const first = itemByKey.get(row.keys[0])}
 					{@const configured = rowConfigured(row)}
 					<div
 						class="prow"
-						class:locked={row.shape === "optional" && !configured}
+						class:dirty={rowDirty(row)}
 						class:field-flash={flashKey === row.keys[0] ||
 							flashKey === row.keys[1]}
 						data-secret-key={row.keys.join(" ")}
@@ -1028,11 +1086,10 @@ function answerConfirm(ok: boolean) {
 										<span class="dim">· 还没有验证</span>
 									{/if}
 								</p>
-							{:else if row.shape === "upload"}
-								{#if configured && !uploadNames[row.keys[0]]}
+							{:else if row.shape === "content"}
+								{#if configured && !replacing[row.keys[0]]}
 									<div class="field-box">
-										<span class="ok" aria-hidden="true">✓</span>
-										<span>已上传</span>
+										<span class="ok">已写入本机 .env.local</span>
 										<span class="grow"></span>
 										<button
 											type="button"
@@ -1045,58 +1102,40 @@ function answerConfirm(ok: boolean) {
 										<button
 											type="button"
 											class="link"
-											onclick={() => pickFile(row.keys[0])}>更换</button
-										>
-									</div>
-								{:else if privateKeySource === "file" && !uploadNames[row.keys[0]]}
-									<div class="field-box">
-										<span class="ok" aria-hidden="true">✓</span>
-										<span>已从本地文件读取</span>
-										<span class="grow"></span>
-										<button
-											type="button"
-											class="link"
-											onclick={() => pickFile(row.keys[0])}>更换</button
+											onclick={() => (replacing[row.keys[0]] = true)}
+											>编辑</button
 										>
 									</div>
 								{:else}
-									<button
-										type="button"
-										class="upload-slot"
-										onclick={() => pickFile(row.keys[0])}
-									>
-										{uploadNames[row.keys[0]] || "选择一个 .pem 文件上传"}
-									</button>
-									<input
-										id={`pem-input-${row.keys[0]}`}
-										type="file"
-										accept=".pem,.key,text/plain"
-										class="file-hidden"
-										onchange={(e) => first && readPemFile(e, first)}
-									/>
+									<textarea
+										class="ui-input mono keyarea"
+										rows="4"
+										placeholder="-----BEGIN PRIVATE KEY-----"
+										spellcheck="false"
+										value={drafts[row.keys[0]] ?? ""}
+										disabled={!writable}
+										aria-label={row.label}
+										oninput={(e) => {
+											drafts[row.keys[0]] = e.currentTarget.value;
+										}}
+									></textarea>
 								{/if}
-								{#if uploadError[row.keys[0]]}
-									<p class="trace bad">{uploadError[row.keys[0]]}</p>
-								{/if}
-								<p class="trace">
-									{#if probeApp}
-										<b>刚刚验过：</b>{probeApp.detail}
-									{:else}
-										<span class="dim">上传后点一次「验证连接」</span>
-									{/if}
-								</p>
 								{#if itemByKey.get("GITHUB_PRIVATE_KEY_PATH")}
 									<input
 										class="ui-input mono small"
 										type="text"
-										placeholder="或填文件路径，例如 .key/blog.pem"
+										placeholder="或填私钥文件路径，例如 .key/blog.pem"
 										spellcheck="false"
 										value={drafts.GITHUB_PRIVATE_KEY_PATH ?? ""}
 										disabled={!writable}
+										aria-label="私钥文件路径"
 										oninput={(e) => {
 											drafts.GITHUB_PRIVATE_KEY_PATH = e.currentTarget.value;
 										}}
 									/>
+								{/if}
+								{#if probeApp}
+									<p class="trace">{probeApp.detail}</p>
 								{/if}
 							{:else if row.shape === "managed"}
 								<div class="field-box">
@@ -1112,58 +1151,6 @@ function answerConfirm(ok: boolean) {
 											? "轮换中…"
 											: i18n(I18nKey.secretsRotate)}</button
 									>
-								</div>
-							{:else if row.shape === "pair"}
-								<div class="pair">
-									{#each row.keys as key (key)}
-										{@const it = itemByKey.get(key)}
-										{#if it}
-											{#if it.sensitive}
-												<div class="eye-wrap">
-													<input
-														class="ui-input mono"
-														type={showInput[key] ? "text" : "password"}
-														value={drafts[key] ?? ""}
-														placeholder={it.example ?? ""}
-														spellcheck="false"
-														autocomplete="new-password"
-														aria-label={it.label}
-														disabled={!writable}
-														oninput={(e) => {
-															drafts[key] = e.currentTarget.value;
-														}}
-													/>
-													<button
-														type="button"
-														class="eye"
-														aria-label={showInput[key] ? "隐藏" : "显示"}
-														onclick={() =>
-															(showInput[key] = !showInput[key])}
-													>
-														<Icon
-															icon={showInput[key]
-																? "material-symbols:visibility-off-outline-rounded"
-																: "material-symbols:visibility-outline-rounded"}
-														/>
-													</button>
-												</div>
-											{:else}
-												<input
-													class="ui-input mono"
-													type="text"
-													value={drafts[key] ?? ""}
-													placeholder={it.example ?? ""}
-													spellcheck="false"
-													autocomplete="off"
-													aria-label={it.label}
-													disabled={!writable}
-													oninput={(e) => {
-														drafts[key] = e.currentTarget.value;
-													}}
-												/>
-											{/if}
-										{/if}
-									{/each}
 								</div>
 							{:else}
 								{@const it = first}
@@ -1237,8 +1224,13 @@ function answerConfirm(ok: boolean) {
 								{/if}
 							{/if}
 						</div>
+						<div class="flag">
+							{rowDirty(row) ? i18n(I18nKey.secretsUnsaved) : ""}
+						</div>
 					</div>
 				{/each}
+					</div>
+				</details>
 			</section>
 		{/each}
 
@@ -1408,24 +1400,29 @@ function answerConfirm(ok: boolean) {
 		flex: 1;
 	}
 
-	/* 分组 */
+	/* ── 分节 ──
+	   只用留白分隔：一条横线都不画，左缘也不画竖线。
+	   竖线只属于「这一行有未保存改动」，见 .prow.dirty。 */
 	.pgroup {
-		margin-top: 1.75rem;
+		margin-top: 2rem;
 	}
 
 	.pgroup:first-of-type {
 		margin-top: 0;
 	}
 
-	.ghead {
-		display: flex;
-		align-items: center;
-		gap: 0.625rem;
-		padding-bottom: 0.625rem;
-		border-bottom: 1px solid var(--line-divider);
+	.shead {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto auto;
+		align-items: start;
+		gap: 1rem 1.5rem;
 	}
 
-	.ghead h3 {
+	.shead-text {
+		min-width: 0;
+	}
+
+	.shead h3 {
 		margin: 0;
 		font-size: var(--admin-fs-item, 1.0625rem);
 		font-weight: 650;
@@ -1433,41 +1430,114 @@ function answerConfirm(ok: boolean) {
 		color: var(--deep-text);
 	}
 
-	.ghead .sub {
+	/* 这一组是干什么的：一句陈述，不解释机制 */
+	.shead .sdesc {
+		margin: 0.25rem 0 0;
+		max-width: 62ch;
 		font-size: var(--admin-fs-meta, 0.75rem);
+		line-height: 1.55;
 		color: var(--content-meta);
+		text-wrap: pretty;
 	}
 
-	/* 结论靠右：一组只给一个判断，不给每个字段都发一块牌子 */
-	.verdict {
-		margin-left: auto;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		font-size: var(--admin-fs-meta, 0.75rem);
+	/* 状态：一个词 + 一行等宽回执，靠右，不铺底 */
+	.state {
+		min-width: 11rem;
+		text-align: right;
+	}
+
+	.state .word {
+		display: block;
+		font-size: var(--admin-fs-body, 0.875rem);
 		font-weight: 500;
+		color: var(--content-meta);
 		white-space: nowrap;
 	}
 
-	.verdict.ok {
+	.state .receipt {
+		display: block;
+		margin-top: 2px;
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
+		line-height: 1.5;
+		color: var(--content-meta);
+	}
+
+	.state[data-tone="ok"] .word {
 		color: var(--success);
 	}
 
-	.verdict.warn {
+	.state[data-tone="todo"] .word {
 		color: var(--primary);
 	}
 
-	.verdict.idle {
-		color: var(--content-meta);
+	/* ── 折叠：原生 details，箭头表示方向，不借用任何色块 ── */
+	.disc {
+		margin-top: 0.75rem;
+	}
+
+	.disc > summary {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		min-height: 28px;
+		padding-right: 0.5rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		font-weight: 500;
+		color: var(--primary);
+		cursor: pointer;
+		list-style: none;
+	}
+
+	.disc > summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.disc > summary:hover {
+		text-decoration: underline;
+	}
+
+	.disc > summary:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	.disc > summary svg {
+		width: 14px;
+		height: 14px;
+		flex: none;
+		transition: transform 0.15s ease;
+	}
+
+	.disc[open] > summary svg {
+		transform: rotate(90deg);
+	}
+
+	.disc > summary .label-open {
+		display: none;
+	}
+
+	.disc[open] > summary .label-open {
+		display: inline;
+	}
+
+	.disc[open] > summary .label-closed {
+		display: none;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.disc > summary svg {
+			transition: none;
+		}
 	}
 
 	/* 行 */
 	.prow {
 		display: grid;
-		grid-template-columns: 13rem minmax(0, 1fr);
-		gap: 1.5rem;
+		grid-template-columns: 13rem minmax(0, 1fr) 4.5rem;
+		gap: 0.5rem 1.5rem;
 		align-items: start;
-		padding: 0.875rem 0;
+		padding: 0.75rem 0.5rem;
 		border-bottom: 1px solid color-mix(in srgb, var(--deep-text) 6%, transparent);
 	}
 
@@ -1475,8 +1545,22 @@ function answerConfirm(ok: boolean) {
 		border-bottom: 0;
 	}
 
-	.prow.locked {
-		opacity: 0.62;
+	/* 未保存：左缘一条 2px 竖线 + 右侧一个词，两条线索，不只靠颜色。
+	   竖线只表示这一件事，不表示展开状态，也不表示本节状态。 */
+	.prow.dirty {
+		box-shadow: inset 2px 0 0 var(--primary);
+	}
+
+	.prow.dirty .name {
+		color: var(--primary);
+	}
+
+	.prow .flag {
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: var(--admin-fs-data, 0.6875rem);
+		line-height: 2.25rem;
+		color: var(--primary);
+		text-align: right;
 	}
 
 	/* 从保存栏清单跳过来的定位提示：整行背景亮两次，左缘压一道主色。
@@ -1568,35 +1652,13 @@ function answerConfirm(ok: boolean) {
 		color: var(--success);
 	}
 
-	/* 未上传时的投放区：虚线、等宽提示，点一下开文件框 */
-	.upload-slot {
-		display: flex;
-		align-items: center;
-		width: 100%;
-		height: 2.25rem;
-		padding: 0 0.75rem;
-		border: 1px dashed var(--input-border);
-		border-radius: 10px;
-		background: none;
-		font: inherit;
-		font-size: 0.9375rem;
-		color: var(--content-meta);
-		text-align: left;
-		cursor: pointer;
-		transition:
-			border-color 0.15s ease,
-			color 0.15s ease;
-	}
-
-	.upload-slot:hover {
-		border-color: color-mix(in srgb, var(--primary) 55%, transparent);
-		color: var(--deep-text);
-	}
-
-	.pair {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
+	/* 私钥内容：多行等宽，行高放宽便于核对首尾标记 */
+	.ui-input.keyarea {
+		height: auto;
+		min-height: 6rem;
+		padding: 0.5rem 0.75rem;
+		resize: vertical;
+		line-height: 1.55;
 	}
 
 	/* 密码框：眼睛按钮压在输入框右侧，不另起一列 */
@@ -1627,10 +1689,6 @@ function answerConfirm(ok: boolean) {
 
 	.eye:hover {
 		color: var(--deep-text);
-	}
-
-	.file-hidden {
-		display: none;
 	}
 
 	.link {
@@ -1827,12 +1885,37 @@ function answerConfirm(ok: boolean) {
 		font-size: var(--admin-fs-data, 0.6875rem);
 	}
 
-	/* 窄屏：左栏收到标题上方，控件拿满一行 */
+	/* 窄屏：说明收到控件上方，未保存标记退到同一行右侧 */
 	@media (max-width: 860px) {
+		.shead {
+			grid-template-columns: minmax(0, 1fr) auto;
+		}
+
+		.state {
+			grid-column: 1 / -1;
+			order: 3;
+			min-width: 0;
+			text-align: left;
+		}
+
+		.shead .ui-btn {
+			grid-column: 2;
+			grid-row: 1;
+		}
+
 		.prow {
-			grid-template-columns: minmax(0, 1fr);
+			grid-template-columns: minmax(0, 1fr) auto;
 			gap: 0.5rem;
 		}
 
+		.prow .right {
+			grid-column: 1 / -1;
+		}
+
+		.prow .flag {
+			grid-row: 1;
+			grid-column: 2;
+			line-height: 1.6;
+		}
 	}
 </style>

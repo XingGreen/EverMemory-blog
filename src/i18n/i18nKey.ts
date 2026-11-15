@@ -858,6 +858,18 @@ enum I18nKey {
 	secretsGroupAuthDesc = "secretsGroupAuthDesc",
 	secretsGroupTurnstile = "secretsGroupTurnstile",
 	secretsGroupTurnstileDesc = "secretsGroupTurnstileDesc",
+	/** 字段行右侧的未保存标记 */
+	secretsUnsaved = "secretsUnsaved",
+	/** 折叠控件：展开设置（{count} 项） */
+	secretsExpandSettings = "secretsExpandSettings",
+	secretsCollapseSettings = "secretsCollapseSettings",
+	secretsCheckRunning = "secretsCheckRunning",
+	secretsCheckPassed = "secretsCheckPassed",
+	secretsCheckFailed = "secretsCheckFailed",
+	secretsCheckIdle = "secretsCheckIdle",
+	secretsStatusDone = "secretsStatusDone",
+	secretsStatusUnset = "secretsStatusUnset",
+	secretsStatusIncomplete = "secretsStatusIncomplete",
 	secretsFieldHelp = "secretsFieldHelp",
 	secretsUploadReplace = "secretsUploadReplace",
 	secretsFieldMenu = "secretsFieldMenu",
