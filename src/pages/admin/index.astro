@@ -1,10 +1,10 @@
 ---
 import AdminDashboard from "@/components/admin/AdminDashboard.svelte";
+import { profileConfig, siteConfig } from "@/config";
 // adminConfig 与 AdminDashboard 用同一条 import 路径（不走 config barrel）：
 // vite 对 barrel 链路的 HMR 传播与直连模块不同步，会出现 SSR 端读到旧值、
 // 客户端读到新值的两端分裂（实测：侧栏直角但容器仍有内距的混合态）。
 import { adminConfig } from "@/config/adminConfig";
-import { profileConfig, siteConfig } from "@/config";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import { resolveAdminLogo } from "@/utils/admin-logo";
 import { resolveAvatarUrl } from "@/utils/avatar-url";
