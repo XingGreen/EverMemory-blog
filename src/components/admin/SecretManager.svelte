@@ -1621,14 +1621,18 @@ function answerConfirm(ok: boolean) {
 		border-color: var(--destructive);
 	}
 
-	/* 已配置 / 已生成：一句静音的词 + 文字动作。
-	   不套输入框（那会假装这里放着一个值），也不用绿色——
-	   绿色只用于「没有待办」的状态词，而这里要说的只是「有东西」。 */
+	/* 已配置 / 已生成：占住和输入框同一个槽位（同底、同描边、同高度），
+	   左边一句状态词，右边两个文字动作。空着不长草，也不跟别行错位。 */
 	.summary {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
+		width: 100%;
 		min-height: 2.25rem;
+		padding: 0 0.75rem;
+		background: var(--input-bg);
+		border: 1px solid var(--input-border);
+		border-radius: 10px;
 	}
 
 	.summary .word {
