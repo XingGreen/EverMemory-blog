@@ -34,6 +34,58 @@ touching icons, styles, the build pipeline, or the dev server.
   two.
 - **`astro check` does not parse CSS.** Unbalanced braces pass until Vite compiles them. Run
   `npx biome check` and verify brace balance after editing a `<style>` block.
+- **Astro scoped styles cannot match `.dark` with `.dark &`.** Astro scopes the `.dark` class
+  too, so the selector compiles to `.dark[data-astro-xxx] &` and never hits the real DOM.
+  Use `:global(.dark) &` instead — already the established pattern in `FloatingButton.astro`,
+  `FloatingTOC.astro`, and `SiteStats.astro`.
+- **Svelte template comments must be `<!-- -->`.** `{/* */}` is a parse error on Svelte 5.56
+  and a bare `/* */` leaks into the DOM. This project runs svelte ^5.56.3, so both failure
+  modes are live; `/* */` style comments belong only in `<script>` / `<style>` blocks.
+- **Descendant selectors built on a child component's root class silently fail.** When a
+  parent passes `class` to a child (e.g. `<Icon class="...">` or a wrapper component), the
+  root element carries the *child's* scope hash, not the parent's — so `.host-class .thing`
+  in the parent's scoped style never matches. Put the host class on a real element in the
+  parent's own template, or bridge with `:global(.host-class)`. Single-class rules are
+  unaffected.
+- **Svelte 5's default `cssHash` hashes the file path.** Moving a component between
+  directories can then produce different scope hashes for SSR and client, silently dropping
+  styles. This project has no `cssHash` override in `astro.config.mjs` (verified 2026-11-15),
+  so treat unexplained scoped-style loss after a file move as this bug first. The fix is
+  content-based hashing — `cssHash: ({ css, hash }) => \`svelte-${hash(css)}\`` under the
+  svelte integration's `compilerOptions` — which touches `astro.config.mjs` and therefore
+  needs explicit approval per the scope table.
+
+## Markdown pipeline
+
+- **rehype/remark plugin changes do not hot-reload.** Plugins under `src/plugins/*.mjs` run
+  at Markdown compile time and Astro's content data store caches the compiled result, so a
+  dev server restart alone may still serve stale HTML. Stop the server, delete
+  `.astro/data-store.json`, and restart. Verify by checking whether the plugin's expected
+  class/attribute actually appears in the page HTML — if new CSS loads but the new class is
+  missing, it is the content cache, not your selector.
+- **`fetch` must check `response.ok`.** A non-2xx body parsed with `r.json()` produces
+  undefined fields that surface as `NaN` or blank UI instead of an error message. Check
+  `ok`, add an `AbortController` timeout, and render explicit error copy in the catch.
+
+## Forms and layout
+
+- **Grid forms need explicit shrink rules.** With 27 grid-based field layouts under
+  `src/components/admin/`, this is the default layout mode. A grid without an explicit
+  column template gets implicit tracks sized to content, and a native `<input>` keeps its
+  ~20-character intrinsic width. Always declare
+  `grid-template-columns: minmax(0, 1fr)`-style templates, set `min-width: 0` on grid items,
+  and give inputs `width: 100%; min-width: 0` so the browser's intrinsic size cannot push
+  the row wider than its container.
+
+## Tooling (Windows)
+
+- **PowerShell does not support `2>nul`.** `nul` is a DOS device name; the redirect is parsed
+  before execution and the command fails with `NotSupportedException` without ever running.
+  Use `2>$null`, or `Remove-Item -ErrorAction SilentlyContinue`. This applies to every
+  command, not just cleanup — the failure is silent in scripts.
+- **PowerShell garbles non-ASCII paths and commit messages.** Read with explicit UTF-8
+  output encoding; for commit messages containing quotes or CJK, write a temp file and use
+  `git commit -F` instead of inline escaping.
 
 ## Admin UI
 

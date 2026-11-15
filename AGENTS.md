@@ -119,6 +119,9 @@ wired.
   caused real breakage. Read before changing icons, styles, or the build pipeline.
 - [`rules/a11y.md`](./rules/a11y.md) — keyboard, focus, contrast, and motion rules. Required
   before adding or changing any interactive component, dialog, or overlay.
+- [`rules/component-api.md`](./rules/component-api.md) — props naming, slot, and conditional
+  rendering conventions for Svelte components. Required before adding or changing a
+  component's public interface.
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — routing, configuration, content
   collections, tests, build pipeline, and deployment.
 - [`docs/PROVIDERS.md`](./docs/PROVIDERS.md) — auth and storage adapter interfaces, provider
