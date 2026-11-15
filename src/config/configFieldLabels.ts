@@ -16,6 +16,7 @@ import { siteConfig } from "./siteConfig";
 const ZH_LABELS: Record<string, string> = {
 	// —— 后台外观（AdminConfig）——
 	appearanceStrategy: "配置策略（复用前台 / 后台独立）",
+	sidebarFlush: "侧边栏紧贴屏幕边缘",
 	pageTransition: "页面切换动画",
 	effect: "动画效果",
 	duration: "动画时长（毫秒）",
