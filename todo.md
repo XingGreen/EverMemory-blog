@@ -138,3 +138,48 @@
 - [x] 修复旧弹窗文案与行为不符：原「保留当前正文」实际会删掉草稿
 - [x] 后台移动端适配：抽屉宽度与安全区、视口高度改 dvh 并按 flex 分配、历史页纵向堆叠、分类表格横向滚动、触控热区 44px、输入框 16px 防 iOS 缩放
 - [x] 通知倒计时进度条 2px 加粗到 4px，轨道 `--btn-regular-bg`、填充用语义色（去掉装饰性光晕）
+
+## 环境变量页（2026-11-13 收尾存档）
+
+### 已合并到 master
+
+- [x] 页头统一说明：只用于本机开发 → 保存到 .env.local → 用「导出配置」带到线上；各处重复的「保存到哪」提示一并收掉（`3d24da86`）
+- [x] 未保存清单回到旧形态：`savebar` + `savebar-notice` + `dirty-list`，字段名回到 `dirtyItems`（`3d24da86`）
+- [x] 清掉注释里遗留的旧名称（`ae811437`）
+- [x] 脏列表跳转高亮恢复：点条目滚动到目标字段并整行亮起 1.6s（`7a24586f`）
+- [x] 高亮块去圆角，回到旧版直角形态（`0556ea1e`）
+
+### 未合并（分支 `revert/color-baseline`，`0aa14ffb`）
+
+- [ ] 整页回退到 `9bc454d2`：`SecretManager.svelte` / `admin-secrets.ts` / `api/admin/secrets.ts` 三个文件
+- [ ] **已知缺陷**：页脚读 `secretSaveState.diffRows`，被回退的组件上报的是 `dirtyItems`，展开清单为空 —— 合并前必须统一字段名
+- [ ] 是否采用该分支待确认（它会让这一页回到两列网格 + 分组计数 + 验证连接）
+
+### 未解决
+
+- [ ] 设计基准未定：参考文件 `.workbuddy/reviews/env-page-review.html` 已收到，尚未据此重做样张
+- [ ] 样张 `.workbuddy/reviews/env-settings-sample.html`（单列 + 衬线）是候选稿，可能废弃
+- [x] 候选稿三 `.workbuddy/reviews/env-variables-sample.html`（可交互）：标题保持「环境变量」，三节改用功能名（仓库写入 / 后台登录 / 人机验证），左纵线只标未保存改动。上一版 `env-connect-sample.html` 的竖脊与提问式标题已被否决。
+- [x] 按该样张落地 `/admin/env/`（commit `2bb2b2cd`）：`SecretManager.svelte`、`admin-secrets.ts`、`i18n/**`。私钥改为粘贴内容/编辑，去掉上传槽与文件名；OAuth 与 Turnstile 各拆两行。
+- [ ] 待确认：私钥行仍保留「或填私钥文件路径」，与「直接写入 .env.local」的口径是否一致，如不需要可去掉
+- [ ] 待确认：顶部「所有必要配置都已完成」可关闭横幅（`secretSaveState` 之外那条 note）样张里没有，暂留
+- [ ] 参考样张与 `docs/ADMIN_UI.md` 存在冲突，需定优先级：输入框 42px/12px 圆角 vs 文档的 36px/10px；分组分隔线 vs 文档「一屏一条通栏细线」
+- [ ] 必填标记：沿用 `*`，还是按 GOV.UK「多数必填时只标可选」
+- [ ] 每个字段的 `⋯` 菜单：保留（省宽度）还是外露（可发现）
+- [ ] 错误态与空态在真实页面里尚未实现（样张只有样式）
+- [ ] `src/content/posts/demo.md` 的删除来自后台操作，未提交
+
+### 下一步
+
+1. 定基准：以旧样张为准，还是采用 `revert/color-baseline`
+2. 统一 `dirtyItems` / `diffRows`，让改动清单能展开
+3. 按基准改样张 → 确认后落代码
+4. 补 i18n 词条（新增文案目前只有中文）
+
+## 暂停：OOBE 引导页落地（2026-11-15）
+
+- [ ] 设计稿已定稿：`https://ardot.tencent.com/file/747723469136032`（Step1 仓库写入 / Step2 后台登录 / Done 一切就绪 + 交互标注条）
+- [ ] 按画布稿重做 `src/components/setup/SetupPage.svelte`：居中窄栏（480px）、Hero 区（圆环图标 + 欢迎语 + 「两步配置，马上就好」）、步骤行（文字深浅 + 细线，无数字徽章）、完成屏（大对勾圆环 + 「一切就绪」）
+- [ ] 分步逻辑：默认第一步，主按钮「下一步：后台登录」切换；完成屏对勾描边 600ms、按钮延迟 300ms；`prefers-reduced-motion` 直落终态
+- [ ] 动效：入场淡入上移 16px 240ms ease-out；步骤切换 180ms 淡入、焦点落新步骤第一个输入框
+- [ ] token 不新造：沿用后台 `--page-bg/--card-bg/--primary` 与 `.ui-input` 规格（36h/10 圆角）

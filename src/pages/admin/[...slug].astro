@@ -41,14 +41,17 @@ const logo = await resolveAdminLogo();
 </AdminLayout>
 
 <style is:global>
+	/* 紧贴模式：与 admin/index.astro 保持同一基准（零内距 + 整视口高）。 */
 	.admin-container {
-		padding: 1.5rem;
-		min-height: calc(100vh - 3rem);
+		padding: 0;
+		min-height: 100vh;
+		min-height: 100dvh;
 	}
 
-	@media (max-width: 768px) {
+	@media (max-width: 1023px) {
 		.admin-container {
-			padding: 1rem;
+			padding: 0;
+			min-height: 100dvh;
 		}
 	}
 </style>

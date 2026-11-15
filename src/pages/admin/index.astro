@@ -34,20 +34,22 @@ const logo = await resolveAdminLogo();
 </AdminLayout>
 
 <style is:global>
+	/* 紧贴模式：后台与屏幕边缘零间距（对齐前台导航栏的贴边语言）。
+	   侧边栏自身贴左缘、全高；高度基准因此从「视口减双倍内距」改为整视口。 */
 	.admin-container {
-		padding: 1.5rem;
-		min-height: calc(100vh - 3rem);
+		padding: 0;
+		min-height: 100vh;
 		/* dvh 跟随浏览器地址栏收放，避免手机上下拖动时高度跳变。
 		   不支持的浏览器沿用上一行的 vh 值。 */
-		min-height: calc(100dvh - 3rem);
+		min-height: 100dvh;
 	}
 
 	/* 断点必须与 .admin-layout 的移动端覆盖（1023px）对齐：
-	   两处内边距与高度基准不一致时，1024 边缘附近会多出 1rem 的纵向溢出。 */
+	   两处内边距与高度基准不一致时，1024 边缘附近会出现纵向溢出。 */
 	@media (max-width: 1023px) {
 		.admin-container {
-			padding: 1rem;
-			min-height: calc(100dvh - 2rem);
+			padding: 0;
+			min-height: 100dvh;
 		}
 	}
 </style>

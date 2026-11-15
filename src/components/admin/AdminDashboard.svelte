@@ -2459,14 +2459,16 @@ function formatDate(dateStr: string | null): string {
 		   只在超宽视口分档放大，且每档的放大幅度都小于视口增幅，保证缩放单调：
 		   1500→1900 视口 +27% 对 zoom +9.5%；1900→2400 +26% 对 +13%。 */
 		--admin-zoom: 1;
-		--admin-viewport-h: calc((100vh - 3rem) / var(--admin-zoom));
+		/* 紧贴模式：容器零内距，高度取整视口（原来是 100vh - 3rem，对应
+		   已移除的 1.5rem 双倍内距）。 */
+		--admin-viewport-h: calc(100vh / var(--admin-zoom));
 		display: flex;
 		align-items: stretch;
-		gap: 1.25rem;
+		gap: 0;
 		/* 必须同时给 height 与 min-height：只给 min-height 时子项会把它
 		   继续撑高（仪表板实测比侧栏高 59px）。height 才是硬约束，
 		   子项超出的部分由各自的 overflow 处理。 */
-		height: calc(100vh - 3rem);
+		height: 100vh;
 		min-height: 0;
 	}
 
@@ -2477,14 +2479,14 @@ function formatDate(dateStr: string | null): string {
 		/* 整页改为文档层滚动后，侧栏用 sticky 常驻视口，
 		   高度取视口高（内容超出时自身内部滚动）。 */
 		position: sticky;
-		top: 1.5rem;
+		top: 0;
 		align-self: flex-start;
 		/* 展开态宽度分档：≥1280 用 20rem(320px)，对齐参考项目 .admin-sidebar 的
 		   max-width: 20rem；更窄的视口保持 16rem(256px)——实测 1080 视口下 320px
 		   会把文章列表的「状态/操作」列挤到换行。折叠态 5.75rem(92px) 两边一致。 */
 		width: 16rem;
 		flex-shrink: 0;
-		height: calc(100vh - 3rem);
+		height: 100vh;
 		overflow: visible;
 		display: flex;
 		flex-direction: column;
@@ -2497,7 +2499,9 @@ function formatDate(dateStr: string | null): string {
 		-webkit-backdrop-filter: blur(12px);
 		backdrop-filter: blur(12px);
 		border: 1px solid transparent;
-		border-radius: var(--radius-large);
+		/* 紧贴模式：贴屏幕的左/上/下三边直角，只朝内容一侧保留圆角——
+		   与前台导航栏（贴顶、底部 0.75rem 圆角）同一套贴边语言。 */
+		border-radius: 0 0.75rem 0.75rem 0;
 		/* 左右 0.75rem 是折叠态「图标列」的一部分，展开/折叠必须保持一致 */
 		padding: 1rem 0.75rem;
 		gap: 0.5rem;
@@ -3645,7 +3649,7 @@ function formatDate(dateStr: string | null): string {
 	.admin-content {
 		flex: 1;
 		min-width: 0;
-		/* 高度由受限的 .admin-layout（height: 100vh-3rem）通过 flex 分配。
+		/* 高度由受限的 .admin-layout（height: 100vh，紧贴模式）通过 flex 分配。
 		   这里不再写死 calc，避免 zoom 容器内基准不一致。 */
 		min-height: 0;
 		/* 内容区铺满可用宽度，不再设置 max-width 限制 */
@@ -4686,14 +4690,14 @@ function formatDate(dateStr: string | null): string {
 	@media (max-width: 1023px) {
 		/* 高度基准换 dvh：100vh 在手机浏览器里取的是「地址栏收起后」的最大视口，
 		   实际可视区更矮，底部会被地址栏压住（iOS Safari 尤其明显）。
-		   窄屏 .admin-container 的上下内边距是 1rem×2，不再是桌面那 3rem。 */
+		   紧贴模式下容器零内距，高度基准与桌面一致取整视口。 */
 		.admin-layout {
 			/* 先给 vh 兜底，再用 dvh 覆盖：不支持的浏览器只丢后一行，
 			   不会连高度一起失效 */
-			height: calc(100vh - 2rem);
-			height: calc(100dvh - 2rem);
-			min-height: calc(100vh - 2rem);
-			min-height: calc(100dvh - 2rem);
+			height: 100vh;
+			height: 100dvh;
+			min-height: 100vh;
+			min-height: 100dvh;
 			/* 侧栏抽屉是 fixed 浮层，flex 里只剩内容区一个子项，gap 无意义 */
 			gap: 0;
 			/* 窄屏多了一条 .mobile-topbar，若还按视口高算，所有「整页卡片」
