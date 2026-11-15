@@ -176,10 +176,10 @@
 3. 按基准改样张 → 确认后落代码
 4. 补 i18n 词条（新增文案目前只有中文）
 
-## 暂停：OOBE 引导页落地（2026-11-15）
+## 已完成：OOBE 引导页落地（2026-11-15）
 
-- [ ] 设计稿已定稿：`https://ardot.tencent.com/file/747723469136032`（Step1 仓库写入 / Step2 后台登录 / Done 一切就绪 + 交互标注条）
-- [ ] 按画布稿重做 `src/components/setup/SetupPage.svelte`：居中窄栏（480px）、Hero 区（圆环图标 + 欢迎语 + 「两步配置，马上就好」）、步骤行（文字深浅 + 细线，无数字徽章）、完成屏（大对勾圆环 + 「一切就绪」）
-- [ ] 分步逻辑：默认第一步，主按钮「下一步：后台登录」切换；完成屏对勾描边 600ms、按钮延迟 300ms；`prefers-reduced-motion` 直落终态
-- [ ] 动效：入场淡入上移 16px 240ms ease-out；步骤切换 180ms 淡入、焦点落新步骤第一个输入框
-- [ ] token 不新造：沿用后台 `--page-bg/--card-bg/--primary` 与 `.ui-input` 规格（36h/10 圆角）
+- [x] 设计稿已定稿：`https://ardot.tencent.com/file/747723469136032`（Step1 仓库写入 / Step2 后台登录 / Done 一切就绪 + 交互标注条）
+- [x] 落地 `src/components/setup/SetupPage.svelte`：最终以用户样张结构为准（窄卡片 460px、步骤标题、底部三段式、完成屏），非画布稿（`3df036ad`）：居中窄栏（480px）、Hero 区（圆环图标 + 欢迎语 + 「两步配置，马上就好」）、步骤行（文字深浅 + 细线，无数字徽章）、完成屏（大对勾圆环 + 「一切就绪」）
+- [x] 分步逻辑：默认第一步，主按钮「下一步：后台登录」切换；完成屏对勾描边 600ms、按钮延迟 300ms；`prefers-reduced-motion` 直落终态
+- [x] 动效：入场淡入上移 16px 240ms ease-out；步骤切换 180ms 淡入、焦点落新步骤第一个输入框
+- [x] token 不新造：沿用后台 `--page-bg/--card-bg/--primary` 与 `.ui-input` 规格（36h/10 圆角）
