@@ -161,7 +161,7 @@
 - [ ] 样张 `.workbuddy/reviews/env-settings-sample.html`（单列 + 衬线）是候选稿，可能废弃
 - [x] 候选稿三 `.workbuddy/reviews/env-variables-sample.html`（可交互）：标题保持「环境变量」，三节改用功能名（仓库写入 / 后台登录 / 人机验证），左纵线只标未保存改动。上一版 `env-connect-sample.html` 的竖脊与提问式标题已被否决。
 - [x] 按该样张落地 `/admin/env/`（commit `2bb2b2cd`）：`SecretManager.svelte`、`admin-secrets.ts`、`i18n/**`。私钥改为粘贴内容/编辑，去掉上传槽与文件名；OAuth 与 Turnstile 各拆两行。
-- [ ] 待确认：私钥行仍保留「或填私钥文件路径」，与「直接写入 .env.local」的口径是否一致，如不需要可去掉
+- [x] 私钥行已恢复文件上传（f92ced4c）：上传/粘贴/路径三种方式并存，「或填私钥文件路径」保留
 - [ ] 待确认：顶部「所有必要配置都已完成」可关闭横幅（`secretSaveState` 之外那条 note）样张里没有，暂留
 - [ ] 参考样张与 `docs/ADMIN_UI.md` 存在冲突，需定优先级：输入框 42px/12px 圆角 vs 文档的 36px/10px；分组分隔线 vs 文档「一屏一条通栏细线」
 - [ ] 必填标记：沿用 `*`，还是按 GOV.UK「多数必填时只标可选」
