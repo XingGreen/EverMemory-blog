@@ -499,6 +499,12 @@ $effect(() => {
  * 只影响界面，草稿本身仍是原值，不点保存就不落盘。
  */
 let replacing = $state<Record<string, boolean>>({});
+/** 私钥框：切到编辑态后要把焦点送进去，否则用户还得自己点一下 */
+let keyAreaEl = $state<HTMLTextAreaElement | null>(null);
+
+$effect(() => {
+	if (replacing.GITHUB_PRIVATE_KEY && keyAreaEl) keyAreaEl.focus();
+});
 
 function buildEntries(): { key: string; value?: string; delete?: boolean }[] {
 	const entries: { key: string; value?: string; delete?: boolean }[] = [];
@@ -1108,6 +1114,7 @@ function answerConfirm(ok: boolean) {
 									</div>
 								{:else}
 									<textarea
+										bind:this={keyAreaEl}
 										class="ui-input mono keyarea"
 										rows="4"
 										placeholder="-----BEGIN PRIVATE KEY-----"
@@ -1534,10 +1541,10 @@ function answerConfirm(ok: boolean) {
 	/* 行 */
 	.prow {
 		display: grid;
-		grid-template-columns: 13rem minmax(0, 1fr) 4.5rem;
+		grid-template-columns: minmax(12rem, 17rem) minmax(0, 1fr) 4.5rem;
 		gap: 0.5rem 1.5rem;
 		align-items: start;
-		padding: 0.75rem 0.5rem;
+		padding: 0.875rem 0.5rem;
 		border-bottom: 1px solid color-mix(in srgb, var(--deep-text) 6%, transparent);
 	}
 
