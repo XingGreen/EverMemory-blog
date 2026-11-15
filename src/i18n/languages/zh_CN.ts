@@ -870,8 +870,6 @@ export const zh_CN: Translation = {
 	[Key.secretsGroupTurnstileDesc]:
 		"未配置时登录页不进行人机验证。两个密钥须同时填写或同时留空。",
 	[Key.secretsUnsaved]: "未保存",
-	[Key.secretsExpandSettings]: "展开设置（{count} 项）",
-	[Key.secretsCollapseSettings]: "收起设置",
 	[Key.secretsCheckRunning]: "校验中",
 	[Key.secretsCheckPassed]: "校验通过",
 	[Key.secretsCheckFailed]: "校验失败",

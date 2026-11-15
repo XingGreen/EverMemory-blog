@@ -864,8 +864,6 @@ export const zaku: Translation = {
 	[Key.secretsGroupTurnstileDesc]:
 		"不配的话登录页不验人机。两个密钥要填就都填，要不就都空着。",
 	[Key.secretsUnsaved]: "没保存",
-	[Key.secretsExpandSettings]: "展开设置（{count} 项）",
-	[Key.secretsCollapseSettings]: "收起设置",
 	[Key.secretsCheckRunning]: "检查中",
 	[Key.secretsCheckPassed]: "检查通过",
 	[Key.secretsCheckFailed]: "检查没通过",

@@ -909,8 +909,6 @@ export const en: Translation = {
 	[Key.secretsGroupTurnstileDesc]:
 		"When unset, the sign-in page skips the bot check. Set both keys, or neither.",
 	[Key.secretsUnsaved]: "Not saved",
-	[Key.secretsExpandSettings]: "Show settings ({count})",
-	[Key.secretsCollapseSettings]: "Hide settings",
 	[Key.secretsCheckRunning]: "Checking",
 	[Key.secretsCheckPassed]: "Verified",
 	[Key.secretsCheckFailed]: "Check failed",

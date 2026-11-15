@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount, tick } from "svelte";
+import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -391,16 +391,9 @@ const changedCount = $derived(items.filter(isDirty).length);
  * 字段容器通过 data-secret-key 定位（见模板），滚动容器是
  * .admin-page-body（AdminPage 内唯一可滚区域）。
  */
-async function scrollToField(key: string) {
+function scrollToField(key: string) {
 	const field = document.querySelector(`[data-secret-key="${key}"]`);
 	if (!field) return;
-	// 字段可能收在折叠区里：先展开这一组，否则 scrollIntoView 对隐藏节点无效
-	const wrap = field.closest<HTMLElement>("[data-group]");
-	const groupId = wrap?.dataset.group;
-	if (groupId && wrap?.hidden) {
-		openGroups[groupId] = true;
-		await tick();
-	}
 	const body = document.querySelector(".admin-page-body");
 	field.scrollIntoView({ behavior: "smooth", block: "center" });
 	// 高亮：加类后 1.6s 移除，与 CSS 过渡时长对应
@@ -770,32 +763,14 @@ function rowDirty(row: SecretRow): boolean {
 }
 
 /**
- * 折叠区的展开状态。
- * 只在数据到手时算一次「默认开到哪些组」，之后交给用户：
- * 若把 open 直接绑成 groupOpen(...)，每次输入都会重新求值，
- * 用户刚收起的分组会被顶开。
+ * 整组都可以留空（每个键都不是必填）时为真——只有这种分组才折叠。
+ * 必填项永远展开：折叠会把「还差哪几项」藏起来，那正是这一页要回答的。
  */
-let openGroups = $state<Record<string, boolean>>({});
-
-$effect(() => {
-	if (loading || items.length === 0) return;
-	if (Object.keys(openGroups).length > 0) return;
-	const next: Record<string, boolean> = {};
-	for (const g of SECRET_GROUPS) next[g.id] = groupOpen(g.id);
-	openGroups = next;
-});
-
-/** 手动开合：用户的意图优先于默认值，一次也不覆盖 */
-function toggleGroup(groupId: string) {
-	openGroups[groupId] = !(openGroups[groupId] ?? false);
-}
-
-/** 默认展开：这一组有未保存改动，或还缺必填项 */
-function groupOpen(groupId: string): boolean {
+function groupOptional(groupId: string): boolean {
 	const rows = rowsOf(groupId);
-	return (
-		rows.some(rowDirty) ||
-		rows.some((r) => r.shape !== "optional" && !rowConfigured(r))
+	if (rows.length === 0) return false;
+	return rows.every((row) =>
+		row.keys.every((key) => itemByKey.get(key)?.required === false),
 	);
 }
 
@@ -830,11 +805,10 @@ function verdictOf(groupId: string): {
 				tone: "idle",
 			};
 		}
-		const addr = addressOf();
 		return probeRepo?.ok
 			? {
 					word: i18n(I18nKey.secretsCheckPassed),
-					receipt: `${probeAt} · ${addr}`,
+					receipt: probeAt,
 					tone: "ok",
 				}
 			: {
@@ -1010,43 +984,13 @@ function answerConfirm(ok: boolean) {
 		{#each groups as group (group.id)}
 			{@const groupRows = rowsOf(group.id)}
 			{@const verdict = verdictOf(group.id)}
-			<section class="pgroup">
-				<div class="shead">
-					<div class="shead-text">
+			<!-- 必填项永远展开，不给折叠；整组都可留空的（人机验证）才可折叠，
+			     折叠形态照参考项目的可选区块：标题 + 当前状态同一行，上面一条细线。 -->
+			<details class="pgroup" class:opt={groupOptional(group.id)} open={!groupOptional(group.id)}>
+				{#if groupOptional(group.id)}
+					<summary class="opt-head">
 						<h3>{i18n(I18nKey[group.labelKey])}</h3>
-						<p class="sdesc">{i18n(I18nKey[group.descKey])}</p>
-					</div>
-					<div class="state" data-tone={verdict.tone}>
-						<span class="word">{verdict.word}</span>
-						{#if verdict.receipt}
-							<span class="receipt">{verdict.receipt}</span>
-						{/if}
-					</div>
-					{#if group.id === "github"}
-						<button
-							type="button"
-							class="ui-btn ui-btn-soft ui-btn-sm"
-							onclick={runProbe}
-							disabled={probe.running || loading}
-						>
-							{probe.running
-								? i18n(I18nKey.secretsCheckRunning)
-								: i18n(I18nKey.secretsProbeCheck)}
-						</button>
-					{/if}
-					<button
-						type="button"
-						class="disc-toggle"
-						aria-expanded={openGroups[group.id] ?? false}
-						aria-controls={`group-${group.id}`}
-						aria-label={openGroups[group.id]
-							? i18n(I18nKey.secretsCollapseSettings)
-							: i18n(I18nKey.secretsExpandSettings).replace(
-									"{count}",
-									String(groupRows.length),
-								)}
-						onclick={() => toggleGroup(group.id)}
-					>
+						<span class="opt-state">{verdict.word}</span>
 						<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
 							<path
 								d="M6 3.5L10.5 8L6 12.5"
@@ -1056,16 +1000,40 @@ function answerConfirm(ok: boolean) {
 								stroke-linejoin="round"
 							/>
 						</svg>
-					</button>
-				</div>
+					</summary>
+					<p class="sdesc">{i18n(I18nKey[group.descKey])}</p>
+				{:else}
+					<!-- 必填分组不给折叠：空的隐藏 summary 顶掉浏览器自带的「详情」一行，
+					     它不渲染、不可聚焦，这一组也就不可能被收起。 -->
+					<summary hidden></summary>
+					<div class="shead">
+						<div class="shead-text">
+							<h3>{i18n(I18nKey[group.labelKey])}</h3>
+							<p class="sdesc">{i18n(I18nKey[group.descKey])}</p>
+						</div>
+						<div class="state" data-tone={verdict.tone}>
+							<span class="word">{verdict.word}</span>
+							{#if verdict.receipt}
+								<span class="receipt">{verdict.receipt}</span>
+							{/if}
+						</div>
+						{#if group.id === "github"}
+							<button
+								type="button"
+								class="ui-btn ui-btn-soft ui-btn-sm"
+								onclick={runProbe}
+								disabled={probe.running || loading}
+							>
+								{probe.running
+									? i18n(I18nKey.secretsCheckRunning)
+									: i18n(I18nKey.secretsProbeCheck)}
+							</button>
+						{/if}
+					</div>
+				{/if}
 
-					<div
-						class="prows"
-						id={`group-${group.id}`}
-						data-group={group.id}
-						hidden={!(openGroups[group.id] ?? false)}
-					>
-						{#each groupRows as row (row.id)}
+				<div class="prows">
+					{#each groupRows as row (row.id)}
 					{@const first = itemByKey.get(row.keys[0])}
 					{@const configured = rowConfigured(row)}
 					<div
@@ -1097,18 +1065,9 @@ function answerConfirm(ok: boolean) {
 								{#if addressError}
 									<p class="trace bad">{addressError}</p>
 								{/if}
-								<p class="trace">
-									{#if probeRepo}
-										<b>刚刚验过：</b>{probeRepo.detail}
-									{:else if probe.running}
-										正在验证…
-									{:else}
-										<button type="button" class="link" onclick={runProbe}
-											>验证连接</button
-										>
-										<span class="dim">· 还没有验证</span>
-									{/if}
-								</p>
+								{#if probeRepo}
+									<p class="trace">{probeRepo.detail}</p>
+								{/if}
 							{:else if row.shape === "content"}
 								{#if configured && !replacing[row.keys[0]]}
 									<div class="summary">
@@ -1220,12 +1179,8 @@ function answerConfirm(ok: boolean) {
 											}}
 										/>
 									{/if}
-									{#if row.shape === "optional"}
-										<p class="trace dim">可选，留空不影响使用</p>
-									{:else if probeInstall && row.id === "install"}
-										<p class="trace">
-											<b>刚刚验过：</b>{probeInstall.detail}
-										</p>
+									{#if probeInstall && row.id === "install"}
+										<p class="trace">{probeInstall.detail}</p>
 										{#if probeInstall.candidates?.length}
 											<p class="trace">
 												{#each probeInstall.candidates as candidate (candidate.id)}
@@ -1249,9 +1204,9 @@ function answerConfirm(ok: boolean) {
 							{rowDirty(row) ? i18n(I18nKey.secretsUnsaved) : ""}
 						</div>
 					</div>
-				{/each}
-					</div>
-			</section>
+					{/each}
+				</div>
+			</details>
 		{/each}
 
 		<!-- 引导期只留一个动作：配置完去登录。
@@ -1431,6 +1386,68 @@ function answerConfirm(ok: boolean) {
 		margin-top: 0;
 	}
 
+	/* 只有「整组都可留空」的分组才折叠。形态照参考项目的可选区块：
+	   上面一条细线，标题与当前状态同一行，箭头靠右，收起时只剩这一行。 */
+	.pgroup.opt {
+		border-top: 1px solid var(--line-divider);
+		padding-top: 1.25rem;
+	}
+
+	.opt-head {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		min-height: 28px;
+		cursor: pointer;
+		list-style: none;
+	}
+
+	.opt-head::-webkit-details-marker {
+		display: none;
+	}
+
+	.opt-head h3 {
+		margin: 0;
+		font-size: var(--admin-fs-item, 1.0625rem);
+		font-weight: 650;
+		letter-spacing: 0.01em;
+		color: var(--deep-text);
+	}
+
+	.opt-head .opt-state {
+		font-size: var(--admin-fs-meta, 0.75rem);
+		color: var(--content-meta);
+	}
+
+	.opt-head svg {
+		width: 14px;
+		height: 14px;
+		flex: none;
+		margin-left: auto;
+		color: var(--content-meta);
+		transition: transform 0.18s ease;
+	}
+
+	.pgroup[open] .opt-head svg {
+		transform: rotate(90deg);
+	}
+
+	.opt-head:hover svg,
+	.opt-head:focus-visible svg {
+		color: var(--deep-text);
+	}
+
+	.opt-head:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 4px;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.opt-head svg {
+			transition: none;
+		}
+	}
+
 	.shead {
 		display: flex;
 		align-items: flex-start;
@@ -1451,7 +1468,7 @@ function answerConfirm(ok: boolean) {
 	}
 
 	/* 这一组是干什么的：一句陈述，不解释机制 */
-	.shead .sdesc {
+	.sdesc {
 		margin: 0.25rem 0 0;
 		max-width: 62ch;
 		font-size: var(--admin-fs-meta, 0.75rem);
@@ -1489,50 +1506,6 @@ function answerConfirm(ok: boolean) {
 
 	.state[data-tone="todo"] .word {
 		color: var(--primary);
-	}
-
-	/* 折叠箭头：24×24 命中区，静音色，展开时转 90°。
-	   它排在状态词与动作之后，和它们同一条基线——不单独占一行，
-	   也不用主色，否则三个分节就是三处抢注意力的彩点。 */
-	.disc-toggle {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 24px;
-		height: 24px;
-		margin-top: 0.125rem;
-		padding: 0;
-		border: 0;
-		border-radius: 6px;
-		background: none;
-		color: var(--content-meta);
-		cursor: pointer;
-		flex: none;
-	}
-
-	.disc-toggle:hover {
-		color: var(--deep-text);
-	}
-
-	.disc-toggle:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 2px;
-	}
-
-	.disc-toggle svg {
-		width: 14px;
-		height: 14px;
-		transition: transform 0.18s ease;
-	}
-
-	.disc-toggle[aria-expanded="true"] svg {
-		transform: rotate(90deg);
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.disc-toggle svg {
-			transition: none;
-		}
 	}
 
 	/* 行 */
@@ -1909,12 +1882,6 @@ function answerConfirm(ok: boolean) {
 
 		.shead .ui-btn {
 			order: 2;
-			align-self: center;
-		}
-
-		.disc-toggle {
-			order: 3;
-			margin-top: 0;
 			align-self: center;
 		}
 

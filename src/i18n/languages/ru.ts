@@ -914,8 +914,6 @@ export const ru: Translation = {
 	[Key.secretsGroupTurnstileDesc]:
 		"Если не настроено, проверка на робота на странице входа не выполняется. Оба ключа задаются вместе или не задаются вовсе.",
 	[Key.secretsUnsaved]: "Не сохранено",
-	[Key.secretsExpandSettings]: "Показать настройки ({count})",
-	[Key.secretsCollapseSettings]: "Скрыть настройки",
 	[Key.secretsCheckRunning]: "Проверка",
 	[Key.secretsCheckPassed]: "Проверено",
 	[Key.secretsCheckFailed]: "Проверка не пройдена",

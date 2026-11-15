@@ -902,8 +902,6 @@ export const ja: Translation = {
 	[Key.secretsGroupTurnstileDesc]:
 		"未設定の場合、ログインページではボット対策を行いません。2 つのキーは両方入力するか、両方空にしてください。",
 	[Key.secretsUnsaved]: "未保存",
-	[Key.secretsExpandSettings]: "設定を開く（{count} 項目）",
-	[Key.secretsCollapseSettings]: "設定を閉じる",
 	[Key.secretsCheckRunning]: "確認中",
 	[Key.secretsCheckPassed]: "確認済み",
 	[Key.secretsCheckFailed]: "確認失敗",

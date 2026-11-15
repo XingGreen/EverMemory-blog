@@ -872,8 +872,6 @@ export const zh_TW: Translation = {
 	[Key.secretsGroupTurnstileDesc]:
 		"未設定時登入頁不進行人機驗證。兩個密鑰須同時填寫或同時留空。",
 	[Key.secretsUnsaved]: "未儲存",
-	[Key.secretsExpandSettings]: "展開設定（{count} 項）",
-	[Key.secretsCollapseSettings]: "收起設定",
 	[Key.secretsCheckRunning]: "校驗中",
 	[Key.secretsCheckPassed]: "校驗通過",
 	[Key.secretsCheckFailed]: "校驗失敗",
