@@ -1,24 +1,22 @@
 <script lang="ts">
 import { onMount } from "svelte";
-import SecretFields from "@/components/admin/secrets/SecretFields.svelte";
-import type I18nKey from "@/i18n/i18nKey";
-import { i18n } from "@/i18n/translation";
-import { SECRET_GROUPS, type SecretItemState } from "@/utils/admin-secrets";
-import {
-	bootstrapRows,
-	buildEntries,
-	isRowConfigured,
-} from "@/utils/secret-draft";
+import FloatField from "@/components/admin/ui/FloatField.svelte";
+import Icon from "@/components/common/Icon.svelte";
+import { SECRET_ROWS, type SecretItemState } from "@/utils/admin-secrets";
+import { buildEntries } from "@/utils/secret-draft";
 
 /**
- * 首次引导页（/setup/）。
+ * 首次引导页（/setup/）——OOBE 壳 + 复用现有输入栏。
  *
- * 与 /admin/env/ 是两条独立入口：这里没有会话、没有侧栏，只做一件事——
- * 把「能登录」所必需的那几项填好，保存后送去登录页。字段渲染与写入判定
- * 都复用后台那一份（SecretFields / secret-draft），只是入口和职责分开了。
+ * 壳层结构参照用户样张：窄卡片、步骤标题、底部三段式操作区
+ * （上一步 / 进度圆点 / 主按钮）、完成屏收尾。
+ * 输入栏全部复用 FloatField（从登录页应急令牌输入抽出的悬浮标签组件），
+ * 草稿与写入复用 secret-draft + /api/admin/secrets/ 引导分支；
+ * 字段名与预填值来自接口回传（itemOf），代码里不写死。
  *
- * 写入本身走 /api/admin/secrets/ 的引导分支：本机 + 缺必填 + 非生产才放行，
- * 且服务端只收 BOOTSTRAP_KEYS。页面不做鉴权判断，服务端是唯一判据。
+ * 与样张的差异：主按钮文字色用 --primary-foreground（前台 --btn-content
+ * 在暗色下与 --primary 同色系，实心 CTA 上不可读）；保存成功去 /login/
+ * （引导结束应登录），展示完成屏收尾。
  */
 let items = $state<SecretItemState[]>([]);
 let loading = $state(true);
@@ -28,23 +26,15 @@ let notice = $state("");
 
 let drafts = $state<Record<string, string>>({});
 let draftsOrigin = $state<Record<string, string>>({});
-let replacing = $state<Record<string, boolean>>({});
 let addressRaw = $state("");
 let addressError = $state("");
+/** 1 = 仓库写入，2 = 后台登录，3 = 完成屏 */
+let step = $state<1 | 2 | 3>(1);
 
 const itemByKey = $derived(new Map(items.map((item) => [item.key, item])));
-/** 引导期要显示的行，判定与后台共享 */
-const rows = $derived(bootstrapRows(items));
-const groups = $derived(
-	SECRET_GROUPS.filter((group) =>
-		rows.some((row) => row.group === group.id),
-	).map((group) => ({
-		...group,
-		rows: rows.filter((row) => row.group === group.id),
-	})),
-);
+const itemOf = (key: string) => itemByKey.get(key);
 
-/** 必填项是否齐了——齐了才出现「去登录」，没齐只能保存 */
+/** 必填项是否齐了——完成屏据此给出「去写文章」还是「去补齐」的提示 */
 const ready = $derived(
 	(() => {
 		const required = items.filter((item) => item.required && !item.managed);
@@ -52,17 +42,17 @@ const ready = $derived(
 	})(),
 );
 
+function syncAddress() {
+	addressRaw = addressOf();
+	addressError = "";
+}
+
 function addressOf(): string {
 	const owner = (drafts.GITHUB_OWNER ?? "").trim();
 	const repo = (drafts.GITHUB_REPO ?? "").trim();
 	const branch = (drafts.GITHUB_BRANCH ?? "").trim();
 	if (!owner && !repo && !branch) return "";
 	return `${owner}/${repo}${branch ? `@${branch}` : ""}`;
-}
-
-function syncAddress() {
-	addressRaw = addressOf();
-	addressError = "";
 }
 
 function setAddress(raw: string) {
@@ -136,8 +126,8 @@ async function save() {
 		const data = await res.json();
 		if (res.ok && data.success) {
 			await load();
-			// 服务端会重新判定：配齐后引导通道自动关闭，这里直接送去登录
-			window.location.href = "/login/";
+			// 服务端重新判定：配齐后引导通道自动关闭，这里展示完成屏再送去登录
+			step = 3;
 			return;
 		}
 		notice = data.message || "保存失败";
@@ -151,157 +141,368 @@ async function save() {
 onMount(load);
 </script>
 
-<svelte:head>
-	<title>首次配置</title>
-</svelte:head>
-
-<main class="setup-page">
-	<div class="setup-card">
-		<header class="setup-head">
-			<h1>首次配置</h1>
-			<p>填好下面几项并保存，就能登录控制面板。这里是本机的一次性初始化通道，配齐后自动关闭。</p>
-		</header>
-
+<main class="oobe">
+	<article class="card">
 		{#if loadError}
-			<div class="setup-error" role="alert">{loadError}</div>
+			<div class="state-error" role="alert">{loadError}</div>
+			<button type="button" class="ghost-btn retry" onclick={load}>重试</button>
 		{:else if loading}
-			<div class="setup-loading">加载中…</div>
-		{:else}
-			{#each groups as group (group.id)}
-				<section class="setup-group">
-					<h2>{i18n(group.labelKey as I18nKey)}</h2>
-					<SecretFields
-						rows={group.rows}
-						itemOf={(key) => itemByKey.get(key)}
-						{drafts}
-						origin={draftsOrigin}
-						writable={true}
-						{replacing}
-						{addressRaw}
-						{addressError}
-						onInput={(key, value) => (drafts[key] = value)}
-						onAddress={setAddress}
-						onView={(key) => {
-							const value = drafts[key] ?? "";
-							window.alert(value || "无内容");
-						}}
-						onEdit={(key) => (replacing[key] = true)}
-						onRotate={() => {}}
-						onCandidate={(id) => (drafts.GITHUB_INSTALLATION_ID = id)}
-					/>
-				</section>
-			{/each}
-
-			{#if notice}
-				<div class="setup-error" role="alert">{notice}</div>
-			{/if}
-
-			<footer class="setup-foot">
-				<span class="setup-hint">
-					{#if ready}
-						必填项已齐，保存后即可登录。
-					{:else}
-						保存后仍需填齐全部必填项才能登录。
-					{/if}
+			<div class="state-loading">加载中…</div>
+		{:else if step === 3}
+			<!-- 完成屏：仪式感的顶点——只有确认，没有多余动作 -->
+			<div class="done-hero">
+				<span class="done-ring" aria-hidden="true">
+					<Icon icon="material-symbols:check" />
 				</span>
+				<h1 class="title">一切就绪</h1>
+				<p class="desc">
+					仓库和登录都已配置完成。
+					{ready
+						? "去登录，开始写你的第一篇文章。"
+						: "部分配置项仍为空，登录后可在环境变量页补齐。"}
+				</p>
+			</div>
+			<div class="done-action">
 				<button
 					type="button"
-					class="ui-btn ui-btn-primary"
-					disabled={saving}
-					onclick={save}
+					class="primary-btn"
+					onclick={() => (window.location.href = "/login/")}
 				>
-					{saving ? "保存中…" : "保存并去登录"}
+					去登录
 				</button>
+			</div>
+		{:else}
+			<!-- 步骤一：仓库写入（输入栏复用 FloatField） -->
+			<div class="step" class:active={step === 1}>
+				<h1 class="title">连接仓库</h1>
+				<p class="desc">配置 GitHub App，允许系统把文章写进你的仓库。</p>
+
+				<FloatField
+					id="fld-repo"
+					label={SECRET_ROWS.find((row) => row.id === "repo")?.label ?? "仓库地址"}
+					bind:value={addressRaw}
+					mono
+					oninput={setAddress}
+				/>
+				{#if addressError}
+					<p class="field-error" role="alert">{addressError}</p>
+				{:else}
+					<p class="field-hint">所有者/仓库名@分支</p>
+				{/if}
+
+				<FloatField
+					id="fld-app-id"
+					label={itemOf("GITHUB_APP_ID")?.label ?? "App ID"}
+					value={drafts.GITHUB_APP_ID ?? ""}
+					mono
+					oninput={(v) => (drafts.GITHUB_APP_ID = v)}
+				/>
+
+				<FloatField
+					id="fld-install"
+					label={itemOf("GITHUB_INSTALLATION_ID")?.label ?? "安装 ID"}
+					value={drafts.GITHUB_INSTALLATION_ID ?? ""}
+					mono
+					oninput={(v) => (drafts.GITHUB_INSTALLATION_ID = v)}
+				/>
+
+				<FloatField
+					id="fld-key"
+					label={itemOf("GITHUB_PRIVATE_KEY")?.label ?? "私钥"}
+					value={drafts.GITHUB_PRIVATE_KEY ?? ""}
+					multiline
+					mono
+					oninput={(v) => (drafts.GITHUB_PRIVATE_KEY = v)}
+				/>
+
+				<FloatField
+					id="fld-key-path"
+					label="或私钥文件路径"
+					value={drafts.GITHUB_PRIVATE_KEY_PATH ?? ""}
+					mono
+					oninput={(v) => (drafts.GITHUB_PRIVATE_KEY_PATH = v)}
+				/>
+			</div>
+
+			<!-- 步骤二：后台登录 -->
+			<div class="step" class:active={step === 2}>
+				<h1 class="title">身份验证</h1>
+				<p class="desc">绑定管理员账号，决定谁能登录控制面板。</p>
+
+				<FloatField
+					id="fld-client-id"
+					label={itemOf("GITHUB_APP_CLIENT_ID")?.label ?? "OAuth Client ID"}
+					value={drafts.GITHUB_APP_CLIENT_ID ?? ""}
+					mono
+					oninput={(v) => (drafts.GITHUB_APP_CLIENT_ID = v)}
+				/>
+
+				<FloatField
+					id="fld-client-secret"
+					label={itemOf("GITHUB_APP_CLIENT_SECRET")?.label ?? "OAuth Client Secret"}
+					type="password"
+					value={drafts.GITHUB_APP_CLIENT_SECRET ?? ""}
+					oninput={(v) => (drafts.GITHUB_APP_CLIENT_SECRET = v)}
+				/>
+
+				<FloatField
+					id="fld-admin-id"
+					label={itemOf("ADMIN_GITHUB_ID")?.label ?? "管理员 GitHub 用户 ID"}
+					value={drafts.ADMIN_GITHUB_ID ?? ""}
+					mono
+					oninput={(v) => (drafts.ADMIN_GITHUB_ID = v)}
+				/>
+			</div>
+
+			{#if notice}
+				<div class="state-error" role="alert">{notice}</div>
+			{/if}
+
+			<!-- 底部三段式：左返回（占位防位移）/ 中进度 / 右主按钮 -->
+			<footer class="footer-actions">
+				<button
+					type="button"
+					class="ghost-btn"
+					class:show={step === 2}
+					onclick={() => (step = 1)}
+				>
+					上一步
+				</button>
+
+				<div class="dots" aria-hidden="true">
+					<span class="dot" class:active={step === 1}></span>
+					<span class="dot" class:active={step === 2}></span>
+				</div>
+
+				{#if step === 1}
+					<button type="button" class="primary-btn" onclick={() => (step = 2)}>
+						下一步
+					</button>
+				{:else}
+					<button type="button" class="primary-btn" disabled={saving} onclick={save}>
+						{saving ? "保存中…" : "保存并完成"}
+					</button>
+				{/if}
 			</footer>
 		{/if}
-	</div>
+	</article>
 </main>
 
 <style>
-	.setup-page {
+	/* 页面级 OOBE token：尺寸决定集中在这里，组件只引用——不散落硬编码。
+	   颜色一律引用后台继承的前台 token，明暗两态自动成立。 */
+	.oobe {
+		--oobe-card-radius: 24px;
+		--oobe-btn-radius: 999px;
+		--oobe-dur: 240ms;
+		--oobe-ease: cubic-bezier(0.2, 0, 0, 1);
+
 		min-height: 100vh;
+		min-height: 100dvh;
 		display: flex;
+		align-items: center;
 		justify-content: center;
-		padding: 3rem 1.5rem;
-		box-sizing: border-box;
-	}
-
-	.setup-card {
-		width: min(960px, 100%);
-		height: fit-content;
-		padding: 2rem;
-		background: var(--card-bg, var(--page-bg));
-		border: 1px solid var(--card-border, var(--input-border));
-		border-radius: 16px;
-	}
-
-	.setup-head {
-		padding-bottom: 1.25rem;
-		border-bottom: 1px solid var(--input-border);
-	}
-
-	.setup-head h1 {
-		margin: 0;
-		font-size: var(--admin-fs-title, 1.5rem);
-		font-weight: 600;
+		padding: 1.5rem;
+		background: var(--page-bg);
 		color: var(--deep-text);
 	}
 
-	.setup-head p {
-		margin: 0.5rem 0 0;
-		font-size: var(--admin-fs-body, 0.875rem);
-		line-height: 1.6;
-		color: var(--content-meta);
-		max-width: 46rem;
+	.card {
+		width: 100%;
+		max-width: 460px;
+		background: var(--card-bg);
+		border-radius: var(--oobe-card-radius);
+		box-shadow: var(--shadow-card);
+		padding: 32px 28px 24px;
 	}
 
-	.setup-group {
-		padding: 1.5rem 0;
-		border-bottom: 1px solid var(--input-border);
-	}
-
-	.setup-group h2 {
-		margin: 0;
-		font-size: var(--admin-fs-body, 0.875rem);
-		font-weight: 600;
+	.title {
+		margin: 0 0 8px;
+		font-size: 22px;
+		font-weight: 700;
+		text-align: center;
 		color: var(--deep-text);
 	}
 
-	.setup-loading {
-		padding: 3rem 0;
+	.desc {
+		margin: 0 0 24px;
+		font-size: 13px;
+		line-height: 1.5;
 		text-align: center;
 		color: var(--content-meta);
 	}
 
-	.setup-error {
-		margin: 1rem 0;
-		padding: 0.75rem 1rem;
-		border-radius: 10px;
-		background: color-mix(in oklab, var(--destructive) 10%, transparent);
-		color: var(--destructive);
-		font-size: var(--admin-fs-body, 0.875rem);
+	/* 字段间距由 FloatField 自身结构 + 这里的统一节奏承担 */
+	.card :global(.field) {
+		margin-bottom: 18px;
 	}
 
-	.setup-foot {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		padding-top: 1.5rem;
-	}
-
-	.setup-hint {
-		font-size: var(--admin-fs-meta, 0.75rem);
+	.field-hint {
+		margin: -10px 0 14px;
+		font-size: 12px;
 		color: var(--content-meta);
 	}
 
-	@media (max-width: 640px) {
-		.setup-card {
-			padding: 1.25rem;
+	.field-error {
+		margin: -10px 0 14px;
+		font-size: 12px;
+		color: var(--destructive);
+	}
+
+	/* ── 步骤切换：一次淡入，尊重 reduced-motion ── */
+	.step {
+		display: none;
+	}
+
+	.step.active {
+		display: block;
+		animation: step-in var(--oobe-dur) var(--oobe-ease);
+	}
+
+	@keyframes step-in {
+		from {
+			opacity: 0;
+			transform: translateY(4px);
 		}
-		.setup-foot {
-			flex-direction: column;
-			align-items: stretch;
+		to {
+			opacity: 1;
+			transform: translateY(0);
 		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.step.active {
+			animation: none;
+		}
+	}
+
+	/* ── 底部三段式：左返回 / 中进度 / 右主按钮 ── */
+	.footer-actions {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		margin-top: 24px;
+		padding-top: 20px;
+		border-top: 1px solid var(--line-divider);
+	}
+
+	.ghost-btn {
+		background: none;
+		border: none;
+		padding: 8px 12px;
+		border-radius: 8px;
+		font: inherit;
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--content-meta);
+		cursor: pointer;
+		/* visibility 占位：切换步骤时按钮不把布局顶来顶去 */
+		visibility: hidden;
+		transition:
+			color 0.2s var(--oobe-ease),
+			background 0.2s var(--oobe-ease);
+	}
+
+	.ghost-btn.show,
+	.ghost-btn.retry {
+		visibility: visible;
+	}
+
+	.ghost-btn:hover {
+		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
+		color: var(--deep-text);
+	}
+
+	.dots {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 999px;
+		background: var(--input-border);
+		transition: all 0.3s var(--oobe-ease);
+	}
+
+	.dot.active {
+		width: 20px;
+		background: var(--primary);
+	}
+
+	.primary-btn {
+		background: var(--primary);
+		/* 前台 --btn-content 在暗色下与 --primary 几乎同色（同色系设计），
+		   实心 CTA 上不可读；后台为这个问题准备的专用 token 是 --primary-foreground */
+		color: var(--primary-foreground);
+		border: none;
+		border-radius: var(--oobe-btn-radius);
+		padding: 10px 20px;
+		font: inherit;
+		font-size: 14px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: filter 0.2s var(--oobe-ease);
+	}
+
+	.primary-btn:hover:not(:disabled) {
+		filter: brightness(1.08);
+	}
+
+	.primary-btn:disabled {
+		opacity: 0.6;
+		cursor: default;
+	}
+
+	.primary-btn:focus-visible,
+	.ghost-btn:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	/* ── 完成屏 ── */
+	.done-hero {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 12px;
+		padding-top: 16px;
+	}
+
+	.done-ring {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 72px;
+		height: 72px;
+		border-radius: 50%;
+		background: color-mix(in oklab, var(--primary) 14%, transparent);
+		color: var(--primary);
+		font-size: 32px;
+	}
+
+	.done-action {
+		display: flex;
+		justify-content: center;
+		margin-top: 28px;
+	}
+
+	/* ── 加载 / 错误态 ── */
+	.state-loading {
+		padding: 48px 0;
+		text-align: center;
+		color: var(--content-meta);
+	}
+
+	.state-error {
+		margin-bottom: 16px;
+		padding: 10px 14px;
+		border-radius: 10px;
+		background: color-mix(in oklab, var(--destructive) 10%, transparent);
+		color: var(--destructive);
+		font-size: 13px;
 	}
 </style>

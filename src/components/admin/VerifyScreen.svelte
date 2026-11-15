@@ -1,6 +1,7 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import TurnstileWidget from "@/components/admin/TurnstileWidget.svelte";
+import FloatField from "@/components/admin/ui/FloatField.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import { DARK_MODE, LIGHT_MODE } from "@/constants/constants";
 import I18nKey from "@/i18n/i18nKey";
@@ -53,8 +54,7 @@ const OAUTH_ERRORS: Record<string, string> = {
 	not_authorized: "该 GitHub 账号无后台访问权限",
 };
 
-// 浮动 label 状态
-let tokenFocused = $state(false);
+// 浮动 label 状态已抽入共享组件 FloatField（引导页 /setup/ 复用同一实现）
 
 // ── Turnstile 人机验证（未配置则整个功能不启用）──
 let turnstileSiteKey = $state("");
@@ -226,20 +226,14 @@ function goBack() {
 					<div class="divider"><span>或</span></div>
 				{/if}
 
-				<!-- 应急登录令牌 -->
-				<div class="field" class:focused={tokenFocused} class:filled={token.trim()}>
-					<input
-						id="verify-token"
-						type="password"
-						bind:value={token}
-						onfocus={() => (tokenFocused = true)}
-						onblur={() => (tokenFocused = false)}
-						onkeydown={handleKeyDown}
-						placeholder=" "
-						autocomplete="off"
-					/>
-					<label for="verify-token">应急登录令牌</label>
-				</div>
+			<!-- 应急登录令牌 -->
+			<FloatField
+				id="verify-token"
+				label="应急登录令牌"
+				type="password"
+				bind:value={token}
+				autocomplete="off"
+			/>
 
 				{#if error}
 					<div class="error-message">
@@ -418,68 +412,6 @@ function goBack() {
 		flex: 1;
 		height: 1px;
 		background: var(--line-divider);
-	}
-
-	/* ── 浮动 label 输入框 ── */
-	.field {
-		position: relative;
-	}
-
-	.field input {
-		width: 100%;
-		padding: 1rem 0.75rem 0.5rem;
-		border: 1px solid var(--input-border);
-		border-radius: var(--radius-md);
-		font-size: 0.9375rem;
-		transition: border-color 0.2s;
-		background: var(--card-bg);
-		color: var(--deep-text);
-		font-family: inherit;
-	}
-
-	.field input:focus {
-		outline: none;
-		border-color: var(--primary);
-		border-width: 2px;
-		padding: calc(1rem - 1px) calc(0.75rem - 1px) calc(0.5rem - 1px);
-	}
-
-	.field label {
-		position: absolute;
-		left: 0.75rem;
-		top: 50%;
-		transform: translateY(-50%);
-		font-size: 0.9375rem;
-		color: var(--content-meta);
-		pointer-events: none;
-		transition: all 0.18s ease;
-	}
-
-	.field.focused label,
-	.field.filled label {
-		top: 0;
-		transform: translateY(-50%) scale(0.8);
-		color: var(--primary);
-		background: var(--card-bg);
-		padding: 0 0.25rem;
-	}
-
-	.field input:-webkit-autofill ~ label {
-		top: 0;
-		transform: translateY(-50%) scale(0.8);
-		color: var(--primary);
-		background: var(--card-bg);
-		padding: 0 0.25rem;
-	}
-
-	.field.focused input {
-		border-color: var(--primary);
-	}
-
-	.field input:-webkit-autofill {
-		-webkit-text-fill-color: var(--deep-text);
-		-webkit-box-shadow: 0 0 0 1000px var(--card-bg) inset;
-		transition: background-color 9999s ease-in-out 0s;
 	}
 
 	/* ── 错误提示 ── */
