@@ -1425,9 +1425,6 @@ function answerConfirm(ok: boolean) {
 	   竖线只属于「这一行有未保存改动」，见 .prow.dirty。 */
 	.pgroup {
 		margin-top: 2rem;
-		/* 内容列封宽：参考项目的设置区块也是 760 左右，
-		   行不再横跨整张卡，状态词与控件离得更近。 */
-		max-width: 50rem;
 	}
 
 	.pgroup:first-of-type {
@@ -1620,10 +1617,10 @@ function answerConfirm(ok: boolean) {
 		min-width: 0;
 	}
 
-	/* 后台容器不限宽，输入框不能跟着容器一直拉长：
-	   控件与结果行统一封在 32rem，行分隔线仍走满宽。 */
+	/* 控件跟着列走满：右半屏不留空。
+	   说明行（trace）仍封 40rem，避免机器回执拉成一行长句。 */
 	.prow .right > * {
-		max-width: 32rem;
+		width: 100%;
 	}
 
 	/* 机器值（仓库地址、ID、密钥）用等宽：字号继承 .ui-input 的 15px，
@@ -1727,6 +1724,7 @@ function answerConfirm(ok: boolean) {
 
 	/* 验证痕迹：机器记账的一行，等宽 */
 	.trace {
+		max-width: 40rem;
 		margin: 0.375rem 0 0;
 		font-family: var(--font-mono, ui-monospace, monospace);
 		font-size: var(--admin-fs-data, 0.6875rem);
@@ -1893,27 +1891,31 @@ function answerConfirm(ok: boolean) {
 	@media (max-width: 860px) {
 		.shead {
 			flex-wrap: wrap;
-			gap: 0.75rem;
+			gap: 0.5rem 0.75rem;
 		}
 
 		.shead-text {
 			flex: 1 1 100%;
 		}
 
+		/* 第二行：状态靠左，动作与箭头靠右，三者同基线 */
 		.state {
-			order: 3;
-			flex: 1 1 100%;
+			order: 1;
+			flex: 1 1 auto;
 			min-width: 0;
+			align-self: center;
 			text-align: left;
 		}
 
 		.shead .ui-btn {
-			order: 1;
+			order: 2;
+			align-self: center;
 		}
 
 		.disc-toggle {
-			order: 2;
+			order: 3;
 			margin-top: 0;
+			align-self: center;
 		}
 
 		.prow {

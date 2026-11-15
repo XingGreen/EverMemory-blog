@@ -73,7 +73,8 @@ let {
 		flex-direction: column;
 		gap: 0.5rem;
 		min-width: 0;
-		flex-shrink: 0;
+		/* 可收缩：说明较长时折行，而不是被卡片右侧裁掉 */
+		flex: 0 1 auto;
 	}
 
 	.page-header h1 {
