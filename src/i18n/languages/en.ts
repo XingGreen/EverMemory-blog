@@ -915,7 +915,6 @@ export const en: Translation = {
 	[Key.secretsCheckIdle]: "Not verified",
 	[Key.secretsStatusDone]: "Filled in",
 	[Key.secretsStatusUnset]: "Not configured",
-	[Key.secretsStatusIncomplete]: "Incomplete",
 	[Key.secretsGroupGithub]: "Repository write",
 	[Key.secretsGroupAuth]: "Admin sign-in",
 	[Key.secretsConfigured]: "Configured",

@@ -781,15 +781,14 @@ const probeInstall = $derived(
 );
 
 /**
- * 组级结论。一组只回答一个问题：这一组现在是什么状态。
- * word 是一个词，receipt 是机器记账的一行（等宽小字）。
- * 可选行（webhook）不参与计数——它空着也是对的。
+ * 组级结论。只给「看输入框看不出来」的那一组：
+ * 仓库写不写得进去要靠一次真实握手，其余分组填没填，字段自己就摆在那儿。
  */
 function verdictOf(groupId: string): {
 	word: string;
 	receipt: string;
 	tone: "ok" | "todo" | "idle";
-} {
+} | null {
 	if (groupId === "github") {
 		if (probe.running) {
 			return {
@@ -818,24 +817,16 @@ function verdictOf(groupId: string): {
 				};
 	}
 
-	const rows = rowsOf(groupId).filter((r) => r.shape !== "optional");
-	const done = rows.filter(rowConfigured).length;
-	const total = rows.length;
-
+	// 人机验证收起时字段看不见，那一行才需要「未配置」这个词（展开后由 CSS 隐藏）
 	if (groupId === "turnstile") {
-		return done === total && total > 0
+		const rows = rowsOf(groupId).filter((r) => r.shape !== "optional");
+		const done = rows.filter(rowConfigured).length;
+		return done === rows.length && rows.length > 0
 			? { word: i18n(I18nKey.secretsStatusDone), receipt: "", tone: "ok" }
 			: { word: i18n(I18nKey.secretsStatusUnset), receipt: "", tone: "idle" };
 	}
 
-	return {
-		word:
-			done === total
-				? i18n(I18nKey.secretsStatusDone)
-				: i18n(I18nKey.secretsStatusIncomplete),
-		receipt: `${done} / ${total}`,
-		tone: done === total ? "ok" : "todo",
-	};
+	return null;
 }
 
 /* ── 仓库地址 ──
@@ -990,7 +981,9 @@ function answerConfirm(ok: boolean) {
 				{#if groupOptional(group.id)}
 					<summary class="opt-head">
 						<h3>{i18n(I18nKey[group.labelKey])}</h3>
-						<span class="opt-state">{verdict.word}</span>
+						{#if verdict}
+							<span class="opt-state">{verdict.word}</span>
+						{/if}
 						<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
 							<path
 								d="M6 3.5L10.5 8L6 12.5"
@@ -1011,12 +1004,14 @@ function answerConfirm(ok: boolean) {
 							<h3>{i18n(I18nKey[group.labelKey])}</h3>
 							<p class="sdesc">{i18n(I18nKey[group.descKey])}</p>
 						</div>
-						<div class="state" data-tone={verdict.tone}>
-							<span class="word">{verdict.word}</span>
-							{#if verdict.receipt}
-								<span class="receipt">{verdict.receipt}</span>
-							{/if}
-						</div>
+						{#if verdict}
+							<div class="state" data-tone={verdict.tone}>
+								<span class="word">{verdict.word}</span>
+								{#if verdict.receipt}
+									<span class="receipt">{verdict.receipt}</span>
+								{/if}
+							</div>
+						{/if}
 						{#if group.id === "github"}
 							<button
 								type="button"
@@ -1419,6 +1414,11 @@ function answerConfirm(ok: boolean) {
 	.opt-head .opt-state {
 		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
+	}
+
+	/* 收起时字段看不见，这个词才有信息量；展开后字段自己就是答案 */
+	.pgroup[open] .opt-head .opt-state {
+		display: none;
 	}
 
 	.opt-head svg {

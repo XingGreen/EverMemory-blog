@@ -878,7 +878,6 @@ export const zh_TW: Translation = {
 	[Key.secretsCheckIdle]: "未校驗",
 	[Key.secretsStatusDone]: "已填寫",
 	[Key.secretsStatusUnset]: "未設定",
-	[Key.secretsStatusIncomplete]: "未填寫完整",
 	[Key.secretsGroupGithub]: "倉庫寫入",
 	[Key.secretsGroupAuth]: "後台登入",
 	[Key.secretsConfigured]: "已設定",

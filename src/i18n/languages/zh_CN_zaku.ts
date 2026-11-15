@@ -870,7 +870,6 @@ export const zaku: Translation = {
 	[Key.secretsCheckIdle]: "还没检查",
 	[Key.secretsStatusDone]: "已填好",
 	[Key.secretsStatusUnset]: "没配",
-	[Key.secretsStatusIncomplete]: "还没填全",
 	[Key.secretsGroupGithub]: "仓库写入",
 	[Key.secretsGroupAuth]: "后台登录",
 	[Key.secretsConfigured]: "已配置",

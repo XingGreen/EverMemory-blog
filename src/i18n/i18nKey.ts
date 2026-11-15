@@ -866,7 +866,6 @@ enum I18nKey {
 	secretsCheckIdle = "secretsCheckIdle",
 	secretsStatusDone = "secretsStatusDone",
 	secretsStatusUnset = "secretsStatusUnset",
-	secretsStatusIncomplete = "secretsStatusIncomplete",
 	secretsFieldHelp = "secretsFieldHelp",
 	secretsUploadReplace = "secretsUploadReplace",
 	secretsFieldMenu = "secretsFieldMenu",

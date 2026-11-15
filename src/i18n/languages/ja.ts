@@ -908,7 +908,6 @@ export const ja: Translation = {
 	[Key.secretsCheckIdle]: "未確認",
 	[Key.secretsStatusDone]: "入力済み",
 	[Key.secretsStatusUnset]: "未設定",
-	[Key.secretsStatusIncomplete]: "入力が不完全",
 	[Key.secretsGroupGithub]: "リポジトリ書き込み",
 	[Key.secretsGroupAuth]: "管理画面ログイン",
 	[Key.secretsConfigured]: "設定済み",

@@ -920,7 +920,6 @@ export const ru: Translation = {
 	[Key.secretsCheckIdle]: "Не проверено",
 	[Key.secretsStatusDone]: "Заполнено",
 	[Key.secretsStatusUnset]: "Не настроено",
-	[Key.secretsStatusIncomplete]: "Заполнено не полностью",
 	[Key.secretsGroupGithub]: "Запись в репозиторий",
 	[Key.secretsGroupAuth]: "Вход в админку",
 	[Key.secretsConfigured]: "Настроено",
