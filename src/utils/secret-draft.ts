@@ -83,6 +83,27 @@ export function isRowConfigured(
 	return row.shape === "content" ? row.keys.some(has) : row.keys.every(has);
 }
 
+/** 私钥文件大小上限：PEM 通常 1.7–3KB，100KB 已是很宽的余量 */
+const PRIVATE_KEY_FILE_LIMIT = 100_000;
+
+/**
+ * 读取用户选中的私钥文件为文本（浏览器本地读取，内容不经网络）。
+ * 上传只是「填入」的另一种方式——读出的内容仍走草稿与保存流程，
+ * 与粘贴无异；因此只做大小限制，不校验 PEM 结构（路径方式同样不校验）。
+ */
+export function readPrivateKeyFile(file: File): Promise<string> {
+	return new Promise((resolve, reject) => {
+		if (file.size > PRIVATE_KEY_FILE_LIMIT) {
+			reject(new Error("私钥文件过大（超过 100KB），请确认选择的是私钥文件"));
+			return;
+		}
+		const reader = new FileReader();
+		reader.onload = () => resolve(String(reader.result ?? ""));
+		reader.onerror = () => reject(new Error("读取文件失败，请重试或改用粘贴"));
+		reader.readAsText(file);
+	});
+}
+
 /** 只把真正改动过的项发出去；清空输入框即视为删除该配置项 */
 export function buildEntries(
 	items: SecretItemState[],

@@ -3,7 +3,11 @@ import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import type { SecretItemState, SecretRow } from "@/utils/admin-secrets";
-import { isRowConfigured, isRowDirty } from "@/utils/secret-draft";
+import {
+	isRowConfigured,
+	isRowDirty,
+	readPrivateKeyFile,
+} from "@/utils/secret-draft";
 
 /**
  * 字段区：一行一个设置项，桌面两列、窄屏一列。
@@ -63,6 +67,9 @@ let showInput = $state<Record<string, boolean>>({});
 function autofocus(node: HTMLTextAreaElement, active: boolean) {
 	if (active) node.focus();
 }
+
+/** 私钥文件上传的本地错误（大小/读取），只影响本行显示 */
+let uploadError = $state("");
 </script>
 
 <div class="prows">
@@ -122,6 +129,36 @@ function autofocus(node: HTMLTextAreaElement, active: boolean) {
 							>
 						</div>
 					{:else}
+						<!-- 上传私钥文件：本地读取后填入草稿，与粘贴等效（仍需保存落盘） -->
+						<div class="upload-row">
+							<label class="upload-btn">
+								<Icon icon="material-symbols:upload-rounded" />
+								上传私钥文件
+								<input
+									type="file"
+									accept=".pem,.key,.txt"
+									hidden
+									disabled={!writable}
+									onchange={async (e) => {
+										const file = e.currentTarget.files?.[0];
+										e.currentTarget.value = "";
+										if (!file) return;
+										uploadError = "";
+										try {
+											const content = await readPrivateKeyFile(file);
+											onInput(row.keys[0], content);
+										} catch (err) {
+											uploadError =
+												err instanceof Error ? err.message : "读取文件失败";
+										}
+									}}
+								/>
+							</label>
+							<span class="upload-note">读取后仍需保存才写入 .env.local</span>
+						</div>
+						{#if uploadError}
+							<p class="trace bad" role="alert">{uploadError}</p>
+						{/if}
 						<textarea
 							use:autofocus={configured}
 							class="ui-input mono keyarea"
@@ -438,6 +475,42 @@ function autofocus(node: HTMLTextAreaElement, active: boolean) {
 	}
 
 	.dim {
+		color: var(--content-meta);
+	}
+
+	/* 私钥上传：按钮压在一行，说明文字跟着，错误只落本行 */
+	.upload-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.upload-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		min-height: 28px;
+		padding: 0 0.75rem;
+		border: 1px solid var(--input-border);
+		border-radius: 999px;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		color: var(--content-meta);
+		cursor: pointer;
+		transition: color 0.15s, border-color 0.15s;
+	}
+
+	.upload-btn:hover {
+		color: var(--primary);
+		border-color: var(--primary);
+	}
+
+	.upload-btn:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	.upload-note {
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 	}
 

@@ -3,7 +3,7 @@ import { onMount } from "svelte";
 import FloatField from "@/components/admin/ui/FloatField.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import { SECRET_ROWS, type SecretItemState } from "@/utils/admin-secrets";
-import { buildEntries } from "@/utils/secret-draft";
+import { buildEntries, readPrivateKeyFile } from "@/utils/secret-draft";
 
 /**
  * 首次引导页（/setup/）——OOBE 壳 + 复用现有输入栏。
@@ -138,6 +138,9 @@ async function save() {
 	}
 }
 
+/** 私钥文件上传的本地错误（大小/读取） */
+let uploadError = $state("");
+
 onMount(load);
 </script>
 
@@ -205,6 +208,35 @@ onMount(load);
 					mono
 					oninput={(v) => (drafts.GITHUB_INSTALLATION_ID = v)}
 				/>
+
+				<div class="upload-row">
+					<label class="upload-btn">
+						<Icon icon="material-symbols:upload-rounded" />
+						上传私钥文件
+						<input
+							type="file"
+							accept=".pem,.key,.txt"
+							hidden
+							onchange={async (e) => {
+								const file = e.currentTarget.files?.[0];
+								e.currentTarget.value = "";
+								if (!file) return;
+								uploadError = "";
+								try {
+									const content = await readPrivateKeyFile(file);
+									drafts.GITHUB_PRIVATE_KEY = content;
+								} catch (err) {
+									uploadError =
+										err instanceof Error ? err.message : "读取文件失败";
+								}
+							}}
+						/>
+					</label>
+					<span class="upload-note">读取后仍需保存才写入 .env.local</span>
+				</div>
+				{#if uploadError}
+					<p class="field-error" role="alert">{uploadError}</p>
+				{/if}
 
 				<FloatField
 					id="fld-key"
@@ -374,6 +406,43 @@ onMount(load);
 		.step.active {
 			animation: none;
 		}
+	}
+
+	/* ── 私钥上传：按钮 + 说明一行，错误只落本行 ── */
+	.upload-row {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 14px;
+	}
+
+	.upload-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		height: 32px;
+		padding: 0 14px;
+		border: 1px solid var(--input-border);
+		border-radius: 999px;
+		font-size: 13px;
+		color: var(--content-meta);
+		cursor: pointer;
+		transition: color 0.15s, border-color 0.15s;
+	}
+
+	.upload-btn:hover {
+		color: var(--primary);
+		border-color: var(--primary);
+	}
+
+	.upload-btn:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	.upload-note {
+		font-size: 12px;
+		color: var(--content-meta);
 	}
 
 	/* ── 底部三段式：左返回 / 中进度 / 右主按钮 ── */
