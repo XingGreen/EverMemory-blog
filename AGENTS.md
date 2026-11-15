@@ -44,10 +44,19 @@ wired.
   user came for: what this is, what to do, what happened. Design rationale, refactor notes,
   review findings, mechanism names (`JWT`, `12-column grid`, "this replaces the old table") and
   any other inside-baseball explanation belong in code comments or `docs/`, never on screen.
-- **CSS.** `!important` is banned in project stylesheets and `<style>` blocks. It breaks the
-  cascade and makes declarations impossible to override, which raises maintenance cost and
-  conflict risk. Every override must be achieved by raising selector specificity or by changing
-  the DOM structure. Applies to the public theme and `/admin/` alike.
+- **CSS.** `!important` is an ownership contract, not a shortcut. Before reaching for it,
+  exhaust the cheaper fixes: delete the wrong upstream rule, repair the selector or scope,
+  expose a prop or CSS custom property, or reorder within the same owner. It is allowed only
+  when a real ownership boundary exists — overriding third-party or generated styles that
+  cannot be fixed upstream (scoped to the integration root, minimal properties), an explicit
+  caller-override API where Svelte's scoped hash stably beats utility classes, a
+  user-preference or media boundary (`prefers-reduced-motion`, `@media print`), or a
+  documented compatibility layer for an external contract. Never use it to repair a broken
+  selector, win a specificity fight inside one owner's own template and styles, or stack
+  `!important` against `!important` — refactor the boundary instead. Every use carries an
+  adjacent English comment naming who owns the overridden declaration and who owns the final
+  value. Existing occurrences are grandfathered: constrain new code, do not sweep the old
+  ones. Full policy in `rules/project-rules.md` §6.
 - **Zero-burden optionals.** Anything that can be switched off — Turnstile, login alerts,
   widgets, third-party integrations — must cost nothing when disabled: zero external requests,
   zero placeholder DOM or layout shift, zero bundle growth (load on demand instead), and no

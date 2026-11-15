@@ -87,16 +87,52 @@ request to justify touching files outside the agreed area.
   bullet count, same link targets. Translate text only.
 - Write documentation in English. Chinese remains in user-facing copy and `src/i18n/`.
 
-## 6. CSS
+## 6. CSS ownership boundaries (`!important`)
 
-- `!important` must not appear in project stylesheets or `<style>` blocks. It breaks the
-  cascade, prevents declarations from being overridden normally, and increases maintenance
-  cost and conflict risk.
-- Every style override must be achieved by raising selector specificity or by changing the DOM
-  structure. Never use `!important` to work around a layout problem, including ones caused by
-  runtime class changes from scripts.
-- This rule covers the public theme and `/admin/` alike.
-- When reviewing a style change, grep the diff for `!important` and reject it if present.
+`!important` expresses a style-ownership contract: the overridden declaration comes from an
+owner this codebase cannot (or should not) edit, and this owner must win. It is not a
+shortcut for specificity problems between rules the same owner controls.
+
+**Before adding one**, in this order: delete the duplicated or wrong upstream rule; repair
+the selector (Svelte/Astro scope, `:global()`, class placement); expose a component prop,
+variant, or CSS custom property as the override point; reorder within the same owner; raise
+specificity with one stable component root class. Only if none of these apply and the case
+matches an allowed scenario below, use `!important`.
+
+**Allowed scenarios**
+
+1. **Third-party or generated styles** that cannot be fixed upstream (Expressive Code,
+   remark/rehype output, embedded widgets). Scope to the integration's root node, override
+   only the necessary properties, and verify computed styles in the browser.
+2. **Explicit caller-override API.** The component's API documents that callers may override
+   this property, and the Svelte scoped hash stably beats the override class. The important
+   lives at the call site, never inside the component's defaults. If the same override
+   appears twice, add a real prop/variant instead.
+3. **User-preference and media boundaries** (`prefers-reduced-motion`, `@media print`)
+   disabling third-party animation or inline styles. Do not smuggle unrelated color or
+   layout changes into the same block.
+4. **Documented compatibility layer** for an external contract that cannot be upgraded in
+   step. Requires a boundary comment, a regression check, and removal conditions.
+
+**Forbidden**: repairing a misspelled or mis-scoped selector; resolving priority inside one
+owner's own template and styles; overriding design tokens or hardcoding values; papering
+over import order or duplicate styles; broad selectors without a component root; hover /
+focus / active states; several unrelated properties in one block; `!important` vs
+`!important` escalation (refactor the boundary instead).
+
+**Comment**: every new `!important` carries an adjacent English comment naming who produced
+the overridden declaration, who owns the final value, and why normal cascade cannot express
+it: `/* !important boundary: <external owner>; this owner owns <invariant>. */` One comment
+may cover a tight group of same-origin declarations, not a whole file.
+
+**Verification**: confirm in the browser which stylesheet actually wins; check both themes,
+narrow viewports, and reduced-motion where relevant; `astro check` does not parse CSS — run
+`npx biome check <files>`. When reviewing a diff, treat each new `!important` as needing an
+allowed scenario plus a boundary comment; reject the rest.
+
+**Existing occurrences (~540) are grandfathered.** Constrain new code only; do not sweep
+them. When touching a grandfathered declaration for other reasons, add the boundary comment
+if the ownership is clear, and leave it alone otherwise.
 
 ## 7. Optional features (zero burden when disabled)
 
