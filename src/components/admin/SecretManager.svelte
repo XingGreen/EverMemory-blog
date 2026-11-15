@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from "svelte";
+import { onMount, tick } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -391,12 +391,16 @@ const changedCount = $derived(items.filter(isDirty).length);
  * 字段容器通过 data-secret-key 定位（见模板），滚动容器是
  * .admin-page-body（AdminPage 内唯一可滚区域）。
  */
-function scrollToField(key: string) {
+async function scrollToField(key: string) {
 	const field = document.querySelector(`[data-secret-key="${key}"]`);
 	if (!field) return;
-	// 字段可能收在折叠区里：先展开，否则 scrollIntoView 对隐藏节点无效
-	const disc = field.closest("details");
-	if (disc && !disc.open) disc.open = true;
+	// 字段可能收在折叠区里：先展开这一组，否则 scrollIntoView 对隐藏节点无效
+	const wrap = field.closest<HTMLElement>("[data-group]");
+	const groupId = wrap?.dataset.group;
+	if (groupId && wrap?.hidden) {
+		openGroups[groupId] = true;
+		await tick();
+	}
 	const body = document.querySelector(".admin-page-body");
 	field.scrollIntoView({ behavior: "smooth", block: "center" });
 	// 高亮：加类后 1.6s 移除，与 CSS 过渡时长对应
@@ -781,6 +785,11 @@ $effect(() => {
 	openGroups = next;
 });
 
+/** 手动开合：用户的意图优先于默认值，一次也不覆盖 */
+function toggleGroup(groupId: string) {
+	openGroups[groupId] = !(openGroups[groupId] ?? false);
+}
+
 /** 默认展开：这一组有未保存改动，或还缺必填项 */
 function groupOpen(groupId: string): boolean {
 	const rows = rowsOf(groupId);
@@ -1025,10 +1034,19 @@ function answerConfirm(ok: boolean) {
 								: i18n(I18nKey.secretsProbeCheck)}
 						</button>
 					{/if}
-				</div>
-
-				<details class="disc" open={openGroups[group.id] ?? false}>
-					<summary>
+					<button
+						type="button"
+						class="disc-toggle"
+						aria-expanded={openGroups[group.id] ?? false}
+						aria-controls={`group-${group.id}`}
+						aria-label={openGroups[group.id]
+							? i18n(I18nKey.secretsCollapseSettings)
+							: i18n(I18nKey.secretsExpandSettings).replace(
+									"{count}",
+									String(groupRows.length),
+								)}
+						onclick={() => toggleGroup(group.id)}
+					>
 						<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
 							<path
 								d="M6 3.5L10.5 8L6 12.5"
@@ -1038,16 +1056,15 @@ function answerConfirm(ok: boolean) {
 								stroke-linejoin="round"
 							/>
 						</svg>
-						<span class="label-closed"
-							>{i18n(I18nKey.secretsExpandSettings).replace(
-								"{count}",
-								String(groupRows.length),
-							)}</span
-						>
-						<span class="label-open">{i18n(I18nKey.secretsCollapseSettings)}</span>
-					</summary>
+					</button>
+				</div>
 
-					<div class="prows">
+					<div
+						class="prows"
+						id={`group-${group.id}`}
+						data-group={group.id}
+						hidden={!(openGroups[group.id] ?? false)}
+					>
 						{#each groupRows as row (row.id)}
 					{@const first = itemByKey.get(row.keys[0])}
 					{@const configured = rowConfigured(row)}
@@ -1234,7 +1251,6 @@ function answerConfirm(ok: boolean) {
 					</div>
 				{/each}
 					</div>
-				</details>
 			</section>
 		{/each}
 
@@ -1409,6 +1425,9 @@ function answerConfirm(ok: boolean) {
 	   竖线只属于「这一行有未保存改动」，见 .prow.dirty。 */
 	.pgroup {
 		margin-top: 2rem;
+		/* 内容列封宽：参考项目的设置区块也是 760 左右，
+		   行不再横跨整张卡，状态词与控件离得更近。 */
+		max-width: 50rem;
 	}
 
 	.pgroup:first-of-type {
@@ -1416,14 +1435,14 @@ function answerConfirm(ok: boolean) {
 	}
 
 	.shead {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto auto;
-		align-items: start;
-		gap: 1rem 1.5rem;
+		display: flex;
+		align-items: flex-start;
+		gap: 1.25rem;
 	}
 
 	.shead-text {
 		min-width: 0;
+		flex: 1;
 	}
 
 	.shead h3 {
@@ -1475,62 +1494,46 @@ function answerConfirm(ok: boolean) {
 		color: var(--primary);
 	}
 
-	/* ── 折叠：原生 details，箭头表示方向，不借用任何色块 ── */
-	.disc {
-		margin-top: 0.75rem;
-	}
-
-	.disc > summary {
+	/* 折叠箭头：24×24 命中区，静音色，展开时转 90°。
+	   它排在状态词与动作之后，和它们同一条基线——不单独占一行，
+	   也不用主色，否则三个分节就是三处抢注意力的彩点。 */
+	.disc-toggle {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.375rem;
-		min-height: 28px;
-		padding-right: 0.5rem;
-		font-size: var(--admin-fs-meta, 0.75rem);
-		font-weight: 500;
-		color: var(--primary);
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		margin-top: 0.125rem;
+		padding: 0;
+		border: 0;
+		border-radius: 6px;
+		background: none;
+		color: var(--content-meta);
 		cursor: pointer;
-		list-style: none;
+		flex: none;
 	}
 
-	.disc > summary::-webkit-details-marker {
-		display: none;
+	.disc-toggle:hover {
+		color: var(--deep-text);
 	}
 
-	.disc > summary:hover {
-		text-decoration: underline;
-	}
-
-	.disc > summary:focus-visible {
+	.disc-toggle:focus-visible {
 		outline: 2px solid var(--primary);
 		outline-offset: 2px;
 	}
 
-	.disc > summary svg {
+	.disc-toggle svg {
 		width: 14px;
 		height: 14px;
-		flex: none;
-		transition: transform 0.15s ease;
+		transition: transform 0.18s ease;
 	}
 
-	.disc[open] > summary svg {
+	.disc-toggle[aria-expanded="true"] svg {
 		transform: rotate(90deg);
 	}
 
-	.disc > summary .label-open {
-		display: none;
-	}
-
-	.disc[open] > summary .label-open {
-		display: inline;
-	}
-
-	.disc[open] > summary .label-closed {
-		display: none;
-	}
-
 	@media (prefers-reduced-motion: reduce) {
-		.disc > summary svg {
+		.disc-toggle svg {
 			transition: none;
 		}
 	}
@@ -1889,19 +1892,28 @@ function answerConfirm(ok: boolean) {
 	/* 窄屏：说明收到控件上方，未保存标记退到同一行右侧 */
 	@media (max-width: 860px) {
 		.shead {
-			grid-template-columns: minmax(0, 1fr) auto;
+			flex-wrap: wrap;
+			gap: 0.75rem;
+		}
+
+		.shead-text {
+			flex: 1 1 100%;
 		}
 
 		.state {
-			grid-column: 1 / -1;
 			order: 3;
+			flex: 1 1 100%;
 			min-width: 0;
 			text-align: left;
 		}
 
 		.shead .ui-btn {
-			grid-column: 2;
-			grid-row: 1;
+			order: 1;
+		}
+
+		.disc-toggle {
+			order: 2;
+			margin-top: 0;
 		}
 
 		.prow {
