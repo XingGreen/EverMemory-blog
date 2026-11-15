@@ -72,7 +72,7 @@ Defined in `src/content.config.ts`:
 
 | Path | Contents |
 | :--- | :--- |
-| `src/pages/` | File-based routes; admin entry under `src/pages/admin/` |
+| `src/pages/` | File-based routes; admin entry under `src/pages/admin/`, first-time setup at `src/pages/setup.astro` (no-session, loopback-only, redirects to `/login/` once configured) |
 | `src/pages/api/admin/` | Admin API endpoints |
 | `src/components/` | Domain-grouped components; admin under `src/components/admin/` |
 | `src/plugins/` | remark / rehype extensions (Mermaid, PlantUML, KaTeX, GitHub cards, reading time, MDX fallback) |

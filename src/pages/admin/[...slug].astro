@@ -4,6 +4,13 @@ import { profileConfig, siteConfig } from "@/config";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import { resolveAdminLogo } from "@/utils/admin-logo";
 import { resolveAvatarUrl } from "@/utils/avatar-url";
+import { canBootstrap } from "@/utils/bootstrap-mode";
+
+// 首次配置阶段：任何后台地址都先让位给 /setup/，避免未登录的 SPA
+// 在后台里空转（接口全 401）。配齐后此判定为假，后台正常渲染。
+if (canBootstrap(Astro.request)) {
+	return Astro.redirect("/setup/");
+}
 
 // 后台是单页应用（前端 History API 路由）：
 // /admin/* 下的一切子路径（settings、articles/edit/:slug 等）都渲染同一个控制台页，

@@ -44,10 +44,8 @@ onMount(async () => {
 			return;
 		}
 		if (data.success) {
-			/* 退出与引导模式的冲突点：密钥没配齐时，服务端对回环请求也回 success，
-			   它表示「允许未登录改配置」，不是「你已登录」。照旧自动进后台，用户
-			   点完退出就被弹回来，表现为退不出去。
-			   真会话（有 Cookie、非 bootstrap）则照常进入，退出过一次不会把人锁在门外。 */
+			/* 服务端只在真登录时回 success（首次配置已拆到独立的 /setup/ 页），
+			   这里据此自动进入后台；shouldAutoEnter 统一了判定，避免各处各写一遍。 */
 			if (!shouldAutoEnter(data)) {
 				sessionStorage.removeItem("admin_verified");
 				sessionStorage.removeItem("admin_redirect");

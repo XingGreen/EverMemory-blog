@@ -34,18 +34,16 @@ afterEach(() => {
 });
 
 describe("退出登录与登录页的判定", () => {
-	it("没退出过：引导模式的假会话也自动进入（首次配置路径）", () => {
-		expect(shouldAutoEnter({ success: true, bootstrap: true })).toBe(true);
+	/* 首次配置已拆成独立的 /setup/ 页，会话接口只在真登录时回 success，
+	   不再有「引导模式假会话」这种 success 但没登录的状态。 */
+
+	it("有会话就自动进入后台", () => {
+		expect(shouldAutoEnter({ success: true })).toBe(true);
 	});
 
-	it("刚退出过：引导模式的假会话不再把人送回后台", () => {
+	it("刚退出过也不影响真会话判定（退出标记只服务于后台内的草稿/bfcache）", () => {
 		markLoggedOut();
 		expect(isLoggedOut()).toBe(true);
-		expect(shouldAutoEnter({ success: true, bootstrap: true })).toBe(false);
-	});
-
-	it("刚退出过：真会话仍然放行，不会锁在门外", () => {
-		markLoggedOut();
 		expect(shouldAutoEnter({ success: true })).toBe(true);
 	});
 
@@ -56,10 +54,10 @@ describe("退出登录与登录页的判定", () => {
 		expect(shouldAutoEnter({ success: false })).toBe(false);
 	});
 
-	it("显式登录成功后退出标记失效", () => {
+	it("退出标记可标记、可清除", () => {
 		markLoggedOut();
+		expect(isLoggedOut()).toBe(true);
 		clearLoggedOut();
 		expect(isLoggedOut()).toBe(false);
-		expect(shouldAutoEnter({ success: true, bootstrap: true })).toBe(true);
 	});
 });

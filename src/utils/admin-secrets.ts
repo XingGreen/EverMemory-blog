@@ -35,6 +35,14 @@ export type AdminSecretItem = {
 	example?: string;
 };
 
+/** 一行渲染需要的状态：清单项 + 服务端返回的当前状态 */
+export type SecretItemState = AdminSecretItem & {
+	configured: boolean;
+	managed?: boolean;
+	/** 敏感项的回显预览（如掩码）；接口不保证提供 */
+	preview?: string;
+};
+
 export const SECRET_GROUPS: readonly {
 	id: SecretGroup;
 	/** 分组标题文案 key（i18n key 名，组件侧直接取用，避免三元判断漏组） */

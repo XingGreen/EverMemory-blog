@@ -4,7 +4,6 @@ import {
 	isJwtSecretAvailable,
 	verifySessionToken,
 } from "@/utils/auth";
-import { canBootstrap } from "@/utils/bootstrap-mode";
 import { isOAuthConfigured } from "@/utils/github-oauth";
 import { isKvBackend } from "@/utils/persist-store";
 import { isSessionStoreDegraded } from "@/utils/session-store";
@@ -22,14 +21,10 @@ export async function GET({ request }) {
 
 	const token = secretAvailable ? getAuthTokenFromRequest(request) : null;
 	const payload = token ? await verifySessionToken(token) : null;
-	// 还没有任何会话、但密钥没配齐且来自本机：进入引导模式，让配置页能打开
-	const bootstrap = !payload && canBootstrap(request);
 
 	const body: {
 		success: boolean;
 		username?: string;
-		/** 引导模式：尚未登录，正在完成首次配置 */
-		bootstrap?: boolean;
 		/** 服务端配置错误：前端据此显示原因，而不是跳回登录页 */
 		configError?: string;
 		oauthEnabled: boolean;
@@ -40,7 +35,7 @@ export async function GET({ request }) {
 			degraded: boolean;
 		};
 	} = {
-		success: Boolean(payload) || bootstrap,
+		success: Boolean(payload),
 		oauthEnabled: isOAuthConfigured(),
 		breakglassEnabled: isBreakglassConfigured(),
 		storage: {
@@ -50,9 +45,6 @@ export async function GET({ request }) {
 	};
 	if (payload) {
 		body.username = payload.username || "admin";
-	} else if (bootstrap) {
-		body.username = "初始化";
-		body.bootstrap = true;
 	} else if (!secretAvailable) {
 		body.configError =
 			"服务器缺少 ADMIN_JWT_SECRET，无法校验登录状态。请在部署平台配置该环境变量（32 字节以上随机串）后重新部署。";

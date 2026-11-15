@@ -131,11 +131,6 @@ let isVerified = $state(
 		: false,
 );
 let adminUsername = $state("");
-/**
- * 引导模式：密钥还没配齐、又来自本机时，服务端允许未登录进入本页。
- * 此时只保留环境变量页，其余入口依赖的接口都会 401。
- */
-let bootstrapMode = $state(false);
 /** 服务端配置错误（如缺签名密钥）：显示原因，不跳转 */
 let configError = $state("");
 // 存储降级：KV 熔断时后台仍可用（仅 JWT 鉴权），但会话表能力受限
@@ -591,11 +586,6 @@ function applyRoute() {
 		window.location.replace("/login/");
 		return;
 	}
-	// 引导模式：只有环境变量页可取数据，其余地址一律回到那里
-	if (bootstrapMode) {
-		enterBootstrapRoute();
-		return;
-	}
 	const next = parseRoute(window.location.pathname);
 	// 无效路径在后台内渲染 404（保留地址，不跳走）
 	route = next.page === "login" ? { page: "dashboard" } : next;
@@ -634,26 +624,7 @@ function applyRoute() {
 	}
 }
 
-/**
- * 引导模式只开放环境变量页。
- *
- * 其余页面的接口全部要求会话，缺密钥时必然 401；真去请求就会弹出「会话已过期」，
- * 点确认又跳回登录页、被引导模式送回后台 —— 401 与弹窗就这么叠成死循环。
- * 所以引导模式下只认 /admin/env/，也不拉文章列表。
- */
-function enterBootstrapRoute() {
-	const target = `${DASHBOARD_PATH}env/`;
-	if (window.location.pathname !== target) {
-		window.history.replaceState({}, "", target);
-	}
-	route = { page: "env" };
-}
-
 function startAdmin() {
-	if (bootstrapMode) {
-		enterBootstrapRoute();
-		return;
-	}
 	loadPosts();
 	applyRoute(); // 同步初始路由
 	// 首次进入控制台：自动弹出新手指引
@@ -685,10 +656,6 @@ onMount(() => {
 onMount(() => {
 	const uninstall = installAuthGuard();
 	const off = onAuthExpired(() => {
-		/* 引导期本来就没有会话，任何后台接口 401 都是预期结果，
-		   不是「会话过期」。照常弹窗只会把用户推向登录页，再被引导模式
-		   送回后台，形成弹窗循环。 */
-		if (bootstrapMode) return;
 		authExpiredOpen = true;
 	});
 	return () => {
@@ -715,12 +682,9 @@ onMount(async () => {
 			return;
 		}
 		if (!data.success) throw new Error("session invalid");
-		/* 退出标记只在「引导模式那种假会话」下继续生效，真正的会话（Cookie 有效，
-		   例如刚走完 OAuth 回调直接落到这里）优先于它 —— 否则退出过一次的人
-		   重新登录也进不来。 */
-		if (isLoggedOut() && !data.bootstrap) clearLoggedOut();
+		// 已确认真会话（Cookie 有效），清除退出标记，避免影响后续的草稿/bfcache 判定
+		clearLoggedOut();
 		isVerified = true;
-		bootstrapMode = Boolean(data.bootstrap);
 		sessionStorage.setItem("admin_verified", "true");
 		if (typeof data.username === "string" && data.username) {
 			adminUsername = data.username;
@@ -1790,8 +1754,6 @@ function formatDate(dateStr: string | null): string {
 			></button>
 		{/if}
 
-		<!-- 引导模式下不渲染导航：其它页面此时都取不到数据 -->
-		{#if !bootstrapMode}
 		<!-- 左侧导航栏 -->
 		<aside
 			class="admin-sidebar"
@@ -1966,7 +1928,6 @@ function formatDate(dateStr: string | null): string {
 				</button>
 			</div>
 		</aside>
-		{/if}
 
 		<!-- 主内容区 -->
 		<div class="admin-main">
@@ -2207,9 +2168,7 @@ function formatDate(dateStr: string | null): string {
 			{:else if activePage === "env"}
 				<AdminPage
 					title={i18n(I18nKey.adminEnvVars)}
-					intro={bootstrapMode
-						? "填好下面几项，保存后就能登录。"
-						: i18n(I18nKey.adminEnvVarsIntro)}
+					intro={i18n(I18nKey.adminEnvVarsIntro)}
 				>
 				{#if import.meta.env.PROD}
 					<section class="secrets-guide">
@@ -2245,7 +2204,6 @@ function formatDate(dateStr: string | null): string {
 						onNotify={(message, type, duration) =>
 							showToast(message, type, duration)}
 						onStateChange={(s) => (secretSaveState = s)}
-						bootstrap={bootstrapMode}
 					/>
 				{/if}
 				{#snippet footer()}

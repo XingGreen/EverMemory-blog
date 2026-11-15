@@ -16,12 +16,9 @@ const AUTH_EXPIRED_EVENT = "admin:auth-expired";
 /**
  * 「用户主动退出」标记。
  *
- * 退出后 Cookie 已清，但引导模式下服务端对回环请求仍会回 success（密钥没配齐时
- * 本来就允许未登录进环境变量页）。登录页若照旧自动进入后台，就形成
- * 「退出 → 登录页 → 又被弹回后台」的回弹，用户表现为退不出去。
- *
- * 该标记只拦「引导模式的假会话」，真会话照常进入（见 shouldAutoEnter）；
- * 显式登录成功或后台确认到真会话后清除。
+ * 退出后用于拦住仍停留在后台标签页里的敏感操作（如 PostEditor 的未保存草稿
+ * 提示）与 bfcache 恢复，避免用户刚退出就被这些残留界面拉回后台。
+ * 显式登录成功时由 clearLoggedOut 清除。
  */
 const LOGOUT_FLAG = "admin_logged_out";
 
@@ -51,18 +48,14 @@ export function clearLoggedOut(): void {
 }
 
 /**
- * 登录页是否应当自动进入后台。
+ * 登录页是否应当自动进入后台：服务端确认有会话即可。
  *
- * 关键区分：`bootstrap` 的 success 表示「密钥没配齐，允许未登录改配置」，
- * 不是「已登录」。刚退出过的人遇到这种假会话必须停在登录页，否则退出无效。
- * 真会话（有 Cookie）不受退出标记影响，避免退出一次就再也进不来。
+ * 会话接口只在真登录时回 success——首次配置已拆成独立的 /setup/ 页，
+ * 不再有「success 但没登录」的伪会话，因此这里不需要再区分引导态。
+ * 退出标记留给 PostEditor / bfcache 等场景，不再参与登录页判定。
  */
-export function shouldAutoEnter(session: {
-	success?: boolean;
-	bootstrap?: boolean;
-}): boolean {
-	if (!session.success) return false;
-	return !(isLoggedOut() && session.bootstrap);
+export function shouldAutoEnter(session: { success?: boolean }): boolean {
+	return Boolean(session.success);
 }
 
 /**

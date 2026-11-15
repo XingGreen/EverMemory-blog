@@ -4,23 +4,25 @@ import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import {
-	type AdminSecretItem,
 	SECRET_GROUPS,
 	SECRET_ROWS,
+	type SecretItemState,
 	type SecretRow,
 } from "@/utils/admin-secrets";
+import {
+	buildDiffRows,
+	buildEntries,
+	isDirtyItem,
+	isRowConfigured,
+	isRowDirty,
+	type SecretDiffRow,
+} from "@/utils/secret-draft";
 import ConfirmDialog from "./ConfirmDialog.svelte";
-
-type SecretItemDTO = AdminSecretItem & {
-	configured: boolean;
-	managed?: boolean;
-	preview?: string;
-};
+import SecretFields from "./secrets/SecretFields.svelte";
 
 let {
 	onNotify,
 	onStateChange,
-	bootstrap = false,
 }: {
 	onNotify: (
 		message: string,
@@ -43,15 +45,9 @@ let {
 		save: () => void;
 		discard: () => void;
 	}) => void;
-	/**
-	 * 引导期（尚未登录）：只展示完成登录所必需的那几项。
-	 * 可选字段此时既用不上、又会被服务端的写入白名单拒收，
-	 * 摆出来只会让人以为「必须全填」。登录后是同一个组件的完整形态。
-	 */
-	bootstrap?: boolean;
 } = $props();
 
-let items = $state<SecretItemDTO[]>([]);
+let items = $state<SecretItemState[]>([]);
 let writable = $state(false);
 let loading = $state(true);
 /** 被 Git 跟踪的密钥文件：这些是真正的泄漏风险 */
@@ -68,8 +64,6 @@ let saving = $state(false);
 let drafts = $state<Record<string, string>>({});
 // 回填时的原始值，用于判断是否发生修改
 let draftsOrigin = $state<Record<string, string>>({});
-// 密码类输入框的显隐切换
-let showInput = $state<Record<string, boolean>>({});
 /**
  * 握手结果：拿当前配置真的去问一次 GitHub。
  * 三段的 id 由服务端给（app / repo / installation），文案也在服务端——
@@ -298,29 +292,11 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 	}
 }
 
-/**
- * 引导期要显示的键：必填且非托管。
- * 托管项（会话签名）由服务端自动生成，摆出来只会让人以为还得自己填。
- */
-function isBootstrapKey(key: string): boolean {
-	const item = items.find((it) => it.key === key);
-	return Boolean(item?.required && !item?.managed);
-}
-
-/** 一行里只要有一个键是登录必需项，这一行在引导期就要出现 */
-function rowVisibleInBootstrap(row: SecretRow): boolean {
-	return row.keys.some(isBootstrapKey);
-}
-
 const groups = $derived(
 	SECRET_GROUPS.map((g) => ({
 		...g,
 		items: items.filter((item) => item.group === g.id),
-	})).filter(
-		(g) =>
-			!bootstrap ||
-			SECRET_ROWS.some((r) => r.group === g.id && rowVisibleInBootstrap(r)),
-	),
+	})),
 );
 
 // 配置完成度：只统计 required 必配项，托管项不算（它自己会生成）
@@ -337,14 +313,8 @@ const allRequiredConfigured = $derived(
 	requiredItems.length > 0 && requiredConfiguredCount === requiredItems.length,
 );
 
-/** 引导期缺项按屏幕上那几行来报，登录后才展开成逐键清单 */
 function missingLabelList(): string {
-	const labels = bootstrap
-		? SECRET_ROWS.filter(
-				(r) => rowVisibleInBootstrap(r) && !rowConfigured(r),
-			).map((r) => r.label)
-		: missingRequired.map((it) => it.label);
-	return labels.join("、");
+	return missingRequired.map((it) => it.label).join("、");
 }
 
 /**
@@ -375,16 +345,9 @@ $effect(() => {
 	prevAllConfigured = current;
 });
 
-function isDirty(item: SecretItemDTO): boolean {
-	const draft = (drafts[item.key] ?? "").trim();
-	// 非敏感项已预填原值，直接与草稿比较
-	if (!item.sensitive) return draft !== (draftsOrigin[item.key] ?? "");
-	// 敏感项：预填了原值则比较差异，否则「有输入即修改」
-	if (item.key in draftsOrigin) return draft !== (draftsOrigin[item.key] ?? "");
-	return draft !== "";
-}
-
-const changedCount = $derived(items.filter(isDirty).length);
+const changedCount = $derived(
+	items.filter((item) => isDirtyItem(item, drafts, draftsOrigin)).length,
+);
 
 /**
  * 滚动到指定字段并短暂高亮。
@@ -440,7 +403,6 @@ async function load() {
 			// 本地开发环境：直接把明文回填到表单，便于查看与局部修改
 			drafts = {};
 			draftsOrigin = {};
-			showInput = {};
 			for (const item of items) {
 				const value = item.value ?? "";
 				if (value) {
@@ -458,11 +420,6 @@ async function load() {
 	} finally {
 		loading = false;
 	}
-}
-
-/** 点击眼镜：切换该字段明文的显示/隐藏（值已预填，无需再请求后端） */
-function toggleReveal(item: SecretItemDTO) {
-	showInput[item.key] = !showInput[item.key];
 }
 
 /**
@@ -496,35 +453,8 @@ $effect(() => {
  * 只影响界面，草稿本身仍是原值，不点保存就不落盘。
  */
 let replacing = $state<Record<string, boolean>>({});
-/** 私钥框：切到编辑态后要把焦点送进去，否则用户还得自己点一下 */
-let keyAreaEl = $state<HTMLTextAreaElement | null>(null);
-
-$effect(() => {
-	if (replacing.GITHUB_PRIVATE_KEY && keyAreaEl) keyAreaEl.focus();
-});
-
-function buildEntries(): { key: string; value?: string; delete?: boolean }[] {
-	const entries: { key: string; value?: string; delete?: boolean }[] = [];
-	for (const item of items) {
-		const draft = (drafts[item.key] ?? "").trim();
-		if (item.key in draftsOrigin) {
-			const origin = draftsOrigin[item.key] ?? "";
-			if (draft === origin) continue;
-			// 清空输入框即视为删除该配置项（用户手动清空即可移除）
-			if (!draft) {
-				entries.push({ key: item.key, delete: true });
-				continue;
-			}
-			entries.push({ key: item.key, value: draft });
-		} else if (draft) {
-			entries.push({ key: item.key, value: draft });
-		}
-	}
-	return entries;
-}
-
 async function save() {
-	const entries = buildEntries();
+	const entries = buildEntries(items, drafts, draftsOrigin);
 	if (entries.length === 0) {
 		onNotify("没有需要保存的修改", "error", 5000);
 		return;
@@ -569,41 +499,11 @@ async function doSave(
 
 /* ── 写入前 diff ──
    页脚那行「还有 N 项未保存」展开后就是这个列表：新增（追加到末尾）、替换
-   （就地改那一行）、移除（清空即删行）。写入实现是逐行 patch，所以这三类动作
-   就是全部，不会有额外的格式变化。
-
-   行由 buildEntries() 派生——列表与真正提交的条目同源，不两处各算一遍。 */
-type SecretDiffRow = {
-	key: string;
-	label: string;
-	kind: "add" | "replace" | "remove";
-	/** 展示用文本：超长截断，敏感项一律留空 */
-	from: string;
-	to: string;
-	masked: boolean;
-};
-
-const diffRows = $derived.by<SecretDiffRow[]>(() => {
-	const byKey = new Map(items.map((i) => [i.key, i]));
-	const clip = (v: string) =>
-		!v ? "" : v.length > 40 ? `${v.slice(0, 40)}…` : v;
-	return buildEntries().map((entry) => {
-		const item = byKey.get(entry.key);
-		const masked = item?.sensitive === true;
-		return {
-			key: entry.key,
-			label: item?.label ?? entry.key,
-			kind: entry.delete
-				? "remove"
-				: entry.key in draftsOrigin
-					? "replace"
-					: "add",
-			from: masked ? "" : clip(draftsOrigin[entry.key] ?? ""),
-			to: masked ? "" : clip(entry.value ?? ""),
-			masked,
-		} satisfies SecretDiffRow;
-	});
-});
+   （就地改那一行）、移除（清空即删行）。列表与真正提交的条目同源，
+   都在 utils/secret-draft.ts 里算，不两处各算一遍。 */
+const diffRows = $derived.by<SecretDiffRow[]>(() =>
+	buildDiffRows(items, drafts, draftsOrigin),
+);
 
 function timestampForFilename(): string {
 	const d = new Date();
@@ -678,7 +578,7 @@ async function copyVercelCommands() {
 	}
 }
 
-async function rotate(item: SecretItemDTO) {
+async function rotate(item: SecretItemState) {
 	if (rotating) return;
 	const confirmed = await askConfirm({
 		title: `轮换密钥「${item.label}」？`,
@@ -732,9 +632,7 @@ async function rotate(item: SecretItemDTO) {
 const itemByKey = $derived(new Map(items.map((i) => [i.key, i])));
 
 function rowsOf(groupId: string): SecretRow[] {
-	return SECRET_ROWS.filter(
-		(r) => r.group === groupId && (!bootstrap || rowVisibleInBootstrap(r)),
-	);
+	return SECRET_ROWS.filter((r) => r.group === groupId);
 }
 
 /**
@@ -743,25 +641,6 @@ function rowsOf(groupId: string): SecretRow[] {
  * 多数行要求每个 key 都在；但私钥那行的两个 key 是**二选一**
  * （内联 Base64 与 .pem 路径），用 every 会把它永远判成未配置。
  */
-function rowConfigured(row: SecretRow): boolean {
-	const has = (k: string) => {
-		const it = itemByKey.get(k);
-		return it?.configured === true || it?.managed === true;
-	};
-	return row.shape === "content" ? row.keys.some(has) : row.keys.every(has);
-}
-
-/**
- * 这一行有没有未保存的改动。
- * 左缘那条竖线只回答这一个问题；分节与展开状态都不靠它表达。
- */
-function rowDirty(row: SecretRow): boolean {
-	return row.keys.some((key) => {
-		const item = itemByKey.get(key);
-		return item ? isDirty(item) : false;
-	});
-}
-
 /**
  * 整组都可以留空（每个键都不是必填）时为真——只有这种分组才折叠。
  * 必填项永远展开：折叠会把「还差哪几项」藏起来，那正是这一页要回答的。
@@ -820,7 +699,9 @@ function verdictOf(groupId: string): {
 	// 人机验证收起时字段看不见，那一行才需要「未配置」这个词（展开后由 CSS 隐藏）
 	if (groupId === "turnstile") {
 		const rows = rowsOf(groupId).filter((r) => r.shape !== "optional");
-		const done = rows.filter(rowConfigured).length;
+		const done = rows.filter((r) =>
+			isRowConfigured(r, (key) => itemByKey.get(key)),
+		).length;
 		return done === rows.length && rows.length > 0
 			? { word: i18n(I18nKey.secretsStatusDone), receipt: "", tone: "ok" }
 			: { word: i18n(I18nKey.secretsStatusUnset), receipt: "", tone: "idle" };
@@ -1027,215 +908,59 @@ function answerConfirm(ok: boolean) {
 					</div>
 				{/if}
 
-				<div class="prows">
-					{#each groupRows as row (row.id)}
-					{@const first = itemByKey.get(row.keys[0])}
-					{@const configured = rowConfigured(row)}
-					<div
-						class="prow"
-						class:dirty={rowDirty(row)}
-						class:field-flash={flashKey === row.keys[0] ||
-							flashKey === row.keys[1]}
-						data-secret-key={row.keys.join(" ")}
-					>
-						<div class="left">
-							<div class="name-row">
-								<div class="name">{row.label}</div>
-								{#if rowDirty(row)}
-									<span class="flag">{i18n(I18nKey.secretsUnsaved)}</span>
-								{/if}
-							</div>
-							<p class="how">{row.how}</p>
-						</div>
+				<SecretFields
+					rows={groupRows}
+					itemOf={(key) => itemByKey.get(key)}
+					{drafts}
+					origin={draftsOrigin}
+					writable={writable}
+					{replacing}
+					addressRaw={addressRaw}
+					addressError={addressError}
+					flashKey={flashKey}
+					{rotating}
+					probeRepoDetail={probeRepo?.detail ?? ""}
+					probeAppDetail={probeApp?.detail ?? ""}
+					probeInstallDetail={probeInstall?.detail ?? ""}
+					probeCandidates={probeInstall?.candidates ?? []}
+					onInput={(key, value) => (drafts[key] = value)}
+					onAddress={setAddress}
+					onView={(key) => {
+						viewTarget = key;
+						viewMode = "text";
+					}}
+					onEdit={(key) => (replacing[key] = true)}
+					onRotate={rotate}
+					onCandidate={(id) => (drafts.GITHUB_INSTALLATION_ID = id)}
+				/>
 
-						<div class="right">
-							{#if row.shape === "address"}
-								<input
-									class="ui-input mono"
-									class:invalid={addressError}
-									type="text"
-									value={addressRaw}
-									placeholder={row.format}
-									spellcheck="false"
-									autocomplete="off"
-									aria-label={row.label}
-									disabled={!writable}
-									oninput={(e) => setAddress(e.currentTarget.value)}
-								/>
-								{#if addressError}
-									<p class="trace bad">{addressError}</p>
-								{/if}
-								{#if probeRepo}
-									<p class="trace">{probeRepo.detail}</p>
-								{/if}
-							{:else if row.shape === "content"}
-								{#if configured && !replacing[row.keys[0]]}
-									<div class="summary">
-										<span class="word">{i18n(I18nKey.secretsConfigured)}</span>
-										<button
-											type="button"
-											class="link"
-											onclick={() => {
-												viewTarget = row.keys[0];
-												viewMode = "text";
-											}}>查看</button
-										>
-										<button
-											type="button"
-											class="link"
-											onclick={() => (replacing[row.keys[0]] = true)}
-											>编辑</button
-										>
-									</div>
-								{:else}
-									<textarea
-										bind:this={keyAreaEl}
-										class="ui-input mono keyarea"
-										rows="4"
-										placeholder="-----BEGIN PRIVATE KEY-----"
-										spellcheck="false"
-										value={drafts[row.keys[0]] ?? ""}
-										disabled={!writable}
-										aria-label={row.label}
-										oninput={(e) => {
-											drafts[row.keys[0]] = e.currentTarget.value;
-										}}
-									></textarea>
-									{#if itemByKey.get("GITHUB_PRIVATE_KEY_PATH")}
-										<input
-											class="ui-input mono small"
-											type="text"
-											placeholder="或填私钥文件路径，例如 .key/blog.pem"
-											spellcheck="false"
-											value={drafts.GITHUB_PRIVATE_KEY_PATH ?? ""}
-											disabled={!writable}
-											aria-label="私钥文件路径"
-											oninput={(e) => {
-												drafts.GITHUB_PRIVATE_KEY_PATH = e.currentTarget.value;
-											}}
-										/>
-									{/if}
-								{/if}
-								{#if probeApp}
-									<p class="trace">{probeApp.detail}</p>
-								{/if}
-							{:else if row.shape === "managed"}
-								<div class="summary">
-									<span class="word">已自动生成</span>
-									<button
-										type="button"
-										class="link"
-										disabled={rotating === row.keys[0]}
-										onclick={() => first && rotate(first)}
-										>{rotating === row.keys[0]
-											? "轮换中…"
-											: i18n(I18nKey.secretsRotate)}</button
-									>
-								</div>
-							{:else}
-								{@const it = first}
-								{#if it}
-									{#if it.sensitive}
-										<div class="eye-wrap">
-											<input
-												class="ui-input mono"
-												type={showInput[it.key] ? "text" : "password"}
-												value={drafts[it.key] ?? ""}
-												placeholder={it.example ?? ""}
-												spellcheck="false"
-												autocomplete="new-password"
-												aria-label={it.label}
-												disabled={!writable}
-												oninput={(e) => {
-													drafts[it.key] = e.currentTarget.value;
-												}}
-											/>
-											<button
-												type="button"
-												class="eye"
-												aria-label={showInput[it.key] ? "隐藏" : "显示"}
-												onclick={() =>
-													(showInput[it.key] = !showInput[it.key])}
-											>
-												<Icon
-													icon={showInput[it.key]
-														? "material-symbols:visibility-off-outline-rounded"
-														: "material-symbols:visibility-outline-rounded"}
-												/>
-											</button>
-										</div>
-									{:else}
-										<input
-											class="ui-input mono"
-											type="text"
-											value={drafts[it.key] ?? ""}
-											placeholder={it.example ?? ""}
-											spellcheck="false"
-											autocomplete="off"
-											aria-label={it.label}
-											disabled={!writable}
-											oninput={(e) => {
-												drafts[it.key] = e.currentTarget.value;
-											}}
-										/>
-									{/if}
-									{#if probeInstall && row.id === "install"}
-										<p class="trace">{probeInstall.detail}</p>
-										{#if probeInstall.candidates?.length}
-											<p class="trace">
-												{#each probeInstall.candidates as candidate (candidate.id)}
-													<button
-														type="button"
-														class="link"
-														onclick={() => {
-															drafts.GITHUB_INSTALLATION_ID = candidate.id;
-														}}
-														>用 {candidate.id}（{candidate.account}）</button
-													>
-												{/each}
-												<span class="dim">· 填入后先保存，再验证一次</span>
-											</p>
-										{/if}
-									{/if}
-								{/if}
-							{/if}
-						</div>
-					</div>
-					{/each}
-				</div>
 			</details>
 		{/each}
 
-		<!-- 引导期只留一个动作：配置完去登录。
-		     泄漏检测、导出、CLI 命令都是登录后的事，摆在这儿只会让人以为还得再做什么。 -->
 		<div class="foot-row">
-			{#if bootstrap}
-				<a class="link" href="/login/">去登录</a>
-			{:else}
-				<button type="button" class="link" disabled={leakBusy} onclick={checkLeak}
-					>{leakBusy ? "检测中…" : i18n(I18nKey.secretsLeakCheck)}</button
-				>
-				<span class="grow"></span>
-				<button
-					type="button"
-					class="link"
-					onclick={() => load()}
-					disabled={loading}>{i18n(I18nKey.secretsReload)}</button
-				>
-				<button
-					type="button"
-					class="link"
-					disabled={exportBusy}
-					onclick={copyVercelCommands}
-					>{i18n(I18nKey.secretsExportCopyVercel)}</button
-				>
-				<button
-					type="button"
-					class="link"
-					disabled={exportBusy}
-					onclick={downloadEnv}>{i18n(I18nKey.secretsExport)}</button
-				>
-			{/if}
+			<button type="button" class="link" disabled={leakBusy} onclick={checkLeak}
+				>{leakBusy ? "检测中…" : i18n(I18nKey.secretsLeakCheck)}</button
+			>
+			<span class="grow"></span>
+			<button
+				type="button"
+				class="link"
+				onclick={() => load()}
+				disabled={loading}>{i18n(I18nKey.secretsReload)}</button
+			>
+			<button
+				type="button"
+				class="link"
+				disabled={exportBusy}
+				onclick={copyVercelCommands}
+				>{i18n(I18nKey.secretsExportCopyVercel)}</button
+			>
+			<button
+				type="button"
+				class="link"
+				disabled={exportBusy}
+				onclick={downloadEnv}>{i18n(I18nKey.secretsExport)}</button
+			>
 		</div>
 
 		{#if leakChecked}

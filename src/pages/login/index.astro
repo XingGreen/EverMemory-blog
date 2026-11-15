@@ -2,6 +2,15 @@
 import LoginGate from "@/components/admin/LoginGate.svelte";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import { resolveAvatarUrl } from "@/utils/avatar-url";
+import { canBootstrap } from "@/utils/bootstrap-mode";
+
+// 首次配置是全站唯一入口：还没配好登录所需密钥时，登录页也让位给 /setup/。
+// 配置齐了（或生产/非本机）canBootstrap 为假，登录页正常显示。
+export const prerender = false;
+
+if (canBootstrap(Astro.request)) {
+	return Astro.redirect("/setup/");
+}
 
 const title = "控制面板";
 const description = "登录后台管理";

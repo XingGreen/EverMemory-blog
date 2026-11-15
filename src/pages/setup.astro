@@ -1,0 +1,21 @@
+---
+import SetupPage from "@/components/setup/SetupPage.svelte";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { canBootstrap } from "@/utils/bootstrap-mode";
+
+// 首次引导：无会话的独立入口，与 /admin/env/ 彻底分开。
+// 只在本机、必填项未齐、非生产时可见；一旦不需要引导，服务端直接送登录页，
+// 让这条一次性通道在所有情况下都无法被当作常开入口使用。
+export const prerender = false;
+
+if (!canBootstrap(Astro.request)) {
+	return Astro.redirect("/login/");
+}
+
+const title = "首次配置";
+const description = "首次配置控制面板所需的密钥";
+---
+
+<AdminLayout title={title} description={description}>
+	<SetupPage client:load />
+</AdminLayout>
