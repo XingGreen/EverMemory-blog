@@ -1094,9 +1094,8 @@ function answerConfirm(ok: boolean) {
 								</p>
 							{:else if row.shape === "content"}
 								{#if configured && !replacing[row.keys[0]]}
-									<div class="field-box">
-										<span class="ok">已写入本机 .env.local</span>
-										<span class="grow"></span>
+									<div class="summary">
+										<span class="word">{i18n(I18nKey.secretsConfigured)}</span>
 										<button
 											type="button"
 											class="link"
@@ -1126,29 +1125,27 @@ function answerConfirm(ok: boolean) {
 											drafts[row.keys[0]] = e.currentTarget.value;
 										}}
 									></textarea>
-								{/if}
-								{#if itemByKey.get("GITHUB_PRIVATE_KEY_PATH")}
-									<input
-										class="ui-input mono small"
-										type="text"
-										placeholder="或填私钥文件路径，例如 .key/blog.pem"
-										spellcheck="false"
-										value={drafts.GITHUB_PRIVATE_KEY_PATH ?? ""}
-										disabled={!writable}
-										aria-label="私钥文件路径"
-										oninput={(e) => {
-											drafts.GITHUB_PRIVATE_KEY_PATH = e.currentTarget.value;
-										}}
-									/>
+									{#if itemByKey.get("GITHUB_PRIVATE_KEY_PATH")}
+										<input
+											class="ui-input mono small"
+											type="text"
+											placeholder="或填私钥文件路径，例如 .key/blog.pem"
+											spellcheck="false"
+											value={drafts.GITHUB_PRIVATE_KEY_PATH ?? ""}
+											disabled={!writable}
+											aria-label="私钥文件路径"
+											oninput={(e) => {
+												drafts.GITHUB_PRIVATE_KEY_PATH = e.currentTarget.value;
+											}}
+										/>
+									{/if}
 								{/if}
 								{#if probeApp}
 									<p class="trace">{probeApp.detail}</p>
 								{/if}
 							{:else if row.shape === "managed"}
-								<div class="field-box">
-									<span class="ok" aria-hidden="true">✓</span>
-									<span>已自动生成</span>
-									<span class="grow"></span>
+								<div class="summary">
+									<span class="word">已自动生成</span>
 									<button
 										type="button"
 										class="link"
@@ -1636,27 +1633,24 @@ function answerConfirm(ok: boolean) {
 		border-color: var(--destructive);
 	}
 
-	/* 只读状态框：和 .ui-input 同一套 token，只是没有光标 */
-	.field-box {
+	/* 已配置 / 已生成：一句静音的词 + 文字动作。
+	   不套输入框（那会假装这里放着一个值），也不用绿色——
+	   绿色只用于「没有待办」的状态词，而这里要说的只是「有东西」。 */
+	.summary {
 		display: flex;
 		align-items: center;
-		gap: 0.625rem;
-		height: 2.25rem;
-		padding: 0 0.75rem;
-		background: var(--input-bg);
-		border: 1px solid var(--input-border);
-		border-radius: 10px;
-		font-size: 0.9375rem;
-		color: var(--deep-text);
-		min-width: 0;
+		gap: 0.75rem;
+		min-height: 2.25rem;
 	}
 
-	.field-box .grow {
-		flex: 1;
+	.summary .word {
+		margin-right: auto;
+		font-size: var(--admin-fs-body, 0.875rem);
+		color: var(--content-meta);
 	}
 
-	.field-box .ok {
-		color: var(--success);
+	.summary .link {
+		flex: none;
 	}
 
 	/* 私钥内容：多行等宽，行高放宽便于核对首尾标记 */
