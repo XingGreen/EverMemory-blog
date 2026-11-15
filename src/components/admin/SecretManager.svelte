@@ -1044,7 +1044,12 @@ function answerConfirm(ok: boolean) {
 						data-secret-key={row.keys.join(" ")}
 					>
 						<div class="left">
-							<div class="name">{row.label}</div>
+							<div class="name-row">
+								<div class="name">{row.label}</div>
+								{#if rowDirty(row)}
+									<span class="flag">{i18n(I18nKey.secretsUnsaved)}</span>
+								{/if}
+							</div>
 							<p class="how">{row.how}</p>
 						</div>
 
@@ -1199,9 +1204,6 @@ function answerConfirm(ok: boolean) {
 									{/if}
 								{/if}
 							{/if}
-						</div>
-						<div class="flag">
-							{rowDirty(row) ? i18n(I18nKey.secretsUnsaved) : ""}
 						</div>
 					</div>
 					{/each}
@@ -1508,24 +1510,36 @@ function answerConfirm(ok: boolean) {
 		color: var(--primary);
 	}
 
-	/* 行 */
-	.prow {
+	/* 字段区：桌面两列横排，标签在控件之上（参考项目的 settings-field-grid）。
+	   行不再画分隔线——网格靠列间距分栏，横线会把两列切断。 */
+	.prows {
 		display: grid;
-		grid-template-columns: minmax(12rem, 17rem) minmax(0, 1fr) 4.5rem;
-		gap: 0.5rem 1.5rem;
-		align-items: start;
-		padding: 0.875rem 0.5rem;
-		border-bottom: 1px solid color-mix(in srgb, var(--deep-text) 6%, transparent);
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1.25rem 1.5rem;
+		margin-top: 1rem;
+		padding-left: 0.5rem;
 	}
 
-	.prow:last-of-type {
-		border-bottom: 0;
+	.prow {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		min-width: 0;
 	}
 
-	/* 未保存：左缘一条 2px 竖线 + 右侧一个词，两条线索，不只靠颜色。
+	.prow .name-row {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		min-width: 0;
+	}
+
+	/* 未保存：左缘一条 2px 竖线 + 标签行末尾一个词，两条线索，不只靠颜色。
 	   竖线只表示这一件事，不表示展开状态，也不表示本节状态。 */
 	.prow.dirty {
 		box-shadow: inset 2px 0 0 var(--primary);
+		padding-left: 0.5rem;
+		margin-left: -0.5rem;
 	}
 
 	.prow.dirty .name {
@@ -1533,11 +1547,11 @@ function answerConfirm(ok: boolean) {
 	}
 
 	.prow .flag {
+		margin-left: auto;
+		flex: none;
 		font-family: var(--font-mono, ui-monospace, monospace);
 		font-size: var(--admin-fs-data, 0.6875rem);
-		line-height: 2.25rem;
 		color: var(--primary);
-		text-align: right;
 	}
 
 	/* 从保存栏清单跳过来的定位提示：整行背景亮两次，左缘压一道主色。
@@ -1584,6 +1598,7 @@ function answerConfirm(ok: boolean) {
 		font-size: var(--admin-fs-meta, 0.75rem);
 		line-height: 1.55;
 		color: var(--content-meta);
+		text-wrap: pretty;
 	}
 
 	.right {
@@ -1885,19 +1900,11 @@ function answerConfirm(ok: boolean) {
 			align-self: center;
 		}
 
-		.prow {
-			grid-template-columns: minmax(0, 1fr) auto;
-			gap: 0.5rem;
+		/* 窄屏改纵向：一列，标签仍在控件之上 */
+		.prows {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 1rem;
 		}
 
-		.prow .right {
-			grid-column: 1 / -1;
-		}
-
-		.prow .flag {
-			grid-row: 1;
-			grid-column: 2;
-			line-height: 1.6;
-		}
 	}
 </style>
