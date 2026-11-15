@@ -30,9 +30,15 @@ let addressRaw = $state("");
 let addressError = $state("");
 /** 1 = 仓库写入，2 = 后台登录，3 = 完成屏 */
 let step = $state<1 | 2 | 3>(1);
+/** 私钥：内容不回显，查看走弹窗；粘贴入口按需展开 */
+let keyView = $state(false);
+let fileEl = $state<HTMLInputElement | null>(null);
 
 const itemByKey = $derived(new Map(items.map((item) => [item.key, item])));
 const itemOf = (key: string) => itemByKey.get(key);
+
+/** 私钥草稿是否有内容——有则显示摘要态，不回显明文 */
+const hasKey = $derived(Boolean((drafts.GITHUB_PRIVATE_KEY ?? "").trim()));
 
 /** 必填项是否齐了——完成屏据此给出「去写文章」还是「去补齐」的提示 */
 const ready = $derived(
@@ -127,7 +133,7 @@ async function save() {
 		if (res.ok && data.success) {
 			await load();
 			// 服务端重新判定：配齐后引导通道自动关闭，这里展示完成屏再送去登录
-			step = 3;
+			if (step === 2) step = 3;
 			return;
 		}
 		notice = data.message || "保存失败";
@@ -135,6 +141,18 @@ async function save() {
 		notice = `保存请求失败: ${err instanceof Error ? err.message : String(err)}`;
 	} finally {
 		saving = false;
+	}
+}
+
+/** 选择私钥文件：本地读取后填入草稿并立即自动保存 */
+async function handleKeyFile(file: File) {
+	uploadError = "";
+	try {
+		const content = await readPrivateKeyFile(file);
+		drafts.GITHUB_PRIVATE_KEY = content;
+		await save();
+	} catch (err) {
+		uploadError = err instanceof Error ? err.message : "读取文件失败";
 	}
 }
 
@@ -209,42 +227,52 @@ onMount(load);
 					oninput={(v) => (drafts.GITHUB_INSTALLATION_ID = v)}
 				/>
 
-				<div class="upload-row">
-					<label class="upload-btn">
-						<Icon icon="material-symbols:upload-rounded" />
-						上传私钥文件
-						<input
-							type="file"
-							accept=".pem,.key,.txt"
-							hidden
-							onchange={async (e) => {
-								const file = e.currentTarget.files?.[0];
-								e.currentTarget.value = "";
-								if (!file) return;
-								uploadError = "";
-								try {
-									const content = await readPrivateKeyFile(file);
-									drafts.GITHUB_PRIVATE_KEY = content;
-								} catch (err) {
-									uploadError =
-										err instanceof Error ? err.message : "读取文件失败";
-								}
-							}}
-						/>
-					</label>
-					<span class="upload-note">读取后仍需保存才写入 .env.local</span>
-				</div>
+				<!-- 私钥：只通过文件上传，内容不回显到任何输入框。
+				     有值时只显示摘要态，查看走弹窗；更换复用同一个文件选择器。
+				     上传成功即自动保存，用户不需要理解「草稿/落盘」的分层。 -->
+				{#if hasKey}
+					<div class="key-summary">
+						<span class="key-summary-word">私钥已就绪</span>
+						<button type="button" class="link-btn" onclick={() => (keyView = true)}>
+							查看
+						</button>
+						<button
+							type="button"
+							class="link-btn"
+							disabled={saving}
+							onclick={() => fileEl?.click()}
+						>
+							更换文件
+						</button>
+					</div>
+				{:else}
+					<div class="upload-row">
+						<button
+							type="button"
+							class="upload-btn"
+							disabled={saving}
+							onclick={() => fileEl?.click()}
+						>
+							<Icon icon="material-symbols:upload-rounded" />
+							选择私钥文件
+						</button>
+					</div>
+				{/if}
 				{#if uploadError}
 					<p class="field-error" role="alert">{uploadError}</p>
 				{/if}
-
-				<FloatField
-					id="fld-key"
-					label={itemOf("GITHUB_PRIVATE_KEY")?.label ?? "私钥"}
-					value={drafts.GITHUB_PRIVATE_KEY ?? ""}
-					multiline
-					mono
-					oninput={(v) => (drafts.GITHUB_PRIVATE_KEY = v)}
+				<input
+					type="file"
+					accept=".pem,.key,.txt"
+					hidden
+					bind:this={fileEl}
+					disabled={saving}
+					onchange={async (e) => {
+						const file = e.currentTarget.files?.[0];
+						e.currentTarget.value = "";
+						if (!file) return;
+						await handleKeyFile(file);
+					}}
 				/>
 
 				<FloatField
@@ -318,7 +346,38 @@ onMount(load);
 			</footer>
 		{/if}
 	</article>
+
+	{#if keyView}
+		<!-- 查看私钥：唯一能看到内容的地方；Esc / 点击遮罩 / 关闭按钮均可退出 -->
+		<div
+			class="modal-backdrop"
+			role="presentation"
+			onclick={() => (keyView = false)}
+		>
+			<div
+				class="modal"
+				role="dialog"
+				aria-modal="true"
+				aria-label="私钥内容"
+				onclick={(e) => e.stopPropagation()}
+			>
+				<header class="modal-head">
+					<span class="modal-title">私钥内容</span>
+					<button type="button" class="link-btn" onclick={() => (keyView = false)}>
+						关闭
+					</button>
+				</header>
+				<pre class="modal-body">{drafts.GITHUB_PRIVATE_KEY}</pre>
+			</div>
+		</div>
+	{/if}
 </main>
+
+<svelte:window
+	onkeydown={(e) => {
+		if (e.key === "Escape") keyView = false;
+	}}
+/>
 
 <style>
 	/* 页面级 OOBE token：尺寸决定集中在这里，组件只引用——不散落硬编码。
@@ -440,9 +499,98 @@ onMount(load);
 		outline-offset: 2px;
 	}
 
-	.upload-note {
-		font-size: 12px;
+	/* 摘要态：私钥就绪后的那一行——状态词 + 文字动作，不回显内容 */
+	.key-summary {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		height: 56px;
+		margin-bottom: 18px;
+		padding: 0 16px;
+		background: var(--input-bg);
+		border: 1px solid var(--input-border);
+		border-radius: var(--oobe-input-radius);
+	}
+
+	.key-summary-word {
+		margin-right: auto;
+		font-size: 15px;
 		color: var(--content-meta);
+	}
+
+	.link-btn {
+		background: none;
+		border: none;
+		padding: 4px 6px;
+		font: inherit;
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--primary);
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.link-btn:hover:not(:disabled) {
+		text-decoration: underline;
+	}
+
+	.link-btn:disabled {
+		color: var(--content-meta);
+		cursor: default;
+	}
+
+	.link-btn:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	/* ── 查看私钥弹窗 ── */
+	.modal-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 60;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1.5rem;
+		background: color-mix(in oklab, var(--deep-text) 30%, transparent);
+		backdrop-filter: blur(4px);
+	}
+
+	.modal {
+		width: min(640px, 100%);
+		max-height: 80vh;
+		display: flex;
+		flex-direction: column;
+		background: var(--card-bg);
+		border-radius: 16px;
+		box-shadow: var(--shadow-lg, 0 12px 40px rgba(0, 0, 0, 0.35));
+	}
+
+	.modal-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 14px 18px;
+		border-bottom: 1px solid var(--line-divider);
+	}
+
+	.modal-title {
+		font-size: 15px;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.modal-body {
+		margin: 0;
+		padding: 16px 18px;
+		overflow: auto;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		line-height: 1.6;
+		color: var(--deep-text);
+		white-space: pre-wrap;
+		word-break: break-all;
 	}
 
 	/* ── 底部三段式：左返回 / 中进度 / 右主按钮 ── */

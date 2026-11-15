@@ -154,7 +154,6 @@ let uploadError = $state("");
 									}}
 								/>
 							</label>
-							<span class="upload-note">读取后仍需保存才写入 .env.local</span>
 						</div>
 						{#if uploadError}
 							<p class="trace bad" role="alert">{uploadError}</p>
@@ -507,11 +506,6 @@ let uploadError = $state("");
 	.upload-btn:focus-visible {
 		outline: 2px solid var(--primary);
 		outline-offset: 2px;
-	}
-
-	.upload-note {
-		font-size: var(--admin-fs-meta, 0.75rem);
-		color: var(--content-meta);
 	}
 
 	/* 窄屏改纵向：一列，标签仍在控件之上 */
