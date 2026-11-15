@@ -48,6 +48,14 @@ wired.
   cascade and makes declarations impossible to override, which raises maintenance cost and
   conflict risk. Every override must be achieved by raising selector specificity or by changing
   the DOM structure. Applies to the public theme and `/admin/` alike.
+- **Zero-burden optionals.** Anything that can be switched off — Turnstile, login alerts,
+  widgets, third-party integrations — must cost nothing when disabled: zero external requests,
+  zero placeholder DOM or layout shift, zero bundle growth (load on demand instead), and no
+  migration burden on existing content. Verify the disabled state when reviewing such a
+  feature, not only the enabled one.
+- **Accessibility.** Keyboard, focus, contrast, and motion rules live in
+  [`rules/a11y.md`](./rules/a11y.md). Native semantics first, every control named, Esc closes
+  overlays, `:focus-visible` everywhere, both themes pass. A type check is not a11y proof.
 
 - **Scope.** Edit `src/pages/admin/**`, `src/pages/api/admin/**`, and `src/components/admin/**`
   directly. Do not modify frontend routes (`src/pages/**` except admin), `src/layouts/**`, or
@@ -109,6 +117,8 @@ wired.
   change.
 - [`rules/pitfalls.md`](./rules/pitfalls.md) — dev-server, build, and styling traps that have
   caused real breakage. Read before changing icons, styles, or the build pipeline.
+- [`rules/a11y.md`](./rules/a11y.md) — keyboard, focus, contrast, and motion rules. Required
+  before adding or changing any interactive component, dialog, or overlay.
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — routing, configuration, content
   collections, tests, build pipeline, and deployment.
 - [`docs/PROVIDERS.md`](./docs/PROVIDERS.md) — auth and storage adapter interfaces, provider

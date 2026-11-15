@@ -97,3 +97,27 @@ request to justify touching files outside the agreed area.
   runtime class changes from scripts.
 - This rule covers the public theme and `/admin/` alike.
 - When reviewing a style change, grep the diff for `!important` and reject it if present.
+
+## 7. Optional features (zero burden when disabled)
+
+Anything that can be switched off — Turnstile, login alerts, widgets, third-party
+integrations — must follow these four properties in its disabled state:
+
+1. **Zero external requests.** No script, link, font, iframe, or analytics call is fetched.
+2. **Zero DOM footprint.** No placeholder markup, empty card, or extra margin/padding; the
+   page's DOM structure and layout do not shift.
+3. **Zero bundle growth.** The third-party SDK is loaded on demand at runtime, never bundled
+   into the main build just because the feature might be enabled.
+4. **No migration burden.** Existing content frontmatter and config keep working without bulk
+   edits; safe defaults inherit global settings.
+
+Verify the disabled state when reviewing such a feature — enabled-state screenshots say
+nothing about points 1–3. Applies to the public theme and `/admin/` alike.
+
+## 8. Accessibility
+
+Keyboard, focus, contrast, and motion rules are in [`rules/a11y.md`](./a11y.md). Short form:
+native semantics first, every control has an accessible name, Esc closes overlays, focus
+moves in and returns out of dialogs, `:focus-visible` on all interactive styles, both themes
+pass contrast, `prefers-reduced-motion` is honored. Screenshots are not acceptance for
+interactive changes — walk the flow with the keyboard.
