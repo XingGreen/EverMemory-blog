@@ -177,6 +177,8 @@ async function resolveAdminUser(query: string, opts?: { silent?: boolean }) {
 		adminState = "ok";
 		// 回填反查的场景：输入框还空着，把解析到的用户名填进去
 		if (!adminUsername) adminUsername = String(data.login);
+		// 用户名就位后拉取名下仓库，供仓库地址自动预填（失败静默，不阻断手填）
+		fetchAdminRepos(String(data.login));
 	} catch (err) {
 		// 被新查询取代：静默退出，不覆盖新查询的状态
 		if (err instanceof DOMException && err.name === "AbortError") return;
@@ -190,6 +192,34 @@ async function resolveAdminUser(query: string, opts?: { silent?: boolean }) {
 		adminError = err instanceof Error ? err.message : "查询失败";
 		adminState = "error";
 	}
+}
+
+/** 用户名下的仓库清单：仓库地址从这里自动预填 */
+let adminRepos = $state<{ full_name: string; default_branch: string }[]>([]);
+
+async function fetchAdminRepos(login: string) {
+	try {
+		const res = await fetch(
+			`https://api.github.com/users/${encodeURIComponent(login)}/repos?sort=updated&per_page=50`,
+			{ headers: { Accept: "application/vnd.github+json" } },
+		);
+		if (!res.ok) return;
+		const list = await res.json();
+		if (!Array.isArray(list)) return;
+		adminRepos = list.map((r) => ({
+			full_name: String(r.full_name),
+			default_branch: String(r.default_branch ?? "main"),
+		}));
+	} catch {
+		// 拉不到清单就退化为手填，不打断引导
+	}
+}
+
+/** 从清单选择仓库：组装成 owner/repo@默认分支 并同步地址栏 */
+function pickRepo(fullName: string) {
+	const repo = adminRepos.find((r) => r.full_name === fullName);
+	if (!repo) return;
+	setAddress(`${repo.full_name}@${repo.default_branch}`);
 }
 
 function onAdminInput(value: string) {
@@ -252,6 +282,20 @@ async function handleKeyFile(file: File) {
 	}
 }
 
+/** 至少一种登录方式就绪：OAuth 两项配对，或应急令牌 */
+const canLogin = $derived(
+	Boolean(
+		((drafts.GITHUB_APP_CLIENT_ID ?? "").trim() &&
+			(drafts.GITHUB_APP_CLIENT_SECRET ?? "").trim()) ||
+			(drafts.ADMIN_BREAKGLASS_TOKEN ?? "").trim(),
+	),
+);
+
+/** 登录配置就绪：保存后直接去登录页，跳过仓库配置 */
+async function goLogin() {
+	if (await save(false)) window.location.href = "/login/";
+}
+
 /** 私钥文件上传的本地错误（大小/读取） */
 let uploadError = $state("");
 
@@ -289,10 +333,92 @@ onMount(load);
 				</button>
 			</div>
 		{:else}
-			<!-- 步骤一：仓库写入（输入栏复用 FloatField） -->
+			<!-- 步骤一：登录配置——最先完成，完成后即可直接登录 -->
 			<div class="step" class:active={step === 1}>
+				<h1 class="title">登录配置</h1>
+				<p class="desc">
+					绑定管理员账号并选好登录方式。完成后即可登录，仓库等其余配置稍后在后台补齐。
+				</p>
+
+				<!-- 1. 管理员用户名：基础身份，解析成功后驱动仓库清单 -->
+				<FloatField
+					id="fld-admin"
+					label="管理员 GitHub 用户名"
+					value={adminUsername}
+					mono
+					oninput={onAdminInput}
+				/>
+				<p class="field-hint">输入 GitHub 用户名，系统自动获取账号的数字 ID</p>
+
+				{#if adminState === "looking"}
+					<p class="resolve-line" aria-live="polite">正在查询该用户…</p>
+				{:else if adminState === "error"}
+					<p class="field-error" role="alert">{adminError}</p>
+				{:else if adminState === "ok" && adminResolved}
+					<div class="admin-resolved">
+						<img
+							class="admin-avatar"
+							src={adminResolved.avatar}
+							alt="GitHub 头像"
+						/>
+						<div class="admin-who">
+							<strong>@{adminResolved.login}</strong>
+							<span>ID {adminResolved.id} · 确认这是你自己</span>
+						</div>
+					</div>
+				{/if}
+
+				<!-- 2. 登录方式：GitHub OAuth（主）或应急令牌（备），至少填其一 -->
+				<FloatField
+					id="fld-client-id"
+					label={itemOf("GITHUB_APP_CLIENT_ID")?.label ?? "OAuth Client ID"}
+					value={drafts.GITHUB_APP_CLIENT_ID ?? ""}
+					mono
+					oninput={(v) => (drafts.GITHUB_APP_CLIENT_ID = v)}
+				/>
+				<p class="field-hint">{howOf("GITHUB_APP_CLIENT_ID")}</p>
+
+				<FloatField
+					id="fld-client-secret"
+					label={itemOf("GITHUB_APP_CLIENT_SECRET")?.label ?? "OAuth Client Secret"}
+					type="password"
+					value={drafts.GITHUB_APP_CLIENT_SECRET ?? ""}
+					oninput={(v) => (drafts.GITHUB_APP_CLIENT_SECRET = v)}
+				/>
+				<p class="field-hint">{howOf("GITHUB_APP_CLIENT_SECRET")}</p>
+
+				<FloatField
+					id="fld-breakglass"
+					label={itemOf("ADMIN_BREAKGLASS_TOKEN")?.label ?? "应急令牌"}
+					type="password"
+					value={drafts.ADMIN_BREAKGLASS_TOKEN ?? ""}
+					oninput={(v) => (drafts.ADMIN_BREAKGLASS_TOKEN = v)}
+				/>
+				<p class="field-hint">{howOf("ADMIN_BREAKGLASS_TOKEN")}</p>
+			</div>
+
+			<!-- 步骤二：连接仓库——登录后也可在后台补齐 -->
+			<div class="step" class:active={step === 2}>
 				<h1 class="title">连接仓库</h1>
-				<p class="desc">配置 GitHub App，允许系统把文章写进你的仓库。</p>
+				<p class="desc">把 GitHub App 安装到仓库，文章才能写进 GitHub。</p>
+
+				{#if adminState === "ok" && adminResolved && adminRepos.length > 0}
+					<div class="field">
+						<label class="pick-label" for="fld-pick-repo">选择你的博客仓库</label>
+						<select
+							id="fld-pick-repo"
+							class="ui-select"
+							onchange={(e) => pickRepo(e.currentTarget.value)}
+						>
+							<option value="" disabled selected>从你名下的仓库中选择…</option>
+							{#each adminRepos as repo (repo.full_name)}
+								<option value={repo.full_name}>
+									{repo.full_name}（默认分支 {repo.default_branch}）
+								</option>
+							{/each}
+						</select>
+					</div>
+				{/if}
 
 				<FloatField
 					id="fld-repo"
@@ -303,6 +429,8 @@ onMount(load);
 				/>
 				{#if addressError}
 					<p class="field-error" role="alert">{addressError}</p>
+				{:else if adminRepos.length > 0 && adminState === "ok"}
+					<p class="field-hint">已按你的选择预填；组织仓库或非默认分支可直接改写</p>
 				{:else}
 					<p class="field-hint">{howOf("GITHUB_OWNER")}</p>
 				{/if}
@@ -383,104 +511,68 @@ onMount(load);
 				<p class="field-hint">可选。私钥文件存在服务器上时填路径</p>
 			</div>
 
-			<!-- 步骤二：后台登录 -->
-			<div class="step" class:active={step === 2}>
-				<h1 class="title">身份验证</h1>
-				<p class="desc">绑定管理员账号，决定谁能登录控制面板。</p>
-
-				<FloatField
-					id="fld-client-id"
-					label={itemOf("GITHUB_APP_CLIENT_ID")?.label ?? "OAuth Client ID"}
-					value={drafts.GITHUB_APP_CLIENT_ID ?? ""}
-					mono
-					oninput={(v) => (drafts.GITHUB_APP_CLIENT_ID = v)}
-				/>
-				<p class="field-hint">{howOf("GITHUB_APP_CLIENT_ID")}</p>
-
-				<FloatField
-					id="fld-client-secret"
-					label={itemOf("GITHUB_APP_CLIENT_SECRET")?.label ?? "OAuth Client Secret"}
-					type="password"
-					value={drafts.GITHUB_APP_CLIENT_SECRET ?? ""}
-					oninput={(v) => (drafts.GITHUB_APP_CLIENT_SECRET = v)}
-				/>
-				<p class="field-hint">{howOf("GITHUB_APP_CLIENT_SECRET")}</p>
-
-				<!-- 管理员账号：输入用户名自动解析 ID 与头像，用户只需确认头像是自己 -->
-				<FloatField
-					id="fld-admin"
-					label="管理员 GitHub 用户名"
-					value={adminUsername}
-					mono
-					oninput={onAdminInput}
-				/>
-				<p class="field-hint">输入 GitHub 用户名，系统自动获取账号的数字 ID</p>
-
-				{#if adminState === "looking"}
-					<p class="resolve-line" aria-live="polite">正在查询该用户…</p>
-				{:else if adminState === "error"}
-					<p class="field-error" role="alert">{adminError}</p>
-				{:else if adminState === "ok" && adminResolved}
-					<div class="admin-resolved">
-						<img
-							class="admin-avatar"
-							src={adminResolved.avatar}
-							alt="GitHub 头像"
-						/>
-						<div class="admin-who">
-							<strong>@{adminResolved.login}</strong>
-							<span>ID {adminResolved.id} · 确认这是你自己</span>
-						</div>
-					</div>
-				{/if}
-			</div>
-
+			
 			{#if notice}
 				<div class="state-error" role="alert">{notice}</div>
 			{/if}
 
-			<!-- 底部三段式：左返回（占位防位移）/ 中进度 / 右主按钮 -->
+			<!-- 底部三段式：左前进/后退（占位防位移）/ 中进度 / 右主动作 -->
 			<footer class="footer-actions">
-				<button
-					type="button"
-					class="ghost-btn"
-					class:show={step === 2}
-					onclick={async () => {
-						// 回退前先保存本步改动，避免返回修改仓库配置时丢失登录字段
-						if (await save(false)) step = 1;
-					}}
-				>
-					上一步
-				</button>
+				{#if step === 1}
+					<!-- 下一步 = 保存登录配置并进入仓库配置；失败留在本步修正 -->
+					<button
+						type="button"
+						class="ghost-btn show"
+						disabled={saving}
+						onclick={async () => {
+							if (await save(false)) step = 2;
+						}}
+					>
+						下一步：连接仓库
+					</button>
+				{:else}
+					<button
+						type="button"
+						class="ghost-btn show"
+						disabled={saving}
+						onclick={async () => {
+							// 回退前先保存本步改动，避免返回修改仓库配置时丢失登录字段
+							if (await save(false)) step = 1;
+						}}
+					>
+						上一步
+					</button>
+				{/if}
 
 				<div class="dots" aria-hidden="true">
 					<span class="dot" class:active={step === 1}></span>
 					<span class="dot" class:active={step === 2}></span>
 				</div>
 
-			{#if step === 1}
-				<!-- 下一步 = 保存仓库配置并进入第二步；失败留在本步修正 -->
-				<button
-					type="button"
-					class="primary-btn"
-					disabled={saving}
-					onclick={async () => {
-						if (await save(false)) step = 2;
-					}}
-				>
-					{saving ? "保存中…" : "下一步"}
-				</button>
-			{:else}
-				<button
-					type="button"
-					class="primary-btn"
-					disabled={saving}
-					onclick={() => save(true)}
-				>
-					{saving ? "保存中…" : "完成"}
-				</button>
-			{/if}
+				{#if step === 1}
+					<!-- 去登录：登录配置就绪即可跳过仓库配置，其余项登录后在后台补齐 -->
+					<button
+						type="button"
+						class="primary-btn"
+						disabled={saving || !canLogin}
+						onclick={goLogin}
+					>
+						{saving ? "保存中…" : "去登录"}
+					</button>
+				{:else}
+					<button
+						type="button"
+						class="primary-btn"
+						disabled={saving}
+						onclick={() => save(true)}
+					>
+						{saving ? "保存中…" : "完成"}
+					</button>
+				{/if}
 			</footer>
+			{#if step === 1 && !canLogin}
+				<p class="center-hint">填好 OAuth 两项或应急令牌其一，即可去登录</p>
+			{/if}
 		{/if}
 	</article>
 
@@ -559,6 +651,27 @@ onMount(load);
 		margin: -8px 0 clamp(10px, 1.8vh, 14px);
 		font-size: 12px;
 		color: var(--destructive);
+	}
+
+	.center-hint {
+		margin: 10px 0 0;
+		text-align: center;
+		font-size: 12px;
+		color: var(--content-meta);
+	}
+
+	/* 仓库清单下拉：标签在上方（原生 select 不做浮动标签） */
+	.pick-label {
+		display: block;
+		margin-bottom: 6px;
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.card :global(.ui-select) {
+		width: 100%;
+		height: 42px;
 	}
 
 	/* ── 管理员解析结果：头像 + 账号 + ID，供用户确认 ── */
