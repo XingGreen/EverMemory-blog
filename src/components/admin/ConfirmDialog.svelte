@@ -24,6 +24,8 @@ let {
 	/** 可选的第三个按钮：既不是确定也不是取消的第三条路，如「继续编辑」 */
 	tertiaryText = "",
 	tone = "default",
+	/** 宽幅变体：内容弹窗（代码块等）用 640px，确认框保持 440px */
+	wide = false,
 	/** 自定义正文（结构化内容，如代码块）；提供时追加在 body 文本之后 */
 	children,
 	onConfirm,
@@ -39,6 +41,7 @@ let {
 	tertiaryText?: string;
 	/** danger 时主按钮用破坏色，用于不可撤销、会丢数据的操作 */
 	tone?: "default" | "danger";
+	wide?: boolean;
 	children?: Snippet;
 	onConfirm?: () => void;
 	onCancel?: () => void;
@@ -72,6 +75,7 @@ function handleKeydown(e: KeyboardEvent) {
 	>
 		<div
 			class="modal-content"
+			class:wide
 			role="alertdialog"
 			aria-modal="true"
 			aria-labelledby="confirm-dialog-title"
@@ -164,11 +168,21 @@ function handleKeydown(e: KeyboardEvent) {
 	.modal-content {
 		width: 90%;
 		max-width: 440px;
+		/* 视口高度封顶 + flex 纵排：header/footer 固定，body 独自滚动，
+		   长内容（私钥等）不再把弹窗撑出屏幕 */
+		max-height: min(85vh, 900px);
+		display: flex;
+		flex-direction: column;
 		background: var(--float-panel-bg);
 		border-radius: var(--radius-large);
 		box-shadow: var(--shadow-card-hover);
 		overflow: hidden;
 		animation: slideIn 0.3s ease-out;
+	}
+
+	/* 宽幅变体：代码块等结构化内容需要更宽的阅读列 */
+	.modal-content.wide {
+		max-width: 640px;
 	}
 
 	@keyframes slideIn {
@@ -188,6 +202,7 @@ function handleKeydown(e: KeyboardEvent) {
 		justify-content: space-between;
 		gap: 1rem;
 		padding: 1.25rem 1.5rem 0.75rem;
+		flex-shrink: 0;
 	}
 
 	.close-btn {
@@ -217,7 +232,11 @@ function handleKeydown(e: KeyboardEvent) {
 	}
 
 	.modal-body {
+		/* 长内容在这里滚动（私钥 PEM 可达数屏高） */
 		padding: 0 1.5rem 1rem;
+		overflow-y: auto;
+		min-height: 0;
+		flex: 1;
 	}
 
 	.lead {
@@ -249,5 +268,6 @@ function handleKeydown(e: KeyboardEvent) {
 		justify-content: flex-end;
 		gap: 0.5rem;
 		padding: 0 1.5rem 1.5rem;
+		flex-shrink: 0;
 	}
 </style>

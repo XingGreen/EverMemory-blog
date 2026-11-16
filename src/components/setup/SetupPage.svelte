@@ -474,6 +474,7 @@ onMount(load);
 	<ConfirmDialog
 		open={keyView}
 		title="私钥内容"
+		wide
 		onTertiary={() => (keyView = false)}
 	>
 		<pre class="modal-code">{drafts.GITHUB_PRIVATE_KEY}</pre>
