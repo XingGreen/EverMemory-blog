@@ -9,6 +9,8 @@ import { buildEntries, readPrivateKeyFile } from "@/utils/secret-draft";
 /**
  * 首次引导页（/setup/）——OOBE 壳 + 复用现有输入栏。
  *
+			{#if step !== 3}
+			{#if step !== 3}
  * 壳层结构参照用户样张：窄卡片、步骤标题、底部三段式操作区
  * （上一步 / 进度圆点 / 主按钮）、完成屏收尾。
  * 输入栏全部复用 FloatField（从登录页应急令牌输入抽出的悬浮标签组件），
@@ -579,6 +581,8 @@ onMount(load);
 					</div>
 				{/if}
 			</footer>
+			{/if}
+			{/if}
 		{/if}
 	</article>
 
