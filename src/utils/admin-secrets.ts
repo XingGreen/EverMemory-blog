@@ -166,7 +166,7 @@ export const SECRET_ROWS: SecretRow[] = [
 		id: "admin-id",
 		group: "auth",
 		label: "管理员 GitHub 用户 ID",
-		how: "仅该账号可登录；打开 api.github.com/user 取返回里的 id",
+		how: "仅该账号可登录；数字 ID 可在 api.github.com/users/{用户名} 查询",
 		keys: ["ADMIN_GITHUB_ID"],
 		shape: "single",
 	},

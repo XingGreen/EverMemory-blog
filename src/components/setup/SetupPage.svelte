@@ -34,6 +34,19 @@ let step = $state<1 | 2 | 3>(1);
 let keyView = $state(false);
 let fileEl = $state<HTMLInputElement | null>(null);
 
+// ── 管理员账号：输入用户名，调 GitHub API 自动解析数字 ID 与头像 ──
+// 输入框里永远是用户名，drafts.ADMIN_GITHUB_ID 由解析结果驱动（保存的仍是数字 ID）。
+let adminUsername = $state("");
+let adminState = $state<"idle" | "looking" | "ok" | "error">("idle");
+let adminError = $state("");
+let adminResolved = $state<{
+	id: string;
+	login: string;
+	avatar: string;
+} | null>(null);
+let adminTimer: ReturnType<typeof setTimeout> | undefined;
+let adminAbort: AbortController | undefined;
+
 const itemByKey = $derived(new Map(items.map((item) => [item.key, item])));
 const itemOf = (key: string) => itemByKey.get(key);
 
@@ -108,11 +121,66 @@ async function load() {
 			}
 		}
 		syncAddress();
+		// 已配置过管理员 ID：反查一次用户资料，让输入框显示用户名与头像
+		const adminId = (drafts.ADMIN_GITHUB_ID ?? "").trim();
+		if (adminId) resolveAdminUser(adminId);
 	} catch (err) {
 		loadError = err instanceof Error ? err.message : "网络请求失败";
 	} finally {
 		loading = false;
 	}
+}
+
+/** GitHub 用户资料解析：/users/{用户名或数字 ID} 两条路共用同一端点 */
+async function resolveAdminUser(query: string) {
+	const q = query.trim();
+	if (!q) {
+		adminState = "idle";
+		adminResolved = null;
+		adminError = "";
+		drafts.ADMIN_GITHUB_ID = "";
+		return;
+	}
+	// 新查询取代旧请求；快速连续输入时旧响应作废，不回写旧 ID
+	adminAbort?.abort();
+	adminAbort = new AbortController();
+	adminState = "looking";
+	adminError = "";
+	try {
+		const res = await fetch(
+			`https://api.github.com/users/${encodeURIComponent(q)}`,
+			{
+				signal: adminAbort.signal,
+				headers: { Accept: "application/vnd.github+json" },
+			},
+		);
+		if (res.status === 404) {
+			throw new Error("GitHub 上没有这个用户名，请检查拼写");
+		}
+		if (!res.ok) {
+			throw new Error("查询失败，稍后再试（可能触发了 GitHub 限流）");
+		}
+		const data = await res.json();
+		adminResolved = {
+			id: String(data.id),
+			login: String(data.login),
+			avatar: String(data.avatar_url),
+		};
+		drafts.ADMIN_GITHUB_ID = String(data.id);
+		adminState = "ok";
+	} catch (err) {
+		// 被新查询取代：静默退出，不覆盖新查询的状态
+		if (err instanceof DOMException && err.name === "AbortError") return;
+		adminResolved = null;
+		adminError = err instanceof Error ? err.message : "查询失败";
+		adminState = "error";
+	}
+}
+
+function onAdminInput(value: string) {
+	adminUsername = value;
+	clearTimeout(adminTimer);
+	adminTimer = setTimeout(() => resolveAdminUser(value), 500);
 }
 
 /**
@@ -323,14 +391,33 @@ onMount(load);
 				/>
 				<p class="field-hint">{howOf("GITHUB_APP_CLIENT_SECRET")}</p>
 
+				<!-- 管理员账号：输入用户名自动解析 ID 与头像，用户只需确认头像是自己 -->
 				<FloatField
-					id="fld-admin-id"
-					label={itemOf("ADMIN_GITHUB_ID")?.label ?? "管理员 GitHub 用户 ID"}
-					value={drafts.ADMIN_GITHUB_ID ?? ""}
+					id="fld-admin"
+					label="管理员 GitHub 用户名"
+					value={adminUsername}
 					mono
-					oninput={(v) => (drafts.ADMIN_GITHUB_ID = v)}
+					oninput={onAdminInput}
 				/>
-				<p class="field-hint">{howOf("ADMIN_GITHUB_ID")}</p>
+				<p class="field-hint">输入 GitHub 用户名，系统自动获取账号的数字 ID</p>
+
+				{#if adminState === "looking"}
+					<p class="resolve-line" aria-live="polite">正在查询该用户…</p>
+				{:else if adminState === "error"}
+					<p class="field-error" role="alert">{adminError}</p>
+				{:else if adminState === "ok" && adminResolved}
+					<div class="admin-resolved">
+						<img
+							class="admin-avatar"
+							src={adminResolved.avatar}
+							alt="GitHub 头像"
+						/>
+						<div class="admin-who">
+							<strong>@{adminResolved.login}</strong>
+							<span>ID {adminResolved.id} · 确认这是你自己</span>
+						</div>
+					</div>
+				{/if}
 			</div>
 
 			{#if notice}
@@ -473,6 +560,48 @@ onMount(load);
 		margin: -10px 0 14px;
 		font-size: 12px;
 		color: var(--destructive);
+	}
+
+	/* ── 管理员解析结果：头像 + 账号 + ID，供用户确认 ── */
+	.resolve-line {
+		margin: -8px 0 14px;
+		font-size: 12px;
+		color: var(--content-meta);
+	}
+
+	.admin-resolved {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin: -8px 0 14px;
+		padding: 10px 14px;
+		background: color-mix(in oklab, var(--primary) 8%, transparent);
+		border: 1px solid color-mix(in oklab, var(--primary) 30%, transparent);
+		border-radius: 12px;
+	}
+
+	.admin-avatar {
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		object-fit: cover;
+	}
+
+	.admin-who {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		min-width: 0;
+	}
+
+	.admin-who strong {
+		font-size: 14px;
+		color: var(--deep-text);
+	}
+
+	.admin-who span {
+		font-size: 12px;
+		color: var(--content-meta);
 	}
 
 	/* ── 步骤切换：一次淡入，尊重 reduced-motion ── */
