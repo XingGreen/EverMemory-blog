@@ -516,13 +516,12 @@ onMount(load);
 				<div class="state-error" role="alert">{notice}</div>
 			{/if}
 
-			<!-- 底部三段式：左前进/后退（占位防位移）/ 中进度 / 右主动作 -->
+			<!-- 底部三段式：可跳过的步骤显示「跳过」按钮，不可跳过则不渲染 -->
 			<footer class="footer-actions">
 				{#if step === 1}
-					<!-- 下一步 = 保存登录配置并进入仓库配置；失败留在本步修正 -->
 					<button
 						type="button"
-						class="ghost-btn show"
+						class="ghost-btn"
 						disabled={saving}
 						onclick={async () => {
 							if (await save(false)) step = 2;
@@ -530,49 +529,56 @@ onMount(load);
 					>
 						下一步：连接仓库
 					</button>
+					<div class="dots" aria-hidden="true">
+						<span class="dot" class:active={step === 1}></span>
+						<span class="dot" class:active={step === 2}></span>
+					</div>
+					{#if canLogin}
+						<button
+							type="button"
+							class="primary-btn"
+							disabled={saving}
+							onclick={goLogin}
+						>
+							{saving ? "保存中…" : "去登录"}
+						</button>
+					{/if}
 				{:else}
 					<button
 						type="button"
-						class="ghost-btn show"
+						class="ghost-btn"
 						disabled={saving}
 						onclick={async () => {
-							// 回退前先保存本步改动，避免返回修改仓库配置时丢失登录字段
 							if (await save(false)) step = 1;
 						}}
 					>
 						上一步
 					</button>
-				{/if}
-
-				<div class="dots" aria-hidden="true">
-					<span class="dot" class:active={step === 1}></span>
-					<span class="dot" class:active={step === 2}></span>
-				</div>
-
-				{#if step === 1}
-					<!-- 去登录：登录配置就绪即可跳过仓库配置，其余项登录后在后台补齐 -->
-					<button
-						type="button"
-						class="primary-btn"
-						disabled={saving || !canLogin}
-						onclick={goLogin}
-					>
-						{saving ? "保存中…" : "去登录"}
-					</button>
-				{:else}
-					<button
-						type="button"
-						class="primary-btn"
-						disabled={saving}
-						onclick={() => save(true)}
-					>
-						{saving ? "保存中…" : "完成"}
-					</button>
+					<div class="dots" aria-hidden="true">
+						<span class="dot" class:active={step === 1}></span>
+						<span class="dot" class:active={step === 2}></span>
+					</div>
+					<div class="done-group">
+						{#if canLogin}
+							<button
+								type="button"
+								class="ghost-btn"
+								onclick={() => (window.location.href = "/login/")}
+							>
+								跳过
+							</button>
+						{/if}
+						<button
+							type="button"
+							class="primary-btn"
+							disabled={saving}
+							onclick={() => save(true)}
+						>
+							{saving ? "保存中…" : "完成"}
+						</button>
+					</div>
 				{/if}
 			</footer>
-			{#if step === 1 && !canLogin}
-				<p class="center-hint">填好 OAuth 两项或应急令牌其一，即可去登录</p>
-			{/if}
 		{/if}
 	</article>
 
@@ -651,13 +657,6 @@ onMount(load);
 		margin: -8px 0 clamp(10px, 1.8vh, 14px);
 		font-size: 12px;
 		color: var(--destructive);
-	}
-
-	.center-hint {
-		margin: 10px 0 0;
-		text-align: center;
-		font-size: 12px;
-		color: var(--content-meta);
 	}
 
 	/* 仓库清单下拉：标签在上方（原生 select 不做浮动标签） */
@@ -836,6 +835,7 @@ onMount(load);
 
 	/* ── 底部三段式：左返回 / 中进度 / 右主按钮 ── */
 	.footer-actions {
+		position: relative;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -855,27 +855,33 @@ onMount(load);
 		font-weight: 500;
 		color: var(--content-meta);
 		cursor: pointer;
-		/* visibility 占位：切换步骤时按钮不把布局顶来顶去 */
-		visibility: hidden;
 		transition:
 			color 0.2s var(--oobe-ease),
 			background 0.2s var(--oobe-ease);
 	}
 
-	.ghost-btn.show,
-	.ghost-btn.retry {
-		visibility: visible;
-	}
 
 	.ghost-btn:hover {
 		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
 		color: var(--deep-text);
 	}
 
+	/* 绝对居中：左右按钮宽度不等时进度点也不偏 */
 	.dots {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%);
 		display: flex;
 		align-items: center;
 		gap: 6px;
+	}
+
+	.done-group {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-left: auto;
 	}
 
 	.dot {
