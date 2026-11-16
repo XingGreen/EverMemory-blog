@@ -1,5 +1,6 @@
 import { getConfigItem } from "@/utils/admin-settings";
 import { requireAuth } from "@/utils/auth";
+import { canBootstrap } from "@/utils/bootstrap-mode";
 import {
 	isRemoteRuntime,
 	readConfigJson,
@@ -41,6 +42,13 @@ export async function GET({ request, params }) {
 	const item = getConfigItem(params.key);
 	if (!item)
 		return json({ success: false, message: `未知配置项: ${params.key}` }, 404);
+
+	// 引导分支（OOBE）：本机 + 缺必填 + 非生产时，站点配置可未登录读取，
+	// 供首次配置表单回填；必填项补齐后此分支自动关闭，回落正常鉴权路径。
+	if (params.key === "site" && canBootstrap(request)) {
+		const { data } = readConfigJson(params.key);
+		return json({ success: true, data, file: item.file, remote: false }, 200);
+	}
 
 	try {
 		// Serverless 环境无本地文件系统：
@@ -116,6 +124,26 @@ export async function POST({ request, params }) {
 
 	try {
 		const body = await request.json();
+
+		// 引导分支（OOBE）：本机 + 缺必填 + 非生产时，站点配置可未登录保存。
+		// 数据形态与正常路径一致（整份配置对象改部分字段），写回仍走 TS 校验。
+		if (params.key === "site" && canBootstrap(request)) {
+			const data = body?.data;
+			if (!data || typeof data !== "object" || Array.isArray(data)) {
+				return json({ success: false, message: "配置数据格式错误" }, 400);
+			}
+			const result = await saveConfigJson(params.key, data);
+			return json(
+				{
+					success: true,
+					message: result.github
+						? "保存成功（已同步到 GitHub）"
+						: "保存成功（仅本地保存）",
+					file: result.file,
+				},
+				200,
+			);
+		}
 
 		// Serverless 环境：源码或表单数据均以 GitHub 为存储（触发自动重建后生效）
 		if (isRemoteRuntime()) {

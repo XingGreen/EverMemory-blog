@@ -29,8 +29,8 @@ let drafts = $state<Record<string, string>>({});
 let draftsOrigin = $state<Record<string, string>>({});
 let addressRaw = $state("");
 let addressError = $state("");
-/** 1 = 仓库写入，2 = 后台登录，3 = 完成屏 */
-let step = $state<1 | 2 | 3>(1);
+/** 1 = 登录配置，2 = 连接仓库，3 = 站点信息，4 = 完成屏 */
+let step = $state<1 | 2 | 3 | 4>(1);
 /** 私钥：内容不回显，查看走弹窗；粘贴入口按需展开 */
 let keyView = $state(false);
 let fileEl = $state<HTMLInputElement | null>(null);
@@ -241,7 +241,7 @@ async function save(goDone: boolean): Promise<boolean> {
 	}
 	const entries = buildEntries(items, drafts, draftsOrigin);
 	if (entries.length === 0) {
-		if (goDone) step = 3;
+		if (goDone) step = 4;
 		return true;
 	}
 	saving = true;
@@ -258,7 +258,7 @@ async function save(goDone: boolean): Promise<boolean> {
 			for (const item of items) {
 				item.configured = Boolean((drafts[item.key] ?? "").trim());
 			}
-			if (goDone) step = 3;
+			if (goDone) step = 4;
 			return true;
 		}
 		notice = data.message || "保存失败";
@@ -297,9 +297,61 @@ async function goLogin() {
 }
 
 /** 私钥文件上传的本地错误（大小/读取） */
-let uploadError = $state("");
+let uploadError = $state();
 
-onMount(load);
+// ── 站点信息（step3）：引导分支读写 siteConfig 的三个基础字段 ──
+let siteDraft = $state({ title: "", subtitle: "", description: "" });
+let siteOrigin = $state({ title: "", subtitle: "", description: "" });
+let siteLoaded = $state(false);
+
+async function loadSite() {
+	try {
+		const res = await fetch("/api/admin/configs/site", { cache: "no-store" });
+		const data = await res.json();
+		if (!data.success || !data.data) return;
+		siteDraft = {
+			title: String(data.data.title ?? ""),
+			subtitle: String(data.data.subtitle ?? ""),
+			description: String(data.data.description ?? ""),
+		};
+		siteOrigin = { ...siteDraft };
+		siteLoaded = true;
+	} catch {
+		// 站点信息是可选步骤，拉取失败不阻断向导
+	}
+}
+
+/** 保存站点信息：整份配置对象回传（只改了引导涉及的三个字段） */
+async function saveSite(): Promise<boolean> {
+	try {
+		const res = await fetch("/api/admin/configs/site", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				data: {
+					title: siteDraft.title.trim(),
+					subtitle: siteDraft.subtitle.trim(),
+					description: siteDraft.description.trim(),
+				},
+			}),
+		});
+		const data = await res.json();
+		if (res.ok && data.success) {
+			siteOrigin = { ...siteDraft };
+			return true;
+		}
+		notice = data.message || "站点信息保存失败";
+		return false;
+	} catch (err) {
+		notice = `站点信息保存失败: ${err instanceof Error ? err.message : String(err)}`;
+		return false;
+	}
+}
+
+onMount(() => {
+	load();
+	loadSite();
+});
 </script>
 
 <main class="oobe">
@@ -309,7 +361,7 @@ onMount(load);
 			<button type="button" class="ghost-btn retry" onclick={load}>重试</button>
 		{:else if loading}
 			<div class="state-loading">加载中…</div>
-		{:else if step === 3}
+		{:else if step === 4}
 			<!-- 完成屏：仪式感的顶点——只有确认，没有多余动作 -->
 			<div class="done-hero">
 				<span class="done-ring" aria-hidden="true">
@@ -516,7 +568,7 @@ onMount(load);
 				<div class="state-error" role="alert">{notice}</div>
 			{/if}
 
-			{#if step !== 3}
+			{#if step !== 4}
 			<!-- 底部三段式：可跳过的步骤显示「跳过」按钮，不可跳过则不渲染 -->
 			<footer class="footer-actions">
 				{#if step === 1}
@@ -544,7 +596,7 @@ onMount(load);
 							{saving ? "保存中…" : "去登录"}
 						</button>
 					{/if}
-				{:else}
+				{:else if step === 2}
 					<button
 						type="button"
 						class="ghost-btn"
@@ -558,13 +610,14 @@ onMount(load);
 					<div class="dots" aria-hidden="true">
 						<span class="dot" class:active={step === 1}></span>
 						<span class="dot" class:active={step === 2}></span>
+						<span class="dot" class:active={step === 3}></span>
 					</div>
 					<div class="done-group">
 						{#if canLogin}
 							<button
 								type="button"
 								class="ghost-btn"
-								onclick={() => (window.location.href = "/login/")}
+								onclick={goLogin}
 							>
 								跳过
 							</button>
@@ -573,13 +626,89 @@ onMount(load);
 							type="button"
 							class="primary-btn"
 							disabled={saving}
-							onclick={() => save(true)}
+							onclick={async () => {
+								if (await save(false)) step = 3;
+							}}
 						>
-							{saving ? "保存中…" : "完成"}
+							{saving ? "保存中…" : "下一步：站点信息"}
 						</button>
 					</div>
 				{/if}
 			</footer>
+
+			<!-- 步骤三：站点信息——可选，全部字段留空可直接完成 -->
+			{#if step === 3}
+			<div class="step" class:active={step === 3}>
+				<h1 class="title">站点信息</h1>
+				<p class="desc">
+					这三项会出现在浏览器标题与分享卡片上。都可以留空，登录后在后台随时改。
+				</p>
+
+				<FloatField
+					id="fld-site-title"
+					label="站点标题"
+					value={siteDraft.title}
+					oninput={(v) => (siteDraft.title = v)}
+				/>
+				<p class="field-hint">浏览器标签页与站点页头显示的名字</p>
+
+				<FloatField
+					id="fld-site-subtitle"
+					label="站点副标题"
+					value={siteDraft.subtitle}
+					oninput={(v) => (siteDraft.subtitle = v)}
+				/>
+				<p class="field-hint">页头标题下方的一句介绍</p>
+
+				<FloatField
+					id="fld-site-description"
+					label="站点描述"
+					value={siteDraft.description}
+					multiline
+					oninput={(v) => (siteDraft.description = v)}
+				/>
+				<p class="field-hint">分享到社交平台时的摘要文案</p>
+			</div>
+
+			<footer class="footer-actions">
+				<button
+					type="button"
+					class="ghost-btn"
+					disabled={saving}
+					onclick={async () => {
+						if (await saveSite()) step = 2;
+					}}
+				>
+					上一步
+				</button>
+				<div class="dots" aria-hidden="true">
+					<span class="dot" class:active={step === 1}></span>
+					<span class="dot" class:active={step === 2}></span>
+					<span class="dot" class:active={step === 3}></span>
+				</div>
+				<div class="done-group">
+					{#if canLogin}
+						<button
+							type="button"
+							class="ghost-btn"
+							onclick={goLogin}
+						>
+							跳过
+						</button>
+					{/if}
+					<button
+						type="button"
+						class="primary-btn"
+						disabled={saving}
+						onclick={async () => {
+							if (await saveSite()) step = 4;
+						}}
+					>
+						{saving ? "保存中…" : "完成"}
+					</button>
+				</div>
+			</footer>
+			{/if}
 			{/if}
 		{/if}
 	</article>
