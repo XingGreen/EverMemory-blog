@@ -493,32 +493,37 @@ onMount(load);
 		min-height: 100vh;
 		min-height: 100dvh;
 		display: flex;
-		align-items: center;
 		justify-content: center;
-		padding: 1.5rem;
+		/* 竖向不用 align-items:center：内容高于视口时 center 会把顶部
+		   裁出滚动区外（滚不动回标题）。margin:auto 同样居中，且溢出时
+		   顶部仍可滚动到——参考前台内容流的滚动行为。 */
+		padding: clamp(16px, 3vh, 24px) 1.5rem;
 		background: var(--page-bg);
 		color: var(--deep-text);
 	}
 
 	.card {
+		margin: auto;
 		width: 100%;
 		max-width: 460px;
 		background: var(--card-bg);
 		border-radius: var(--oobe-card-radius);
 		box-shadow: var(--shadow-card);
-		padding: 32px 28px 24px;
+		/* 内距随视口高度收敛：矮屏（768 高的笔记本）也能放下整卡 */
+		padding: clamp(20px, 4vh, 32px) clamp(22px, 6vw, 28px)
+			clamp(16px, 3vh, 24px);
 	}
 
 	.title {
-		margin: 0 0 8px;
-		font-size: 22px;
+		margin: 0 0 6px;
+		font-size: clamp(19px, 3.2vh, 22px);
 		font-weight: 700;
 		text-align: center;
 		color: var(--deep-text);
 	}
 
 	.desc {
-		margin: 0 0 24px;
+		margin: 0 0 clamp(14px, 2.5vh, 24px);
 		font-size: 13px;
 		line-height: 1.5;
 		text-align: center;
@@ -527,17 +532,17 @@ onMount(load);
 
 	/* 字段间距由 FloatField 自身结构 + 这里的统一节奏承担 */
 	.card :global(.field) {
-		margin-bottom: 18px;
+		margin-bottom: clamp(10px, 1.8vh, 18px);
 	}
 
 	.field-hint {
-		margin: -10px 0 14px;
+		margin: -8px 0 clamp(10px, 1.8vh, 14px);
 		font-size: 12px;
 		color: var(--content-meta);
 	}
 
 	.field-error {
-		margin: -10px 0 14px;
+		margin: -8px 0 clamp(10px, 1.8vh, 14px);
 		font-size: 12px;
 		color: var(--destructive);
 	}
@@ -708,8 +713,8 @@ onMount(load);
 		align-items: center;
 		justify-content: space-between;
 		gap: 12px;
-		margin-top: 24px;
-		padding-top: 20px;
+		margin-top: clamp(16px, 2.5vh, 24px);
+		padding-top: clamp(14px, 2vh, 20px);
 		border-top: 1px solid var(--line-divider);
 	}
 
@@ -795,7 +800,7 @@ onMount(load);
 		flex-direction: column;
 		align-items: center;
 		gap: 12px;
-		padding-top: 16px;
+		padding-top: clamp(8px, 2vh, 16px);
 	}
 
 	.done-ring {
@@ -813,7 +818,7 @@ onMount(load);
 	.done-action {
 		display: flex;
 		justify-content: center;
-		margin-top: 28px;
+		margin-top: clamp(18px, 3vh, 28px);
 	}
 
 	/* ── 加载 / 错误态 ── */
