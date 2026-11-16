@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount } from "svelte";
+import ConfirmDialog from "@/components/admin/ConfirmDialog.svelte";
 import FloatField from "@/components/admin/ui/FloatField.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import { SECRET_ROWS, type SecretItemState } from "@/utils/admin-secrets";
@@ -469,37 +470,15 @@ onMount(load);
 		{/if}
 	</article>
 
-	{#if keyView}
-		<!-- 查看私钥：唯一能看到内容的地方；Esc / 点击遮罩 / 关闭按钮均可退出 -->
-		<div
-			class="modal-backdrop"
-			role="presentation"
-			onclick={() => (keyView = false)}
-		>
-			<div
-				class="modal"
-				role="dialog"
-				aria-modal="true"
-				aria-label="私钥内容"
-				onclick={(e) => e.stopPropagation()}
-			>
-				<header class="modal-head">
-					<span class="modal-title">私钥内容</span>
-					<button type="button" class="link-btn" onclick={() => (keyView = false)}>
-						关闭
-					</button>
-				</header>
-				<pre class="modal-body">{drafts.GITHUB_PRIVATE_KEY}</pre>
-			</div>
-		</div>
-	{/if}
+	<!-- 查看私钥：复用通用弹窗组件；Esc / 遮罩 / 右上角关闭均可退出 -->
+	<ConfirmDialog
+		open={keyView}
+		title="私钥内容"
+		onTertiary={() => (keyView = false)}
+	>
+		<pre class="modal-code">{drafts.GITHUB_PRIVATE_KEY}</pre>
+	</ConfirmDialog>
 </main>
-
-<svelte:window
-	onkeydown={(e) => {
-		if (e.key === "Escape") keyView = false;
-	}}
-/>
 
 <style>
 	/* 页面级 OOBE token：尺寸决定集中在这里，组件只引用——不散落硬编码。
@@ -708,47 +687,12 @@ onMount(load);
 		outline-offset: 2px;
 	}
 
-	/* ── 查看私钥弹窗 ── */
-	.modal-backdrop {
-		position: fixed;
-		inset: 0;
-		z-index: 60;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 1.5rem;
-		background: color-mix(in oklab, var(--deep-text) 30%, transparent);
-		backdrop-filter: blur(4px);
-	}
-
-	.modal {
-		width: min(640px, 100%);
-		max-height: 80vh;
-		display: flex;
-		flex-direction: column;
-		background: var(--card-bg);
-		border-radius: 16px;
-		box-shadow: var(--shadow-lg, 0 12px 40px rgba(0, 0, 0, 0.35));
-	}
-
-	.modal-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 14px 18px;
-		border-bottom: 1px solid var(--line-divider);
-	}
-
-	.modal-title {
-		font-size: 15px;
-		font-weight: 600;
-		color: var(--deep-text);
-	}
-
-	.modal-body {
+	/* 查看私钥的等宽正文：弹窗壳来自通用 ConfirmDialog */
+	.modal-code {
 		margin: 0;
-		padding: 16px 18px;
-		overflow: auto;
+		padding: 0;
+		background: none;
+		border: none;
 		font-family: var(--font-mono);
 		font-size: 13px;
 		line-height: 1.6;

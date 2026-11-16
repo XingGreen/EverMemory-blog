@@ -1,4 +1,5 @@
 <script lang="ts">
+import type { Snippet } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 
 /**
@@ -9,6 +10,9 @@ import Icon from "@/components/common/Icon.svelte";
  *
  * 按钮文案由调用方给，默认的「确定 / 取消」在很多场景下没有信息量——
  * 写「覆盖本地 / 取消」比「确定 / 取消」更能让人停下来想一秒。
+ *
+ * 也承载只读内容弹窗：传 children（自定义正文，如等宽代码块）且不传
+ * 确认/取消回调时，footer 整体不渲染，右上角关闭按钮即为唯一出口。
  */
 let {
 	open,
@@ -20,6 +24,8 @@ let {
 	/** 可选的第三个按钮：既不是确定也不是取消的第三条路，如「继续编辑」 */
 	tertiaryText = "",
 	tone = "default",
+	/** 自定义正文（结构化内容，如代码块）；提供时追加在 body 文本之后 */
+	children,
 	onConfirm,
 	onCancel,
 	onTertiary,
@@ -33,8 +39,9 @@ let {
 	tertiaryText?: string;
 	/** danger 时主按钮用破坏色，用于不可撤销、会丢数据的操作 */
 	tone?: "default" | "danger";
-	onConfirm: () => void;
-	onCancel: () => void;
+	children?: Snippet;
+	onConfirm?: () => void;
+	onCancel?: () => void;
 	onTertiary?: () => void;
 } = $props();
 
@@ -45,7 +52,7 @@ let {
  */
 function handleDismiss() {
 	if (onTertiary) onTertiary();
-	else onCancel();
+	else onCancel?.();
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -86,7 +93,7 @@ function handleKeydown(e: KeyboardEvent) {
 				{/if}
 			</div>
 
-			{#if body || hint}
+			{#if body || hint || children}
 				<div class="modal-body">
 					{#if body}
 						<p class="lead">{body}</p>
@@ -94,27 +101,34 @@ function handleKeydown(e: KeyboardEvent) {
 					{#if hint}
 						<p class="hint">{hint}</p>
 					{/if}
+					{@render children?.()}
 				</div>
 			{/if}
 
-			<div class="modal-footer">
-				{#if tertiaryText && onTertiary}
-					<button class="ui-btn ui-btn-ghost" type="button" onclick={onTertiary}>
-						{tertiaryText}
-					</button>
-				{/if}
-				<button class="ui-btn ui-btn-soft" type="button" onclick={onCancel}>
-					{cancelText}
-				</button>
-				<button
-					class="ui-btn ui-btn-primary"
-					class:danger={tone === "danger"}
-					type="button"
-					onclick={onConfirm}
-				>
-					{confirmText}
-				</button>
-			</div>
+			{#if (confirmText && onConfirm) || (cancelText && onCancel) || (tertiaryText && onTertiary)}
+				<div class="modal-footer">
+					{#if tertiaryText && onTertiary}
+						<button class="ui-btn ui-btn-ghost" type="button" onclick={onTertiary}>
+							{tertiaryText}
+						</button>
+					{/if}
+					{#if cancelText && onCancel}
+						<button class="ui-btn ui-btn-soft" type="button" onclick={onCancel}>
+							{cancelText}
+						</button>
+					{/if}
+					{#if confirmText && onConfirm}
+						<button
+							class="ui-btn ui-btn-primary"
+							class:danger={tone === "danger"}
+							type="button"
+							onclick={onConfirm}
+						>
+							{confirmText}
+						</button>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	</div>
 {/if}
