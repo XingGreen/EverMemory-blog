@@ -1,9 +1,13 @@
 <script lang="ts">
+import Icon from "@/components/common/Icon.svelte";
+
 /**
- * 浮动标签输入栏——从 VerifyScreen 的应急令牌输入原样抽出（样式与
+ * 浮动标签输入栏——从 VerifyScreen 的应急令牌输入抽出（样式与
  * focused/filled 状态逻辑未改动），登录页与首次引导页共用。
  *
  * 空态：标签待在框内；聚焦或有值：标签缩放悬浮到上边框。
+ * 标签水平位置：默认贴左（与输入文字起点对齐）；只有传入 `icon`
+ * （前置图标）时才向右避让图标宽度。
  * filled 判定用 trim 后的值；autofill 的边角（-webkit-autofill）已处理。
  */
 let {
@@ -13,6 +17,7 @@ let {
 	value = $bindable(""),
 	multiline = false,
 	mono = false,
+	icon,
 	autocomplete = "off",
 	disabled = false,
 	oninput,
@@ -25,6 +30,8 @@ let {
 	multiline?: boolean;
 	/** 机器值（仓库地址、App ID 等）用等宽字族 */
 	mono?: boolean;
+	/** 前置图标：出现时标签与输入文字向右避让 */
+	icon?: string;
 	autocomplete?: string;
 	disabled?: boolean;
 	oninput?: (value: string) => void;
@@ -34,7 +41,10 @@ let {
 let focused = $state(false);
 </script>
 
-<div class="field" class:focused class:filled={value.trim()}>
+<div class="field" class:focused class:filled={value.trim()} class:has-icon={Boolean(icon)}>
+	{#if icon}
+		<Icon {icon} class="lead-icon" aria-hidden="true" />
+	{/if}
 	{#if multiline}
 		<textarea
 			{id}
@@ -85,6 +95,22 @@ let focused = $state(false);
 		font-family: inherit;
 	}
 
+	/* 前置图标：占住左侧，输入文字与标签一起向右避让 */
+	.field.has-icon input,
+	.field.has-icon textarea {
+		padding-left: 2.6rem;
+	}
+
+	.lead-icon {
+		position: absolute;
+		left: 0.75rem;
+		top: 50%;
+		transform: translateY(-50%);
+		font-size: 18px;
+		color: var(--content-meta);
+		pointer-events: none;
+	}
+
 	.field textarea {
 		min-height: 96px;
 		resize: vertical;
@@ -106,6 +132,7 @@ let focused = $state(false);
 
 	.field label {
 		position: absolute;
+		/* 无图标：与输入文字起点对齐、贴左 */
 		left: 0.75rem;
 		top: 50%;
 		transform: translateY(-50%);
@@ -113,6 +140,11 @@ let focused = $state(false);
 		color: var(--content-meta);
 		pointer-events: none;
 		transition: all 0.18s ease;
+	}
+
+	/* 有前置图标：标签与文字一起向右避让 */
+	.field.has-icon label {
+		left: 2.6rem;
 	}
 
 	/* 多行框的标签停在首行位置 */
@@ -124,7 +156,10 @@ let focused = $state(false);
 	.field.focused label,
 	.field.filled label {
 		top: 0;
+		/* 原点是修正关键：默认 center 会让越宽的标签左缘漂得越靠右，
+		   以左缘为缩放原点后标签始终贴住起点 */
 		transform: translateY(-50%) scale(0.8);
+		transform-origin: left center;
 		color: var(--primary);
 		background: var(--card-bg);
 		padding: 0 0.25rem;
@@ -134,6 +169,7 @@ let focused = $state(false);
 	.field textarea:-webkit-autofill ~ label {
 		top: 0;
 		transform: translateY(-50%) scale(0.8);
+		transform-origin: left center;
 		color: var(--primary);
 		background: var(--card-bg);
 		padding: 0 0.25rem;
