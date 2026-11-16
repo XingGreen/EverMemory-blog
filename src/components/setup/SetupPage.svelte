@@ -124,7 +124,8 @@ async function load() {
 		syncAddress();
 		// 已配置过管理员 ID：反查一次用户资料，让输入框显示用户名与头像
 		const adminId = (drafts.ADMIN_GITHUB_ID ?? "").trim();
-		if (adminId) resolveAdminUser(adminId);
+		// 回填失败必须静默：此时输入框还是空的，报错只会让人困惑
+		if (adminId) resolveAdminUser(adminId, { silent: true });
 	} catch (err) {
 		loadError = err instanceof Error ? err.message : "网络请求失败";
 	} finally {
@@ -132,8 +133,13 @@ async function load() {
 	}
 }
 
-/** GitHub 用户资料解析：/users/{用户名或数字 ID} 两条路共用同一端点 */
-async function resolveAdminUser(query: string) {
+/**
+ * GitHub 用户资料解析：/users/{用户名或数字 ID} 两条路共用同一端点。
+ * silent（回填反查）时失败不显示错误——输入框还没内容，报错只会让人困惑；
+ * 只有用户主动输入触发的失败才提示。
+ */
+async function resolveAdminUser(query: string, opts?: { silent?: boolean }) {
+	const silent = opts?.silent === true;
 	const q = query.trim();
 	if (!q) {
 		adminState = "idle";
@@ -169,10 +175,18 @@ async function resolveAdminUser(query: string) {
 		};
 		drafts.ADMIN_GITHUB_ID = String(data.id);
 		adminState = "ok";
+		// 回填反查的场景：输入框还空着，把解析到的用户名填进去
+		if (!adminUsername) adminUsername = String(data.login);
 	} catch (err) {
 		// 被新查询取代：静默退出，不覆盖新查询的状态
 		if (err instanceof DOMException && err.name === "AbortError") return;
 		adminResolved = null;
+		if (silent) {
+			// 回填失败不算用户操作，退回空闲态、不留错误提示
+			adminState = "idle";
+			adminError = "";
+			return;
+		}
 		adminError = err instanceof Error ? err.message : "查询失败";
 		adminState = "error";
 	}
