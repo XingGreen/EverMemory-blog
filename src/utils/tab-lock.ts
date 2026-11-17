@@ -17,6 +17,12 @@
  */
 
 const LOCK_PREFIX = "em-tab-lock:";
+
+/** 锁 key 归一化：直接输链接常带尾斜杠，不归一会导致同页两把锁（绕过） */
+function normalizeRoute(route: string): string {
+	const trimmed = route.replace(/\/+$/, "");
+	return trimmed === "" ? "/" : trimmed;
+}
 const CHANNEL_NAME = "em-tab-lock";
 /** 心跳间隔：持有者每 3s 刷新一次时间戳 */
 const HEARTBEAT_MS = 3000;
@@ -44,7 +50,7 @@ function myId(): string {
 }
 
 function lockKey(route: string): string {
-	return `${LOCK_PREFIX}${route}`;
+	return `${LOCK_PREFIX}${normalizeRoute(route)}`;
 }
 
 function readLock(route: string): LockInfo | null {
@@ -149,6 +155,7 @@ function waitHandshake(route: string): Promise<boolean> {
  * 返回 false 表示同路由已被另一个存活标签页持有（调用方应拦截进入）。
  */
 export async function tryLockRoute(route: string): Promise<boolean> {
+	route = normalizeRoute(route);
 	const info = readLock(route);
 	if (info) {
 		if (info.tabId === myId()) {
@@ -183,6 +190,7 @@ export function releaseCurrentLock() {
 
 /** 释放当前持有的路由锁（路由切换 / 页面卸载时调用） */
 export function releaseRoute(route: string) {
+	route = normalizeRoute(route);
 	if (heldRoute !== route) return;
 	heldRoute = "";
 	clearLock(route, myId());
@@ -198,6 +206,15 @@ export function releaseAllLocks() {
 /** 供测试与调试：当前持有者信息（可能为 null） */
 export function peekLock(route: string): LockInfo | null {
 	return readLock(route);
+}
+
+/**
+ * 路由锁是否已空闲（无锁或持有者心跳过期）。
+ * 只读查看模式用它轮询「原标签页是否已关闭 → 可接管」。
+ */
+export function isRouteFree(route: string): boolean {
+	const info = readLock(normalizeRoute(route));
+	return !info || isStale(info);
 }
 
 /** 仅供测试：重置模块级状态 */

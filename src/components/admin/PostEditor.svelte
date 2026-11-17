@@ -34,6 +34,8 @@ let {
 	onCancel,
 	onError,
 	onDelete,
+	/** 多标签页只读查看：此路由正在另一标签页编辑，保存入口整体停用 */
+	readOnly = false,
 }: {
 	post: any;
 	mode: "edit" | "create";
@@ -43,6 +45,7 @@ let {
 	onError: (msg: string) => void;
 	/** 删除只在这里出现：个人博客删文章是罕见动作，不值得每行占一格 */
 	onDelete?: (trigger?: HTMLElement | null) => void;
+	readOnly?: boolean;
 } = $props();
 
 /**
@@ -1405,6 +1408,11 @@ onDestroy(() => {
 });
 
 async function handleSave() {
+	// 只读查看：锁在另一标签页手里，保存必然互相覆盖
+	if (readOnly) {
+		onError("此页面正在另一个标签页编辑，无法从这里保存。");
+		return;
+	}
 	/* 标题留空时的兜底：
 	   加密文章改用「前缀 + 时间」，绝不从正文里取——正文首行一旦当了标题，
 	   加密就形同虚设。未加密的文章仍按 siteConfig.post.titleFallback 处理：
@@ -1780,7 +1788,7 @@ $effect(() => {
 					{i18n(I18nKey.postDelete)}
 				</button>
 			{/if}
-			<button class="ui-btn ui-btn-primary" onclick={handleSave} disabled={isSaving}>
+			<button class="ui-btn ui-btn-primary" onclick={handleSave} disabled={isSaving || readOnly}>
 				{#if isSaving}
 					<span class="spinner"></span>
 					{i18n(I18nKey.postSaving)}
