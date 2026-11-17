@@ -34,12 +34,21 @@
     line-height: 1.2;
 }
 
-/* .banner-page-title-icon {
-    font-size: 1.2em;
+/* 标题图标：空心变体、无背景装饰，尺寸与标题文字一致（1em = 标题字号） */
+.banner-page-title-icon {
+    font-size: 1em;
     line-height: 1;
-    vertical-align: middle;
-    transform: translateY(0.08em);
-  } */
+    color: inherit;
+}
+
+/* 页面介绍：标题下方的引用文案 */
+.banner-page-title-desc {
+    font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+    line-height: 1.7;
+    max-width: 42rem;
+    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
+    margin: 0;
+}
 
 .banner-page-title-text {
     line-height: 1.2;

@@ -1,6 +1,7 @@
 ---
 import { Icon } from "astro-icon/components";
 import type { NavBarLink } from "@/types/config";
+import { toOutlineIcon } from "@/utils/icon-outline";
 import { url } from "@/utils/url-utils";
 
 interface Props {
@@ -22,7 +23,7 @@ const processedLinks = Astro.props.links;
                         aria-expanded="false"
                     >
                         <div class="flex items-center transition text-black/75 dark:text-white/75 font-bold group-hover:text-(--primary) group-active:text-(--primary)">
-							{link.icon && <Icon is:inline name={link.icon} class="text-[1.1rem] mr-2" />}
+							{link.icon && <Icon is:inline name={toOutlineIcon(link.icon)} class="text-[1.1rem] mr-2" />}
                             {link.name}
                         </div>
                         <Icon is:inline name="material-symbols:keyboard-arrow-down-rounded"
@@ -37,7 +38,7 @@ const processedLinks = Astro.props.links;
                                target={child.external ? "_blank" : null}
                             >
                                 <div class="flex items-center transition text-black/60 dark:text-white/60 font-medium group-hover:text-(--primary) group-active:text-(--primary)">
-									{child.icon && <Icon is:inline name={child.icon} class="text-[1.1rem] mr-2" />}
+									{child.icon && <Icon is:inline name={toOutlineIcon(child.icon)} class="text-[1.1rem] mr-2" />}
                                     {child.name}
                                 </div>
                                 {child.external && <Icon is:inline name="fa7-solid:arrow-up-right-from-square"
@@ -55,7 +56,7 @@ const processedLinks = Astro.props.links;
                    target={link.external ? "_blank" : null}
                 >
                     <div class="flex items-center transition text-black/75 dark:text-white/75 font-bold group-hover:text-(--primary) group-active:text-(--primary)">
-						{link.icon && <Icon is:inline name={link.icon} class="text-[1.1rem] mr-2" />}
+						{link.icon && <Icon is:inline name={toOutlineIcon(link.icon)} class="text-[1.1rem] mr-2" />}
                         {link.name}
                     </div>
 					{!link.external && <Icon is:inline name="material-symbols:chevron-right-rounded"
