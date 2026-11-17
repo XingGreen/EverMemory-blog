@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount } from "svelte";
+import ConfirmDialog from "@/components/admin/ConfirmDialog.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import { adminConfig } from "@/config/adminConfig";
 import { backgroundWallpaper } from "@/config/backgroundWallpaper";
@@ -26,7 +27,6 @@ import {
 } from "@/utils/auth-expired";
 import { isTourDone, resetTour } from "@/utils/onboarding";
 import {
-	isRouteFree,
 	releaseAllLocks,
 	releaseCurrentLock,
 	tryLockRoute,
@@ -587,41 +587,15 @@ function parseRoute(pathname: string): Route {
 	}
 }
 
-/** 只读查看模式：该路由正在另一标签页编辑，本页只看不存 */
-let viewerRoute = $state("");
-let lockFree = $state(false);
-let viewerPoll: ReturnType<typeof setInterval> | undefined;
+/** 该路由已在其他标签页打开：弹窗拦截，重新加载重试 */
+let routeLocked = $state("");
 let lockSeq = 0;
-
-function startViewerPoll(path: string) {
-	stopViewerPoll();
-	viewerPoll = setInterval(() => {
-		if (isRouteFree(path)) lockFree = true;
-	}, 4000);
-}
-
-function stopViewerPoll() {
-	if (!viewerPoll) return;
-	clearInterval(viewerPoll);
-	viewerPoll = undefined;
-}
-
-/** 查看模式接管制：原标签页已关闭，本页获得锁转为正常编辑 */
-async function takeOver() {
-	stopViewerPoll();
-	if (await tryLockRoute(viewerRoute)) {
-		viewerRoute = "";
-		lockFree = false;
-	}
-}
 
 function applyRoute() {
 	// 未登录：跳回独立登录页（/login/），不再在后台页内展示登录
 	if (!isVerified) {
 		releaseAllLocks();
-		viewerRoute = "";
-		lockFree = false;
-		stopViewerPoll();
+		routeLocked = "";
 		route = { page: "login" };
 		window.location.replace("/login/");
 		return;
@@ -670,16 +644,8 @@ function applyRoute() {
 	releaseCurrentLock();
 	void tryLockRoute(lockPath).then((ok) => {
 		if (seq !== lockSeq) return;
-		if (ok) {
-			viewerRoute = "";
-			lockFree = false;
-			stopViewerPoll();
-		} else {
-			// 同路由已在别的标签页打开：放行渲染，进入只读查看
-			viewerRoute = lockPath;
-			lockFree = false;
-			startViewerPoll(lockPath);
-		}
+		// 弹窗拦截而非只读放行：用户没机会白输入一大篇才被告知无法保存
+		routeLocked = ok ? "" : lockPath;
 	});
 }
 
@@ -1992,29 +1958,7 @@ function formatDate(dateStr: string | null): string {
 
 		<!-- 主内容区 -->
 		<div class="admin-main">
-			{#if viewerRoute}
-				<div class="viewer-banner" role="status">
-					<Icon icon="material-symbols:visibility" />
-					<span>
-						{lockFree
-							? "原标签页已关闭。"
-							: "此页面正在另一个标签页编辑，当前为只读查看，保存已被停用。"}
-					</span>
-					{#if lockFree}
-						<button type="button" class="ui-btn ui-btn-primary" onclick={takeOver}>
-							接管编辑
-						</button>
-					{:else}
-						<button
-							type="button"
-							class="ui-btn ui-btn-ghost"
-							onclick={() => window.location.reload()}
-						>
-							重新加载
-						</button>
-					{/if}
-				</div>
-			{/if}
+
 			<div class="card-base mobile-topbar">
 				<button class="menu-toggle" onclick={() => (isSidebarOpen = true)} aria-label="打开菜单">
 					<Icon icon="material-symbols:menu-rounded" style="font-size: 28px" />
@@ -2121,7 +2065,6 @@ function formatDate(dateStr: string | null): string {
 						<PostEditor
 							post={editingPost}
 							mode="edit"
-							readOnly={Boolean(viewerRoute)}
 							onSave={handleSaveSuccess}
 							onCancel={handleCancelEdit}
 							onDelete={(trigger) => {
@@ -2133,7 +2076,6 @@ function formatDate(dateStr: string | null): string {
 						<PostEditor
 							post={null}
 							mode="create"
-							readOnly={Boolean(viewerRoute)}
 							onSave={handleSaveSuccess}
 							onCancel={handleCancelEdit}
 							onError={(msg) => showToast(msg, "error", 10000)}
@@ -2435,6 +2377,18 @@ function formatDate(dateStr: string | null): string {
 				{/key}
 			</div>
 		</div>
+	{/if}
+
+	<!-- 多标签页路由冲突：阻断式弹窗，进入前就拦下，避免输入后无法保存 -->
+	{#if routeLocked}
+		<ConfirmDialog
+			open={true}
+			icon="material-symbols:lock"
+			title="正在其他标签页中编辑"
+			body="此页面正在其他标签页中编辑。关闭该标签页后，重新加载此页面即可编辑。"
+			confirmText="重新加载"
+			onConfirm={() => window.location.reload()}
+		/>
 	{/if}
 
 	<OnboardingTour
@@ -5220,26 +5174,4 @@ function formatDate(dateStr: string | null): string {
 		margin-top: 0.75rem;
 		opacity: 0.75;
 	}
-	/* ── 多标签页只读查看警示条 ── */
-	.viewer-banner {
-		position: sticky;
-		top: 0;
-		z-index: 11000;
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.625rem 1rem;
-		background: color-mix(in oklab, var(--primary) 12%, var(--card-bg));
-		border-bottom: 1px solid color-mix(in oklab, var(--primary) 30%, transparent);
-		font-size: 0.875rem;
-		color: var(--deep-text);
-	}
-
-	.viewer-banner > :global(.iconify),
-	.viewer-banner :global(svg) {
-		flex-shrink: 0;
-	}
-
-	.viewer-banner span {
-		margin-right: auto;
-	}</style>
+</style>

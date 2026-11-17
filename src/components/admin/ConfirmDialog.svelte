@@ -26,7 +26,8 @@ let {
 	tone = "default",
 	/** 宽幅变体：内容弹窗（代码块等）用 640px，确认框保持 440px */
 	wide = false,
-	/** 自定义正文（结构化内容，如代码块）；提供时追加在 body 文本之后 */
+	/** 可选的头部图标：内容型弹窗（如拦截提示）用它代替纯文字标题 */
+	icon,
 	children,
 	onConfirm,
 	onCancel,
@@ -42,6 +43,8 @@ let {
 	/** danger 时主按钮用破坏色，用于不可撤销、会丢数据的操作 */
 	tone?: "default" | "danger";
 	wide?: boolean;
+	/** 可选的头部图标：内容型弹窗（如拦截提示）用它代替纯文字标题 */
+	icon?: string;
 	children?: Snippet;
 	onConfirm?: () => void;
 	onCancel?: () => void;
@@ -83,6 +86,9 @@ function handleKeydown(e: KeyboardEvent) {
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.stopPropagation()}
 		>
+			{#if icon}
+				<Icon {icon} class="modal-icon" aria-hidden="true" />
+			{/if}
 			<div class="modal-header">
 				<h2 id="confirm-dialog-title">{title}</h2>
 				{#if onTertiary}
@@ -194,6 +200,13 @@ function handleKeydown(e: KeyboardEvent) {
 			opacity: 1;
 			transform: translateY(0);
 		}
+	}
+
+	.modal-icon {
+		display: block;
+		margin: 1.25rem 1.5rem 0;
+		font-size: 28px;
+		color: var(--content-meta);
 	}
 
 	.modal-header {
