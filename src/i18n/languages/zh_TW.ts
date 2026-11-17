@@ -518,6 +518,8 @@ export const zh_TW: Translation = {
 	[Key.adminExpandSidebar]: "展開側邊欄",
 	[Key.adminSidebarRole]: "管理員",
 	[Key.adminLogout]: "登出",
+	[Key.adminSearch]: "搜尋設定",
+	[Key.adminNoResults]: "沒有符合的設定項目",
 	[Key.adminLogoutConfirmMessage]: "登出後需要重新登入才能進入後台。",
 
 	[Key.verifyTitle]: "管理員登入",

@@ -7,7 +7,7 @@ import { profileConfig, siteConfig } from "@/config";
 import { adminConfig } from "@/config/adminConfig";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import { resolveAdminLogo } from "@/utils/admin-logo";
-import { resolveAvatarUrl } from "@/utils/avatar-url";
+import { resolveAdminAvatarUrl } from "@/utils/avatar-url";
 import { canBootstrap } from "@/utils/bootstrap-mode";
 
 // 首次配置阶段：后台首页也让位给 /setup/，与 [...slug] 兜底页保持一致。
@@ -18,7 +18,7 @@ if (canBootstrap(Astro.request)) {
 const title = "控制面板";
 const description = `控制面板 - ${profileConfig.name}`;
 
-const avatarUrl = resolveAvatarUrl();
+const avatarUrl = resolveAdminAvatarUrl();
 const logo = await resolveAdminLogo();
 ---
 

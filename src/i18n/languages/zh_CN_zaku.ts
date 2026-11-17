@@ -513,6 +513,8 @@ export const zaku: Translation = {
 	[Key.adminExpandSidebar]: "展开侧边栏",
 	[Key.adminSidebarRole]: "管理员",
 	[Key.adminLogout]: "退出登录",
+	[Key.adminSearch]: "搜索设置",
+	[Key.adminNoResults]: "没有匹配的设置项",
 	[Key.adminLogoutConfirmMessage]: "退出后需要重新登录才能进入后台。",
 
 	[Key.verifyTitle]: "管理员登录",

@@ -89,7 +89,15 @@ $effect(() => {
 		</div>
 	{/if}
 	{#if isLoading}
-		<div class="editor-status">{i18n(I18nKey.configLoading)}</div>
+		<!-- 骨架屏：占住表单的真实排版高度，加载完成不跳动 -->
+		<div class="editor-skeleton" aria-hidden="true">
+			<div class="sk sk-title"></div>
+			<div class="sk sk-line"></div>
+			<div class="sk sk-line"></div>
+			<div class="sk sk-area"></div>
+			<div class="sk sk-line"></div>
+			<div class="sk sk-line"></div>
+		</div>
 	{:else if error}
 		<div class="editor-status error">{i18n(I18nKey.configLoadFailed)}: {error}</div>
 	{:else if item.kind === "html" && (typeof data === "string" || (remote && source))}
@@ -258,5 +266,54 @@ $effect(() => {
 		color: color-mix(in oklab, var(--content-meta) 55%, transparent);
 		font-family: var(--font-mono, monospace);
 		word-break: break-all;
+	}
+	/* ── 加载骨架屏：shimmer 扫过，reduced-motion 时静止为灰块 ── */
+	.editor-skeleton {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		padding: 0.5rem 0;
+	}
+
+	.sk {
+		border-radius: 8px;
+		background: linear-gradient(
+			100deg,
+			var(--input-bg) 40%,
+			color-mix(in oklab, var(--deep-text) 8%, var(--input-bg)) 50%,
+			var(--input-bg) 60%
+		);
+		background-size: 200% 100%;
+		animation: sk-sweep 1.4s ease-in-out infinite;
+	}
+
+	.sk-title {
+		height: 1.25rem;
+		width: 30%;
+	}
+
+	.sk-line {
+		height: 2.5rem;
+		width: 100%;
+	}
+
+	.sk-area {
+		height: 8rem;
+		width: 100%;
+	}
+
+	@keyframes sk-sweep {
+		from {
+			background-position: 200% 0;
+		}
+		to {
+			background-position: -200% 0;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.sk {
+			animation: none;
+		}
 	}
 </style>

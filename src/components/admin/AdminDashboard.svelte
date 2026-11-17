@@ -24,6 +24,7 @@ import {
 	onAuthExpired,
 	relogin,
 } from "@/utils/auth-expired";
+import { portalToBody } from "@/utils/floating";
 import { isTourDone, resetTour } from "@/utils/onboarding";
 import {
 	releaseAllLocks,
@@ -432,6 +433,32 @@ const settingsTab = $derived.by(() => {
 });
 
 /** 设置页 tab 列表：全部配置项（按 CONFIG_ITEMS 原顺序） */
+/** 设置页导航图标：纯 UI 关注点，放组件内而非配置结构里 */
+const settingsTabIcons: Record<string, string> = {
+	site: "material-symbols:language",
+	profile: "material-symbols:person",
+	navbar: "material-symbols:link",
+	footer: "material-symbols:view-list",
+	music: "material-symbols:music-note",
+	friends: "material-symbols:group",
+	comment: "material-symbols:chat",
+	font: "material-symbols:font-download",
+	wallpaper: "material-symbols:wallpaper",
+	announcement: "material-symbols:campaign",
+	analytics: "material-symbols:analytics",
+	gallery: "material-symbols:photo-library",
+	app: "material-symbols:apps",
+	sponsor: "material-symbols:volunteer-activism",
+	license: "material-symbols:copyright-outline",
+	effects: "material-symbols:auto-awesome",
+	plantuml: "material-symbols:account-tree",
+	sidebar: "material-symbols:view-quilt-outline",
+	admin: "material-symbols:lock",
+};
+
+/** 设置页 rail 搜索：按当前语言的标签名过滤 */
+let railQuery = $state("");
+
 const settingsTabs = $derived(
 	CONFIG_ITEMS.map((item) => ({
 		id: item.key,
@@ -448,8 +475,22 @@ const settingsGroups = $derived(
 		id: group.id,
 		labelKey: group.labelKey,
 		items: settingsTabs.filter((tab) => getConfigGroup(tab.id) === group.id),
-	})).filter((group) => group.items.length > 0),
+	}))
+		.map((group) => ({
+			...group,
+			items: railQuery.trim()
+				? group.items.filter((tab) =>
+						i18n(tab.labelKey)
+							.toLowerCase()
+							.includes(railQuery.trim().toLowerCase()),
+					)
+				: group.items,
+		}))
+		.filter((group) => group.items.length > 0),
 );
+
+/** 当前选中页所属的组：组标题跟随高亮（仅文字变色，不带背景） */
+const activeGroup = $derived(settingsTab ? getConfigGroup(settingsTab) : "");
 
 /** 切到某个 tab：直接跳对应配置项详情页 */
 function goSettingsTab(tabId: string) {
@@ -589,6 +630,12 @@ function parseRoute(pathname: string): Route {
 /** 该路由已在其他标签页打开：弹窗拦截，重新加载重试 */
 let routeLocked = $state("");
 let lockSeq = 0;
+/** 页面级数据加载的顶部进度条：设置页/环境变量页加载时点亮 */
+let navLoading = $state(false);
+
+$effect(() => {
+	navLoading = settingsLoading || Boolean(secretSaveState?.loading);
+});
 
 function applyRoute() {
 	// 未登录：跳回独立登录页（/login/），不再在后台页内展示登录
@@ -2094,8 +2141,21 @@ function formatDate(dateStr: string | null): string {
 								<!-- 24 个配置项竖排会占满左侧一列，分组标题给出结构；
 								     窄屏换成一个下拉，避免横向裁切（旧 tab 栏的毛病） -->
 								<nav class="settings-rail" aria-label={i18n(I18nKey.adminSettings)}>
+									<div class="settings-rail-search">
+										<Icon icon="material-symbols:search-rounded" />
+										<input
+											type="search"
+											placeholder={i18n(I18nKey.adminSearch)}
+											bind:value={railQuery}
+										/>
+									</div>
 									{#each settingsGroups as group (group.id)}
-										<p class="settings-rail-group">{i18n(group.labelKey)}</p>
+										<p
+											class="settings-rail-group"
+											class:active={activeGroup === group.id}
+										>
+											{i18n(group.labelKey)}
+										</p>
 										{#each group.items as tab (tab.id)}
 											<button
 												type="button"
@@ -2104,9 +2164,12 @@ function formatDate(dateStr: string | null): string {
 												aria-current={settingsTab === tab.id ? "page" : undefined}
 												onclick={() => goSettingsTab(tab.id)}
 											>
+												<Icon icon={settingsTabIcons[tab.id] ?? "material-symbols:tune"} />
 												{i18n(tab.labelKey)}
 											</button>
 										{/each}
+									{:else}
+										<p class="settings-rail-empty">{i18n(I18nKey.adminNoResults)}</p>
 									{/each}
 								</nav>
 
@@ -2279,7 +2342,11 @@ function formatDate(dateStr: string | null): string {
 										secretSaveState.loading ||
 										secretSaveState.changedCount === 0}
 								>
-									<Icon icon="material-symbols:save-outline" />
+									{#if secretSaveState.saving}
+										<span class="btn-spinner" aria-hidden="true"></span>
+									{:else}
+										<Icon icon="material-symbols:save-outline" />
+									{/if}
 									<span
 										>{secretSaveState.saving
 											? i18n(I18nKey.secretsSaving)
@@ -2390,6 +2457,10 @@ function formatDate(dateStr: string | null): string {
 		/>
 	{/if}
 
+	{#if navLoading}
+		<div class="nav-progress" role="progressbar" aria-label="加载中"></div>
+	{/if}
+
 	<OnboardingTour
 		open={tourOpen}
 		onClose={() => (tourOpen = false)}
@@ -2409,6 +2480,7 @@ function formatDate(dateStr: string | null): string {
 	<div
 		class="modal-overlay"
 		role="dialog"
+		use:portalToBody
 		aria-modal="true"
 		aria-label={i18n(I18nKey.authExpiredTitle)}
 		tabindex="-1"
@@ -2436,6 +2508,7 @@ function formatDate(dateStr: string | null): string {
 	<div
 		class="modal-overlay"
 		role="dialog"
+		use:portalToBody
 		aria-modal="true"
 		aria-label={i18n(I18nKey.secretsLeaveTitle)}
 		tabindex="-1"
@@ -2810,11 +2883,6 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	/* 一级导航项选中：主色调高亮（底色 + 文字都取 --primary 系列） */
-	/* 退出登录：hover 时整行泛红，和普通导航区分开 */
-	.nav-item.is-danger:hover {
-		background: color-mix(in srgb, var(--destructive, #d33) 12%, transparent);
-		color: var(--destructive, #d33);
-	}
 
 	.nav-item.active {
 		background: color-mix(in oklab, var(--primary) 18%, transparent);
@@ -2838,6 +2906,12 @@ function formatDate(dateStr: string | null): string {
 	   中性底色，退出登录项也走同一套，不再给单独的红/主色。 */
 	.nav-item:hover:not(.active) {
 		background: var(--btn-regular-bg);
+	}
+
+	/* 退出登录：hover 时整行泛红，和普通导航区分开。选择器带上 .nav-item 前缀压过下面的 .nav-item:hover:not(.active)，否则主题色背景会盖掉这里的红。 */
+	.nav-item.is-danger:hover:not(.active) {
+		background: color-mix(in srgb, var(--destructive, #d33) 18%, transparent);
+		color: var(--destructive, #d33);
 	}
 
 	/* 底部管理员信息：纯展示，不可点击、无 hover 与选中态 */
@@ -3234,6 +3308,49 @@ function formatDate(dateStr: string | null): string {
 		);
 	}
 
+	/* 搜索框：rail 顶部，占满窄列 */
+	.settings-rail-search {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: 0.75rem;
+		padding: 0.375rem 0.625rem;
+		border: 1px solid var(--input-border);
+		border-radius: 8px;
+		background: var(--input-bg);
+	}
+
+	.settings-rail-search :global(.inline-icon) {
+		font-size: 16px;
+		color: var(--content-meta);
+	}
+
+	.settings-rail-search input {
+		flex: 1;
+		min-width: 0;
+		border: none;
+		background: none;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		color: var(--deep-text);
+		outline: none;
+	}
+
+	/* 组标题高亮：仅文字变色，不带背景——与可点击的页面项区分开 */
+	.settings-rail-group.active {
+		color: var(--primary);
+	}
+
+	.settings-rail-item :global(.inline-icon) {
+		font-size: 16px;
+		flex-shrink: 0;
+	}
+
+	.settings-rail-empty {
+		margin: 0.25rem 0;
+		font-size: var(--admin-fs-meta, 0.75rem);
+		color: var(--content-meta);
+	}
+
 	.settings-rail::-webkit-scrollbar {
 		width: 8px;
 	}
@@ -3461,8 +3578,8 @@ function formatDate(dateStr: string | null): string {
 		padding: 0.5rem 0.75rem;
 		border: none;
 		border-radius: 10px;
-		background: color-mix(in srgb, var(--primary) 12%, transparent);
-		color: var(--primary);
+		background: color-mix(in srgb, var(--destructive, #d33) 12%, transparent);
+		color: var(--destructive, #d33);
 		font-size: var(--admin-fs-meta, 0.75rem);
 		font-family: inherit;
 		font-weight: 500;
@@ -4795,8 +4912,9 @@ function formatDate(dateStr: string | null): string {
 			   放到 86vw（≈335px）后与 20rem 上限共同兜住大屏手机与小屏平板 */
 			width: min(86vw, 20rem);
 			max-width: 20rem;
-			height: auto;
+			/* top/bottom 同时定位会把抽屉拉伸到满高：选项少时不再缩成一截 */
 			z-index: 120;
+			overflow-y: auto;
 			/* 与桌面态同材质：无实线边框，靠背景/毛玻璃/阴影分层 */
 			border: 1px solid transparent;
 			border-radius: var(--radius-large);
@@ -5172,5 +5290,64 @@ function formatDate(dateStr: string | null): string {
 	.config-error-hint {
 		margin-top: 0.75rem;
 		opacity: 0.75;
+	}
+	/* 按钮内转圈：saving 时替代图标，防连点由 disabled 承担 */
+	.btn-spinner {
+		width: 14px;
+		height: 14px;
+		border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+		border-top-color: currentColor;
+		border-radius: 50%;
+		animation: btn-spin 0.7s linear infinite;
+	}
+
+	@keyframes btn-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.btn-spinner {
+			animation: none;
+		}
+	}
+
+	/* 导航进度条：页面级 fetch 期间的顶部细条（indeterminate 扫过） */
+	.nav-progress {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 2px;
+		z-index: 14000;
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	.nav-progress::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		width: 40%;
+		background: var(--primary);
+		animation: nav-sweep 0.9s ease-in-out infinite;
+	}
+
+	@keyframes nav-sweep {
+		from {
+			transform: translateX(-100%);
+		}
+		to {
+			transform: translateX(350%);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.nav-progress::after {
+			animation: none;
+			width: 100%;
+			opacity: 0.5;
+		}
 	}
 </style>

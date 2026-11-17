@@ -1,6 +1,7 @@
 <script lang="ts">
 import type { Snippet } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
+import { portalToBody } from "@/utils/floating";
 
 /**
  * 通用确认弹窗。
@@ -72,6 +73,7 @@ function handleKeydown(e: KeyboardEvent) {
 	<div
 		class="modal-overlay"
 		role="presentation"
+		use:portalToBody
 		onclick={(e) => {
 			if (e.target === e.currentTarget) handleDismiss();
 		}}
