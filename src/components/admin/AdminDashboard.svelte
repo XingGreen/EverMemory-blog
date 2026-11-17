@@ -25,6 +25,11 @@ import {
 	relogin,
 } from "@/utils/auth-expired";
 import { isTourDone, resetTour } from "@/utils/onboarding";
+import {
+	releaseAllLocks,
+	releaseCurrentLock,
+	tryLockRoute,
+} from "@/utils/tab-lock";
 import AdminPage from "./AdminPage.svelte";
 import ConfirmDialog from "./ConfirmDialog.svelte";
 import DeleteConfirmModal from "./DeleteConfirmModal.svelte";
@@ -581,9 +586,14 @@ function parseRoute(pathname: string): Route {
 	}
 }
 
+let routeLocked = $state("");
+let lockSeq = 0;
+
 function applyRoute() {
 	// 未登录：跳回独立登录页（/login/），不再在后台页内展示登录
 	if (!isVerified) {
+		releaseAllLocks();
+		routeLocked = "";
 		route = { page: "login" };
 		window.location.replace("/login/");
 		return;
@@ -624,6 +634,16 @@ function applyRoute() {
 			`${DASHBOARD_PATH}settings/${next.section}/`,
 		);
 	}
+
+	// 多标签页路由锁：同路由只允许一个标签页，不同路由互不影响。
+	// 握手失败/过期锁会由 tryLockRoute 内部处理；序号丢弃过期结果。
+	const seq = ++lockSeq;
+	const lockPath = window.location.pathname;
+	releaseCurrentLock();
+	void tryLockRoute(lockPath).then((ok) => {
+		if (seq !== lockSeq) return;
+		routeLocked = ok ? "" : lockPath;
+	});
 }
 
 function startAdmin() {
@@ -639,6 +659,7 @@ function startAdmin() {
    放在 startAdmin 里的话监听器生命周期与组件脱钩，HMR 下会叠加。 */
 onMount(() => {
 	window.addEventListener("popstate", applyRoute);
+	window.addEventListener("pagehide", releaseAllLocks);
 	/* 从往返缓存（bfcache）恢复时 onMount 不会重跑，状态是退出前那一份。
 	   不处理的话「退出 → 后退」会看到一个仍然登录着的后台。 */
 	const onPageShow = (event: PageTransitionEvent) => {
@@ -2350,6 +2371,23 @@ function formatDate(dateStr: string | null): string {
 						style:animation-duration={`${toastDuration}ms`}
 					></div>
 				{/key}
+			</div>
+		</div>
+	{/if}
+
+	<!-- 多标签页路由冲突：同路由已在其他标签页打开时覆盖整个后台 -->
+	{#if routeLocked}
+		<div class="route-lock-overlay" role="alertdialog" aria-modal="true" aria-labelledby="route-lock-title">
+			<div class="route-lock-card">
+				<Icon icon="material-symbols:tab-rounded" class="route-lock-icon" />
+				<h1 class="route-lock-title" id="route-lock-title">页面已在其他标签页打开</h1>
+				<p class="route-lock-text">
+					同一页面同时打开会互相覆盖保存。<br>
+					请关闭另一个标签页，或回到后台首页使用其他功能。
+				</p>
+				<button type="button" class="ui-btn ui-btn-primary" onclick={() => navigate(`${DASHBOARD_PATH}`)}>
+					返回后台首页
+				</button>
 			</div>
 		</div>
 	{/if}
@@ -5136,5 +5174,51 @@ function formatDate(dateStr: string | null): string {
 	.config-error-hint {
 		margin-top: 0.75rem;
 		opacity: 0.75;
+	}
+	/* ── 多标签页路由冲突覆盖屏 ── */
+	.route-lock-overlay {
+		position: fixed;
+		inset: 0;
+		/* 高于确认弹窗（12000）：它拦截的是整个页面 */
+		z-index: 13000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1.5rem;
+		background: color-mix(in oklab, var(--page-bg) 80%, transparent);
+		-webkit-backdrop-filter: blur(6px);
+		backdrop-filter: blur(6px);
+	}
+
+	.route-lock-card {
+		width: min(420px, 100%);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+		padding: 2.5rem 2rem 2rem;
+		background: var(--float-panel-bg);
+		border-radius: var(--radius-large);
+		box-shadow: var(--shadow-card-hover);
+		text-align: center;
+	}
+
+	.route-lock-icon {
+		font-size: 44px;
+		color: var(--title-active, var(--primary));
+	}
+
+	.route-lock-title {
+		margin: 0;
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: var(--deep-text);
+	}
+
+	.route-lock-text {
+		margin: 0;
+		font-size: 0.875rem;
+		line-height: 1.7;
+		color: var(--content-meta);
 	}
 </style>
