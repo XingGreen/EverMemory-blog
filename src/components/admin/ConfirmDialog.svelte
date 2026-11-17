@@ -202,7 +202,9 @@ function handleKeydown(e: KeyboardEvent) {
 		}
 	}
 
-	.modal-icon {
+		/* Icon 组件根元素的 class 是运行时拼接的字符串，父级 scoped hash
+	   不会落到它上面，只能用 :global 命中子组件传播出来的类名 */
+	:global(.modal-icon) {
 		display: block;
 		margin: 1.25rem 1.5rem 0;
 		font-size: 28px;
