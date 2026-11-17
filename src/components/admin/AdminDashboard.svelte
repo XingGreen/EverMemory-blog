@@ -1,6 +1,5 @@
 <script lang="ts">
 import { onMount } from "svelte";
-import ConfirmDialog from "@/components/admin/ConfirmDialog.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import { adminConfig } from "@/config/adminConfig";
 import { backgroundWallpaper } from "@/config/backgroundWallpaper";
