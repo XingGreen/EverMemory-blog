@@ -936,10 +936,6 @@ onMount(() => {
 		white-space: nowrap;
 	}
 
-	.link-btn:hover:not(:disabled) {
-		text-decoration: underline;
-	}
-
 	.link-btn:disabled {
 		color: var(--content-meta);
 		cursor: default;
