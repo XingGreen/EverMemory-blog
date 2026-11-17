@@ -3,6 +3,7 @@ import { onDestroy, onMount, setContext } from "svelte";
 import { prefersReducedMotion } from "svelte/motion";
 import { fade, fly } from "svelte/transition";
 import Icon from "@/components/common/Icon.svelte";
+import "@/styles/expressive-code.css";
 import { editorConfig } from "@/config/editorConfig";
 import { siteConfig } from "@/config/siteConfig";
 import I18nKey from "@/i18n/i18nKey";

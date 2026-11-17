@@ -27,25 +27,30 @@ let indicatorOpacity = $state(0);
 $effect(() => {
 	const lines = editorState.visibleTocLines;
 	if (!tocListEl) return;
-	requestAnimationFrame(() => {
-		const list = tocListEl;
-		if (!list) return;
-		const items = Array.from(
-			list.querySelectorAll<HTMLElement>(".toc-item.visible"),
-		);
-		if (!items.length) {
-			indicatorHeight = 0;
-			indicatorOpacity = 0;
-			return;
-		}
-		const first = items[0];
-		const last = items[items.length - 1];
-		const listRect = list.getBoundingClientRect();
-		const firstRect = first.getBoundingClientRect();
-		const lastRect = last.getBoundingClientRect();
-		indicatorTop = firstRect.top - listRect.top;
-		indicatorHeight = lastRect.bottom - firstRect.top;
-		indicatorOpacity = 1;
+			const measure = () => {
+				const list = tocListEl;
+				if (!list) return;
+				const items = Array.from(
+					list.querySelectorAll<HTMLElement>(".toc-item.visible"),
+				);
+				if (!items.length) {
+					indicatorHeight = 0;
+					indicatorOpacity = 0;
+					return;
+				}
+				const first = items[0];
+				const last = items[items.length - 1];
+				const listRect = list.getBoundingClientRect();
+				const firstRect = first.getBoundingClientRect();
+				const lastRect = last.getBoundingClientRect();
+				indicatorTop = firstRect.top - listRect.top;
+				indicatorHeight = lastRect.bottom - firstRect.top;
+				indicatorOpacity = 1;
+			};
+			requestAnimationFrame(measure);
+			// 面板挂在抽屉里：抽屉展开动画进行中测到的 rect 是中间态，
+			// 动画结束后再补测一次，消除指示器的上下偏移。
+			setTimeout(measure, 380);
 	});
 });
 </script>

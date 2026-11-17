@@ -1,7 +1,7 @@
 <script lang="ts">
 import { getContext } from "svelte";
-import PostMetaBar from "@/components/admin/PostMetaBar.svelte";
 import AdminPostStats from "@/components/admin/AdminPostStats.svelte";
+import PostMetaBar from "@/components/admin/PostMetaBar.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -19,12 +19,38 @@ const wordCount = $derived(countWords(editorState.content));
 const minutes = $derived(readingMinutes(wordCount));
 /* 封面图可能是相对路径（./images/x.avif），换算成后台取图端点 */
 const coverUrl = $derived(
-	resolveAdminAsset(editorState.image, `src/content/posts/${editorState.slug}.md`),
+	resolveAdminAsset(
+		editorState.image,
+		`src/content/posts/${editorState.slug}.md`,
+	),
 );
 
 /* 行号列：textarea 的文本不是 DOM 节点，CSS 计数器数不了行，所以用一个与正文
    同字体、同 line-height 的 gutter，靠 scrollTop 同步。行数按换行符统计。 */
 let gutterEl = $state<HTMLDivElement | undefined>();
+
+/**
+ * MDX 预览的代码块复制：EC 的交互脚本不会在预览容器里执行，
+ * 这里用事件委托接住复制按钮，把同块代码写进剪贴板。
+ */
+function handlePreviewCopyClick(event: MouseEvent) {
+	const target = event.target as HTMLElement;
+	const btn = target.closest<HTMLButtonElement>("button.copy, .copy > button");
+	if (!btn) return;
+	const fig =
+		btn.closest("figure") ??
+		btn.closest(".expressive-code") ??
+		btn.parentElement;
+	const code =
+		fig?.querySelector("pre code")?.textContent ??
+		fig?.querySelector("pre")?.textContent ??
+		"";
+	if (!code) return;
+	void navigator.clipboard.writeText(code).then(() => {
+		btn.classList.add("copied");
+		setTimeout(() => btn.classList.remove("copied"), 1500);
+	});
+}
 const lineNumbers = $derived(
 	Array.from(
 		{ length: Math.max(1, editorState.content.split("\n").length) },
@@ -133,6 +159,7 @@ const TOOLS: {
 		</button>
 	</div>
 
+	{#if editorState.activeTab === "editor"}
 	<div class="md-toolbar" role="toolbar" aria-label={i18n(I18nKey.postMdToolbar)}>
 		{#each TOOLS as tool, i (tool.title)}
 			{#if i === 3 || i === 5 || i === 8 || i === 11 || i === 13}
@@ -183,6 +210,7 @@ const TOOLS: {
 			</button>
 		</div>
 	</div>
+	{/if}
 
 	{#if editorState.activeTab === "editor"}
 		<div class="editor-field" class:with-lines={editorState.showLineNumbers}>
@@ -198,7 +226,12 @@ const TOOLS: {
 				bind:value={editorState.content}
 				onscroll={(e) => {
 					actions.handleEditorScroll();
-					if (gutterEl) gutterEl.scrollTop = e.currentTarget.scrollTop;
+					if (gutterEl) {
+						gutterEl.scrollTop = e.currentTarget.scrollTop;
+						/* 自动换行让正文比逻辑行更高：gutter 空白补到与内容等高，
+						   否则行数栏先到底、右侧还能滚，视觉上两边没对齐 */
+						gutterEl.style.height = `${e.currentTarget.scrollHeight}px`;
+					}
 				}}
 				onkeydown={handleEditorKeydown}
 				placeholder={i18n(I18nKey.postContentPlaceholder)}
@@ -210,6 +243,7 @@ const TOOLS: {
 		<div
 			bind:this={editorState.previewEl}
 			onscroll={actions.handlePreviewScroll}
+			onclick={handlePreviewCopyClick}
 			class="prose dark:prose-invert prose-base max-w-none! content-preview custom-md"
 		>
 			<!-- 标题 + 元数据栏：与历史版本页共用 PostMetaBar，
@@ -430,7 +464,8 @@ const TOOLS: {
 	}
 	/* ── 行号列 ──
 	   必须与 .content-editor 同字体、同 line-height(1.6)、同上下内边距，
-	   否则行号会逐行漂移；滚动由 textarea 的 onscroll 写 gutterEl.scrollTop 同步。 */
+	   否则行号会逐行漂移；滚动由 textarea 的 onscroll 写 gutterEl.scrollTop 同步。
+	   自动换行会让正文高于逻辑行数：滚动同步时把 gutter 高度拉到与内容等高。 */
 	.editor-field {
 		position: relative;
 		display: flex;
@@ -439,6 +474,7 @@ const TOOLS: {
 	}
 
 	.editor-gutter {
+		/* 高度由滚动同步时按内容 scrollHeight 拉齐 */
 		flex: 0 0 auto;
 		width: 3rem;
 		overflow: hidden;
