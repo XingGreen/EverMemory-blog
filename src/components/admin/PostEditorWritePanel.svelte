@@ -274,14 +274,11 @@ const TOOLS: {
 		min-width: 0;
 		min-height: 0;
 		height: 100%;
-		/* 宽度上限：对齐前台正文栏（max-w-3xl + 缓冲），窗口拖宽时
-		   写作区整体停住，不再参与无限拉伸。
-		   右内边距为 0：滚动条贴面板最边缘，排版由 textarea/preview
-		   自身的 padding 承担（上一版的负 margin 双份内边距方案已废弃） */
+		/* 内边距与宽度上限保持对称原值：内容宽度的调节权完全交给
+		   宽度手柄（editorMaxWidth），面板层不再叠加任何限制或
+		   非对称 padding——上一版的外层上限与右侧归零把手柄挤压失效 */
 		width: 100%;
-		max-width: 52rem;
-		margin-inline: auto;
-		padding: 1.25rem 0 1.25rem 1.5rem;
+		padding: 1.25rem 1.5rem;
 		isolation: isolate;
 	}
 
@@ -289,8 +286,8 @@ const TOOLS: {
 		display: flex;
 		gap: 0.25rem;
 		flex-shrink: 0;
-		margin-left: -1.5rem;
-		padding-left: 1.5rem;
+		margin-inline: -1.5rem;
+		padding-inline: 1.5rem;
 		border-bottom: 1px solid var(--line-color);
 	}
 
@@ -322,8 +319,8 @@ const TOOLS: {
 		flex-wrap: wrap;
 		flex-shrink: 0;
 		gap: 0.25rem;
-		margin-left: -1.5rem;
-		padding: 0.5rem 0 0.5rem 1.5rem;
+		margin-inline: -1.5rem;
+		padding: 0.5rem 1.5rem;
 		background: color-mix(in srgb, var(--btn-regular-bg) 35%, var(--card-bg));
 		border: none;
 		border-bottom: 1px solid var(--line-color);
@@ -418,8 +415,7 @@ const TOOLS: {
 	.content-preview {
 		flex: 1;
 		min-height: 0;
-		/* 右侧补回面板让出的 padding：滚动条仍贴面板右缘 */
-		padding: 1.25rem 1.5rem;
+		padding: 1.25rem;
 		overflow-y: auto;
 		border: none;
 		border-radius: var(--radius-md);

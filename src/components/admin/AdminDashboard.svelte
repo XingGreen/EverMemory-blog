@@ -436,15 +436,14 @@ const settingsTab = $derived.by(() => {
 /** 设置页 tab 列表：全部配置项（按 CONFIG_ITEMS 原顺序） */
 /**
  * 设置页导航图标：选中态实心、其余空心，成对显式声明。
- * 集合里没有 outline 变体的图标（language/link/music-note/apps）
- * 两态都用实心——语义正确优先于空心规范，绝不拿近似图标顶替。
+ * 集合里没有 outline 变体的图标（language/link/music-note/apps/
+ * wallpaper/image-outline）两态都用实心——语义正确优先于空心规范，
+ * 绝不拿近似图标顶替；photo-outline-rounded 在集合里实际是别的
+ * 图形（曾被视为美元符号），一律不用。
  * 全部条目经 @iconify-json 数据校验存在。
  */
 const settingsTabIcons: Record<string, { solid: string; outline: string }> = {
-	site: {
-		solid: "material-symbols:language",
-		outline: "material-symbols:language",
-	},
+
 	profile: {
 		solid: "material-symbols:person",
 		outline: "material-symbols:person-outline",
@@ -474,8 +473,8 @@ const settingsTabIcons: Record<string, { solid: string; outline: string }> = {
 		outline: "material-symbols:font-download-outline",
 	},
 	wallpaper: {
-		solid: "material-symbols:image",
-		outline: "material-symbols:image-outline",
+		solid: "material-symbols:wallpaper",
+		outline: "material-symbols:wallpaper",
 	},
 	announcement: {
 		solid: "material-symbols:campaign",
@@ -498,8 +497,8 @@ const settingsTabIcons: Record<string, { solid: string; outline: string }> = {
 		outline: "material-symbols:code",
 	},
 	"cover-image": {
-		solid: "material-symbols:photo-outline-rounded",
-		outline: "material-symbols:photo-outline-rounded",
+		solid: "material-symbols:image-outline",
+		outline: "material-symbols:image-outline",
 	},
 	"code-theme": {
 		solid: "material-symbols:style-outline",
