@@ -37,6 +37,12 @@ wired.
   4. **Task ledger.** Every task that was NOT executed — failed and deferred, proposed but not
      confirmed, skipped, or forgotten — must be recorded in the project's `.todo` file. No
      omissions: the ledger is the single source of truth for outstanding work.
+  5. **Comment preservation (hard rule).** Comments that already exist in the code are the
+     user's writing: never delete them, never reword them — not even when the formatting is
+     bad. Refactoring surrounding code must leave existing comments byte-for-byte untouched.
+  5. **Comment preservation (hard rule).** Comments that already exist in the code are the
+     user's writing: never delete them, never reword them — not even when the formatting is
+     bad. Refactoring surrounding code must leave existing comments byte-for-byte untouched.
 
 - **UI standards.** Anything under `/admin/` follows [`docs/ADMIN_UI.md`](./docs/ADMIN_UI.md):
   five type sizes, one spacing scale, one accent colour that only means "needs you", and the
@@ -92,6 +98,14 @@ wired.
   `src/utils/mdx-runtime.ts`, and the existing preview APIs instead of building a second
   Markdown pipeline.
 
+- **Attribution and business boundary.** Preserve the original author's name and license
+  notices (Footer, SiteInfo, README) — this is not negotiable. But OOBE and the entire admin
+  dashboard are our own work with no upstream lineage: self-built modules carry only our own
+  attribution, and never carry upstream names, links, or traces into them.
+- **Attribution and business boundary.** Preserve the original author's name and license
+  notices (Footer, SiteInfo, README) — this is not negotiable. But OOBE and the entire admin
+  dashboard are our own work with no upstream lineage: self-built modules carry only our own
+  attribution, and never carry upstream names, links, or traces into them.
 - **License.** Check the license of third-party code before reading or adapting it. This project
   is MIT; copyleft source must not be copied in — study the intent, write the implementation.
   Never remove `LICENSE`, the copyright lines in any `README*.md`, or the GPL inspiration

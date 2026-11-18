@@ -99,7 +99,7 @@ async function fetchFromRemote(filePath: string): Promise<Response | null> {
 			headers: {
 				Authorization: `Bearer ${token}`,
 				Accept: "application/vnd.github.v3.raw",
-				"User-Agent": "Firefly-Blog",
+				"User-Agent": "EverMemory-Blog",
 			},
 			signal: AbortSignal.timeout(15_000),
 		});
