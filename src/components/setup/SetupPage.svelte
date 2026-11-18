@@ -291,9 +291,9 @@ const canLogin = $derived(
 	),
 );
 
-/** 登录配置就绪：保存后直接去登录页，跳过仓库配置 */
+/** 统一提交点之一：去登录/跳过时落盘全部草稿，再跳登录页 */
 async function goLogin() {
-	if (await save(false)) window.location.href = "/login/";
+	if (await save(false)) window.location.replace("/login/");
 }
 
 /** 私钥文件上传的本地错误（大小/读取） */
@@ -575,10 +575,7 @@ onMount(() => {
 					<button
 						type="button"
 						class="ghost-btn"
-						disabled={saving}
-						onclick={async () => {
-							if (await save(false)) step = 2;
-						}}
+						onclick={() => (step = 2)}
 					>
 						下一步：连接仓库
 					</button>
@@ -600,10 +597,7 @@ onMount(() => {
 					<button
 						type="button"
 						class="ghost-btn"
-						disabled={saving}
-						onclick={async () => {
-							if (await save(false)) step = 1;
-						}}
+						onclick={() => (step = 1)}
 					>
 						上一步
 					</button>
@@ -625,12 +619,9 @@ onMount(() => {
 						<button
 							type="button"
 							class="primary-btn"
-							disabled={saving}
-							onclick={async () => {
-								if (await save(false)) step = 3;
-							}}
+							onclick={() => (step = 3)}
 						>
-							{saving ? "保存中…" : "下一步：站点信息"}
+							下一步：站点信息
 						</button>
 					</div>
 				{/if}
@@ -674,10 +665,7 @@ onMount(() => {
 				<button
 					type="button"
 					class="ghost-btn"
-					disabled={saving}
-					onclick={async () => {
-						if (await saveSite()) step = 2;
-					}}
+					onclick={() => (step = 2)}
 				>
 					上一步
 				</button>
@@ -701,7 +689,8 @@ onMount(() => {
 						class="primary-btn"
 						disabled={saving}
 						onclick={async () => {
-							if (await saveSite()) step = 4;
+							// 统一提交：向导中途不落盘，强退/反悔零脏数据
+							if (await save(true) && (await saveSite())) step = 4;
 						}}
 					>
 						{saving ? "保存中…" : "完成"}

@@ -537,6 +537,10 @@ export const en: Translation = {
 	[Key.adminLogout]: "Log Out",
 	[Key.adminSearch]: "Search settings",
 	[Key.adminNoResults]: "No matching settings",
+	[Key.postExport]: "Export posts",
+	[Key.postImport]: "Import posts",
+	[Key.postExporting]: "Exporting…",
+	[Key.postImporting]: "Importing…",
 	[Key.adminLogoutConfirmMessage]:
 		"You will need to sign in again to access the dashboard.",
 

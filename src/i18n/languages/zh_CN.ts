@@ -518,6 +518,10 @@ export const zh_CN: Translation = {
 	[Key.adminLogout]: "退出登录",
 	[Key.adminSearch]: "搜索设置",
 	[Key.adminNoResults]: "没有匹配的设置项",
+	[Key.postExport]: "导出文章",
+	[Key.postImport]: "导入文章",
+	[Key.postExporting]: "导出中…",
+	[Key.postImporting]: "导入中…",
 	[Key.adminLogoutConfirmMessage]: "退出后需要重新登录才能进入后台。",
 
 	[Key.verifyTitle]: "管理员登录",

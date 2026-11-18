@@ -25,6 +25,7 @@ import {
 	relogin,
 } from "@/utils/auth-expired";
 import { portalToBody } from "@/utils/floating";
+import { toOutlineIcon } from "@/utils/icon-outline";
 import { isTourDone, resetTour } from "@/utils/onboarding";
 import {
 	releaseAllLocks,
@@ -449,10 +450,10 @@ const settingsTabIcons: Record<string, string> = {
 	gallery: "material-symbols:photo-library",
 	app: "material-symbols:apps",
 	sponsor: "material-symbols:volunteer-activism",
-	license: "material-symbols:copyright-outline",
+	license: "material-symbols:copyright",
 	effects: "material-symbols:auto-awesome",
 	plantuml: "material-symbols:account-tree",
-	sidebar: "material-symbols:view-quilt-outline",
+	sidebar: "material-symbols:view-quilt",
 	admin: "material-symbols:lock",
 };
 
@@ -628,6 +629,125 @@ function parseRoute(pathname: string): Route {
 }
 
 /** 该路由已在其他标签页打开：弹窗拦截，重新加载重试 */
+/** 文章导入/导出的进行中标记：按钮锁定 + 文案切换 */
+let importExportBusy = $state(false);
+
+/** 导出全部文章：逐篇取全文，打包成一个 JSON 附件下载 */
+async function exportPosts() {
+	if (importExportBusy) return;
+	importExportBusy = true;
+	try {
+		const bundle: unknown[] = [];
+		for (const p of posts) {
+			const res = await fetch(
+				`/api/admin/post-content/?slug=${encodeURIComponent(p.slug)}`,
+			);
+			const data = await res.json();
+			if (data.success) {
+				bundle.push({
+					slug: p.slug,
+					filePath: data.filePath,
+					content: data.content,
+					...data.frontmatter,
+				});
+			}
+		}
+		const blob = new Blob(
+			[
+				JSON.stringify(
+					{ version: 1, exportedAt: new Date().toISOString(), posts: bundle },
+					null,
+					2,
+				),
+			],
+			{ type: "application/json" },
+		);
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = `posts-export-${new Date().toISOString().slice(0, 10)}.json`;
+		a.click();
+		URL.revokeObjectURL(url);
+		showToast(`已导出 ${bundle.length} 篇文章`, "success");
+	} catch (err) {
+		showToast(
+			`导出失败: ${err instanceof Error ? err.message : String(err)}`,
+			"error",
+			8000,
+		);
+	} finally {
+		importExportBusy = false;
+	}
+}
+
+/** 导入文章：解析导出文件，逐篇走正式保存通道 */
+async function importPosts(file: File) {
+	if (importExportBusy) return;
+	importExportBusy = true;
+	try {
+		const parsed = JSON.parse(await file.text());
+		const list = Array.isArray(parsed?.posts)
+			? parsed.posts
+			: Array.isArray(parsed)
+				? parsed
+				: null;
+		if (!list) {
+			showToast("文件格式不正确：需要包含 posts 数组的导出文件", "error", 8000);
+			return;
+		}
+		let ok = 0;
+		let fail = 0;
+		for (const post of list) {
+			if (!post?.slug || typeof post.content !== "string") {
+				fail++;
+				continue;
+			}
+			const res = await fetch("/api/admin/save/", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					slug: post.slug,
+					title: post.title || post.slug,
+					author: post.author ?? "",
+					category: post.category ?? "",
+					tags: Array.isArray(post.tags) ? post.tags : [],
+					published: post.published ?? "",
+					updated: post.updated ?? "",
+					description: post.description ?? "",
+					image: post.image ?? "",
+					lang: post.lang ?? "",
+					licenseName: post.licenseName ?? "",
+					licenseUrl: post.licenseUrl ?? "",
+					sourceLink: post.sourceLink ?? "",
+					comment: post.comment !== false,
+					password: post.password ?? "",
+					passwordHint: post.passwordHint ?? "",
+					draft: post.draft === true,
+					pinned: post.pinned === true,
+					content: post.content,
+				}),
+			});
+			const data = await res.json();
+			if (res.ok && data.success) ok++;
+			else fail++;
+		}
+		await loadPosts();
+		showToast(
+			`导入完成：成功 ${ok} 篇${fail > 0 ? `，失败 ${fail} 篇` : ""}`,
+			fail > 0 ? "warning" : "success",
+			8000,
+		);
+	} catch (err) {
+		showToast(
+			`导入失败: ${err instanceof Error ? err.message : String(err)}`,
+			"error",
+			8000,
+		);
+	} finally {
+		importExportBusy = false;
+	}
+}
+
 let routeLocked = $state("");
 let lockSeq = 0;
 /** 页面级数据加载的顶部进度条：设置页/环境变量页加载时点亮 */
@@ -2102,6 +2222,9 @@ function formatDate(dateStr: string | null): string {
 								onRefresh={loadPosts}
 								onCreate={goCreatePost}
 								onSync={handleSync}
+								onExport={exportPosts}
+								onImport={importPosts}
+								importExportBusy={importExportBusy}
 								onOpenDiff={(slug) => navigate(`${DASHBOARD_PATH}sync/${slug}/`)}
 								onOpenSync={() => navigate(`${DASHBOARD_PATH}sync/`)}
 								{isSyncing}
@@ -2164,7 +2287,14 @@ function formatDate(dateStr: string | null): string {
 												aria-current={settingsTab === tab.id ? "page" : undefined}
 												onclick={() => goSettingsTab(tab.id)}
 											>
-												<Icon icon={settingsTabIcons[tab.id] ?? "material-symbols:tune"} />
+												<Icon
+													icon={settingsTab === tab.id
+														? settingsTabIcons[tab.id] ??
+															"material-symbols:tune"
+														: toOutlineIcon(
+																settingsTabIcons[tab.id] ??
+																	"material-symbols:tune",
+															)} />
 												{i18n(tab.labelKey)}
 											</button>
 										{/each}
@@ -2650,12 +2780,10 @@ function formatDate(dateStr: string | null): string {
 	.sidebar-brand {
 		display: flex;
 		align-items: center;
-		gap: 0;
-		/* 上下对称：28px logo（含 mb-1 为 32px margin-box）中心落在
-		   品牌盒与右上角折叠按钮（中心 30px）近似同轴，不再上浮。
-		   左 1.25rem + logo 14px = 图标中心 46px，与导航图标列对齐；
-		   上下 0.5rem：32px + 16px = 48px 行高，与参考项目 3rem 对齐 */
-		padding: 0.5rem 0.75rem 0.5rem 1.25rem;
+		/* 与 .nav-item 同构：左 1.375rem + 图标 24px + gap 1.375rem，
+		   图标中心与导航图标列（46px）、文字左缘与导航文字完全水平对齐 */
+		gap: 1.375rem;
+		padding: 0.6875rem 0.75rem 0.6875rem 1.375rem;
 		margin-bottom: 0.75rem;
 		border-radius: var(--radius-xl);
 		transition: background 0.15s;
@@ -2673,20 +2801,16 @@ function formatDate(dateStr: string | null): string {
 
 	/* 前台 Navbar <Picture>：h-7 w-7 mb-1 mr-2 object-contain */
 	.brand-logo {
-		width: 1.75rem;
-		height: 1.75rem;
-		margin-bottom: 0.25rem;
-		margin-right: 0.5rem;
+		width: 1.5rem;
+		height: 1.5rem;
 		object-fit: contain;
 		flex-shrink: 0;
 	}
 
-	/* 图标型 Logo：与前台 Icon text-[1.75rem] mb-1 mr-2 对齐 */
+	/* 图标型 Logo：24px 与 .brand-logo 一致，列位置与导航图标对齐 */
 	.brand-home {
-		font-size: 1.75rem;
+		font-size: 1.5rem;
 		flex-shrink: 0;
-		margin-bottom: 0.25rem;
-		margin-right: 0.5rem;
 		/* 颜色继承 brand（深色或主题色），不再是固定的主题色 */
 	}
 
@@ -3383,6 +3507,9 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.settings-rail-item {
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
 		display: flex;
 		align-items: center;
 		width: 100%;

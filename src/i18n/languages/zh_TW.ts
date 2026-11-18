@@ -520,6 +520,10 @@ export const zh_TW: Translation = {
 	[Key.adminLogout]: "登出",
 	[Key.adminSearch]: "搜尋設定",
 	[Key.adminNoResults]: "沒有符合的設定項目",
+	[Key.postExport]: "匯出文章",
+	[Key.postImport]: "匯入文章",
+	[Key.postExporting]: "匯出中…",
+	[Key.postImporting]: "匯入中…",
 	[Key.adminLogoutConfirmMessage]: "登出後需要重新登入才能進入後台。",
 
 	[Key.verifyTitle]: "管理員登入",

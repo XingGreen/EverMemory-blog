@@ -533,6 +533,10 @@ export const ja: Translation = {
 	[Key.adminLogout]: "ログアウト",
 	[Key.adminSearch]: "設定を検索",
 	[Key.adminNoResults]: "一致する設定がありません",
+	[Key.postExport]: "記事をエクスポート",
+	[Key.postImport]: "記事をインポート",
+	[Key.postExporting]: "エクスポート中…",
+	[Key.postImporting]: "インポート中…",
 	[Key.adminLogoutConfirmMessage]: "再度ログインが必要になります。",
 
 	[Key.verifyTitle]: "管理者ログイン",

@@ -274,6 +274,11 @@ const TOOLS: {
 		min-width: 0;
 		min-height: 0;
 		height: 100%;
+		/* 宽度上限：窗口拖宽时写作区（tabs/工具栏/编辑区）整体停住，
+		   不再参与无限拉伸，长行可读性与栏宽稳定都以它为准 */
+		width: 100%;
+		max-width: 72rem;
+		margin-inline: auto;
 		padding: 1.25rem 1.5rem;
 		isolation: isolate;
 	}
@@ -411,7 +416,9 @@ const TOOLS: {
 	.content-preview {
 		flex: 1;
 		min-height: 0;
-		padding: 1.25rem;
+		/* 滚动条贴面板最边缘（与 editor-field 同款负 margin 模式） */
+		margin-inline: -1.5rem;
+		padding: 1.25rem 1.5rem;
 		overflow-y: auto;
 		border: none;
 		border-radius: var(--radius-md);
@@ -471,6 +478,9 @@ const TOOLS: {
 		display: flex;
 		flex: 1;
 		min-height: 0;
+		/* 滚动条贴面板最边缘：负 margin 抵消面板 padding（与 tabs 同款） */
+		margin-inline: -1.5rem;
+		padding-inline: 1.5rem;
 	}
 
 	.editor-gutter {

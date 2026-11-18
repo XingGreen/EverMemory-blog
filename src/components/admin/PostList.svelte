@@ -16,6 +16,9 @@ let {
 	onRefresh,
 	onCreate,
 	onSync,
+	onExport,
+	onImport,
+	importExportBusy = false,
 	onOpenDiff,
 	onOpenSync,
 	isSyncing = false,
@@ -28,6 +31,11 @@ let {
 	onRefresh: () => void;
 	onCreate: () => void;
 	onSync?: () => void;
+	/** 导出全部文章为 JSON 附件 */
+	onExport?: () => void;
+	/** 从导出文件导入文章（file input 的 change 回调） */
+	onImport?: (file: File) => void;
+	importExportBusy?: boolean;
 	/** 跳转到独立差异页，由上层注入路由 */
 	onOpenDiff?: (slug: string) => void;
 	/** 打开同步工作台 */
@@ -37,6 +45,8 @@ let {
 	 *  套进 AdminPage 时传 false，页头由外壳的 title/actions 承担。 */
 	heading?: boolean;
 } = $props();
+
+let importInput = $state<HTMLInputElement | undefined>();
 
 /** 同步面板开关：点「同步文章」打开专门的面板，不再直接触发同步 */
 
@@ -483,6 +493,41 @@ function actionLabel(action: string, title: string): string {
 				{/if}
 			</div>
 
+			{#if onExport}
+				<button
+					class="ui-btn ui-btn-soft header-export"
+					onclick={onExport}
+					disabled={isLoading || importExportBusy}
+				>
+					<Icon icon="material-symbols:download" class="btn-icon" />
+					<span class="btn-label"
+						>{importExportBusy ? i18n(I18nKey.postExporting) : i18n(I18nKey.postExport)}</span
+					>
+				</button>
+			{/if}
+			{#if onImport}
+				<button
+					class="ui-btn ui-btn-soft header-import"
+					onclick={() => importInput?.click()}
+					disabled={isLoading || importExportBusy}
+				>
+					<Icon icon="material-symbols:upload" class="btn-icon" />
+					<span class="btn-label"
+						>{importExportBusy ? i18n(I18nKey.postImporting) : i18n(I18nKey.postImport)}</span
+					>
+				</button>
+				<input
+					type="file"
+					accept=".json"
+					hidden
+					bind:this={importInput}
+					onchange={async (e) => {
+						const file = e.currentTarget.files?.[0];
+						e.currentTarget.value = "";
+						if (file) onImport?.(file);
+					}}
+				/>
+			{/if}
 			{#if onSync}
 				<button
 					class="ui-btn ui-btn-soft header-sync"

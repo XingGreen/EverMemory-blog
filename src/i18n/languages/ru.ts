@@ -537,6 +537,10 @@ export const ru: Translation = {
 	[Key.adminLogout]: "Выйти",
 	[Key.adminSearch]: "Поиск настроек",
 	[Key.adminNoResults]: "Совпадений нет",
+	[Key.postExport]: "Экспорт статей",
+	[Key.postImport]: "Импорт статей",
+	[Key.postExporting]: "Экспорт…",
+	[Key.postImporting]: "Импорт…",
 	[Key.adminLogoutConfirmMessage]:
 		"Чтобы снова войти, потребуется авторизация.",
 
