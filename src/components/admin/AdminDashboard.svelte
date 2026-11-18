@@ -434,27 +434,89 @@ const settingsTab = $derived.by(() => {
 });
 
 /** 设置页 tab 列表：全部配置项（按 CONFIG_ITEMS 原顺序） */
-/** 设置页导航图标：纯 UI 关注点，放组件内而非配置结构里 */
-const settingsTabIcons: Record<string, string> = {
-	site: "material-symbols:language",
-	profile: "material-symbols:person",
-	navbar: "material-symbols:link",
-	footer: "material-symbols:view-list",
-	music: "material-symbols:music-note",
-	friends: "material-symbols:group",
-	comment: "material-symbols:chat",
-	font: "material-symbols:font-download",
-	wallpaper: "material-symbols:wallpaper",
-	announcement: "material-symbols:campaign",
-	analytics: "material-symbols:analytics",
-	gallery: "material-symbols:photo-library",
-	app: "material-symbols:apps",
-	sponsor: "material-symbols:volunteer-activism",
-	license: "material-symbols:copyright",
-	effects: "material-symbols:auto-awesome",
-	plantuml: "material-symbols:account-tree",
-	sidebar: "material-symbols:view-quilt",
-	admin: "material-symbols:lock",
+/**
+ * 设置页导航图标：选中态实心、其余空心，成对显式声明。
+ * 集合里没有 outline 变体的图标换用有 outline 的近义图标
+ * （site→explore、navbar→dashboard、music→library-music、
+ * wallpaper→image、app→grid-view），全部经 @iconify-json 数据校验。
+ */
+const settingsTabIcons: Record<string, { solid: string; outline: string }> = {
+	site: {
+		solid: "material-symbols:explore",
+		outline: "material-symbols:explore-outline",
+	},
+	profile: {
+		solid: "material-symbols:person",
+		outline: "material-symbols:person-outline",
+	},
+	navbar: {
+		solid: "material-symbols:dashboard",
+		outline: "material-symbols:dashboard-outline",
+	},
+	footer: {
+		solid: "material-symbols:view-list",
+		outline: "material-symbols:view-list-outline",
+	},
+	music: {
+		solid: "material-symbols:library-music",
+		outline: "material-symbols:library-music-outline",
+	},
+	friends: {
+		solid: "material-symbols:group",
+		outline: "material-symbols:group-outline",
+	},
+	comment: {
+		solid: "material-symbols:chat",
+		outline: "material-symbols:chat-outline",
+	},
+	font: {
+		solid: "material-symbols:font-download",
+		outline: "material-symbols:font-download-outline",
+	},
+	wallpaper: {
+		solid: "material-symbols:image",
+		outline: "material-symbols:image-outline",
+	},
+	announcement: {
+		solid: "material-symbols:campaign",
+		outline: "material-symbols:campaign-outline",
+	},
+	analytics: {
+		solid: "material-symbols:analytics",
+		outline: "material-symbols:analytics-outline",
+	},
+	gallery: {
+		solid: "material-symbols:photo-library",
+		outline: "material-symbols:photo-library-outline-rounded",
+	},
+	app: {
+		solid: "material-symbols:grid-view",
+		outline: "material-symbols:grid-view-outline",
+	},
+	sponsor: {
+		solid: "material-symbols:volunteer-activism",
+		outline: "material-symbols:volunteer-activism-outline",
+	},
+	license: {
+		solid: "material-symbols:copyright",
+		outline: "material-symbols:copyright-outline",
+	},
+	effects: {
+		solid: "material-symbols:auto-awesome",
+		outline: "material-symbols:auto-awesome-outline",
+	},
+	plantuml: {
+		solid: "material-symbols:account-tree",
+		outline: "material-symbols:account-tree-outline",
+	},
+	sidebar: {
+		solid: "material-symbols:view-quilt",
+		outline: "material-symbols:view-quilt-outline",
+	},
+	admin: {
+		solid: "material-symbols:lock",
+		outline: "material-symbols:lock-outline",
+	},
 };
 
 /** 设置页 rail 搜索：按当前语言的标签名过滤 */
@@ -2271,6 +2333,16 @@ function formatDate(dateStr: string | null): string {
 											placeholder={i18n(I18nKey.adminSearch)}
 											bind:value={railQuery}
 										/>
+										{#if railQuery}
+											<button
+												type="button"
+												class="rail-search-clear"
+												aria-label={i18n(I18nKey.postSearchClear)}
+												onclick={() => (railQuery = "")}
+											>
+												<Icon icon="material-symbols:close-rounded" />
+											</button>
+										{/if}
 									</div>
 									{#each settingsGroups as group (group.id)}
 										<p
@@ -2288,13 +2360,13 @@ function formatDate(dateStr: string | null): string {
 												onclick={() => goSettingsTab(tab.id)}
 											>
 												<Icon
-													icon={settingsTab === tab.id
-														? settingsTabIcons[tab.id] ??
-															"material-symbols:tune"
-														: toOutlineIcon(
-																settingsTabIcons[tab.id] ??
-																	"material-symbols:tune",
-															)} />
+													icon={
+														settingsTabIcons[tab.id]?.[
+															settingsTab === tab.id
+																? "solid"
+																: "outline"
+														] ?? "material-symbols:tune"
+													} />
 												{i18n(tab.labelKey)}
 											</button>
 										{/each}
@@ -3457,6 +3529,30 @@ function formatDate(dateStr: string | null): string {
 		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--deep-text);
 		outline: none;
+		/* 原生清除按钮在部分主题下渲染成渐变色块，隐藏并换成图标库按钮 */
+		-webkit-appearance: none;
+		appearance: none;
+	}
+
+	.settings-rail-search input::-webkit-search-cancel-button {
+		-webkit-appearance: none;
+		appearance: none;
+	}
+
+	.rail-search-clear {
+		display: grid;
+		place-items: center;
+		width: 1.25rem;
+		height: 1.25rem;
+		padding: 0;
+		border: none;
+		background: none;
+		color: var(--content-meta);
+		cursor: pointer;
+	}
+
+	.rail-search-clear :global(.inline-icon) {
+		font-size: 14px;
 	}
 
 	/* 组标题高亮：仅文字变色，不带背景——与可点击的页面项区分开 */
@@ -3465,7 +3561,8 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.settings-rail-item :global(.inline-icon) {
-		font-size: 16px;
+		font-size: 15px;
+		line-height: 1;
 		flex-shrink: 0;
 	}
 
