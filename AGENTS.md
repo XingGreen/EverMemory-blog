@@ -34,6 +34,9 @@ wired.
   3. **Merge as soon as the work is done.** When the branch is complete and verified, squash it
      into one commit, merge, delete the branch (local and remote), switch back, and `git pull`.
      Do not park a finished branch waiting for a go-ahead.
+  4. **Task ledger.** Every task that was NOT executed — failed and deferred, proposed but not
+     confirmed, skipped, or forgotten — must be recorded in the project's `.todo` file. No
+     omissions: the ledger is the single source of truth for outstanding work.
 
 - **UI standards.** Anything under `/admin/` follows [`docs/ADMIN_UI.md`](./docs/ADMIN_UI.md):
   five type sizes, one spacing scale, one accent colour that only means "needs you", and the
