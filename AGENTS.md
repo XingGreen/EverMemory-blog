@@ -96,10 +96,10 @@ wired.
   Markdown pipeline.
 
 - **Attribution and business boundary.** Preserve the original author's name and license
-  notices (Footer, SiteInfo, README) — this is not negotiable. But OOBE and the entire admin
-  dashboard are original work by this project's owner (the site configured in
-  `profileConfig`/`siteConfig`), with no upstream lineage: self-built modules carry only the
-  site owner's attribution, and never carry upstream names, links, or traces into them.
+  notices (Footer, SiteInfo, README) — this is not negotiable. This is a public, community-
+  maintained project: OOBE and the entire admin dashboard are original work by the project's
+  maintainers, with no upstream lineage. Self-built modules carry the maintainers'
+  attribution, and never carry upstream names, links, or traces into them.
 - **Attribution and business boundary.** Preserve the original author's name and license
   notices (Footer, SiteInfo, README) — this is not negotiable. But OOBE and the entire admin
   dashboard are our own work with no upstream lineage: self-built modules carry only our own
