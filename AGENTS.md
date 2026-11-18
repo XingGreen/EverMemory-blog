@@ -80,10 +80,12 @@ wired.
   and report only when the instruction conflicts with the real system behaviour (would crash or
   corrupt data), or when the action touches sensitive data or destructive Git operations.
 
-- **No reinvention.** Check `package.json` / `node_modules`, then official library docs, then a
-  license-checked reference project. If nothing fits, stop and report what is missing and which
-  options exist. Adding a dependency requires reporting the trade-off first. Reuse `src/i18n/`
-  keys instead of writing copy; reuse `src/utils/markdown-renderer.ts`,
+- **No reinvention.** An existing plugin/package — or the project's own current solution —
+  always outranks hand-rolling a replacement. Hand-written substitutes are the last resort, not
+  a default: before writing custom code, check `package.json` / `node_modules`, then official
+  library docs, then a license-checked reference project. If nothing fits, stop and report what
+  is missing and which options exist. Adding a dependency requires reporting the trade-off
+  first. Reuse `src/i18n/` keys instead of writing copy; reuse `src/utils/markdown-renderer.ts`,
   `src/utils/mdx-runtime.ts`, and the existing preview APIs instead of building a second
   Markdown pipeline.
 
