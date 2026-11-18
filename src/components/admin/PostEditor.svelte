@@ -2,6 +2,7 @@
 import { onDestroy, onMount, setContext } from "svelte";
 import { prefersReducedMotion } from "svelte/motion";
 import { fade, fly } from "svelte/transition";
+import Skeleton from "@/components/admin/Skeleton.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import "@/styles/expressive-code.css";
 import { editorConfig } from "@/config/editorConfig";
@@ -1829,10 +1830,7 @@ $effect(() => {
 	{/if}
 
 	{#if isLoadingContent}
-		<div class="loading-editorState">
-			<div class="loader"></div>
-			<p>{i18n(I18nKey.postLoadingContent)}</p>
-		</div>
+		<Skeleton variant="panel" />
 	{:else}
 		<div
 			class="editor-body"

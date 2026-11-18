@@ -1,4 +1,5 @@
 <script lang="ts">
+import Skeleton from "@/components/admin/Skeleton.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -401,7 +402,7 @@ $effect(() => {
 	<div class="sync-split">
 		<aside class="sync-sidebar">
 			{#if loading}
-				<p class="hint">正在比对…</p>
+				<Skeleton variant="list" rows={6} />
 			{:else if data?.error || !data?.connected}
 				<pre class="err">{data?.error ?? "读取远端失败，原因未知"}</pre>
 			{:else if data}

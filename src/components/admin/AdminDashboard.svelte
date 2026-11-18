@@ -436,30 +436,30 @@ const settingsTab = $derived.by(() => {
 /** 设置页 tab 列表：全部配置项（按 CONFIG_ITEMS 原顺序） */
 /**
  * 设置页导航图标：选中态实心、其余空心，成对显式声明。
- * 集合里没有 outline 变体的图标换用有 outline 的近义图标
- * （site→explore、navbar→dashboard、music→library-music、
- * wallpaper→image、app→grid-view），全部经 @iconify-json 数据校验。
+ * 集合里没有 outline 变体的图标（language/link/music-note/apps）
+ * 两态都用实心——语义正确优先于空心规范，绝不拿近似图标顶替。
+ * 全部条目经 @iconify-json 数据校验存在。
  */
 const settingsTabIcons: Record<string, { solid: string; outline: string }> = {
 	site: {
-		solid: "material-symbols:explore",
-		outline: "material-symbols:explore-outline",
+		solid: "material-symbols:language",
+		outline: "material-symbols:language",
 	},
 	profile: {
 		solid: "material-symbols:person",
 		outline: "material-symbols:person-outline",
 	},
 	navbar: {
-		solid: "material-symbols:dashboard",
-		outline: "material-symbols:dashboard-outline",
+		solid: "material-symbols:link",
+		outline: "material-symbols:link",
 	},
 	footer: {
 		solid: "material-symbols:view-list",
 		outline: "material-symbols:view-list-outline",
 	},
 	music: {
-		solid: "material-symbols:library-music",
-		outline: "material-symbols:library-music-outline",
+		solid: "material-symbols:music-note",
+		outline: "material-symbols:music-note",
 	},
 	friends: {
 		solid: "material-symbols:group",
@@ -490,8 +490,28 @@ const settingsTabIcons: Record<string, { solid: string; outline: string }> = {
 		outline: "material-symbols:photo-library-outline-rounded",
 	},
 	app: {
-		solid: "material-symbols:grid-view",
-		outline: "material-symbols:grid-view-outline",
+		solid: "material-symbols:apps",
+		outline: "material-symbols:apps",
+	},
+	"footer-html": {
+		solid: "material-symbols:code",
+		outline: "material-symbols:code",
+	},
+	"cover-image": {
+		solid: "material-symbols:photo-outline-rounded",
+		outline: "material-symbols:photo-outline-rounded",
+	},
+	"code-theme": {
+		solid: "material-symbols:style-outline",
+		outline: "material-symbols:style-outline",
+	},
+	"pio-spine": {
+		solid: "material-symbols:animation",
+		outline: "material-symbols:animation-outline",
+	},
+	"pio-live2d": {
+		solid: "material-symbols:smart-toy",
+		outline: "material-symbols:smart-toy-outline",
 	},
 	sponsor: {
 		solid: "material-symbols:volunteer-activism",

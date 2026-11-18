@@ -1,4 +1,5 @@
 <script lang="ts">
+import Skeleton from "@/components/admin/Skeleton.svelte";
 import BlurUpImage from "@/components/common/BlurUpImage.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import AdminPage from "./AdminPage.svelte";
@@ -421,7 +422,7 @@ $effect(() => {
 	{/snippet}
 
 	{#if loading}
-		<p class="state">正在加载…</p>
+		<Skeleton variant="list" rows={5} />
 	{:else if error}
 		<p class="state error">{error}</p>
 	{:else if links.length === 0}

@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onMount } from "svelte";
+import Skeleton from "@/components/admin/Skeleton.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
@@ -821,7 +822,7 @@ function answerConfirm(ok: boolean) {
 
 <div class="secrets-page">
 	{#if loading}
-		<p class="state-line">{i18n(I18nKey.configLoading)}</p>
+		<Skeleton variant="form" />
 	{:else if loadError}
 		<div class="state-line bad">
 			<span>{loadError}</span>
