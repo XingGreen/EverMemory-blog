@@ -21,6 +21,8 @@
 
 ## 待用户决定
 
+- [ ] 导航栏「Firefly 链接」子菜单（navBarConfig.ts:81-88，含上游仓库链接）是否保留——Firefly 是本项目基于的上游开源项目（CuteLeaf/Firefly），Footer 与 SiteInfo 的致署名受 License 规范保护不可删，但导航子菜单属站点所有者的可配置项（2026-11-18，用户指出 Firefly 全局存在后的分类结论）
+
 - [ ] package.json 的 `"license": "ISC"` 与项目 MIT LICENSE 不一致（2026-11-15）
 - [ ] README.en.md 缺 GPL 灵感来源声明（2026-11-15）
 
