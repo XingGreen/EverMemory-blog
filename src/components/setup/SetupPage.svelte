@@ -19,8 +19,22 @@ let {
 	logoSrc?: string | null;
 } = $props();
 
-/** 入场序列：black（全黑静置）→ logo（黑底浮现）→ fade（黑幕淡出）→ done */
-let introPhase = $state<"black" | "logo" | "fade" | "done">("black");
+/**
+ * 入场序列：black（全黑静置）→ logo（LOGO 放大浮现）→ rise（LOGO 上移、
+ * 原位出现加载圈）→ fade（黑幕淡出，须数据已就绪）→ done
+ */
+let introPhase = $state<"black" | "logo" | "rise" | "fade" | "done">("black");
+let introDataReady = $state(false);
+
+// rise 阶段且数据加载完毕：短暂停顿后淡出黑幕，再收尾完成
+$effect(() => {
+	if (introPhase !== "rise" || !introDataReady) return;
+	const t = setTimeout(() => {
+		introPhase = "fade";
+		setTimeout(() => (introPhase = "done"), 800);
+	}, 400);
+	return () => clearTimeout(t);
+});
 
 /**
  * 首次引导页（/setup/）——OOBE 壳 + 复用现有输入栏。
@@ -367,19 +381,21 @@ async function saveSite(): Promise<boolean> {
 onMount(() => {
 	load();
 	loadSite();
-	// 入场序列（Windows 12 概念版方向的第一步）：黑场静置 → LOGO 浮现 →
-	// 黑幕淡出露出向导。reduced-motion 用户直接跳过整套动画。
+	// 入场序列（Windows 12 概念版方向）：黑场静置 → LOGO 放大浮现 →
+	// LOGO 上移、原位出现加载圈 → 数据就绪后黑幕淡出露出向导。
+	// reduced-motion 用户直接跳过整套动画（a11y §6）。
 	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
 		introPhase = "done";
 		return;
 	}
 	const t1 = setTimeout(() => (introPhase = "logo"), 700);
-	const t2 = setTimeout(() => (introPhase = "fade"), 2000);
-	const t3 = setTimeout(() => (introPhase = "done"), 2800);
+	const t2 = setTimeout(() => (introPhase = "rise"), 1600);
+	void Promise.allSettled([load(), loadSite()]).then(() => {
+		introDataReady = true;
+	});
 	return () => {
 		clearTimeout(t1);
 		clearTimeout(t2);
-		clearTimeout(t3);
 	};
 });
 </script>
@@ -392,12 +408,20 @@ onMount(() => {
 			use:portalToBody
 			aria-hidden="true"
 		>
-			{#if introPhase === "logo"}
-				<div class="intro-logo">
-					{#if logoType === "image" && logoSrc}
-						<img src={logoSrc} alt={logoAlt} />
-					{:else}
-						<Icon icon={logoValue} />
+			{#if introPhase === "logo" || introPhase === "rise"}
+				<div class="intro-stack">
+					<div
+						class="intro-logo"
+						class:intro-logo-risen={introPhase === "rise"}
+					>
+						{#if logoType === "image" && logoSrc}
+							<img src={logoSrc} alt={logoAlt} />
+						{:else}
+							<Icon icon={logoValue} />
+						{/if}
+					</div>
+					{#if introPhase === "rise"}
+						<div class="intro-spinner"></div>
 					{/if}
 				</div>
 			{/if}
@@ -1151,10 +1175,22 @@ onMount(() => {
 		pointer-events: none;
 	}
 
+	.intro-stack {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 2.25rem;
+	}
+
 	.intro-logo {
 		display: grid;
 		place-items: center;
-		animation: intro-logo-in 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+		animation: intro-logo-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	/* rise 阶段：LOGO 上移腾出原位 */
+	.intro-logo.intro-logo-risen {
+		animation: intro-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 	}
 
 	.intro-logo :global(.inline-icon) {
@@ -1168,14 +1204,47 @@ onMount(() => {
 		object-fit: contain;
 	}
 
+	.intro-spinner {
+		width: 26px;
+		height: 26px;
+		border: 2px solid color-mix(in srgb, #fff 25%, transparent);
+		border-top-color: #fff;
+		border-radius: 50%;
+		animation: intro-spin 0.7s linear infinite, intro-fade-in 0.4s ease both;
+	}
+
 	@keyframes intro-logo-in {
 		from {
 			opacity: 0;
-			transform: scale(0.92);
+			transform: scale(0.6);
 		}
 		to {
 			opacity: 1;
 			transform: scale(1);
+		}
+	}
+
+	@keyframes intro-rise {
+		from {
+			transform: translateY(0);
+		}
+		to {
+			transform: translateY(-2.75rem);
+		}
+	}
+
+	@keyframes intro-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	@keyframes intro-fade-in {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
 		}
 	}
 
