@@ -5,6 +5,22 @@ import FloatField from "@/components/admin/ui/FloatField.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import { SECRET_ROWS, type SecretItemState } from "@/utils/admin-secrets";
 import { buildEntries, readPrivateKeyFile } from "@/utils/secret-draft";
+import { portalToBody } from "@/utils/floating";
+
+let {
+	logoType = "icon",
+	logoValue = "material-symbols:home-pin-outline",
+	logoAlt = "",
+	logoSrc = null,
+}: {
+	logoType?: "icon" | "image" | "url";
+	logoValue?: string;
+	logoAlt?: string;
+	logoSrc?: string | null;
+} = $props();
+
+/** 入场序列：black（全黑静置）→ logo（黑底浮现）→ fade（黑幕淡出）→ done */
+let introPhase = $state<"black" | "logo" | "fade" | "done">("black");
 
 /**
  * 首次引导页（/setup/）——OOBE 壳 + 复用现有输入栏。
@@ -351,10 +367,44 @@ async function saveSite(): Promise<boolean> {
 onMount(() => {
 	load();
 	loadSite();
+	// 入场序列（Windows 12 概念版方向的第一步）：黑场静置 → LOGO 浮现 →
+	// 黑幕淡出露出向导。reduced-motion 用户直接跳过整套动画。
+	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+		introPhase = "done";
+		return;
+	}
+	const t1 = setTimeout(() => (introPhase = "logo"), 700);
+	const t2 = setTimeout(() => (introPhase = "fade"), 2000);
+	const t3 = setTimeout(() => (introPhase = "done"), 2800);
+	return () => {
+		clearTimeout(t1);
+		clearTimeout(t2);
+		clearTimeout(t3);
+	};
 });
 </script>
 
-<main class="oobe">
+<!-- 入场序列：黑场 → LOGO 浮现 → 淡出；一次性装饰，不可交互 -->
+	{#if introPhase !== "done"}
+		<div
+			class="intro-black"
+			class:intro-fade-out={introPhase === "fade"}
+			use:portalToBody
+			aria-hidden="true"
+		>
+			{#if introPhase === "logo"}
+				<div class="intro-logo">
+					{#if logoType === "image" && logoSrc}
+						<img src={logoSrc} alt={logoAlt} />
+					{:else}
+						<Icon icon={logoValue} />
+					{/if}
+				</div>
+			{/if}
+		</div>
+	{/if}
+
+	<main class="oobe">
 	<article class="card">
 		{#if loadError}
 			<div class="state-error" role="alert">{loadError}</div>
@@ -1084,5 +1134,56 @@ onMount(() => {
 		background: color-mix(in oklab, var(--destructive) 10%, transparent);
 		color: var(--destructive);
 		font-size: 13px;
+	}
+	/* ── 入场序列：黑场与 LOGO ── */
+	.intro-black {
+		position: fixed;
+		inset: 0;
+		z-index: 15000;
+		display: grid;
+		place-items: center;
+		background: #000;
+		transition: opacity 0.8s ease;
+	}
+
+	.intro-black.intro-fade-out {
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.intro-logo {
+		display: grid;
+		place-items: center;
+		animation: intro-logo-in 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	.intro-logo :global(.inline-icon) {
+		font-size: 72px;
+		color: #fff;
+	}
+
+	.intro-logo img {
+		width: 72px;
+		height: 72px;
+		object-fit: contain;
+	}
+
+	@keyframes intro-logo-in {
+		from {
+			opacity: 0;
+			transform: scale(0.92);
+		}
+		to {
+			opacity: 1;
+			transform: scale(1);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.intro-black,
+		.intro-logo {
+			animation: none;
+			transition: none;
+		}
 	}
 </style>
