@@ -1194,14 +1194,14 @@ onMount(() => {
 	}
 
 	.intro-logo :global(.inline-icon) {
-		/* 开屏 LOGO 是视觉中心：随视口放大，大屏封顶 160px */
-		font-size: clamp(96px, 18vw, 160px);
+		/* 参考图比例：LOGO 中等、稳占视觉中心而不喧宾夺主 */
+		font-size: clamp(80px, 10vw, 112px);
 		color: #fff;
 	}
 
 	.intro-logo img {
-		width: clamp(96px, 18vw, 160px);
-		height: clamp(96px, 18vw, 160px);
+		width: clamp(80px, 10vw, 112px);
+		height: clamp(80px, 10vw, 112px);
 		object-fit: contain;
 	}
 
@@ -1209,16 +1209,20 @@ onMount(() => {
 	   绝对定位在原 LOGO 的中心（stack 中心），LOGO 上移后占据原位 */
 	/* 开屏加载圈独立规格：比按钮内转圈粗约一倍、大一倍，暗底上清晰可见；
 	   绝对定位在原 LOGO 的中心（stack 中心），LOGO 上移后占据原位 */
+	/* 参考图样式：白色细环缺口弧（约 270°，一圈缺口），不是实心全环。
+	   线宽 3.5px、直径 40px——暗底上环线清晰，缺口让旋转方向可读 */
 	.intro-spinner {
 		position: absolute;
 		top: 50%;
 		left: 50%;
-		width: 48px;
-		height: 48px;
-		border: 5px solid color-mix(in srgb, #fff 22%, transparent);
+		width: 40px;
+		height: 40px;
+		border: 3.5px solid transparent;
 		border-top-color: #fff;
+		border-left-color: #fff;
+		border-right-color: #fff;
 		border-radius: 50%;
-		animation: intro-spin 0.8s linear infinite,
+		animation: intro-spin 0.9s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite,
 			intro-fade-in 0.4s ease both;
 		translate: -50% -50%;
 	}
@@ -1239,8 +1243,8 @@ onMount(() => {
 			transform: translateY(0);
 		}
 		to {
-			/* 上移量 = 半个 LOGO 高 + 一圈间隙，让出原位给加载圈 */
-			transform: translateY(clamp(-7rem, -14vw, -4.5rem));
+			/* 上移量按参考图：LOGO 与加载圈间留出约 1.2 倍 LOGO 高的距离 */
+			transform: translateY(clamp(-6.5rem, -10vw, -4.75rem));
 		}
 	}
 
