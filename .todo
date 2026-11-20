@@ -7,6 +7,10 @@
 
 - [ ] OOBE 界面按 Windows 12 概念版风格重做（2026-11-18，用户提出待确认细节）：品牌区/标题的名称绑定已定案——与前台同款回退链（siteConfig.navbar.title || siteConfig.title），博主身份用 profileConfig.name，界面不出现开发者项目名；step3 已有 siteConfig 动态读写链路可复用
 
+## 已完成（本轮）
+
+- [x] 【前端设计专家】专家包完整性审计与打包导出（2026-11-20）：7 文件全在，manifest 声明与实际一致；产物 `.workbuddy/exports/frontend-design-expert-1.0.0.zip`。注意：`~/.workbuddy/skills/frontend-design` 是**另一个独立安装的同名 skill**（内容不同，10.9KB vs 包内 9.4KB），不属于专家包，打包未含
+
 ## 验证类（待用户/环境）
 
 - [ ] 多标签页路由锁的真实双开验证（tab A 开编辑页 → tab B 直输同 URL 含尾斜杠变体 → 应弹拦截窗；关 A 后 B 重新加载可进入）——CDP 无法模拟真实 BroadcastChannel 握手（2026-11-17）
