@@ -389,7 +389,7 @@ onMount(() => {
 		return;
 	}
 	const t1 = setTimeout(() => (introPhase = "logo"), 700);
-	const t2 = setTimeout(() => (introPhase = "rise"), 1600);
+	const t2 = setTimeout(() => (introPhase = "rise"), 1200);
 	void Promise.allSettled([load(), loadSite()]).then(() => {
 		introDataReady = true;
 	});
@@ -420,7 +420,7 @@ onMount(() => {
 					{/if}
 				</div>
 				{#if introPhase === "rise"}
-					<!-- 加载圆圈与 LOGO 完全独立：位置只由视口中心决定，不参考 LOGO -->
+					<!-- 加载圆圈：屏幕绝对居中，LOGO 淡出后占据正中 -->
 					<div class="intro-spinner"></div>
 				{/if}
 			{/if}
@@ -1180,9 +1180,20 @@ onMount(() => {
 		animation: intro-logo-in 0.5s cubic-bezier(0.2, 0, 0, 1) both;
 	}
 
-	/* rise 阶段：LOGO 上移腾出原位 */
+	/* rise 阶段：LOGO 淡出，加载圆圈在正中对位淡入（无位移、无重叠） */
 	.intro-logo.intro-logo-risen {
-		animation: intro-rise 0.45s cubic-bezier(0.2, 0, 0, 1) both;
+		animation: intro-logo-out 0.4s cubic-bezier(0.2, 0, 0, 1) both;
+	}
+
+	@keyframes intro-logo-out {
+		from {
+			opacity: 1;
+			scale: 1;
+		}
+		to {
+			opacity: 0;
+			scale: 0.98;
+		}
 	}
 
 	.intro-logo :global(.inline-icon) {
@@ -1204,13 +1215,11 @@ onMount(() => {
 	   绝对定位在原 LOGO 的中心（stack 中心），LOGO 上移后占据原位 */
 	/* 开屏加载圆圈独立规格：比按钮内转圈粗约一倍、大一倍，暗底上清晰可见；
 	   绝对定位在原 LOGO 的中心（stack 中心），LOGO 上移后占据原位 */
-	/* 参考图样式：白色细环缺口弧（约 270°，一圈缺口），不是实心全环。
-	   线宽 3.5px、直径 40px——暗底上环线清晰，缺口让旋转方向可读。
-	   定位与 LOGO 彻底独立：只锚定「视口中心下方固定偏移」的下部区域，
-	   LOGO 无论怎么缩放或上移都不会改变它的位置 */
+	/* 白色细环缺口弧（约 270°），40px / 3.5px。
+	   位置：屏幕绝对居中（严格规范），LOGO 淡出后占据正中 */
 	.intro-spinner {
 		position: absolute;
-		top: calc(50% + clamp(4.75rem, 7vh, 6rem));
+		top: 50%;
 		left: 50%;
 		width: 40px;
 		height: 40px;
@@ -1221,7 +1230,7 @@ onMount(() => {
 		border-radius: 50%;
 		animation: intro-spin 0.9s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite,
 			intro-fade-in 0.4s ease both;
-		translate: -50% 0;
+		translate: -50% -50%;
 	}
 
 	@keyframes intro-logo-in {
@@ -1232,16 +1241,6 @@ onMount(() => {
 		to {
 			opacity: 1;
 			scale: 1;
-		}
-	}
-
-	@keyframes intro-rise {
-		from {
-			transform: translateY(0);
-		}
-		to {
-			/* 上移幅度：幅度足够被感知（64px），但 LOGO 仍是画面主体 */
-			transform: translateY(-4rem);
 		}
 	}
 
