@@ -37,6 +37,10 @@ wired.
   4. **Task ledger.** Every task that was NOT executed — failed and deferred, proposed but not
      confirmed, skipped, or forgotten — must be recorded in the project's `.todo` file. No
      omissions: the ledger is the single source of truth for outstanding work.
+  5. **Terminology ambiguity stops the work.** When the user names something with a vague or
+     contradictory term (for example mixing up "loading progress bar" and "loading circle"),
+     make no code change at all. Stop, state what you believe they mean, and wait for an
+     explicit answer before acting.
   5. **Comment preservation (hard rule).** Comments that already exist in the code are the
      user's writing: never delete them, never reword them — not even when the formatting is
      bad. Refactoring surrounding code must leave existing comments byte-for-byte untouched.

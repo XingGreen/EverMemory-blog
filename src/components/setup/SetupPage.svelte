@@ -21,7 +21,7 @@ let {
 
 /**
  * 入场序列：black（全黑静置）→ logo（LOGO 放大浮现）→ rise（LOGO 上移、
- * 原位出现加载圈）→ fade（黑幕淡出，须数据已就绪）→ done
+ * 原位出现加载圆圈）→ fade（黑幕淡出，须数据已就绪）→ done
  */
 let introPhase = $state<"black" | "logo" | "rise" | "fade" | "done">("black");
 let introDataReady = $state(false);
@@ -382,7 +382,7 @@ onMount(() => {
 	load();
 	loadSite();
 	// 入场序列（Windows 12 概念版方向）：黑场静置 → LOGO 放大浮现 →
-	// LOGO 上移、原位出现加载圈 → 数据就绪后黑幕淡出露出向导。
+	// LOGO 上移、原位出现加载圆圈 → 数据就绪后黑幕淡出露出向导。
 	// reduced-motion 用户直接跳过整套动画（a11y §6）。
 	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
 		introPhase = "done";
@@ -420,7 +420,7 @@ onMount(() => {
 					{/if}
 				</div>
 				{#if introPhase === "rise"}
-					<!-- 加载圈与 LOGO 完全独立：位置只由视口中心决定，不参考 LOGO -->
+					<!-- 加载圆圈与 LOGO 完全独立：位置只由视口中心决定，不参考 LOGO -->
 					<div class="intro-spinner"></div>
 				{/if}
 			{/if}
@@ -1197,9 +1197,9 @@ onMount(() => {
 		object-fit: contain;
 	}
 
-	/* 开屏加载圈独立规格：比按钮内转圈粗约一倍、大一倍，暗底上清晰可见；
+	/* 开屏加载圆圈独立规格：比按钮内转圈粗约一倍、大一倍，暗底上清晰可见；
 	   绝对定位在原 LOGO 的中心（stack 中心），LOGO 上移后占据原位 */
-	/* 开屏加载圈独立规格：比按钮内转圈粗约一倍、大一倍，暗底上清晰可见；
+	/* 开屏加载圆圈独立规格：比按钮内转圈粗约一倍、大一倍，暗底上清晰可见；
 	   绝对定位在原 LOGO 的中心（stack 中心），LOGO 上移后占据原位 */
 	/* 参考图样式：白色细环缺口弧（约 270°，一圈缺口），不是实心全环。
 	   线宽 3.5px、直径 40px——暗底上环线清晰，缺口让旋转方向可读。
@@ -1237,8 +1237,8 @@ onMount(() => {
 			transform: translateY(0);
 		}
 		to {
-			/* 轻微上移：只让出一点呼吸感，LOGO 仍是画面主体 */
-			transform: translateY(-1.5rem);
+			/* 上移幅度：幅度足够被感知（64px），但 LOGO 仍是画面主体 */
+			transform: translateY(-4rem);
 		}
 	}
 
