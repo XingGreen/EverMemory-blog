@@ -45,9 +45,6 @@ wired.
      the task in progress. The conversation context and the current task goal decide what gets
      touched; never switch the object of work on your own initiative (for example, do not
      wander onto an unrelated branch while the task is about a specific screen).
-  5. **Comment preservation (hard rule).** Comments that already exist in the code are the
-     user's writing: never delete them, never reword them — not even when the formatting is
-     bad. Refactoring surrounding code must leave existing comments byte-for-byte untouched.
 
 - **UI standards.** Anything under `/admin/` follows [`docs/ADMIN_UI.md`](./docs/ADMIN_UI.md):
   five type sizes, one spacing scale, one accent colour that only means "needs you", and the
