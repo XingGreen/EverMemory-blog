@@ -408,21 +408,17 @@ onMount(() => {
 			use:portalToBody
 			aria-hidden="true"
 		>
-			{#if introPhase === "logo" || introPhase === "rise"}
-				<div
-					class="intro-logo"
-					class:intro-logo-risen={introPhase === "rise"}
-				>
+			{#if introPhase === "logo"}
+				<div class="intro-logo">
 					{#if logoType === "image" && logoSrc}
 						<img src={logoSrc} alt={logoAlt} />
 					{:else}
 						<Icon icon={logoValue} />
 					{/if}
 				</div>
-				{#if introPhase === "rise"}
-					<!-- 加载圆圈：屏幕绝对居中，LOGO 淡出后占据正中 -->
-					<div class="intro-spinner"></div>
-				{/if}
+			{:else if introPhase === "rise"}
+				<!-- 加载圆圈：屏幕绝对居中；与 LOGO 互斥渲染，物理上不可能重叠 -->
+				<div class="intro-spinner"></div>
 			{/if}
 		</div>
 	{/if}
@@ -1178,22 +1174,6 @@ onMount(() => {
 		display: grid;
 		place-items: center;
 		animation: intro-logo-in 0.5s cubic-bezier(0.2, 0, 0, 1) both;
-	}
-
-	/* rise 阶段：LOGO 淡出，加载圆圈在正中对位淡入（无位移、无重叠） */
-	.intro-logo.intro-logo-risen {
-		animation: intro-logo-out 0.4s cubic-bezier(0.2, 0, 0, 1) both;
-	}
-
-	@keyframes intro-logo-out {
-		from {
-			opacity: 1;
-			scale: 1;
-		}
-		to {
-			opacity: 0;
-			scale: 0.98;
-		}
 	}
 
 	.intro-logo :global(.inline-icon) {
