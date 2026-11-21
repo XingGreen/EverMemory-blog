@@ -1210,10 +1210,12 @@ onMount(() => {
 	/* 开屏加载圈独立规格：比按钮内转圈粗约一倍、大一倍，暗底上清晰可见；
 	   绝对定位在原 LOGO 的中心（stack 中心），LOGO 上移后占据原位 */
 	/* 参考图样式：白色细环缺口弧（约 270°，一圈缺口），不是实心全环。
-	   线宽 3.5px、直径 40px——暗底上环线清晰，缺口让旋转方向可读 */
+	   线宽 3.5px、直径 40px——暗底上环线清晰，缺口让旋转方向可读。
+	   定位：绝对贴在 LOGO 正下方（不参与居中计算、不覆盖 LOGO、
+	   不占据画面正中心）——LOGO 与加载圈同时存在 */
 	.intro-spinner {
 		position: absolute;
-		top: 50%;
+		top: calc(100% + 2.5rem);
 		left: 50%;
 		width: 40px;
 		height: 40px;
@@ -1224,7 +1226,7 @@ onMount(() => {
 		border-radius: 50%;
 		animation: intro-spin 0.9s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite,
 			intro-fade-in 0.4s ease both;
-		translate: -50% -50%;
+		translate: -50% 0;
 	}
 
 	@keyframes intro-logo-in {
@@ -1243,8 +1245,8 @@ onMount(() => {
 			transform: translateY(0);
 		}
 		to {
-			/* 上移量按参考图：LOGO 与加载圈间留出约 1.2 倍 LOGO 高的距离 */
-			transform: translateY(clamp(-6.5rem, -10vw, -4.75rem));
+			/* 轻微上移：只让出一点呼吸感，LOGO 仍是画面主体 */
+			transform: translateY(-1.5rem);
 		}
 	}
 
