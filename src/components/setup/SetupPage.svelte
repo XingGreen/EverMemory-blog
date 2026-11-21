@@ -408,7 +408,8 @@ onMount(() => {
 			use:portalToBody
 			aria-hidden="true"
 		>
-			{#if introPhase === "logo"}
+			{#if introPhase === "logo" || introPhase === "rise"}
+				<!-- LOGO 全程显示：加载期间不消失、不替换、不位移 -->
 				<div class="intro-logo">
 					{#if logoType === "image" && logoSrc}
 						<img src={logoSrc} alt={logoAlt} />
@@ -416,8 +417,9 @@ onMount(() => {
 						<Icon icon={logoValue} />
 					{/if}
 				</div>
-			{:else if introPhase === "rise"}
-				<!-- 加载圆圈：屏幕绝对居中；与 LOGO 互斥渲染，物理上不可能重叠 -->
+			{/if}
+			{#if introPhase === "rise"}
+				<!-- 加载圆圈：LOGO 下方区域、视口锚定；两者同时存在，互不覆盖 -->
 				<div class="intro-spinner"></div>
 			{/if}
 		</div>
@@ -1196,10 +1198,11 @@ onMount(() => {
 	/* 开屏加载圆圈独立规格：比按钮内转圈粗约一倍、大一倍，暗底上清晰可见；
 	   绝对定位在原 LOGO 的中心（stack 中心），LOGO 上移后占据原位 */
 	/* 白色细环缺口弧（约 270°），40px / 3.5px。
-	   位置：屏幕绝对居中（严格规范），LOGO 淡出后占据正中 */
+	   位置：视口中心下方固定偏移，与 LOGO 垂直分离 */
 	.intro-spinner {
 		position: absolute;
-		top: 50%;
+		/* 视口中心下方的下部区域：LOGO 常驻正中，圆圈只在其下方出现 */
+		top: calc(50% + clamp(4.75rem, 7vh, 6rem));
 		left: 50%;
 		width: 40px;
 		height: 40px;
@@ -1210,7 +1213,7 @@ onMount(() => {
 		border-radius: 50%;
 		animation: intro-spin 0.9s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite,
 			intro-fade-in 0.4s ease both;
-		translate: -50% -50%;
+		translate: -50% 0;
 	}
 
 	@keyframes intro-logo-in {
