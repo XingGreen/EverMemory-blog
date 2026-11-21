@@ -409,21 +409,20 @@ onMount(() => {
 			aria-hidden="true"
 		>
 			{#if introPhase === "logo" || introPhase === "rise"}
-				<div class="intro-stack">
-					<div
-						class="intro-logo"
-						class:intro-logo-risen={introPhase === "rise"}
-					>
-						{#if logoType === "image" && logoSrc}
-							<img src={logoSrc} alt={logoAlt} />
-						{:else}
-							<Icon icon={logoValue} />
-						{/if}
-					</div>
-					{#if introPhase === "rise"}
-						<div class="intro-spinner"></div>
+				<div
+					class="intro-logo"
+					class:intro-logo-risen={introPhase === "rise"}
+				>
+					{#if logoType === "image" && logoSrc}
+						<img src={logoSrc} alt={logoAlt} />
+					{:else}
+						<Icon icon={logoValue} />
 					{/if}
 				</div>
+				{#if introPhase === "rise"}
+					<!-- 加载圈与 LOGO 完全独立：位置只由视口中心决定，不参考 LOGO -->
+					<div class="intro-spinner"></div>
+				{/if}
 			{/if}
 		</div>
 	{/if}
@@ -1175,13 +1174,6 @@ onMount(() => {
 		pointer-events: none;
 	}
 
-	.intro-stack {
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-	}
-
 	.intro-logo {
 		display: grid;
 		place-items: center;
@@ -1211,11 +1203,11 @@ onMount(() => {
 	   绝对定位在原 LOGO 的中心（stack 中心），LOGO 上移后占据原位 */
 	/* 参考图样式：白色细环缺口弧（约 270°，一圈缺口），不是实心全环。
 	   线宽 3.5px、直径 40px——暗底上环线清晰，缺口让旋转方向可读。
-	   定位：绝对贴在 LOGO 正下方（不参与居中计算、不覆盖 LOGO、
-	   不占据画面正中心）——LOGO 与加载圈同时存在 */
+	   定位与 LOGO 彻底独立：只锚定「视口中心下方固定偏移」的下部区域，
+	   LOGO 无论怎么缩放或上移都不会改变它的位置 */
 	.intro-spinner {
 		position: absolute;
-		top: calc(100% + 2.5rem);
+		top: calc(50% + clamp(4.75rem, 7vh, 6rem));
 		left: 50%;
 		width: 40px;
 		height: 40px;
