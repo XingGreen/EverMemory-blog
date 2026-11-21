@@ -632,6 +632,36 @@ const siteLogo = await getSiteLogo();
         在顶部闪出一条横线（#progress-bar.loading）。 */}
     {!excludeFrontendEffects && <div id="progress-bar"></div>}
 
+    {/* 进入后台的转场遮罩：前台点击控制面板入口时下拉覆盖，后台加载后由 veil 接住退场 */}
+    {!excludeFrontendEffects && (
+      <>
+        <div id="admin-enter-veil" aria-hidden="true"><div class="aev-grid"></div></div>
+        <script is:inline>
+          document.addEventListener("click", (event) => {
+            if (event.defaultPrevented || event.button !== 0) return;
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+            const anchor = target.closest("a[href]");
+            if (!anchor) return;
+            if (anchor.getAttribute("target") && anchor.target !== "_self") return;
+            let path;
+            try { path = new URL(anchor.href, location.href).pathname; } catch { return; }
+            const isAdmin = (p) => p === "/admin" || p.startsWith("/admin/") || p === "/login" || p.startsWith("/login/");
+            const current = location.pathname;
+            if (isAdmin(current) || !isAdmin(path) || current === path) return;
+            const veil = document.getElementById("admin-enter-veil");
+            if (!veil) return;
+            event.preventDefault();
+            event.stopPropagation();
+            veil.classList.add("is-covering");
+            const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+            setTimeout(() => { location.href = anchor.href; }, reduced ? 0 : 560);
+          }, true);
+        </script>
+      </>
+    )}
+
     <!-- 页面顶部渐变高光效果 - 只在full和semifull模式下显示 -->
     {shouldShowTopHighlight && <div class="top-gradient-highlight" />}
     <ConfigCarrier />
@@ -659,6 +689,39 @@ const siteLogo = await getSiteLogo();
   }}
 >
   @reference "../styles/main.css";
+
+  /* 进入后台的转场遮罩：默认在视口上方，点击时下拉覆盖前台 */
+  #admin-enter-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 14998;
+    background: #0e0b16;
+    transform: translateY(-101%);
+    pointer-events: none;
+  }
+
+  #admin-enter-veil.is-covering {
+    transform: translateY(0);
+    transition: transform 0.55s cubic-bezier(0.76, 0, 0.24, 1);
+  }
+
+  #admin-enter-veil .aev-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, #2a2340 1px, transparent 1px),
+      linear-gradient(to bottom, #2a2340 1px, transparent 1px);
+    background-size: 34px 34px;
+    opacity: 0.55;
+    -webkit-mask-image: radial-gradient(ellipse 72% 62% at 50% 46%, #000 26%, transparent 78%);
+    mask-image: radial-gradient(ellipse 72% 62% at 50% 46%, #000 26%, transparent 78%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #admin-enter-veil.is-covering {
+      transition: none;
+    }
+  }
 
   @layer components {
     .enable-banner #wallpaper-wrapper {

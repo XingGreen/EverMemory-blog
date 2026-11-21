@@ -3,6 +3,7 @@ import { onMount } from "svelte";
 import Icon from "@/components/common/Icon.svelte";
 import { clearLoggedOut, shouldAutoEnter } from "@/utils/auth-expired";
 import VerifyScreen from "./VerifyScreen.svelte";
+import AdminEntryVeil from "./AdminEntryVeil.svelte";
 
 let { avatarUrl = "" }: { avatarUrl?: string } = $props();
 
@@ -65,6 +66,8 @@ onMount(async () => {
 	view = "login";
 });
 </script>
+
+<AdminEntryVeil />
 
 {#if view === "loading"}
 	<div class="login-loading"></div>

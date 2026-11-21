@@ -1,5 +1,6 @@
 ---
 import AdminDashboard from "@/components/admin/AdminDashboard.svelte";
+import AdminEntryVeil from "@/components/admin/AdminEntryVeil.svelte";
 import { profileConfig, siteConfig } from "@/config";
 // adminConfig 与 AdminDashboard 用同一条 import 路径（不走 config barrel）：
 // vite 对 barrel 链路的 HMR 传播与直连模块不同步，会出现 SSR 端读到旧值、
@@ -23,6 +24,7 @@ const logo = await resolveAdminLogo();
 ---
 
 <AdminLayout title={title} description={description}>
+	<AdminEntryVeil client:load />
 	<div class="admin-container" data-flush={adminConfig.sidebarFlush ? "on" : "off"}>
 		<AdminDashboard
 			client:load

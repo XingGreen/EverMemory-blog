@@ -1,5 +1,6 @@
 ---
 import AdminDashboard from "@/components/admin/AdminDashboard.svelte";
+import AdminEntryVeil from "@/components/admin/AdminEntryVeil.svelte";
 import { profileConfig, siteConfig } from "@/config";
 // 同 index.astro：adminConfig 直连模块，避免 barrel HMR 传播差异导致两端分裂
 import { adminConfig } from "@/config/adminConfig";
@@ -28,6 +29,7 @@ const logo = await resolveAdminLogo();
 ---
 
 <AdminLayout title={title} description={description}>
+	<AdminEntryVeil client:load />
 	<div class="admin-container" data-flush={adminConfig.sidebarFlush ? "on" : "off"}>
 		<AdminDashboard
 			client:load
