@@ -41,6 +41,10 @@ wired.
      contradictory term (for example mixing up "loading progress bar" and "loading circle"),
      make no code change at all. Stop, state what you believe they mean, and wait for an
      explicit answer before acting.
+  6. **Stay on the current task.** Without an explicit new instruction, never drift away from
+     the task in progress. The conversation context and the current task goal decide what gets
+     touched; never switch the object of work on your own initiative (for example, do not
+     wander onto an unrelated branch while the task is about a specific screen).
   5. **Comment preservation (hard rule).** Comments that already exist in the code are the
      user's writing: never delete them, never reword them — not even when the formatting is
      bad. Refactoring surrounding code must leave existing comments byte-for-byte untouched.
