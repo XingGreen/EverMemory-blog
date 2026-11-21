@@ -1166,7 +1166,7 @@ onMount(() => {
 		display: grid;
 		place-items: center;
 		background: #000;
-		transition: opacity 0.8s ease;
+		transition: opacity 0.5s cubic-bezier(0.2, 0, 0, 1);
 	}
 
 	.intro-black.intro-fade-out {
@@ -1177,23 +1177,26 @@ onMount(() => {
 	.intro-logo {
 		display: grid;
 		place-items: center;
-		animation: intro-logo-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+		animation: intro-logo-in 0.5s cubic-bezier(0.2, 0, 0, 1) both;
 	}
 
 	/* rise 阶段：LOGO 上移腾出原位 */
 	.intro-logo.intro-logo-risen {
-		animation: intro-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+		animation: intro-rise 0.45s cubic-bezier(0.2, 0, 0, 1) both;
 	}
 
 	.intro-logo :global(.inline-icon) {
-		/* 参考图比例：LOGO 中等、稳占视觉中心而不喧宾夺主 */
-		font-size: clamp(80px, 10vw, 112px);
+		/* 尺寸规范：高度上限 80px；图标为方形，宽=高=80px 封顶 */
+		font-size: clamp(64px, 16vw, 80px);
 		color: #fff;
 	}
 
 	.intro-logo img {
-		width: clamp(80px, 10vw, 112px);
-		height: clamp(80px, 10vw, 112px);
+		/* 尺寸规范：宽 96-160px（移动约 24% 屏宽）、高 ≤80px，按图片比例装入 */
+		max-width: clamp(96px, 24vw, 160px);
+		max-height: 80px;
+		width: auto;
+		height: auto;
 		object-fit: contain;
 	}
 
@@ -1224,11 +1227,11 @@ onMount(() => {
 	@keyframes intro-logo-in {
 		from {
 			opacity: 0;
-			transform: scale(0.6);
+			scale: 0.95;
 		}
 		to {
 			opacity: 1;
-			transform: scale(1);
+			scale: 1;
 		}
 	}
 
