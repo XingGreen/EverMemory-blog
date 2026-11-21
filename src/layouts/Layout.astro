@@ -658,6 +658,16 @@ const siteLogo = await getSiteLogo();
             const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
             setTimeout(() => { location.href = anchor.href; }, reduced ? 0 : 560);
           }, true);
+          // 从后台后退回来时，bfcache 会连同 .is-covering 一起恢复，
+          // 遮罩因此一直盖在前台。页面每次显示都复位，避免停在纯背景。
+          addEventListener("pageshow", () => {
+            const veil = document.getElementById("admin-enter-veil");
+            if (!veil) return;
+            veil.style.transition = "none";
+            veil.classList.remove("is-covering");
+            // 恢复过渡，供下一次点击进入时下拉使用
+            requestAnimationFrame(() => { veil.style.transition = ""; });
+          });
         </script>
       </>
     )}

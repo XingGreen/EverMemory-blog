@@ -19,9 +19,16 @@ onMount(() => {
 		requestAnimationFrame(() => (phase = "lift"));
 	});
 	const done = setTimeout(() => (phase = "done"), 1200);
+	// bfcache 恢复时 onMount 不会重跑：若恢复时还没到 done，遮罩会一直盖着
+	// 只在 persisted 时复位，初次加载的 pageshow 不能跳过入场
+	const restore = (event: PageTransitionEvent) => {
+		if (event.persisted) phase = "done";
+	};
+	window.addEventListener("pageshow", restore);
 	return () => {
 		cancelAnimationFrame(raf);
 		clearTimeout(done);
+		window.removeEventListener("pageshow", restore);
 	};
 });
 </script>
