@@ -25,19 +25,22 @@ let {
  */
 let introPhase = $state<"black" | "logo" | "rise" | "fade" | "done">("black");
 let introDataReady = $state(false);
+/** 从前台转场进入：元素动画提前，避免与遮罩叠加出两段空白 */
+let introQuick = $state(false);
 
 // 状态词只反映真实数据状态：两份配置读取完成才算就绪，不按动画阶段编造进度
 const introStatus = $derived(
 	introPhase === "fade" || introPhase === "done" ? "已就绪" : "正在读取配置",
 );
 
-// rise 阶段且数据加载完毕：等题名与笔尖走完再上移幕布，与样张的 3.4s 收尾对齐
+// rise 阶段且数据加载完毕，等题名走完（1.5s 起 + 0.95s）再上移幕布，
+// 避免元素只显影一半就被切走；数据比动画慢时也不会提前收尾
 $effect(() => {
 	if (introPhase !== "rise" || !introDataReady) return;
 	const t = setTimeout(() => {
 		introPhase = "fade";
 		setTimeout(() => (introPhase = "done"), 900);
-	}, 1400);
+	}, introQuick ? 750 : 1350);
 	return () => clearTimeout(t);
 });
 
@@ -384,16 +387,21 @@ async function saveSite(): Promise<boolean> {
 }
 
 onMount(() => {
-	load();
-	loadSite();
 	// 入场序列：夜色静置、基线生长 → LOGO 显影、题名收束 → 笔尖写到底 →
 	// 数据就绪后幕布上移露出向导。reduced-motion 用户直接跳过整套动画（a11y §6）。
 	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
 		introPhase = "done";
 		return;
 	}
-	const t1 = setTimeout(() => (introPhase = "logo"), 200);
-	const t2 = setTimeout(() => (introPhase = "rise"), 1100);
+	// 从前台转场进来时遮罩已经盖住视口，跳过开屏的前置静默，直接进主体动画
+	let fromFront = false;
+	try {
+		fromFront = sessionStorage.getItem("admin_entered_from_front") === "1";
+		sessionStorage.removeItem("admin_entered_from_front");
+	} catch {}
+	if (fromFront) introQuick = true;
+	const t1 = setTimeout(() => (introPhase = "logo"), fromFront ? 0 : 200);
+	const t2 = setTimeout(() => (introPhase = "rise"), fromFront ? 500 : 1100);
 	void Promise.allSettled([load(), loadSite()]).then(() => {
 		introDataReady = true;
 	});
@@ -414,6 +422,7 @@ onMount(() => {
 		<div
 			class="intro-black"
 			class:intro-fade-out={introPhase === "fade"}
+			class:intro-quick={introQuick}
 			use:portalToBody
 			aria-hidden="true"
 		>
@@ -1200,6 +1209,23 @@ onMount(() => {
 	.intro-black.intro-fade-out {
 		transform: translateY(-101%);
 		pointer-events: none;
+	}
+
+	/* 转场进入：遮罩已盖住视口，元素动画立即开始，不再空等前置静默 */
+	.intro-black.intro-quick .intro-logo {
+		animation-delay: 0.05s;
+	}
+	.intro-black.intro-quick .intro-wordmark {
+		animation-delay: 0.35s;
+	}
+	.intro-black.intro-quick .intro-status {
+		animation-delay: 0.5s;
+	}
+	.intro-black.intro-quick .intro-rule {
+		animation-delay: 0s;
+	}
+	.intro-black.intro-quick .intro-nib {
+		animation-delay: 0.2s, 0.4s;
 	}
 
 	/* 坐标格只在中心可见，边缘自然淡出 */

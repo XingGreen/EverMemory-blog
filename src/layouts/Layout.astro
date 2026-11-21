@@ -655,8 +655,11 @@ const siteLogo = await getSiteLogo();
             event.preventDefault();
             event.stopPropagation();
             veil.classList.add("is-covering");
+            // 告知目标页这是转场进入：setup 开屏据此跳过前置静默，避免两段空白叠加
+            try { sessionStorage.setItem("admin_entered_from_front", "1"); } catch {}
             const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-            setTimeout(() => { location.href = anchor.href; }, reduced ? 0 : 560);
+            // 遮罩下拉 0.55s，走完约 60% 已盖住视口即可切换，减少与 setup 开屏的空白叠加
+            setTimeout(() => { location.href = anchor.href; }, reduced ? 0 : 320);
           }, true);
           // 从后台后退回来时，bfcache 会连同 .is-covering 一起恢复，
           // 遮罩因此一直盖在前台。页面每次显示都复位，避免停在纯背景。
