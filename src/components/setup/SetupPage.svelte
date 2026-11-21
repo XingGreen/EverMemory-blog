@@ -27,12 +27,9 @@ let introPhase = $state<"black" | "logo" | "rise" | "fade" | "done">("black");
 let introDataReady = $state(false);
 
 // 状态词跟着阶段走；只有数据就绪才推进，不播假进度
+// 状态词只反映真实数据状态：两份配置读取完成才算就绪，不按动画阶段编造进度
 const introStatus = $derived(
-	introPhase === "black"
-		? "还没有记录"
-		: introPhase === "fade" || introPhase === "done"
-			? "已就绪"
-			: "正在写下第一行",
+	introPhase === "fade" || introPhase === "done" ? "已就绪" : "正在读取配置",
 );
 
 // rise 阶段且数据加载完毕：笔尖写到底后幕布上移，再收尾完成
@@ -423,7 +420,7 @@ onMount(() => {
 		>
 			<!-- 图片在夜色阶段就进入 DOM 并开始加载，避免显影阶段才请求导致空场 -->
 			<div class="intro-grid"></div>
-			<span class="intro-folio">EVERMEMORY / 001</span>
+			<span class="intro-folio">EVERMEMORY / 首次配置</span>
 			<div class="intro-center">
 				<div
 					class="intro-logo"
