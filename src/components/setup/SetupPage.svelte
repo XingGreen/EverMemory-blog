@@ -26,19 +26,18 @@ let {
 let introPhase = $state<"black" | "logo" | "rise" | "fade" | "done">("black");
 let introDataReady = $state(false);
 
-// 状态词跟着阶段走；只有数据就绪才推进，不播假进度
 // 状态词只反映真实数据状态：两份配置读取完成才算就绪，不按动画阶段编造进度
 const introStatus = $derived(
 	introPhase === "fade" || introPhase === "done" ? "已就绪" : "正在读取配置",
 );
 
-// rise 阶段且数据加载完毕：笔尖写到底后幕布上移，再收尾完成
+// rise 阶段且数据加载完毕：等题名与笔尖走完再上移幕布，与样张的 3.4s 收尾对齐
 $effect(() => {
 	if (introPhase !== "rise" || !introDataReady) return;
 	const t = setTimeout(() => {
 		introPhase = "fade";
 		setTimeout(() => (introPhase = "done"), 900);
-	}, 900);
+	}, 1400);
 	return () => clearTimeout(t);
 });
 
@@ -422,12 +421,7 @@ onMount(() => {
 			<div class="intro-grid"></div>
 			<span class="intro-folio">EVERMEMORY / 首次配置</span>
 			<div class="intro-center">
-				<div
-					class="intro-logo"
-					class:intro-logo-active={introPhase === "logo" ||
-						introPhase === "rise" ||
-						introPhase === "fade"}
-				>
+				<div class="intro-logo">
 					{#if introImageSrc}
 						<img
 							src={introImageSrc}
@@ -1261,17 +1255,12 @@ onMount(() => {
 		text-align: center;
 	}
 
+	/* 三个主体元素的时间轴与样张一致，都从幕布出现起算，不受阶段切换影响 */
 	.intro-logo {
 		display: grid;
 		place-items: center;
 		opacity: 0;
-	}
-
-	/* 显影只由 active 触发：夜色阶段图片已在 DOM 中开始加载。
-	   rise 不覆盖 animation，透明度留在 active 上，LOGO 不会中途消失 */
-	.intro-logo.intro-logo-active {
-		opacity: 1;
-		animation: intro-develop 0.6s ease-out 0.2s both;
+		animation: intro-develop 0.6s ease-out 0.72s both;
 	}
 
 	.intro-logo :global(.inline-icon) {
@@ -1296,7 +1285,7 @@ onMount(() => {
 		letter-spacing: 0.26em;
 		margin-right: -0.26em;
 		color: var(--intro-paper);
-		animation: intro-word-in 0.95s var(--ease-out) 0.35s both;
+		animation: intro-word-in 0.95s var(--ease-out) 1.5s both;
 	}
 
 	.intro-status {
@@ -1306,6 +1295,7 @@ onMount(() => {
 		letter-spacing: 0.18em;
 		min-height: 1.4em;
 		color: color-mix(in oklab, var(--intro-paper) 66%, var(--intro-ink));
+		animation: intro-rise-in 0.6s ease-out 1.72s both;
 	}
 
 	/* 基线：书写线，左端与卷号同列 */
