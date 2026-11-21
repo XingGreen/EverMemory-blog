@@ -20,19 +20,28 @@ let {
 } = $props();
 
 /**
- * 入场序列：black（全黑静置）→ logo（LOGO 放大浮现）→ rise（LOGO 上移、
- * 原位出现加载圆圈）→ fade（黑幕淡出，须数据已就绪）→ done
+ * 入场序列：black（夜色静置、基线生长）→ logo（LOGO 显影、题名收束）
+ * → rise（笔尖写到底）→ fade（幕布上移，须数据已就绪）→ done
  */
 let introPhase = $state<"black" | "logo" | "rise" | "fade" | "done">("black");
 let introDataReady = $state(false);
 
-// rise 阶段且数据加载完毕：短暂停顿后淡出黑幕，再收尾完成
+// 状态词跟着阶段走；只有数据就绪才推进，不播假进度
+const introStatus = $derived(
+	introPhase === "black"
+		? "还没有记录"
+		: introPhase === "fade" || introPhase === "done"
+			? "已就绪"
+			: "正在写下第一行",
+);
+
+// rise 阶段且数据加载完毕：笔尖写到底后幕布上移，再收尾完成
 $effect(() => {
 	if (introPhase !== "rise" || !introDataReady) return;
 	const t = setTimeout(() => {
 		introPhase = "fade";
-		setTimeout(() => (introPhase = "done"), 800);
-	}, 400);
+		setTimeout(() => (introPhase = "done"), 900);
+	}, 900);
 	return () => clearTimeout(t);
 });
 
@@ -381,15 +390,14 @@ async function saveSite(): Promise<boolean> {
 onMount(() => {
 	load();
 	loadSite();
-	// 入场序列（Windows 12 概念版方向）：黑场静置 → LOGO 放大浮现 →
-	// LOGO 上移、原位出现加载圆圈 → 数据就绪后黑幕淡出露出向导。
-	// reduced-motion 用户直接跳过整套动画（a11y §6）。
+	// 入场序列：夜色静置、基线生长 → LOGO 显影、题名收束 → 笔尖写到底 →
+	// 数据就绪后幕布上移露出向导。reduced-motion 用户直接跳过整套动画（a11y §6）。
 	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
 		introPhase = "done";
 		return;
 	}
-	const t1 = setTimeout(() => (introPhase = "logo"), 700);
-	const t2 = setTimeout(() => (introPhase = "rise"), 1200);
+	const t1 = setTimeout(() => (introPhase = "logo"), 200);
+	const t2 = setTimeout(() => (introPhase = "rise"), 1100);
 	void Promise.allSettled([load(), loadSite()]).then(() => {
 		introDataReady = true;
 	});
@@ -400,26 +408,49 @@ onMount(() => {
 });
 </script>
 
-<!-- 入场序列：黑场 → LOGO 浮现 → 淡出；一次性装饰，不可交互 -->
+<!-- 入场序列：夜色 → 显影 → 笔尖写到底 → 幕布上移；一次性装饰，不可交互 -->
 	{#if introPhase !== "done"}
+		{@const introImageSrc =
+			logoSrc ??
+			(logoType === "url" || /^(https?:|\/)/.test(logoValue)
+				? logoValue
+				: null)}
 		<div
 			class="intro-black"
 			class:intro-fade-out={introPhase === "fade"}
 			use:portalToBody
 			aria-hidden="true"
 		>
-			{#if introPhase === "logo"}
-				<div class="intro-logo">
-					{#if logoType === "image" && logoSrc}
-						<img src={logoSrc} alt={logoAlt} />
+			<!-- 图片在夜色阶段就进入 DOM 并开始加载，避免显影阶段才请求导致空场 -->
+			<div class="intro-grid"></div>
+			<span class="intro-folio">EVERMEMORY / 001</span>
+			<div class="intro-center">
+				<div
+					class="intro-logo"
+					class:intro-logo-active={introPhase === "logo" ||
+						introPhase === "rise" ||
+						introPhase === "fade"}
+				>
+					{#if introImageSrc}
+						<img
+							src={introImageSrc}
+							alt={logoAlt}
+							width="512"
+							height="512"
+							fetchpriority="high"
+							decoding="sync"
+						/>
 					{:else}
 						<Icon icon={logoValue} />
 					{/if}
 				</div>
-			{:else if introPhase === "rise"}
-				<!-- 加载圆圈：屏幕绝对居中；与 LOGO 互斥渲染，物理上不可能重叠 -->
-				<div class="intro-spinner"></div>
-			{/if}
+				<div class="intro-wordmark">EverMemory</div>
+				<p class="intro-status">{introStatus}</p>
+			</div>
+			<div class="intro-baseline">
+				<span class="intro-rule"></span>
+				<span class="intro-nib"></span>
+			</div>
 		</div>
 	{/if}
 
@@ -1154,96 +1185,243 @@ onMount(() => {
 		color: var(--destructive);
 		font-size: 13px;
 	}
-	/* ── 入场序列：黑场与 LOGO ── */
+	/* ── 入场序列：标本夜色 ──
+	   幕布与向导卡片共用一条基线、一套墨色；幕布上移露出卡片。 */
 	.intro-black {
+		--intro-ink: #0e0b16;
+		--intro-paper: #efeaf7;
+		--intro-pollen: #e9c15b;
+		--intro-rule: #2a2340;
+
 		position: fixed;
 		inset: 0;
 		z-index: 15000;
-		display: grid;
-		place-items: center;
-		background: #000;
-		transition: opacity 0.5s cubic-bezier(0.2, 0, 0, 1);
+		background: var(--intro-ink);
+		transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1);
+		will-change: transform;
 	}
 
 	.intro-black.intro-fade-out {
-		opacity: 0;
+		transform: translateY(-101%);
 		pointer-events: none;
+	}
+
+	/* 坐标格只在中心可见，边缘自然淡出 */
+	.intro-grid {
+		position: absolute;
+		inset: 0;
+		background-image:
+			linear-gradient(to right, var(--intro-rule) 1px, transparent 1px),
+			linear-gradient(to bottom, var(--intro-rule) 1px, transparent 1px);
+		background-size: 34px 34px;
+		opacity: 0.55;
+		-webkit-mask-image: radial-gradient(
+			ellipse 72% 62% at 50% 46%,
+			#000 26%,
+			transparent 78%
+		);
+		mask-image: radial-gradient(
+			ellipse 72% 62% at 50% 46%,
+			#000 26%,
+			transparent 78%
+		);
+	}
+
+	.intro-folio {
+		position: absolute;
+		top: clamp(20px, 4vh, 42px);
+		left: clamp(24px, 7vw, 120px);
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.2em;
+		color: color-mix(in oklab, var(--intro-paper) 58%, var(--intro-ink));
+		animation: intro-rise-in 0.7s var(--ease-out) 0.1s both;
+	}
+
+	.intro-folio::after {
+		content: "";
+		display: block;
+		width: 26px;
+		height: 1px;
+		margin-top: 9px;
+		background: var(--intro-rule);
+	}
+
+	.intro-center {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: clamp(16px, 2.8vh, 26px);
+		padding-bottom: 6vh;
+		text-align: center;
 	}
 
 	.intro-logo {
 		display: grid;
 		place-items: center;
-		animation: intro-logo-in 0.5s cubic-bezier(0.2, 0, 0, 1) both;
+		opacity: 0;
+	}
+
+	/* 显影只由 active 触发：夜色阶段图片已在 DOM 中开始加载。
+	   rise 不覆盖 animation，透明度留在 active 上，LOGO 不会中途消失 */
+	.intro-logo.intro-logo-active {
+		opacity: 1;
+		animation: intro-develop 0.6s ease-out 0.2s both;
 	}
 
 	.intro-logo :global(.inline-icon) {
-		/* 尺寸规范：高度上限 80px；图标为方形，宽=高=80px 封顶 */
-		font-size: clamp(64px, 16vw, 80px);
-		color: #fff;
+		font-size: clamp(96px, 22vw, 144px);
+		color: var(--intro-paper);
 	}
 
 	.intro-logo img {
-		/* 尺寸规范：宽 96-160px（移动约 24% 屏宽）、高 ≤80px，按图片比例装入 */
-		max-width: clamp(96px, 24vw, 160px);
-		max-height: 80px;
-		width: auto;
+		/* 图片四周有透明留白，容器放大后花朵主体才与题名相称；
+		   显式高宽让图片未解码时也占据稳定位置。 */
+		width: clamp(128px, 20vw, 192px);
 		height: auto;
+		aspect-ratio: 1;
 		object-fit: contain;
 	}
 
-	/* 开屏加载圆圈独立规格：比按钮内转圈粗约一倍、大一倍，暗底上清晰可见；
-	   绝对定位在原 LOGO 的中心（stack 中心），LOGO 上移后占据原位 */
-	/* 开屏加载圆圈独立规格：比按钮内转圈粗约一倍、大一倍，暗底上清晰可见；
-	   绝对定位在原 LOGO 的中心（stack 中心），LOGO 上移后占据原位 */
-	/* 白色细环缺口弧（约 270°），40px / 3.5px。
-	   位置：屏幕绝对居中（严格规范），LOGO 淡出后占据正中 */
-	.intro-spinner {
+	.intro-wordmark {
+		font-family: var(--font-name);
+		font-size: clamp(30px, 6.4vw, 54px);
+		font-weight: 400;
+		line-height: 1;
+		letter-spacing: 0.26em;
+		margin-right: -0.26em;
+		color: var(--intro-paper);
+		animation: intro-word-in 0.95s var(--ease-out) 1s both;
+	}
+
+	.intro-status {
+		margin: 0;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.18em;
+		min-height: 1.4em;
+		color: color-mix(in oklab, var(--intro-paper) 66%, var(--intro-ink));
+	}
+
+	/* 基线：书写线，左端与卷号同列 */
+	.intro-baseline {
+		position: absolute;
+		left: clamp(24px, 7vw, 120px);
+		right: clamp(24px, 7vw, 120px);
+		bottom: clamp(64px, 18vh, 180px);
+		height: 1px;
+	}
+
+	.intro-rule {
+		position: absolute;
+		inset: 0;
+		background: var(--intro-rule);
+		transform: scaleX(0);
+		transform-origin: left center;
+		animation: intro-rule-grow 0.9s var(--ease-out) 0.1s both;
+	}
+
+	.intro-nib {
 		position: absolute;
 		top: 50%;
-		left: 50%;
-		width: 40px;
-		height: 40px;
-		border: 3.5px solid transparent;
-		border-top-color: #fff;
-		border-left-color: #fff;
-		border-right-color: #fff;
-		border-radius: 50%;
-		animation: intro-spin 0.9s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite,
-			intro-fade-in 0.4s ease both;
-		translate: -50% -50%;
+		left: 0;
+		width: 7px;
+		height: 7px;
+		background: var(--intro-pollen);
+		transform: translate(-50%, -50%) rotate(45deg);
+		opacity: 0;
+		animation:
+			intro-nib-in 0.3s ease-out 0.7s both,
+			intro-nib-write 1.1s cubic-bezier(0.4, 0, 0.2, 1) 1.3s both;
 	}
 
-	@keyframes intro-logo-in {
-		from {
-			opacity: 0;
-			scale: 0.95;
-		}
-		to {
-			opacity: 1;
-			scale: 1;
-		}
-	}
-
-	@keyframes intro-spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	@keyframes intro-fade-in {
+	@keyframes intro-rise-in {
 		from {
 			opacity: 0;
 		}
 		to {
 			opacity: 1;
+		}
+	}
+
+	@keyframes intro-develop {
+		from {
+			opacity: 0;
+			filter: blur(4px);
+		}
+		to {
+			opacity: 1;
+			filter: blur(0);
+		}
+	}
+
+	@keyframes intro-word-in {
+		from {
+			opacity: 0;
+			letter-spacing: 0.26em;
+			margin-right: -0.26em;
+		}
+		to {
+			opacity: 1;
+			letter-spacing: 0.035em;
+			margin-right: -0.035em;
+		}
+	}
+
+	@keyframes intro-rule-grow {
+		from {
+			transform: scaleX(0);
+		}
+		to {
+			transform: scaleX(1);
+		}
+	}
+
+	@keyframes intro-nib-in {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
+	@keyframes intro-nib-write {
+		from {
+			left: 0;
+		}
+		to {
+			left: 100%;
 		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
 		.intro-black,
-		.intro-logo {
+		.intro-folio,
+		.intro-logo,
+		.intro-wordmark,
+		.intro-rule,
+		.intro-nib {
 			animation: none;
 			transition: none;
+		}
+
+		.intro-logo {
+			opacity: 1;
+		}
+		.intro-rule {
+			transform: scaleX(1);
+		}
+		.intro-nib {
+			opacity: 1;
+			left: 100%;
+		}
+		.intro-wordmark {
+			letter-spacing: 0.035em;
+			margin-right: -0.035em;
 		}
 	}
 </style>
