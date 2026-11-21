@@ -1259,7 +1259,6 @@ onMount(() => {
 	.intro-logo {
 		display: grid;
 		place-items: center;
-		opacity: 0;
 		animation: intro-develop 0.6s ease-out 0.72s both;
 	}
 
