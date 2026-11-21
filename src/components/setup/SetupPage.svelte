@@ -1192,6 +1192,11 @@ onMount(() => {
 		--intro-paper: #efeaf7;
 		--intro-pollen: #e9c15b;
 		--intro-rule: #2a2340;
+		/* 字体栈定义在开屏自身：幕布 portal 到 body，不依赖后台 token 的作用域 */
+		--intro-serif: "Iowan Old Style", "Palatino Linotype", "Source Han Serif SC",
+			"Songti SC", Georgia, serif;
+		--intro-mono: "JetBrains Mono", "Monaco", "Consolas", monospace;
+		--ease-out: cubic-bezier(0.2, 0, 0, 1);
 
 		position: fixed;
 		inset: 0;
@@ -1231,7 +1236,7 @@ onMount(() => {
 		position: absolute;
 		top: clamp(20px, 4vh, 42px);
 		left: clamp(24px, 7vw, 120px);
-		font-family: var(--font-mono);
+		font-family: var(--intro-mono);
 		font-size: 11px;
 		letter-spacing: 0.2em;
 		color: color-mix(in oklab, var(--intro-paper) 58%, var(--intro-ink));
@@ -1287,19 +1292,19 @@ onMount(() => {
 	}
 
 	.intro-wordmark {
-		font-family: var(--font-name);
+		font-family: var(--intro-serif);
 		font-size: clamp(30px, 6.4vw, 54px);
 		font-weight: 400;
 		line-height: 1;
 		letter-spacing: 0.26em;
 		margin-right: -0.26em;
 		color: var(--intro-paper);
-		animation: intro-word-in 0.95s var(--ease-out) 1s both;
+		animation: intro-word-in 0.95s var(--ease-out) 0.35s both;
 	}
 
 	.intro-status {
 		margin: 0;
-		font-family: var(--font-mono);
+		font-family: var(--intro-mono);
 		font-size: 11px;
 		letter-spacing: 0.18em;
 		min-height: 1.4em;
