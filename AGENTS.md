@@ -45,6 +45,13 @@ wired.
      the task in progress. The conversation context and the current task goal decide what gets
      touched; never switch the object of work on your own initiative (for example, do not
      wander onto an unrelated branch while the task is about a specific screen).
+  7. **Restate, then act; never claim unverified work.** Before touching anything, restate the
+     task goal in one sentence and keep every edit inside it — a wider reading is not a licence
+     to widen the change. When a reference image, layout, or sample exists, it is the contract:
+     match its structure, and never substitute your own arrangement for it. Any UI change is
+     finished only after a screenshot self-check at the real viewport — read the rendered result,
+     name what is wrong, fix it, shoot again. "Done" without that check is not allowed, and
+     neither is reporting a fix that was never rendered.
 
 - **UI standards.** Anything under `/admin/` follows [`docs/ADMIN_UI.md`](./docs/ADMIN_UI.md):
   five type sizes, one spacing scale, one accent colour that only means "needs you", and the
