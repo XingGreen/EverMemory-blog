@@ -52,6 +52,13 @@ wired.
      finished only after a screenshot self-check at the real viewport — read the rendered result,
      name what is wrong, fix it, shoot again. "Done" without that check is not allowed, and
      neither is reporting a fix that was never rendered.
+  8. **Compare against the reference until the geometry matches.** Screenshots are compared to
+     the reference repeatedly, not once: after the first render, after every fix, and again
+     before reporting. The comparison covers padding, gutters, and the boundaries between
+     regions — not just whether the content appeared. Copy that renders is not a layout that
+     works: a title stuck to the card edge, a button pushed out of its container, a control that
+     shifted off its column, or two independent regions that visually merge into one (padding
+     and gutter too close in size) are all failures, and are fixed before anything is claimed.
 
 - **UI standards.** Anything under `/admin/` follows [`docs/ADMIN_UI.md`](./docs/ADMIN_UI.md):
   five type sizes, one spacing scale, one accent colour that only means "needs you", and the
