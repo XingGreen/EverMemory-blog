@@ -73,8 +73,10 @@ let {
 		flex-direction: column;
 		gap: 0.5rem;
 		min-width: 0;
-		/* 可收缩：说明较长时折行，而不是被卡片右侧裁掉 */
-		flex: 0 1 auto;
+		/* 不收缩：§5 要求页头保持一行，标题是这一行里唯一不该被挤的东西。
+		   挤到放不下时由轨道（可横向滚动）与操作组承担，而不是把标题
+		   压成「文章管 / 理」两行。 */
+		flex: 0 0 auto;
 	}
 
 	.page-header h1 {
@@ -83,6 +85,7 @@ let {
 		font-weight: 650;
 		line-height: 1.35;
 		color: var(--deep-text);
+		white-space: nowrap;
 	}
 
 	/* dense：列表页的标题不该和内容抢注意力 */

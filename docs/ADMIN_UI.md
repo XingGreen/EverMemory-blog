@@ -87,8 +87,7 @@ hairline (`--line-divider`) for structure.
 
 Colour may also mark **state**, provided it lands on the word or the icon and never on a filled
 shape: `--success` = nothing left to do, `--primary` = waiting on you, `--destructive` = failed.
-What stays banned is the *pill* — a filled rounded block behind a label. Five pills down a column
-read as a legend nobody asked for; a green check beside 已配置 reads as a fact.
+A green check beside 已配置 reads as a fact.
 
 One exception: **diff lines.** In a side-by-side or unified diff, green/red encode "this line was
 added / removed" — that is content, not taxonomy, and it is the only colour convention users
@@ -96,14 +95,13 @@ already know by heart. Use `--success` and `--destructive`; never a raw colour l
 
 Forbidden:
 
-- Status pills with a tinted background (the green/amber/blue badge set). Status is a word, set
-  in the type scale, optionally in `--primary` when it is asking for action.
 - Colour as taxonomy. Category, language and file type are data, not colour codes.
 - Gradients on chrome. They belong to content (cover images), not to buttons or cards.
 
 ## 5. Primitives
 
-Three components in `src/components/admin/ui/`. Pages import them; pages do not restyle them.
+`src/components/admin/ui/` holds the shared, restyle-free pieces. Pages import them; pages do
+not restyle them.
 
 ### `PageHeader`
 
@@ -114,7 +112,8 @@ Three components in `src/components/admin/ui/`. Pages import them; pages do not 
 
 - Props: `title`, `meta?`, `dense?`, `bordered?`, `rail?` (snippet), `actions?` (snippet).
 - One line. If it wraps, the page has too many controls in it — move a control into the rail or
-  into a popover.
+  into a popover. The title neither shrinks nor wraps: the rail and the action group give way
+  first, and the rail scrolls horizontally when it runs out of room.
 - `dense` exists for list pages, where the list is the content and the title is furniture.
 - Below 1023px the title and meta are hidden: the mobile top bar already shows the page name.
   Actions stay unless the page can prove the top bar duplicates them.
@@ -122,27 +121,35 @@ Three components in `src/components/admin/ui/`. Pages import them; pages do not 
   directly underneath, pass `bordered={false}` and let the tab bar draw the line — otherwise two
   hairlines end up a few dozen pixels apart.
 
-### `Toolbar`
+### `FloatField`
 
-Filters and sort, one row, immediately under the header. Collapsible; collapsed by default when
-it holds two or more controls and the page has fewer than ~20 rows.
+Floating-label input. Props: `label`, `value` (`$bindable`), `type?`, `hint?`, `disabled?`,
+`placeholder?`. Owns its label↔input binding so callers never re-implement the float animation.
 
-- Controls are 36px tall, `--admin-fs-meta`, 8px radius.
-- Labels stay visible. Two selects both reading "All" are indistinguishable without them —
-  this is worth the width.
+### `AdminPage` (one level up, in `src/components/admin/`)
 
-### `ListRow`
+The page shell: card, `PageHeader`, one scroll region, optional footer. The page supplies
+content; it does not draw its own heading or a second sticky bar.
+
+### List rows and filter rows
+
+These are **not** extracted components, and this document should not pretend otherwise. Each
+list page owns its row grid and filter row, because the fields differ per page (`--post-rail-w`
+in `PostList`, the two-column workspace in `TaxonomyManager`, the table in `LinksPage`). Follow
+the shape instead of importing:
 
 ```
 title                                                      state
 description                                  ·  category · .md      time
 ```
 
-- Desktop: two-column grid, `1fr` plus a fixed rail (`--post-rail-w`).
-- The rail holds machine data only: state word on top, relative time below, right-aligned, mono.
-- Narrow screens: one column; title, description, meta line, then a row of state + actions.
+- A fixed right rail holds machine data only: state word on top, relative time below,
+  right-aligned, mono.
 - Hover swaps the rail for the row's actions. Keyboard does the same through `:focus-within`;
   touch shows both at once.
+- Narrow screens: one column; title, description, meta line, then a row of state + actions.
+- Filter rows sit directly under the header at `--admin-fs-meta` and keep their labels visible:
+  two selects both reading "All" are indistinguishable without them.
 
 ## 5a. Long navigation
 
