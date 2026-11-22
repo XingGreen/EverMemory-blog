@@ -1,11 +1,10 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import ConfirmDialog from "@/components/admin/ConfirmDialog.svelte";
-import FloatField from "@/components/admin/ui/FloatField.svelte";
 import Icon from "@/components/common/Icon.svelte";
+import { siteConfig } from "@/config";
 import { SECRET_ROWS, type SecretItemState } from "@/utils/admin-secrets";
 import { buildEntries, readPrivateKeyFile } from "@/utils/secret-draft";
-import { portalToBody } from "@/utils/floating";
 
 let {
 	logoType = "icon",
@@ -20,43 +19,18 @@ let {
 } = $props();
 
 /**
- * 入场序列：black（夜色静置、基线生长）→ logo（LOGO 显影、题名收束）
- * → rise（笔尖写到底）→ fade（幕布上移，须数据已就绪）→ done
+ * 首次引导页（/setup/）——六步向导。
+ * 一屏一个问题：身份 / 登录方式 / 仓库 / 凭证 / 私钥 / 署名，最后一张完成屏。
+ * 页面顶部只放站点标题（读自配置，第 6 步改名后即时跟新）；
+ * 卡片顶行只放位置标签「首次配置」；卡片内大标题是这一步要回答的问题。
+ * 落盘只在「完成」发生一次，中途跳过不留脏数据。
  */
-let introPhase = $state<"black" | "logo" | "rise" | "fade" | "done">("black");
-let introDataReady = $state(false);
-/** 从前台转场进入：元素动画提前，避免与遮罩叠加出两段空白 */
-let introQuick = $state(false);
+// 页面顶部只放站点标题，不再渲染 logo；入参保留以兼容 /setup.astro
+void logoType;
+void logoValue;
+void logoAlt;
+void logoSrc;
 
-// 状态词只反映真实数据状态：两份配置读取完成才算就绪，不按动画阶段编造进度
-const introStatus = $derived(
-	introPhase === "fade" || introPhase === "done" ? "已就绪" : "正在读取配置",
-);
-
-// rise 阶段且数据加载完毕，等题名走完（1.5s 起 + 0.95s）再上移幕布，
-// 避免元素只显影一半就被切走；数据比动画慢时也不会提前收尾
-$effect(() => {
-	if (introPhase !== "rise" || !introDataReady) return;
-	const t = setTimeout(() => {
-		introPhase = "fade";
-		setTimeout(() => (introPhase = "done"), 900);
-	}, introQuick ? 750 : 1350);
-	return () => clearTimeout(t);
-});
-
-/**
- * 首次引导页（/setup/）——OOBE 壳 + 复用现有输入栏。
- *
- * 壳层结构参照用户样张：窄卡片、步骤标题、底部三段式操作区
- * （上一步 / 进度圆点 / 主按钮）、完成屏收尾。
- * 输入栏全部复用 FloatField（从登录页应急令牌输入抽出的悬浮标签组件），
- * 草稿与写入复用 secret-draft + /api/admin/secrets/ 引导分支；
- * 字段名与预填值来自接口回传（itemOf），代码里不写死。
- *
- * 与样张的差异：主按钮文字色用 --primary-foreground（前台 --btn-content
- * 在暗色下与 --primary 同色系，实心 CTA 上不可读）；保存成功去 /login/
- * （引导结束应登录），展示完成屏收尾。
- */
 let items = $state<SecretItemState[]>([]);
 let loading = $state(true);
 let saving = $state(false);
@@ -67,14 +41,13 @@ let drafts = $state<Record<string, string>>({});
 let draftsOrigin = $state<Record<string, string>>({});
 let addressRaw = $state("");
 let addressError = $state("");
-/** 1 = 登录配置，2 = 连接仓库，3 = 站点信息，4 = 完成屏 */
-let step = $state<1 | 2 | 3 | 4>(1);
-/** 私钥：内容不回显，查看走弹窗；粘贴入口按需展开 */
+/** 1–6 为步骤，7 为完成屏 */
+let step = $state<1 | 2 | 3 | 4 | 5 | 6 | 7>(1);
+let way = $state<"oauth" | "token">("oauth");
 let keyView = $state(false);
 let fileEl = $state<HTMLInputElement | null>(null);
+let uploadError = $state("");
 
-// ── 管理员账号：输入用户名，调 GitHub API 自动解析数字 ID 与头像 ──
-// 输入框里永远是用户名，drafts.ADMIN_GITHUB_ID 由解析结果驱动（保存的仍是数字 ID）。
 let adminUsername = $state("");
 let adminState = $state<"idle" | "looking" | "ok" | "error">("idle");
 let adminError = $state("");
@@ -85,29 +58,72 @@ let adminResolved = $state<{
 } | null>(null);
 let adminTimer: ReturnType<typeof setTimeout> | undefined;
 let adminAbort: AbortController | undefined;
+let adminRepos = $state<{ full_name: string; default_branch: string }[]>([]);
+
+let siteDraft = $state({ title: "", subtitle: "", description: "" });
+let siteOrigin = $state({ title: "", subtitle: "", description: "" });
 
 const itemByKey = $derived(new Map(items.map((item) => [item.key, item])));
 const itemOf = (key: string) => itemByKey.get(key);
-
-/** 字段说明与后台同源：按 key 找到所属行，取该行的 how 文案 */
 const howOf = (key: string) =>
 	SECRET_ROWS.find((row) => row.keys.includes(key))?.how ?? "";
 
-/** 私钥草稿是否有内容——有则显示摘要态，不回显明文 */
 const hasKey = $derived(Boolean((drafts.GITHUB_PRIVATE_KEY ?? "").trim()));
 
-/** 必填项是否齐了——完成屏据此给出「去写文章」还是「去补齐」的提示 */
-const ready = $derived(
-	(() => {
-		const required = items.filter((item) => item.required && !item.managed);
-		return required.length > 0 && required.every((item) => item.configured);
-	})(),
+/** 页面顶部站点标题：配置里有值就显示，用户在第 6 步改名后即时跟新 */
+const siteTitle = $derived(
+	siteDraft.title.trim() || siteOrigin.title.trim() || siteConfig.title,
 );
 
-function syncAddress() {
-	addressRaw = addressOf();
-	addressError = "";
-}
+const STEPS = [
+	{
+		title: "谁可以管理这个站点",
+		lede: "只允许一个 GitHub 账号登录后台，先把它定下来。",
+		label: "身份",
+		icon: "material-symbols:person",
+		rules: [
+			"填写 GitHub 用户名，不是邮箱或昵称",
+			"数字 ID 会自动取到，无需手动查询",
+		],
+	},
+	{
+		title: "这台机器怎么确认是你",
+		lede: "选一种进入后台的方式，另一种留空即可。",
+		label: "登录",
+		icon: "material-symbols:shield-lock",
+		rules: ["两项配对使用，只填一项将无法登录"],
+	},
+	{
+		title: "文章写进哪个仓库",
+		lede: "从你的账号下挑一个，或者手动填写完整地址。",
+		label: "仓库",
+		icon: "material-symbols:folder-open",
+		rules: ["文章会提交到这个仓库的默认分支"],
+	},
+	{
+		title: "装上写作凭证",
+		lede: "两个数字，用来确认这次提交来自这台机器。",
+		label: "凭证",
+		icon: "material-symbols:lock",
+		rules: ["应用 ID 在应用设置页顶部", "安装 ID 是安装地址末尾的那段数字"],
+	},
+	{
+		title: "把私钥交给它",
+		lede: "提交文章时用它签名，只在这台电脑上读取。",
+		label: "私钥",
+		icon: "material-symbols:description",
+		rules: ["内容不会显示在页面上，也不会离开这台电脑"],
+	},
+	{
+		title: "最后署上你的名字",
+		lede: "这三项决定别人看到这个站点时的第一印象。",
+		label: "署名",
+		icon: "material-symbols:edit",
+		rules: ["显示在浏览器标签页与分享卡片上", "可以留空，登录后在后台修改"],
+	},
+] as const;
+
+const current = $derived(STEPS[Math.min(step, 6) - 1]);
 
 function addressOf(): string {
 	const owner = (drafts.GITHUB_OWNER ?? "").trim();
@@ -115,6 +131,11 @@ function addressOf(): string {
 	const branch = (drafts.GITHUB_BRANCH ?? "").trim();
 	if (!owner && !repo && !branch) return "";
 	return `${owner}/${repo}${branch ? `@${branch}` : ""}`;
+}
+
+function syncAddress() {
+	addressRaw = addressOf();
+	addressError = "";
 }
 
 function setAddress(raw: string) {
@@ -138,11 +159,16 @@ function setAddress(raw: string) {
 	drafts.GITHUB_BRANCH = m[3] ?? "";
 }
 
+function pickRepo(fullName: string) {
+	const repo = adminRepos.find((r) => r.full_name === fullName);
+	if (!repo) return;
+	setAddress(`${repo.full_name}@${repo.default_branch}`);
+}
+
 async function load() {
 	loading = true;
 	loadError = "";
 	try {
-		// 引导分支：未登录时服务端只放行本机 + 缺必填 + 非生产
 		const res = await fetch("/api/admin/secrets/", { cache: "no-store" });
 		const data = await res.json();
 		if (!data.success) {
@@ -160,9 +186,7 @@ async function load() {
 			}
 		}
 		syncAddress();
-		// 已配置过管理员 ID：反查一次用户资料，让输入框显示用户名与头像
 		const adminId = (drafts.ADMIN_GITHUB_ID ?? "").trim();
-		// 回填失败必须静默：此时输入框还是空的，报错只会让人困惑
 		if (adminId) resolveAdminUser(adminId, { silent: true });
 	} catch (err) {
 		loadError = err instanceof Error ? err.message : "网络请求失败";
@@ -171,11 +195,6 @@ async function load() {
 	}
 }
 
-/**
- * GitHub 用户资料解析：/users/{用户名或数字 ID} 两条路共用同一端点。
- * silent（回填反查）时失败不显示错误——输入框还没内容，报错只会让人困惑；
- * 只有用户主动输入触发的失败才提示。
- */
 async function resolveAdminUser(query: string, opts?: { silent?: boolean }) {
 	const silent = opts?.silent === true;
 	const q = query.trim();
@@ -186,7 +205,6 @@ async function resolveAdminUser(query: string, opts?: { silent?: boolean }) {
 		drafts.ADMIN_GITHUB_ID = "";
 		return;
 	}
-	// 新查询取代旧请求；快速连续输入时旧响应作废，不回写旧 ID
 	adminAbort?.abort();
 	adminAbort = new AbortController();
 	adminState = "looking";
@@ -199,12 +217,8 @@ async function resolveAdminUser(query: string, opts?: { silent?: boolean }) {
 				headers: { Accept: "application/vnd.github+json" },
 			},
 		);
-		if (res.status === 404) {
-			throw new Error("GitHub 上没有这个用户名，请检查拼写");
-		}
-		if (!res.ok) {
-			throw new Error("查询失败，稍后再试（可能触发了 GitHub 限流）");
-		}
+		if (res.status === 404) throw new Error("GitHub 上没有这个用户名");
+		if (!res.ok) throw new Error("查询失败，稍后再试");
 		const data = await res.json();
 		adminResolved = {
 			id: String(data.id),
@@ -213,16 +227,12 @@ async function resolveAdminUser(query: string, opts?: { silent?: boolean }) {
 		};
 		drafts.ADMIN_GITHUB_ID = String(data.id);
 		adminState = "ok";
-		// 回填反查的场景：输入框还空着，把解析到的用户名填进去
 		if (!adminUsername) adminUsername = String(data.login);
-		// 用户名就位后拉取名下仓库，供仓库地址自动预填（失败静默，不阻断手填）
 		fetchAdminRepos(String(data.login));
 	} catch (err) {
-		// 被新查询取代：静默退出，不覆盖新查询的状态
 		if (err instanceof DOMException && err.name === "AbortError") return;
 		adminResolved = null;
 		if (silent) {
-			// 回填失败不算用户操作，退回空闲态、不留错误提示
 			adminState = "idle";
 			adminError = "";
 			return;
@@ -231,9 +241,6 @@ async function resolveAdminUser(query: string, opts?: { silent?: boolean }) {
 		adminState = "error";
 	}
 }
-
-/** 用户名下的仓库清单：仓库地址从这里自动预填 */
-let adminRepos = $state<{ full_name: string; default_branch: string }[]>([]);
 
 async function fetchAdminRepos(login: string) {
 	try {
@@ -249,15 +256,8 @@ async function fetchAdminRepos(login: string) {
 			default_branch: String(r.default_branch ?? "main"),
 		}));
 	} catch {
-		// 拉不到清单就退化为手填，不打断引导
+		// 拉不到清单就退化为手填
 	}
-}
-
-/** 从清单选择仓库：组装成 owner/repo@默认分支 并同步地址栏 */
-function pickRepo(fullName: string) {
-	const repo = adminRepos.find((r) => r.full_name === fullName);
-	if (!repo) return;
-	setAddress(`${repo.full_name}@${repo.default_branch}`);
 }
 
 function onAdminInput(value: string) {
@@ -266,50 +266,6 @@ function onAdminInput(value: string) {
 	adminTimer = setTimeout(() => resolveAdminUser(value), 500);
 }
 
-/**
- * 统一保存：落盘动作只在「下一步」「完成」两个向导节点发生。
- * 成功后直接把 configured 同步到本地状态——不再全量 load()，
- * 否则整份草稿重建会让所有输入框重渲染（页面重载的元凶）。
- * 返回是否成功，调用方据此决定是否前进到下一步。
- */
-async function save(goDone: boolean): Promise<boolean> {
-	if (addressError) {
-		notice = "请先修正仓库地址格式";
-		return false;
-	}
-	const entries = buildEntries(items, drafts, draftsOrigin);
-	if (entries.length === 0) {
-		if (goDone) step = 4;
-		return true;
-	}
-	saving = true;
-	notice = "";
-	try {
-		const res = await fetch("/api/admin/secrets/", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ entries }),
-		});
-		const data = await res.json();
-		if (res.ok && data.success) {
-			// 本地同步：草稿非空即已配置，派生态随之更新，无需网络往返
-			for (const item of items) {
-				item.configured = Boolean((drafts[item.key] ?? "").trim());
-			}
-			if (goDone) step = 4;
-			return true;
-		}
-		notice = data.message || "保存失败";
-		return false;
-	} catch (err) {
-		notice = `保存请求失败: ${err instanceof Error ? err.message : String(err)}`;
-		return false;
-	} finally {
-		saving = false;
-	}
-}
-
-/** 选择私钥文件：本地读取后只进草稿（摘要态立即出现），落盘交给向导节点 */
 async function handleKeyFile(file: File) {
 	uploadError = "";
 	try {
@@ -319,28 +275,6 @@ async function handleKeyFile(file: File) {
 		uploadError = err instanceof Error ? err.message : "读取文件失败";
 	}
 }
-
-/** 至少一种登录方式就绪：OAuth 两项配对，或应急令牌 */
-const canLogin = $derived(
-	Boolean(
-		((drafts.GITHUB_APP_CLIENT_ID ?? "").trim() &&
-			(drafts.GITHUB_APP_CLIENT_SECRET ?? "").trim()) ||
-			(drafts.ADMIN_BREAKGLASS_TOKEN ?? "").trim(),
-	),
-);
-
-/** 统一提交点之一：去登录/跳过时落盘全部草稿，再跳登录页 */
-async function goLogin() {
-	if (await save(false)) window.location.replace("/login/");
-}
-
-/** 私钥文件上传的本地错误（大小/读取） */
-let uploadError = $state();
-
-// ── 站点信息（step3）：引导分支读写 siteConfig 的三个基础字段 ──
-let siteDraft = $state({ title: "", subtitle: "", description: "" });
-let siteOrigin = $state({ title: "", subtitle: "", description: "" });
-let siteLoaded = $state(false);
 
 async function loadSite() {
 	try {
@@ -353,16 +287,24 @@ async function loadSite() {
 			description: String(data.data.description ?? ""),
 		};
 		siteOrigin = { ...siteDraft };
-		siteLoaded = true;
 	} catch {
 		// 站点信息是可选步骤，拉取失败不阻断向导
 	}
 }
 
-/** 保存站点信息：整份配置对象回传（只改了引导涉及的三个字段） */
-async function saveSite(): Promise<boolean> {
+async function saveSite(): Promise<void> {
+	// 三项都没改就不回写：读不到配置时 siteDraft 为空，全量回传会把原标题清空
+	const changed =
+		siteDraft.title.trim() !== siteOrigin.title ||
+		siteDraft.subtitle.trim() !== siteOrigin.subtitle ||
+		siteDraft.description.trim() !== siteOrigin.description;
+	const empty =
+		!siteDraft.title.trim() &&
+		!siteDraft.subtitle.trim() &&
+		!siteDraft.description.trim();
+	if (!changed || empty) return;
 	try {
-		const res = await fetch("/api/admin/configs/site", {
+		await fetch("/api/admin/configs/site", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
@@ -373,674 +315,748 @@ async function saveSite(): Promise<boolean> {
 				},
 			}),
 		});
-		const data = await res.json();
-		if (res.ok && data.success) {
-			siteOrigin = { ...siteDraft };
-			return true;
-		}
-		notice = data.message || "站点信息保存失败";
-		return false;
-	} catch (err) {
-		notice = `站点信息保存失败: ${err instanceof Error ? err.message : String(err)}`;
-		return false;
+	} catch {
+		// 站点信息失败不阻断：密钥已落盘，用户可在后台补
 	}
 }
 
-onMount(() => {
-	// 入场序列：夜色静置、基线生长 → LOGO 显影、题名收束 → 笔尖写到底 →
-	// 数据就绪后幕布上移露出向导。reduced-motion 用户直接跳过整套动画（a11y §6）。
-	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-		introPhase = "done";
-		return;
+async function save(): Promise<boolean> {
+	if (addressError) {
+		notice = "请先修正仓库地址格式";
+		return false;
 	}
-	// 从前台转场进来时遮罩已经盖住视口，跳过开屏的前置静默，直接进主体动画
-	let fromFront = false;
+	const entries = buildEntries(items, drafts, draftsOrigin);
+	if (entries.length === 0) return true;
+	saving = true;
+	notice = "";
 	try {
-		fromFront = sessionStorage.getItem("admin_entered_from_front") === "1";
-		sessionStorage.removeItem("admin_entered_from_front");
-	} catch {}
-	if (fromFront) introQuick = true;
-	const t1 = setTimeout(() => (introPhase = "logo"), fromFront ? 0 : 200);
-	const t2 = setTimeout(() => (introPhase = "rise"), fromFront ? 500 : 1100);
-	void Promise.allSettled([load(), loadSite()]).then(() => {
-		introDataReady = true;
-	});
-	return () => {
-		clearTimeout(t1);
-		clearTimeout(t2);
-	};
+		const res = await fetch("/api/admin/secrets/", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ entries }),
+		});
+		const data = await res.json();
+		if (res.ok && data.success) {
+			for (const item of items) {
+				item.configured = Boolean((drafts[item.key] ?? "").trim());
+			}
+			return true;
+		}
+		notice = data.message || "保存失败";
+		return false;
+	} catch (err) {
+		notice = `保存请求失败: ${err instanceof Error ? err.message : String(err)}`;
+		return false;
+	} finally {
+		saving = false;
+	}
+}
+
+async function finish() {
+	const ok = await save();
+	if (!ok) return;
+	await saveSite();
+	step = 7;
+}
+
+onMount(() => {
+	void Promise.allSettled([load(), loadSite()]);
 });
 </script>
 
-<!-- 入场序列：夜色 → 显影 → 笔尖写到底 → 幕布上移；一次性装饰，不可交互 -->
-	{#if introPhase !== "done"}
-		{@const introImageSrc =
-			logoSrc ??
-			(logoType === "url" || /^(https?:|\/)/.test(logoValue)
-				? logoValue
-				: null)}
-		<div
-			class="intro-black"
-			class:intro-fade-out={introPhase === "fade"}
-			class:intro-quick={introQuick}
-			use:portalToBody
-			aria-hidden="true"
-		>
-			<!-- 图片在夜色阶段就进入 DOM 并开始加载，避免显影阶段才请求导致空场 -->
-			<div class="intro-grid"></div>
-			<span class="intro-folio">EVERMEMORY / 首次配置</span>
-			<div class="intro-center">
-				<div class="intro-logo">
-					{#if introImageSrc}
-						<img
-							src={introImageSrc}
-							alt={logoAlt}
-							width="512"
-							height="512"
-							fetchpriority="high"
-							decoding="sync"
-						/>
-					{:else}
-						<Icon icon={logoValue} />
-					{/if}
-				</div>
-				<div class="intro-wordmark">EverMemory</div>
-				<p class="intro-status">{introStatus}</p>
-			</div>
-			<div class="intro-baseline">
-				<span class="intro-rule"></span>
-				<span class="intro-nib"></span>
-			</div>
-		</div>
-	{/if}
+<div class="oobe">
+	<p class="site">{siteTitle}</p>
 
-	<main class="oobe">
-	<article class="card">
+	<section class="sheet">
+		<div class="bar">
+			<button
+				class="back"
+				type="button"
+				aria-label="上一步"
+				title="上一步"
+				onclick={() => {
+					if (step > 1) step = (step - 1) as typeof step;
+				}}
+				hidden={step === 1 || step === 7}
+			>
+				<Icon icon="material-symbols:arrow-back" />
+			</button>
+			<span class="ctx">首次配置</span>
+		</div>
+
 		{#if loadError}
-			<div class="state-error" role="alert">{loadError}</div>
-			<button type="button" class="ghost-btn retry" onclick={load}>重试</button>
+			<p class="alert" role="alert">{loadError}</p>
+			<button class="ghost" type="button" onclick={load}>重试</button>
 		{:else if loading}
-			<div class="state-loading">加载中…</div>
-		{:else if step === 4}
-			<!-- 完成屏：仪式感的顶点——只有确认，没有多余动作 -->
-			<div class="done-hero">
-				<span class="done-ring" aria-hidden="true">
-					<Icon icon="material-symbols:check" />
-				</span>
-				<h1 class="title">一切就绪</h1>
-				<p class="desc">
-					仓库和登录都已配置完成。
-					{ready
-						? "去登录，开始写你的第一篇文章。"
-						: "部分配置项仍为空，登录后可在环境变量页补齐。"}
-				</p>
-			</div>
-			<div class="done-action">
-				<button
-					type="button"
-					class="primary-btn"
-					onclick={() => (window.location.href = "/login/")}
-				>
-					去登录
-				</button>
+			<p class="loading">读取配置…</p>
+		{:else if step === 7}
+			<div class="sealed">
+				<span class="stamp">已完成配置</span>
+				<p>这台机器现在可以替你写文章了。此地址已关闭，刷新将跳转到登录页。</p>
+				<p>后续修改配置，请在后台的环境变量页进行。</p>
+				<div class="foot">
+					<button
+						class="go"
+						type="button"
+						onclick={() => (window.location.href = "/login/")}
+					>
+						开始使用
+					</button>
+				</div>
 			</div>
 		{:else}
-			<!-- 步骤一：登录配置——最先完成，完成后即可直接登录 -->
-			<div class="step" class:active={step === 1}>
-				<h1 class="title">登录配置</h1>
-				<p class="desc">
-					绑定管理员账号并选好登录方式。完成后即可登录，仓库等其余配置稍后在后台补齐。
-				</p>
+			<div class="body">
+				<div class="art" aria-hidden="true">
+					<Icon icon={current.icon} style="font-size: 84px;" />
+				</div>
 
-				<!-- 1. 管理员用户名：基础身份，解析成功后驱动仓库清单 -->
-				<FloatField
-					id="fld-admin"
-					label="管理员 GitHub 用户名"
-					value={adminUsername}
-					mono
-					oninput={onAdminInput}
-				/>
-				<p class="field-hint">输入 GitHub 用户名，系统自动获取账号的数字 ID</p>
+				<div class="content">
+					<h1>{current.title}</h1>
+					<p class="lede">{current.lede}</p>
 
-				{#if adminState === "looking"}
-					<p class="resolve-line" aria-live="polite">正在查询该用户…</p>
-				{:else if adminState === "error"}
-					<p class="field-error" role="alert">{adminError}</p>
-				{:else if adminState === "ok" && adminResolved}
-					<div class="admin-resolved">
-						<img
-							class="admin-avatar"
-							src={adminResolved.avatar}
-							alt="GitHub 头像"
+					{#if step === 1}
+						<label class="one">
+							<span>GitHub 用户名</span>
+							<input
+								value={adminUsername}
+								placeholder="例如 evermemory"
+								autocomplete="off"
+								spellcheck="false"
+								oninput={(e) => onAdminInput(e.currentTarget.value)}
+							/>
+						</label>
+						{#if adminState === "looking"}
+							<p class="note">正在查询…</p>
+						{:else if adminState === "error"}
+							<p class="note err" role="alert">{adminError}</p>
+						{:else if adminState === "ok" && adminResolved}
+							<p class="picked">
+								<img src={adminResolved.avatar} alt="" />
+								<b>@{adminResolved.login}</b>
+								<span>数字 ID {adminResolved.id}</span>
+							</p>
+						{/if}
+					{:else if step === 2}
+						<ul class="list" role="listbox" aria-label="登录方式">
+							<li>
+								<button
+									type="button"
+									role="option"
+									aria-selected={way === "oauth"}
+									onclick={() => (way = "oauth")}
+								>
+									GitHub OAuth<span class="sub">推荐</span>
+								</button>
+							</li>
+							<li>
+								<button
+									type="button"
+									role="option"
+									aria-selected={way === "token"}
+									onclick={() => (way = "token")}
+								>
+									应急令牌<span class="sub">备用</span>
+								</button>
+							</li>
+						</ul>
+						{#if way === "oauth"}
+							<label class="one">
+								<span>客户端 ID</span>
+								<input
+									value={drafts.GITHUB_APP_CLIENT_ID ?? ""}
+									spellcheck="false"
+									oninput={(e) => (drafts.GITHUB_APP_CLIENT_ID = e.currentTarget.value)}
+								/>
+							</label>
+							<label class="one">
+								<span>客户端密钥</span>
+								<input
+									type="password"
+									value={drafts.GITHUB_APP_CLIENT_SECRET ?? ""}
+									oninput={(e) => (drafts.GITHUB_APP_CLIENT_SECRET = e.currentTarget.value)}
+								/>
+							</label>
+						{:else}
+							<label class="one">
+								<span>应急令牌</span>
+								<input
+									type="password"
+									value={drafts.ADMIN_BREAKGLASS_TOKEN ?? ""}
+									oninput={(e) => (drafts.ADMIN_BREAKGLASS_TOKEN = e.currentTarget.value)}
+								/>
+							</label>
+						{/if}
+					{:else if step === 3}
+						{#if adminRepos.length > 0}
+							<ul class="list" role="listbox" aria-label="仓库">
+								{#each adminRepos.slice(0, 4) as repo (repo.full_name)}
+									<li>
+										<button
+											type="button"
+											role="option"
+											aria-selected={addressRaw ===
+												`${repo.full_name}@${repo.default_branch}`}
+											onclick={() => pickRepo(repo.full_name)}
+										>
+											{repo.full_name}<span class="sub">{repo.default_branch}</span>
+										</button>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+						<label class="one wide">
+							<span>所有者 / 仓库名 @ 分支</span>
+							<input
+								bind:value={addressRaw}
+								placeholder="owner/repo@main"
+								spellcheck="false"
+								oninput={(e) => setAddress(e.currentTarget.value)}
+							/>
+						</label>
+						{#if addressError}
+							<p class="note err" role="alert">{addressError}</p>
+						{/if}
+					{:else if step === 4}
+						<label class="one">
+							<span>应用 ID</span>
+							<input
+								value={drafts.GITHUB_APP_ID ?? ""}
+								spellcheck="false"
+								oninput={(e) => (drafts.GITHUB_APP_ID = e.currentTarget.value)}
+							/>
+						</label>
+						<label class="one">
+							<span>安装 ID</span>
+							<input
+								value={drafts.GITHUB_INSTALLATION_ID ?? ""}
+								spellcheck="false"
+								oninput={(e) => (drafts.GITHUB_INSTALLATION_ID = e.currentTarget.value)}
+							/>
+						</label>
+					{:else if step === 5}
+						{#if hasKey}
+							<div class="file">
+								<span>私钥已导入</span>
+								<button class="link" type="button" onclick={() => (keyView = true)}>
+									查看内容
+								</button>
+								<button class="link" type="button" onclick={() => fileEl?.click()}>
+									重新导入
+								</button>
+							</div>
+						{:else}
+							<button class="ghost solid" type="button" onclick={() => fileEl?.click()}>
+								<Icon icon="material-symbols:upload-rounded" style="font-size: 18px;" />
+								导入私钥文件
+							</button>
+						{/if}
+						<input
+							type="file"
+							accept=".pem,.key,.txt"
+							hidden
+							bind:this={fileEl}
+							disabled={saving}
+							onchange={async (e) => {
+								const file = e.currentTarget.files?.[0];
+								e.currentTarget.value = "";
+								if (file) await handleKeyFile(file);
+							}}
 						/>
-						<div class="admin-who">
-							<strong>@{adminResolved.login}</strong>
-							<span>ID {adminResolved.id} · 确认这是你自己</span>
-						</div>
-					</div>
-				{/if}
-
-				<!-- 2. 登录方式：GitHub OAuth（主）或应急令牌（备），至少填其一 -->
-				<FloatField
-					id="fld-client-id"
-					label={itemOf("GITHUB_APP_CLIENT_ID")?.label ?? "OAuth Client ID"}
-					value={drafts.GITHUB_APP_CLIENT_ID ?? ""}
-					mono
-					oninput={(v) => (drafts.GITHUB_APP_CLIENT_ID = v)}
-				/>
-				<p class="field-hint">{howOf("GITHUB_APP_CLIENT_ID")}</p>
-
-				<FloatField
-					id="fld-client-secret"
-					label={itemOf("GITHUB_APP_CLIENT_SECRET")?.label ?? "OAuth Client Secret"}
-					type="password"
-					value={drafts.GITHUB_APP_CLIENT_SECRET ?? ""}
-					oninput={(v) => (drafts.GITHUB_APP_CLIENT_SECRET = v)}
-				/>
-				<p class="field-hint">{howOf("GITHUB_APP_CLIENT_SECRET")}</p>
-
-				<FloatField
-					id="fld-breakglass"
-					label={itemOf("ADMIN_BREAKGLASS_TOKEN")?.label ?? "应急令牌"}
-					type="password"
-					value={drafts.ADMIN_BREAKGLASS_TOKEN ?? ""}
-					oninput={(v) => (drafts.ADMIN_BREAKGLASS_TOKEN = v)}
-				/>
-				<p class="field-hint">{howOf("ADMIN_BREAKGLASS_TOKEN")}</p>
-			</div>
-
-			<!-- 步骤二：连接仓库——登录后也可在后台补齐 -->
-			<div class="step" class:active={step === 2}>
-				<h1 class="title">连接仓库</h1>
-				<p class="desc">把 GitHub App 安装到仓库，文章才能写进 GitHub。</p>
-
-				{#if adminState === "ok" && adminResolved && adminRepos.length > 0}
-					<div class="field">
-						<label class="pick-label" for="fld-pick-repo">选择你的博客仓库</label>
-						<select
-							id="fld-pick-repo"
-							class="ui-select"
-							onchange={(e) => pickRepo(e.currentTarget.value)}
-						>
-							<option value="" disabled selected>从你名下的仓库中选择…</option>
-							{#each adminRepos as repo (repo.full_name)}
-								<option value={repo.full_name}>
-									{repo.full_name}（默认分支 {repo.default_branch}）
-								</option>
-							{/each}
-						</select>
-					</div>
-				{/if}
-
-				<FloatField
-					id="fld-repo"
-					label={SECRET_ROWS.find((row) => row.id === "repo")?.label ?? "仓库地址"}
-					bind:value={addressRaw}
-					mono
-					oninput={setAddress}
-				/>
-				{#if addressError}
-					<p class="field-error" role="alert">{addressError}</p>
-				{:else if adminRepos.length > 0 && adminState === "ok"}
-					<p class="field-hint">已按你的选择预填；组织仓库或非默认分支可直接改写</p>
-				{:else}
-					<p class="field-hint">{howOf("GITHUB_OWNER")}</p>
-				{/if}
-
-				<FloatField
-					id="fld-app-id"
-					label={itemOf("GITHUB_APP_ID")?.label ?? "App ID"}
-					value={drafts.GITHUB_APP_ID ?? ""}
-					mono
-					oninput={(v) => (drafts.GITHUB_APP_ID = v)}
-				/>
-				<p class="field-hint">{howOf("GITHUB_APP_ID")}</p>
-
-				<FloatField
-					id="fld-install"
-					label={itemOf("GITHUB_INSTALLATION_ID")?.label ?? "安装 ID"}
-					value={drafts.GITHUB_INSTALLATION_ID ?? ""}
-					mono
-					oninput={(v) => (drafts.GITHUB_INSTALLATION_ID = v)}
-				/>
-				<p class="field-hint">{howOf("GITHUB_INSTALLATION_ID")}</p>
-
-				<!-- 私钥：只通过文件上传，内容不回显到任何输入框。
-				     查看走弹窗；更换复用同一个文件选择器。落盘在向导节点统一发生。 -->
-				{#if hasKey}
-					<div class="key-summary">
-						<span class="key-summary-word">私钥已就绪</span>
-						<button type="button" class="link-btn" onclick={() => (keyView = true)}>
-							查看
-						</button>
-						<button
-							type="button"
-							class="link-btn"
-							disabled={saving}
-							onclick={() => fileEl?.click()}
-						>
-							更换文件
-						</button>
-					</div>
-				{:else}
-					<div class="upload-row">
-						<button
-							type="button"
-							class="upload-btn"
-							disabled={saving}
-							onclick={() => fileEl?.click()}
-						>
-							<Icon icon="material-symbols:upload-rounded" />
-							选择私钥文件
-						</button>
-					</div>
-					<p class="field-hint">{howOf("GITHUB_PRIVATE_KEY")}</p>
-				{/if}
-				{#if uploadError}
-					<p class="field-error" role="alert">{uploadError}</p>
-				{/if}
-				<input
-					type="file"
-					accept=".pem,.key,.txt"
-					hidden
-					bind:this={fileEl}
-					disabled={saving}
-					onchange={async (e) => {
-						const file = e.currentTarget.files?.[0];
-						e.currentTarget.value = "";
-						if (!file) return;
-						await handleKeyFile(file);
-					}}
-				/>
-
-				<FloatField
-					id="fld-key-path"
-					label="或私钥文件路径"
-					value={drafts.GITHUB_PRIVATE_KEY_PATH ?? ""}
-					mono
-					oninput={(v) => (drafts.GITHUB_PRIVATE_KEY_PATH = v)}
-				/>
-				<p class="field-hint">可选。私钥文件存在服务器上时填路径</p>
-			</div>
-
-			
-			{#if notice}
-				<div class="state-error" role="alert">{notice}</div>
-			{/if}
-
-			{#if step !== 4}
-			<!-- 底部三段式：可跳过的步骤显示「跳过」按钮，不可跳过则不渲染 -->
-			<footer class="footer-actions">
-				{#if step === 1}
-					<button
-						type="button"
-						class="ghost-btn"
-						onclick={() => (step = 2)}
-					>
-						下一步：连接仓库
-					</button>
-					<div class="dots" aria-hidden="true">
-						<span class="dot" class:active={step === 1}></span>
-						<span class="dot" class:active={step === 2}></span>
-					</div>
-					{#if canLogin}
-						<button
-							type="button"
-							class="primary-btn"
-							disabled={saving}
-							onclick={goLogin}
-						>
-							{saving ? "保存中…" : "去登录"}
-						</button>
+						{#if uploadError}
+							<p class="note err" role="alert">{uploadError}</p>
+						{/if}
+					{:else}
+						<label class="one wide">
+							<span>站点标题</span>
+							<input
+								value={siteDraft.title}
+								oninput={(e) => (siteDraft.title = e.currentTarget.value)}
+							/>
+						</label>
+						<label class="one wide">
+							<span>一句话介绍</span>
+							<input
+								value={siteDraft.subtitle}
+								oninput={(e) => (siteDraft.subtitle = e.currentTarget.value)}
+							/>
+						</label>
+						<label class="one wide">
+							<span>分享时的摘要</span>
+							<input
+								value={siteDraft.description}
+								oninput={(e) => (siteDraft.description = e.currentTarget.value)}
+							/>
+						</label>
 					{/if}
-				{:else if step === 2}
-					<button
-						type="button"
-						class="ghost-btn"
-						onclick={() => (step = 1)}
-					>
-						上一步
-					</button>
-					<div class="dots" aria-hidden="true">
-						<span class="dot" class:active={step === 1}></span>
-						<span class="dot" class:active={step === 2}></span>
-						<span class="dot" class:active={step === 3}></span>
+
+					<div class="rules">
+						{#each current.rules as rule (rule)}
+							<div>{rule}</div>
+						{/each}
 					</div>
-					<div class="done-group">
-						{#if canLogin}
+
+					{#if notice}
+						<p class="note err" role="alert">{notice}</p>
+					{/if}
+
+					<div class="foot">
+						{#if step > 1}
 							<button
+								class="skip"
 								type="button"
-								class="ghost-btn"
-								onclick={goLogin}
+								onclick={() => {
+									if (step < 6) step = (step + 1) as typeof step;
+								}}
 							>
 								跳过
 							</button>
 						{/if}
-						<button
-							type="button"
-							class="primary-btn"
-							onclick={() => (step = 3)}
-						>
-							下一步：站点信息
-						</button>
+						{#if step < 6}
+							<button
+								class="go"
+								type="button"
+								onclick={() => (step = (step + 1) as typeof step)}
+							>
+								下一步
+							</button>
+						{:else}
+							<button class="go" type="button" disabled={saving} onclick={finish}>
+								{saving ? "保存中…" : "完成"}
+							</button>
+						{/if}
 					</div>
-				{/if}
-			</footer>
-
-			<!-- 步骤三：站点信息——可选，全部字段留空可直接完成 -->
-			{#if step === 3}
-			<div class="step" class:active={step === 3}>
-				<h1 class="title">站点信息</h1>
-				<p class="desc">
-					这三项会出现在浏览器标题与分享卡片上。都可以留空，登录后在后台随时改。
-				</p>
-
-				<FloatField
-					id="fld-site-title"
-					label="站点标题"
-					value={siteDraft.title}
-					oninput={(v) => (siteDraft.title = v)}
-				/>
-				<p class="field-hint">浏览器标签页与站点页头显示的名字</p>
-
-				<FloatField
-					id="fld-site-subtitle"
-					label="站点副标题"
-					value={siteDraft.subtitle}
-					oninput={(v) => (siteDraft.subtitle = v)}
-				/>
-				<p class="field-hint">页头标题下方的一句介绍</p>
-
-				<FloatField
-					id="fld-site-description"
-					label="站点描述"
-					value={siteDraft.description}
-					multiline
-					oninput={(v) => (siteDraft.description = v)}
-				/>
-				<p class="field-hint">分享到社交平台时的摘要文案</p>
+				</div>
 			</div>
-
-			<footer class="footer-actions">
-				<button
-					type="button"
-					class="ghost-btn"
-					onclick={() => (step = 2)}
-				>
-					上一步
-				</button>
-				<div class="dots" aria-hidden="true">
-					<span class="dot" class:active={step === 1}></span>
-					<span class="dot" class:active={step === 2}></span>
-					<span class="dot" class:active={step === 3}></span>
-				</div>
-				<div class="done-group">
-					{#if canLogin}
-						<button
-							type="button"
-							class="ghost-btn"
-							onclick={goLogin}
-						>
-							跳过
-						</button>
-					{/if}
-					<button
-						type="button"
-						class="primary-btn"
-						disabled={saving}
-						onclick={async () => {
-							// 统一提交：向导中途不落盘，强退/反悔零脏数据
-							if (await save(true) && (await saveSite())) step = 4;
-						}}
-					>
-						{saving ? "保存中…" : "完成"}
-					</button>
-				</div>
-			</footer>
-			{/if}
-			{/if}
 		{/if}
-	</article>
+	</section>
 
-	<!-- 查看私钥：复用通用弹窗组件；Esc / 遮罩 / 右上角关闭均可退出 -->
-	<ConfirmDialog
-		open={keyView}
-		title="私钥内容"
-		wide
-		onTertiary={() => (keyView = false)}
-	>
-		<pre class="modal-code">{drafts.GITHUB_PRIVATE_KEY}</pre>
-	</ConfirmDialog>
-</main>
+	<ol class="track" aria-label="配置进度">
+		{#each STEPS as s, i (s.label)}
+			<li aria-current={step === i + 1 ? "step" : undefined} class:done={step > i + 1}>
+				<span class="n">{i + 1}</span><span class="t">{s.label}</span>
+			</li>
+		{/each}
+	</ol>
+</div>
+
+<ConfirmDialog
+	open={keyView}
+	title="私钥内容"
+	wide
+	onTertiary={() => (keyView = false)}
+>
+	<pre class="modal-code">{drafts.GITHUB_PRIVATE_KEY}</pre>
+</ConfirmDialog>
 
 <style>
-	/* 页面级 OOBE token：尺寸决定集中在这里，组件只引用——不散落硬编码。
-	   颜色一律引用后台继承的前台 token，明暗两态自动成立。 */
 	.oobe {
-		--oobe-card-radius: 24px;
-		--oobe-btn-radius: 999px;
-		--oobe-dur: 240ms;
-		--oobe-ease: cubic-bezier(0.2, 0, 0, 1);
-
 		min-height: 100vh;
 		min-height: 100dvh;
 		display: flex;
-		justify-content: center;
-		/* 竖向不用 align-items:center：内容高于视口时 center 会把顶部
-		   裁出滚动区外（滚不动回标题）。margin:auto 同样居中，且溢出时
-		   顶部仍可滚动到——参考前台内容流的滚动行为。 */
-		padding: clamp(16px, 3vh, 24px) 1.5rem;
+		flex-direction: column;
+		align-items: center;
+		padding: 24px 20px 0;
 		background: var(--page-bg);
 		color: var(--deep-text);
 	}
 
-	.card {
-		margin: auto;
+	.site {
 		width: 100%;
-		max-width: 460px;
-		background: var(--card-bg);
-		border-radius: var(--oobe-card-radius);
-		box-shadow: var(--shadow-card);
-		/* 内距随视口高度收敛：矮屏（768 高的笔记本）也能放下整卡 */
-		padding: clamp(20px, 4vh, 32px) clamp(22px, 6vw, 28px)
-			clamp(16px, 3vh, 24px);
-	}
-
-	.title {
-		margin: 0 0 6px;
-		font-size: clamp(19px, 3.2vh, 22px);
-		font-weight: 700;
+		max-width: 760px;
+		margin: 0;
 		text-align: center;
-		color: var(--deep-text);
-	}
-
-	.desc {
-		margin: 0 0 clamp(14px, 2.5vh, 24px);
-		font-size: 13px;
-		line-height: 1.5;
-		text-align: center;
-		color: var(--content-meta);
-	}
-
-	/* 字段间距由 FloatField 自身结构 + 这里的统一节奏承担 */
-	.card :global(.field) {
-		margin-bottom: clamp(10px, 1.8vh, 18px);
-	}
-
-	.field-hint {
-		margin: -8px 0 clamp(10px, 1.8vh, 14px);
-		font-size: 12px;
-		color: var(--content-meta);
-	}
-
-	.field-error {
-		margin: -8px 0 clamp(10px, 1.8vh, 14px);
-		font-size: 12px;
-		color: var(--destructive);
-	}
-
-	/* 仓库清单下拉：标签在上方（原生 select 不做浮动标签） */
-	.pick-label {
-		display: block;
-		margin-bottom: 6px;
-		font-size: 13px;
+		font-size: 27px;
 		font-weight: 600;
+		letter-spacing: -0.01em;
 		color: var(--deep-text);
 	}
 
-	.card :global(.ui-select) {
+	.sheet {
 		width: 100%;
-		height: 42px;
-	}
-
-	/* ── 管理员解析结果：头像 + 账号 + ID，供用户确认 ── */
-	.resolve-line {
-		margin: -8px 0 14px;
-		font-size: 12px;
-		color: var(--content-meta);
-	}
-
-	.admin-resolved {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		margin: -8px 0 14px;
-		padding: 10px 14px;
-		background: color-mix(in oklab, var(--primary) 8%, transparent);
-		border: 1px solid color-mix(in oklab, var(--primary) 30%, transparent);
-		border-radius: 12px;
-	}
-
-	.admin-avatar {
-		width: 40px;
-		height: 40px;
-		border-radius: 50%;
-		object-fit: cover;
-	}
-
-	.admin-who {
+		max-width: 760px;
+		height: min(500px, calc(100dvh - 148px));
+		margin: auto 0 4px;
+		background: var(--card-bg);
+		border: 1px solid var(--line-color);
+		border-radius: var(--radius-large);
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
-		min-width: 0;
+		padding: 28px;
+		overflow: hidden;
 	}
 
-	.admin-who strong {
-		font-size: 14px;
-		color: var(--deep-text);
+	.bar {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		min-height: 28px;
+		flex: none;
 	}
 
-	.admin-who span {
-		font-size: 12px;
+	.back {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		padding: 0;
+		background: none;
+		border: 0;
+		border-radius: 4px;
 		color: var(--content-meta);
+		cursor: pointer;
+		font-size: 18px;
 	}
 
-	/* ── 步骤切换：一次淡入，尊重 reduced-motion ── */
-	.step {
+	.back[hidden] {
 		display: none;
 	}
 
-	.step.active {
-		display: block;
-		animation: step-in var(--oobe-dur) var(--oobe-ease);
+	.back:hover {
+		color: var(--deep-text);
 	}
 
-	@keyframes step-in {
-		from {
-			opacity: 0;
-			transform: translateY(4px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.step.active {
-			animation: none;
-		}
-	}
-
-	/* ── 私钥上传：按钮 + 说明一行，错误只落本行 ── */
-	.upload-row {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		margin-bottom: 14px;
-	}
-
-	.upload-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		height: 32px;
-		padding: 0 14px;
-		border: 1px solid var(--input-border);
-		border-radius: 999px;
+	.ctx {
 		font-size: 13px;
 		color: var(--content-meta);
-		cursor: pointer;
-		transition: color 0.15s, border-color 0.15s;
 	}
 
-	.upload-btn:hover {
-		color: var(--primary);
+	.body {
+		flex: 1;
+		min-height: 0;
+		display: grid;
+		grid-template-columns: 250px minmax(0, 1fr);
+		gap: 34px;
+		align-items: start;
+		margin-top: 10px;
+	}
+
+	.art {
+		align-self: center;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--content-meta);
+	}
+
+	.content {
+		min-width: 0;
+		align-self: stretch;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+	}
+
+	h1 {
+		margin: 0 0 12px;
+		font-size: 27px;
+		font-weight: 600;
+		letter-spacing: -0.02em;
+		line-height: 1.3;
+		color: var(--deep-text);
+	}
+
+	.lede {
+		margin: 0 0 20px;
+		font-size: 13px;
+		line-height: 1.75;
+		color: var(--content-meta);
+	}
+
+	.one {
+		display: block;
+	}
+
+	.one + .one {
+		margin-top: 10px;
+	}
+
+	.one span {
+		display: block;
+		margin-bottom: 6px;
+		font-size: 12px;
+		color: var(--content-meta);
+	}
+
+	.one input {
+		width: 100%;
+		max-width: 259px;
+		padding: 8px 12px;
+		font-family: var(--font-mono);
+		font-size: 15px;
+		color: var(--deep-text);
+		background: var(--input-bg);
+		border: 1px solid transparent;
+		border-radius: 4px;
+	}
+
+	.one.wide input {
+		max-width: none;
+	}
+
+	.one input:focus {
+		outline: none;
 		border-color: var(--primary);
 	}
 
-	.upload-btn:focus-visible {
+	.rules {
+		margin: 20px 0 0;
+		font-size: 12px;
+		line-height: 1.7;
+		color: var(--content-meta);
+	}
+
+	.note {
+		margin: 8px 0 0;
+		font-size: 12px;
+		color: var(--content-meta);
+	}
+
+	.note.err {
+		color: var(--destructive);
+	}
+
+	.picked {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 10px 0 0;
+		font-size: 12px;
+		color: var(--content-meta);
+	}
+
+	.picked img {
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+	}
+
+	.picked b {
+		font-weight: 500;
+		font-family: var(--font-mono);
+		color: var(--deep-text);
+	}
+
+	.list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.list li + li {
+		margin-top: 2px;
+	}
+
+	.list button {
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+		width: 100%;
+		padding: 10px 12px;
+		font: inherit;
+		font-size: 14px;
+		text-align: left;
+		color: var(--deep-text);
+		background: var(--input-bg);
+		border: 0;
+		border-radius: 4px;
+		cursor: pointer;
+	}
+
+	.list button:hover {
+		background: var(--btn-regular-bg);
+	}
+
+	.list button[aria-selected="true"] {
+		box-shadow: inset 2px 0 0 var(--primary);
+	}
+
+	.list .sub {
+		margin-left: 8px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--content-meta);
+	}
+
+	.file {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		height: 40px;
+		padding: 0 12px;
+		font-size: 14px;
+		color: var(--content-meta);
+		background: var(--input-bg);
+		border-radius: 4px;
+	}
+
+	.link {
+		padding: 0;
+		font: inherit;
+		font-size: 12px;
+		color: var(--primary);
+		background: none;
+		border: 0;
+		text-decoration: underline;
+		text-underline-offset: 3px;
+		cursor: pointer;
+	}
+
+	.foot {
+		display: flex;
+		justify-content: flex-end;
+		align-items: center;
+		gap: 6px;
+		margin-top: auto;
+		padding-top: 18px;
+		flex: none;
+	}
+
+	button {
+		font: inherit;
+		cursor: pointer;
+	}
+
+	.skip {
+		padding: 8px 10px;
+		font-size: 13px;
+		color: var(--content-meta);
+		background: none;
+		border: 0;
+		border-radius: 4px;
+	}
+
+	.skip:hover {
+		color: var(--deep-text);
+		background: var(--btn-regular-bg);
+	}
+
+	.go {
+		display: inline-flex;
+		align-items: center;
+		min-height: 34px;
+		padding: 8px 16px;
+		font-size: 13px;
+		color: var(--primary-foreground);
+		background: var(--primary);
+		border: 0;
+		border-radius: 6px;
+	}
+
+	.go:hover:not(:disabled) {
+		filter: brightness(1.06);
+	}
+
+	.go:disabled {
+		opacity: 0.6;
+		cursor: default;
+	}
+
+	.ghost {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 8px 14px;
+		font-size: 13px;
+		color: var(--content-meta);
+		background: none;
+		border: 1px solid var(--line-color);
+		border-radius: 4px;
+	}
+
+	.ghost.solid {
+		font-size: 14px;
+		color: var(--deep-text);
+		background: var(--input-bg);
+		border-color: transparent;
+	}
+
+	.back:focus-visible,
+	.skip:focus-visible,
+	.go:focus-visible,
+	.ghost:focus-visible,
+	.link:focus-visible {
 		outline: 2px solid var(--primary);
 		outline-offset: 2px;
 	}
 
-	/* 摘要态：私钥就绪后的那一行——状态词 + 文字动作，不回显内容 */
-	.key-summary {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		height: 56px;
-		margin-bottom: 18px;
-		padding: 0 16px;
-		background: var(--input-bg);
-		border: 1px solid var(--input-border);
-		border-radius: var(--oobe-input-radius);
+	.loading {
+		margin: 40px 0;
+		text-align: center;
+		font-size: 13px;
+		color: var(--content-meta);
 	}
 
-	.key-summary-word {
-		margin-right: auto;
+	.alert {
+		margin: 0 0 12px;
+		padding: 8px 12px;
+		border-left: 2px solid var(--destructive);
+		font-size: 13px;
+		color: var(--destructive);
+	}
+
+	.sealed {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.stamp {
+		display: inline-block;
+		margin-bottom: 12px;
+		padding: 6px 10px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.06em;
+		color: var(--content-meta);
+		border: 1px solid var(--line-color);
+		border-radius: 3px;
+	}
+
+	.sealed p {
+		margin: 0 0 6px;
+		font-size: 13px;
+		line-height: 1.8;
+		color: var(--content-meta);
+	}
+
+	.track {
+		width: 100%;
+		max-width: 760px;
+		display: flex;
+		gap: 22px;
+		margin: 0;
+		padding: 14px 2px 16px;
+		list-style: none;
+	}
+
+	.track li {
+		display: flex;
+		align-items: baseline;
+		gap: 6px;
+	}
+
+	.track .n {
+		font-family: var(--font-mono);
 		font-size: 15px;
 		color: var(--content-meta);
 	}
 
-	.link-btn {
-		background: none;
-		border: none;
-		padding: 4px 6px;
-		font: inherit;
-		font-size: 13px;
-		font-weight: 500;
-		color: var(--primary);
-		cursor: pointer;
+	.track .t {
+		font-size: 11px;
+		color: var(--content-meta);
 		white-space: nowrap;
 	}
 
-	.link-btn:disabled {
-		color: var(--content-meta);
-		cursor: default;
+	.track li[aria-current] .n,
+	.track li[aria-current] .t {
+		color: var(--deep-text);
 	}
 
-	.link-btn:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 2px;
-	}
-
-	/* 查看私钥的等宽正文：弹窗壳来自通用 ConfirmDialog */
 	.modal-code {
 		margin: 0;
 		padding: 0;
-		background: none;
-		border: none;
 		font-family: var(--font-mono);
 		font-size: 13px;
 		line-height: 1.6;
@@ -1049,396 +1065,58 @@ onMount(() => {
 		word-break: break-all;
 	}
 
-	/* ── 底部三段式：左返回 / 中进度 / 右主按钮 ── */
-	.footer-actions {
-		position: relative;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-		margin-top: clamp(16px, 2.5vh, 24px);
-		padding-top: clamp(14px, 2vh, 20px);
-		border-top: 1px solid var(--line-divider);
-	}
-
-	.ghost-btn {
-		background: none;
-		border: none;
-		padding: 8px 12px;
-		border-radius: 8px;
-		font: inherit;
-		font-size: 14px;
-		font-weight: 500;
-		color: var(--content-meta);
-		cursor: pointer;
-		transition:
-			color 0.2s var(--oobe-ease),
-			background 0.2s var(--oobe-ease);
-	}
-
-
-	.ghost-btn:hover {
-		background: color-mix(in oklab, var(--deep-text) 8%, transparent);
-		color: var(--deep-text);
-	}
-
-	/* 绝对居中：左右按钮宽度不等时进度点也不偏 */
-	.dots {
-		position: absolute;
-		left: 50%;
-		top: 50%;
-		transform: translate(-50%, -50%);
-		display: flex;
-		align-items: center;
-		gap: 6px;
-	}
-
-	.done-group {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		margin-left: auto;
-	}
-
-	.dot {
-		width: 6px;
-		height: 6px;
-		border-radius: 999px;
-		background: var(--input-border);
-		transition: all 0.3s var(--oobe-ease);
-	}
-
-	.dot.active {
-		width: 20px;
-		background: var(--primary);
-	}
-
-	.primary-btn {
-		background: var(--primary);
-		/* 前台 --btn-content 在暗色下与 --primary 几乎同色（同色系设计），
-		   实心 CTA 上不可读；后台为这个问题准备的专用 token 是 --primary-foreground */
-		color: var(--primary-foreground);
-		border: none;
-		border-radius: var(--oobe-btn-radius);
-		padding: 10px 20px;
-		font: inherit;
-		font-size: 14px;
-		font-weight: 600;
-		cursor: pointer;
-		transition: filter 0.2s var(--oobe-ease);
-	}
-
-	.primary-btn:hover:not(:disabled) {
-		filter: brightness(1.08);
-	}
-
-	.primary-btn:disabled {
-		opacity: 0.6;
-		cursor: default;
-	}
-
-	.primary-btn:focus-visible,
-	.ghost-btn:focus-visible {
-		outline: 2px solid var(--primary);
-		outline-offset: 2px;
-	}
-
-	/* ── 完成屏 ── */
-	.done-hero {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 12px;
-		padding-top: clamp(8px, 2vh, 16px);
-	}
-
-	.done-ring {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 72px;
-		height: 72px;
-		border-radius: 50%;
-		background: color-mix(in oklab, var(--primary) 14%, transparent);
-		color: var(--primary);
-		font-size: 32px;
-	}
-
-	.done-action {
-		display: flex;
-		justify-content: center;
-		margin-top: clamp(18px, 3vh, 28px);
-	}
-
-	/* ── 加载 / 错误态 ── */
-	.state-loading {
-		padding: 48px 0;
-		text-align: center;
-		color: var(--content-meta);
-	}
-
-	.state-error {
-		margin-bottom: 16px;
-		padding: 10px 14px;
-		border-radius: 10px;
-		background: color-mix(in oklab, var(--destructive) 10%, transparent);
-		color: var(--destructive);
-		font-size: 13px;
-	}
-	/* ── 入场序列：标本夜色 ──
-	   幕布与向导卡片共用一条基线、一套墨色；幕布上移露出卡片。 */
-	.intro-black {
-		--intro-ink: #0e0b16;
-		--intro-paper: #efeaf7;
-		--intro-pollen: #e9c15b;
-		--intro-rule: #2a2340;
-		/* 字体栈定义在开屏自身：幕布 portal 到 body，不依赖后台 token 的作用域 */
-		--intro-serif: "Iowan Old Style", "Palatino Linotype", "Source Han Serif SC",
-			"Songti SC", Georgia, serif;
-		--intro-mono: "JetBrains Mono", "Monaco", "Consolas", monospace;
-		--ease-out: cubic-bezier(0.2, 0, 0, 1);
-
-		position: fixed;
-		inset: 0;
-		z-index: 15000;
-		background: var(--intro-ink);
-		transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1);
-		will-change: transform;
-	}
-
-	.intro-black.intro-fade-out {
-		transform: translateY(-101%);
-		pointer-events: none;
-	}
-
-	/* 转场进入：遮罩已盖住视口，元素动画立即开始，不再空等前置静默 */
-	.intro-black.intro-quick .intro-logo {
-		animation-delay: 0.05s;
-	}
-	.intro-black.intro-quick .intro-wordmark {
-		animation-delay: 0.35s;
-	}
-	.intro-black.intro-quick .intro-status {
-		animation-delay: 0.5s;
-	}
-	.intro-black.intro-quick .intro-rule {
-		animation-delay: 0s;
-	}
-	.intro-black.intro-quick .intro-nib {
-		animation-delay: 0.2s, 0.4s;
-	}
-
-	/* 坐标格只在中心可见，边缘自然淡出 */
-	.intro-grid {
-		position: absolute;
-		inset: 0;
-		background-image:
-			linear-gradient(to right, var(--intro-rule) 1px, transparent 1px),
-			linear-gradient(to bottom, var(--intro-rule) 1px, transparent 1px);
-		background-size: 34px 34px;
-		opacity: 0.55;
-		-webkit-mask-image: radial-gradient(
-			ellipse 72% 62% at 50% 46%,
-			#000 26%,
-			transparent 78%
-		);
-		mask-image: radial-gradient(
-			ellipse 72% 62% at 50% 46%,
-			#000 26%,
-			transparent 78%
-		);
-	}
-
-	.intro-folio {
-		position: absolute;
-		top: clamp(20px, 4vh, 42px);
-		left: clamp(24px, 7vw, 120px);
-		font-family: var(--intro-mono);
-		font-size: 11px;
-		letter-spacing: 0.2em;
-		color: color-mix(in oklab, var(--intro-paper) 58%, var(--intro-ink));
-		animation: intro-rise-in 0.7s var(--ease-out) 0.1s both;
-	}
-
-	.intro-folio::after {
-		content: "";
-		display: block;
-		width: 26px;
-		height: 1px;
-		margin-top: 9px;
-		background: var(--intro-rule);
-	}
-
-	.intro-center {
-		position: absolute;
-		inset: 0;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: clamp(16px, 2.8vh, 26px);
-		padding-bottom: 6vh;
-		text-align: center;
-	}
-
-	/* 三个主体元素的时间轴与样张一致，都从幕布出现起算，不受阶段切换影响 */
-	.intro-logo {
-		display: grid;
-		place-items: center;
-		animation: intro-develop 0.6s ease-out 0.72s both;
-	}
-
-	.intro-logo :global(.inline-icon) {
-		font-size: clamp(96px, 22vw, 144px);
-		color: var(--intro-paper);
-	}
-
-	.intro-logo img {
-		/* 图片四周有透明留白，容器放大后花朵主体才与题名相称；
-		   显式高宽让图片未解码时也占据稳定位置。 */
-		width: clamp(128px, 20vw, 192px);
-		height: auto;
-		aspect-ratio: 1;
-		object-fit: contain;
-	}
-
-	.intro-wordmark {
-		font-family: var(--intro-serif);
-		font-size: clamp(30px, 6.4vw, 54px);
-		font-weight: 400;
-		line-height: 1;
-		letter-spacing: 0.26em;
-		margin-right: -0.26em;
-		color: var(--intro-paper);
-		animation: intro-word-in 0.95s var(--ease-out) 1.5s both;
-	}
-
-	.intro-status {
-		margin: 0;
-		font-family: var(--intro-mono);
-		font-size: 11px;
-		letter-spacing: 0.18em;
-		min-height: 1.4em;
-		color: color-mix(in oklab, var(--intro-paper) 66%, var(--intro-ink));
-		animation: intro-rise-in 0.6s ease-out 1.72s both;
-	}
-
-	/* 基线：书写线，左端与卷号同列 */
-	.intro-baseline {
-		position: absolute;
-		left: clamp(24px, 7vw, 120px);
-		right: clamp(24px, 7vw, 120px);
-		bottom: clamp(64px, 18vh, 180px);
-		height: 1px;
-	}
-
-	.intro-rule {
-		position: absolute;
-		inset: 0;
-		background: var(--intro-rule);
-		transform: scaleX(0);
-		transform-origin: left center;
-		animation: intro-rule-grow 0.9s var(--ease-out) 0.1s both;
-	}
-
-	.intro-nib {
-		position: absolute;
-		top: 50%;
-		left: 0;
-		width: 7px;
-		height: 7px;
-		background: var(--intro-pollen);
-		transform: translate(-50%, -50%) rotate(45deg);
-		opacity: 0;
-		animation:
-			intro-nib-in 0.3s ease-out 0.7s both,
-			intro-nib-write 1.1s cubic-bezier(0.4, 0, 0.2, 1) 1.3s both;
-	}
-
-	@keyframes intro-rise-in {
-		from {
-			opacity: 0;
+	@media (max-width: 700px) {
+		.oobe {
+			padding: 16px 0 0;
 		}
-		to {
-			opacity: 1;
-		}
-	}
 
-	@keyframes intro-develop {
-		from {
-			opacity: 0;
-			filter: blur(4px);
+		.site {
+			font-size: 23px;
+			padding-bottom: 12px;
 		}
-		to {
-			opacity: 1;
-			filter: blur(0);
-		}
-	}
 
-	@keyframes intro-word-in {
-		from {
-			opacity: 0;
-			letter-spacing: 0.26em;
-			margin-right: -0.26em;
+		.sheet {
+			height: auto;
+			flex: 1;
+			min-height: 0;
+			border: 0;
+			border-radius: 0;
+			padding: 18px 20px;
+			margin: 0;
 		}
-		to {
-			opacity: 1;
-			letter-spacing: 0.035em;
-			margin-right: -0.035em;
-		}
-	}
 
-	@keyframes intro-rule-grow {
-		from {
-			transform: scaleX(0);
+		.body {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 0;
+			margin-top: 6px;
 		}
-		to {
-			transform: scaleX(1);
-		}
-	}
 
-	@keyframes intro-nib-in {
-		from {
-			opacity: 0;
+		.art {
+			display: none;
 		}
-		to {
-			opacity: 1;
-		}
-	}
 
-	@keyframes intro-nib-write {
-		from {
-			left: 0;
+		h1 {
+			margin-top: 14px;
+			font-size: 23px;
 		}
-		to {
-			left: 100%;
+
+		.one input {
+			max-width: none;
+		}
+
+		.track {
+			gap: 14px;
+			padding: 14px 20px 16px;
+		}
+
+		.track .t {
+			display: none;
 		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.intro-black,
-		.intro-folio,
-		.intro-logo,
-		.intro-wordmark,
-		.intro-rule,
-		.intro-nib {
-			animation: none;
-			transition: none;
-		}
-
-		.intro-logo {
-			opacity: 1;
-		}
-		.intro-rule {
-			transform: scaleX(1);
-		}
-		.intro-nib {
-			opacity: 1;
-			left: 100%;
-		}
-		.intro-wordmark {
-			letter-spacing: 0.035em;
-			margin-right: -0.035em;
+		* {
+			transition: none !important;
 		}
 	}
 </style>
