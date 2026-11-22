@@ -11,6 +11,10 @@ import { resolveAdminLogo } from "@/utils/admin-logo";
 import { resolveAdminAvatarUrl } from "@/utils/avatar-url";
 import { canBootstrap } from "@/utils/bootstrap-mode";
 
+// 服务端渲染：canBootstrap 读 Astro.request.headers 判断是否来自本机回环，
+// 这个头在预渲染产物里不存在，缺这一行会让守卫在生产构建中永远判假。
+export const prerender = false;
+
 // 首次配置阶段：后台首页也让位给 /setup/，与 [...slug] 兜底页保持一致。
 if (canBootstrap(Astro.request)) {
 	return Astro.redirect("/setup/");

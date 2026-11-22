@@ -278,7 +278,7 @@ onMount(() => {
 		border-radius: 0.75rem;
 		background: var(--muted);
 		color: var(--deep-text) !important;
-		font-size: 0.925rem;
+		font-size: var(--admin-fs-body, 0.925rem);
 	}
 
 	.status-banner.error {
@@ -312,7 +312,7 @@ onMount(() => {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		font-size: 0.9rem;
+		font-size: var(--admin-fs-meta, 0.9rem);
 		color: var(--content-meta);
 	}
 
@@ -328,7 +328,7 @@ onMount(() => {
 
 	/* 数据时间戳：会话是实时数据，必须显式标出这份列表的采集时刻 */
 	.updated-at {
-		font-size: 0.8rem;
+		font-size: var(--admin-fs-data, 0.8rem);
 		color: var(--content-meta);
 		white-space: nowrap;
 	}
@@ -342,7 +342,7 @@ onMount(() => {
 		border: 1px solid var(--line-divider);
 		background: var(--card-bg);
 		color: var(--deep-text);
-		font-size: 0.875rem;
+		font-size: var(--admin-fs-body, 0.875rem);
 		cursor: pointer;
 		transition: background 0.15s ease, border-color 0.15s ease;
 	}
@@ -367,7 +367,7 @@ onMount(() => {
 
 	.sec-btn.sm {
 		padding: 0.35rem 0.7rem;
-		font-size: 0.8rem;
+		font-size: var(--admin-fs-meta, 0.8rem);
 	}
 
 	.sessions-empty {
@@ -377,7 +377,7 @@ onMount(() => {
 		gap: 0.5rem;
 		padding: 3rem 1rem;
 		color: var(--content-meta);
-		font-size: 0.925rem;
+		font-size: var(--admin-fs-body, 0.925rem);
 	}
 
 	.sessions-empty :global(.empty-icon) {
@@ -418,12 +418,12 @@ onMount(() => {
 
 	.session-device {
 		font-weight: 600;
-		font-size: 0.95rem;
+		font-size: var(--admin-fs-body, 0.95rem);
 		color: var(--deep-text);
 	}
 
 	.badge {
-		font-size: 0.7rem;
+		font-size: var(--admin-fs-data, 0.7rem);
 		padding: 0.1rem 0.5rem;
 		border-radius: 999px;
 	}
@@ -443,7 +443,7 @@ onMount(() => {
 		display: flex;
 		gap: 1rem;
 		flex-wrap: wrap;
-		font-size: 0.8rem;
+		font-size: var(--admin-fs-data, 0.8rem);
 		color: var(--content-meta);
 	}
 </style>

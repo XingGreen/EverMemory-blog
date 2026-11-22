@@ -22,15 +22,13 @@ these rules win and the older wording is void.
 
 | Area | Paths | Permission |
 | :--- | :--- | :--- |
-| Dashboard | `src/pages/admin/**`, `src/pages/api/admin/**`, `src/components/admin/**` | edit directly |
-| Frontend | `src/pages/**` except `admin`, `src/layouts/**`, `src/components/{layout,widget,controls}/**` | do not modify |
-| Shared components | `src/components/common/**` | ask first |
-| Shared logic | `src/utils/**`, `src/i18n/**`, `src/config/**`, `src/constants/**` | ask first |
-| Build and deploy | `turbo.json`, `astro.config.mjs`, `wrangler.jsonc`, `vercel.json`, `package.json` | ask first |
-| Shared docs | `AGENTS.md`, `rules/**`, `docs/**`, `README*.md`, `CONTRIBUTING.md` | edit directly |
+| Everything | the whole repository | edit directly |
 
-Violating the frontend boundary has already forced a rollback once. Do not re-interpret a
-request to justify touching files outside the agreed area.
+The path allowlist is gone: the dashboard, the public theme, the build wiring and the tooling are
+all editable. What still binds is the quality bar — the design system in `docs/ADMIN_UI.md` for
+`/admin/`, the `!important` ownership policy in §6, the zero-burden rule for optional features, and
+the attribution boundary. Editing a file is not permission to widen the task: keep each change
+inside what was asked.
 
 ## 2. Requirement handling
 

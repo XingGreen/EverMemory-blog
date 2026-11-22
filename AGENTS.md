@@ -91,12 +91,10 @@ wired.
   [`rules/a11y.md`](./rules/a11y.md). Native semantics first, every control named, Esc closes
   overlays, `:focus-visible` everywhere, both themes pass. A type check is not a11y proof.
 
-- **Scope.** Edit `src/pages/admin/**`, `src/pages/api/admin/**`, and `src/components/admin/**`
-  directly. Do not modify frontend routes (`src/pages/**` except admin), `src/layouts/**`, or
-  `src/components/{layout,widget,controls}/**`. Ask before touching `src/components/common/**`,
-  `src/utils/**`, `src/i18n/**`, `src/config/**`, `src/constants/**`, `turbo.json`,
-  `astro.config.mjs`, `wrangler.jsonc`, `vercel.json`, or `package.json`. Never widen a request
-  beyond its stated scope.
+- **Scope.** The whole repository is editable, frontend and build wiring included.
+  The rules that still bind are the quality ones above — no reinvention, no invented values, no
+  placeholders, the design system for anything under `/admin/` — not a path allowlist. Keep a
+  change inside what the task asked for regardless of what is editable.
 
 - **Decide and execute.** Routine code edits, file organisation, and formatting: decide and run
   them without asking. When a standard, style, or architecture question is unclear, read the

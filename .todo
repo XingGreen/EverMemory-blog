@@ -37,3 +37,9 @@
 ## 架构待办
 
 - [ ] 生产目录 6 个写入模块（config/taxonomy/secret/audit/persist/github-app）未做 fs|KV 抽象——线上改配置、分类、密钥无法落盘（2026-11-15）
+
+## 设计令牌收敛（2026-11-22）
+
+- [x] PostList / SessionManager / PostHistoryPage / TaxonomyManager 的文字字号改为 `--admin-fs-*` token（44 处，采用率 27.6% → 42.6%）；图标尺寸保留原值
+- [ ] 剩余约 171 处硬编码字号未收敛，集中在 AdminDashboard（61）、PostList 图标档、PostEditorFmPanel（14）、SettingsOverview（8）、VerifyScreen（7）。多数是图标尺寸与装饰值，需逐条判定是否为五级字号管辖（2026-11-22）
+- [ ] `src/pages/admin/index.astro` 缺 `export const prerender = false`，导致 `Astro.request.headers` 在预渲染路径不可用、`canBootstrap` 的生产判定失效——已补，但 `[...slug].astro` 的同名声明仍排在 `canBootstrap` 调用之后，建议前移（2026-11-22）

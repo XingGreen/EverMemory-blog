@@ -825,7 +825,7 @@ function actionLabel(action: string, title: string): string {
 		border-bottom: 1.5px solid transparent;
 		background: none;
 		font: inherit;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.8125rem);
 		color: var(--md-on-surface-variant);
 		white-space: nowrap;
 		cursor: pointer;
@@ -856,7 +856,7 @@ function actionLabel(action: string, title: string): string {
 
 	.rail-count {
 		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: 0.6875rem;
+		font-size: var(--admin-fs-data, 0.6875rem);
 		font-variant-numeric: tabular-nums;
 		color: var(--md-on-surface-variant);
 	}
@@ -922,7 +922,7 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.filter-label {
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--md-on-surface-variant);
 		white-space: nowrap;
 	}
@@ -935,7 +935,7 @@ function actionLabel(action: string, title: string): string {
 		background: none;
 		color: var(--md-primary-text);
 		font: inherit;
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-weight: 500;
 		cursor: pointer;
 	}
@@ -983,7 +983,7 @@ function actionLabel(action: string, title: string): string {
 
 	.state-text {
 		color: var(--md-on-surface-variant);
-		font-size: 0.875rem;
+		font-size: var(--admin-fs-body, 0.875rem);
 	}
 
 	/* 加载骨架：占位块与真实行共用 .list-item 的列网格与 min-height，
@@ -1108,7 +1108,7 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.ledger-state {
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-weight: 500;
 		letter-spacing: 0.02em;
 		color: var(--md-on-surface-variant);
@@ -1121,7 +1121,7 @@ function actionLabel(action: string, title: string): string {
 
 /* 已发布是最安静的一档：它不需要你做任何事 */
 	.ledger-time {
-		font-size: 0.71875rem;
+		font-size: var(--admin-fs-data, 0.71875rem);
 		color: var(--md-on-surface-variant);
 	}
 
@@ -1152,7 +1152,7 @@ function actionLabel(action: string, title: string): string {
 	/* 标题是列表的视觉锚点：加大加粗，并用 on-surface（暗色下接近纯白），
 	   亮色主题下 on-surface 是深色，符合「最亮/最重」的层级意图而非硬编码纯白。 */
 	.title {
-		font-size: 1.0625rem;
+		font-size: var(--admin-fs-item, 1.0625rem);
 		font-weight: 600;
 		letter-spacing: 0.01em;
 		color: var(--md-on-surface);
@@ -1179,7 +1179,7 @@ function actionLabel(action: string, title: string): string {
 	/* 摘要：给人读的第二行 */
 	.intro {
 		display: block;
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-weight: 400;
 		color: var(--md-on-surface-variant);
 		overflow: hidden;
@@ -1201,7 +1201,7 @@ function actionLabel(action: string, title: string): string {
 	}
 
 	.meta-cat {
-		font-size: 0.6875rem;
+		font-size: var(--admin-fs-data, 0.6875rem);
 		color: var(--md-on-surface-variant);
 		white-space: nowrap;
 		overflow: hidden;
@@ -1210,7 +1210,7 @@ function actionLabel(action: string, title: string): string {
 
 	.meta-ext {
 		font-family: var(--font-mono, ui-monospace, monospace);
-		font-size: 0.6875rem;
+		font-size: var(--admin-fs-data, 0.6875rem);
 		letter-spacing: 0.02em;
 		color: var(--md-on-surface-variant);
 		white-space: nowrap;
@@ -1309,7 +1309,7 @@ function actionLabel(action: string, title: string): string {
 		padding: 0.75rem 1rem 0;
 		border-top: 1px solid var(--md-outline);
 		color: var(--md-on-surface-variant);
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 	}
 
 	/* 左侧统计：只在筛选时出现，因此不必再分成「总数 + 未同步」两段 */
@@ -1331,7 +1331,7 @@ function actionLabel(action: string, title: string): string {
 		background: transparent;
 		color: var(--md-primary-text);
 		font: inherit;
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		font-weight: 500;
 		cursor: pointer;
 		transition: background 0.15s;
@@ -1418,7 +1418,7 @@ function actionLabel(action: string, title: string): string {
 			border-radius: 12px;
 			background: var(--btn-regular-bg);
 			color: var(--deep-text);
-			font-size: 0.75rem;
+			font-size: var(--admin-fs-meta, 0.75rem);
 		}
 
 		/* 视觉 32px 仍低于 44px 触控下限，用伪元素纵向外扩 */
@@ -1493,7 +1493,7 @@ function actionLabel(action: string, title: string): string {
 		}
 
 		.title {
-			font-size: 0.875rem;
+			font-size: var(--admin-fs-item, 0.875rem);
 			font-weight: 700;
 			line-height: 1.35;
 		}

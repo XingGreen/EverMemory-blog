@@ -9,6 +9,10 @@ import { resolveAdminLogo } from "@/utils/admin-logo";
 import { resolveAdminAvatarUrl } from "@/utils/avatar-url";
 import { canBootstrap } from "@/utils/bootstrap-mode";
 
+// 服务端渲染：canBootstrap 读 Astro.request.headers 判断请求是否来自本机回环，
+// 该头在预渲染产物里不存在。声明必须在调用之前，否则生产构建里守卫恒判假。
+export const prerender = false;
+
 // 首次配置阶段：任何后台地址都先让位给 /setup/，避免未登录的 SPA
 // 在后台里空转（接口全 401）。配齐后此判定为假，后台正常渲染。
 if (canBootstrap(Astro.request)) {
@@ -19,7 +23,6 @@ if (canBootstrap(Astro.request)) {
 // /admin/* 下的一切子路径（settings、articles/edit/:slug 等）都渲染同一个控制台页，
 // 具体显示哪个页面由 AdminDashboard 按当前 pathname 在前端解析。
 // 因此这里用不预渲染的动态兜底页承接任意子路径，避免 404。
-export const prerender = false;
 
 const title = "控制面板";
 const description = `控制面板 - ${profileConfig.name}`;

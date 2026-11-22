@@ -699,7 +699,7 @@ $effect(() => {
 		background: transparent;
 		font-family: inherit;
 		white-space: nowrap;
-		font-size: 0.875rem;
+		font-size: var(--admin-fs-body, 0.875rem);
 		color: var(--content-meta);
 		text-decoration: none;
 		cursor: pointer;
@@ -830,11 +830,12 @@ $effect(() => {
 		width: 100%;
 	}
 
-	/* 参考 .post-editor-title */
+	/* 文档大标题：五级字号里最高一档用 --admin-fs-page（docs/ADMIN_UI.md §3），
+	   原 2.25rem 不在表内，是各页面自行放大的历史遗留。 */
 	.post-editor-title {
 		margin: 0 0 1rem;
 		padding: 0;
-		font-size: 2.25rem;
+		font-size: var(--admin-fs-page, 2.25rem);
 		line-height: 1.4;
 		font-weight: 700;
 		letter-spacing: -0.025em;
@@ -844,7 +845,7 @@ $effect(() => {
 	.post-history-banner {
 		/* 参考里紧跟标题的说明行：小字、次级色、左对齐 */
 		margin: -0.5rem 0 0.75rem;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.8125rem);
 		color: var(--content-meta);
 	}
 
@@ -888,7 +889,7 @@ $effect(() => {
 		padding: 1rem 1.25rem 0.75rem 2rem;
 		border-bottom: 1px solid var(--post-editor-rule);
 		background: var(--card-bg);
-		font-size: 0.875rem;
+		font-size: var(--admin-fs-meta, 0.875rem);
 		font-weight: 500;
 		color: var(--content-meta);
 	}
@@ -932,7 +933,7 @@ $effect(() => {
 		border-top: 1px solid var(--post-editor-rule);
 		background: transparent;
 		font-family: inherit;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.8125rem);
 		color: var(--destructive);
 		cursor: pointer;
 	}
@@ -950,14 +951,14 @@ $effect(() => {
 	/* 参考 .post-history-note */
 	.post-history-note {
 		margin: 0;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.8125rem);
 		color: var(--content-meta);
 	}
 
 	.post-history-error {
 		margin: 0;
 		padding: 0 1.75rem 1rem;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.8125rem);
 		color: var(--destructive);
 	}
 
@@ -986,14 +987,14 @@ $effect(() => {
 
 	.post-history-confirm h3 {
 		margin: 0;
-		font-size: 1rem;
+		font-size: var(--admin-fs-item, 1rem);
 		font-weight: 600;
 		color: var(--deep-text);
 	}
 
 	.post-history-confirm p {
 		margin: 0;
-		font-size: 0.875rem;
+		font-size: var(--admin-fs-body, 0.875rem);
 		color: var(--content-meta);
 	}
 
@@ -1010,7 +1011,7 @@ $effect(() => {
 		background: transparent;
 		color: var(--deep-text);
 		font-family: inherit;
-		font-size: 0.875rem;
+		font-size: var(--admin-fs-body, 0.875rem);
 		cursor: pointer;
 	}
 
@@ -1028,7 +1029,7 @@ $effect(() => {
 
 	@media (max-width: 768px) {
 		.post-editor-title {
-			font-size: 1.75rem;
+			font-size: var(--admin-fs-page-dense, 1.75rem);
 		}
 
 		/* 历史页是「正文 + 20rem 版本栏」的横向双栏。手机上 20rem(320px)

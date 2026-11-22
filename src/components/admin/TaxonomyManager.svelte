@@ -1098,7 +1098,7 @@ $effect(() => {
 		align-items: center;
 		gap: 0.5rem;
 		padding: 2rem 0.5rem;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.8125rem);
 		color: var(--content-meta);
 	}
 
@@ -1525,7 +1525,7 @@ $effect(() => {
 
 	.dialog-actions :global(.ui-btn) {
 		padding: 0.5rem 1rem;
-		font-size: 0.875rem;
+		font-size: var(--admin-fs-body, 0.875rem);
 	}
 
 	.modal-card {
@@ -1547,7 +1547,7 @@ $effect(() => {
 	}
 
 	.modal-head h3 {
-		font-size: 1.0625rem;
+		font-size: var(--admin-fs-item, 1.0625rem);
 		font-weight: 600;
 		color: var(--deep-text);
 	}
@@ -1573,14 +1573,14 @@ $effect(() => {
 
 	.modal-desc {
 		margin: 0 0 1.25rem;
-		font-size: 0.875rem;
+		font-size: var(--admin-fs-body, 0.875rem);
 		line-height: 1.7;
 		color: var(--content-meta);
 	}
 
 	.modal-hint {
 		margin: -0.75rem 0 1.25rem;
-		font-size: 0.75rem;
+		font-size: var(--admin-fs-meta, 0.75rem);
 		color: var(--content-meta);
 		opacity: 0.8;
 	}
@@ -1590,7 +1590,7 @@ $effect(() => {
 		flex-direction: column;
 		gap: 0.5rem;
 		margin-bottom: 1.25rem;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.8125rem);
 		color: var(--deep-text);
 	}
 
@@ -1602,7 +1602,7 @@ $effect(() => {
 		border-radius: 8px;
 		background: var(--input-bg);
 		color: var(--deep-text);
-		font-size: 0.875rem;
+		font-size: var(--admin-fs-body, 0.875rem);
 		font-family: inherit;
 	}
 
@@ -1613,7 +1613,7 @@ $effect(() => {
 
 	.modal-error {
 		margin: 0 0 0.75rem;
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.8125rem);
 		color: var(--destructive);
 	}
 
@@ -1634,7 +1634,7 @@ $effect(() => {
 		border: none;
 		background: transparent;
 		color: var(--destructive);
-		font-size: 0.8125rem;
+		font-size: var(--admin-fs-meta, 0.8125rem);
 		font-family: inherit;
 		cursor: pointer;
 		opacity: 0.85;
