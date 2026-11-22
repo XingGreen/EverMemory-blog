@@ -61,8 +61,7 @@ inside what was asked.
   published history, or deleting an unmerged branch. Rewriting published history requires a
   backup branch, explicit approval, and `git push --force-with-lease`.
 - Commit messages: one short subject line; body at most two lines, only what changed. No
-  reasoning, no narrative, no conversation traces. `scripts/check-commit-msg.mjs` rejects
-  phrases such as "previous round", "measured", or "per your request".
+  reasoning, no narrative, no conversation traces.
 - Stage only the files this change touches; avoid `git add -A` when unrelated edits exist.
 
 ## 4. Delivery
