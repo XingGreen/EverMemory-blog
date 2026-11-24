@@ -300,6 +300,56 @@ const groups = $derived(
 	})),
 );
 
+/**
+ * 侧边栏是「目录」而不是「页面切换器」：点某一组就滚到那一组。
+ * 不拆成独立页面——只有三组，整页铺开更省事，也避免「别的组不见了」的错觉。
+ *
+ * 滚动必须落在本组件自己的滚动容器上（AdminPage 的内容区），
+ * 不能用 scrollIntoView：它会连带滚动后台的整页容器与文档层，
+ * 而后台 html/body 是 overflow:hidden，被程序化滚动后无法恢复。
+ */
+function scrollToGroup(id: string) {
+	const target = document.querySelector<HTMLElement>(`[data-group="${id}"]`);
+	if (!target) return;
+
+	/* 折叠的分组（人机验证）要先展开，否则滚过去看到的是收起的一条。
+	   展开会改变布局高度，所以滚动必须等浏览器结算完新布局后再算，
+	   单帧在慢设备上仍可能读到旧高度，用双帧更稳。 */
+	const details = target as HTMLDetailsElement;
+	const needsOpen = details.tagName === "DETAILS" && !details.open;
+	if (needsOpen) details.open = true;
+
+	requestAnimationFrame(() => {
+		requestAnimationFrame(() => {
+			const scroller = findScrollParent(target);
+			if (!scroller) {
+				target.scrollIntoView({ block: "start", behavior: "smooth" });
+				return;
+			}
+			const headroom = 12;
+			const offset =
+				target.getBoundingClientRect().top -
+				scroller.getBoundingClientRect().top +
+				scroller.scrollTop -
+				headroom;
+			scroller.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
+		});
+	});
+}
+
+/** 向上找到第一个可纵向滚动的祖先 */
+function findScrollParent(el: HTMLElement): HTMLElement | null {
+	let node = el.parentElement;
+	while (node) {
+		const style = getComputedStyle(node);
+		if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight) {
+			return node;
+		}
+		node = node.parentElement;
+	}
+	return null;
+}
+
 // 配置完成度：只统计 required 必配项，托管项不算（它自己会生成）
 const requiredItems = $derived(
 	items.filter((item) => item.required && !item.managed),
@@ -854,89 +904,119 @@ function answerConfirm(ok: boolean) {
 			</div>
 		{/if}
 
-		{#each groups as group (group.id)}
-			{@const groupRows = rowsOf(group.id)}
-			{@const verdict = verdictOf(group.id)}
-			<!-- 必填项永远展开，不给折叠；整组都可留空的（人机验证）才可折叠，
-			     折叠形态照参考项目的可选区块：标题 + 当前状态同一行，上面一条细线。 -->
-			<details class="pgroup" class:opt={groupOptional(group.id)} open={!groupOptional(group.id)}>
-				{#if groupOptional(group.id)}
-					<summary class="opt-head">
-						<h3>{i18n(I18nKey[group.labelKey])}</h3>
-						{#if verdict}
-							<span class="opt-state">{verdict.word}</span>
+		<!-- 左列分组目录 + 右侧整页内容。
+		     分组只有三组，不需要拆成独立页面：整页铺开，点左列跳到对应分组即可。
+		     侧边栏在这里是「目录」，不是「页面切换器」——内容始终全在页面上，
+		     这样加/减分组不用改路由，也不会让用户以为「别的组不见了」。 -->
+		<div class="secrets-layout">
+			<nav class="secrets-nav" aria-label="环境变量分组">
+				{#each groups as group (group.id)}
+					{@const gv = verdictOf(group.id)}
+					<button
+						type="button"
+						class="secrets-nav-item"
+						onclick={() => scrollToGroup(group.id)}
+					>
+						<Icon icon={group.icon} size="sm" />
+						<span class="secrets-nav-label">{i18n(I18nKey[group.labelKey])}</span>
+						{#if gv}
+							<span class="secrets-nav-dot" data-tone={gv.tone} aria-hidden="true"></span>
 						{/if}
-						<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-							<path
-								d="M6 3.5L10.5 8L6 12.5"
-								stroke="currentColor"
-								stroke-width="1.6"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-						</svg>
-					</summary>
-					<p class="sdesc">{i18n(I18nKey[group.descKey])}</p>
-				{:else}
-					<!-- 必填分组不给折叠：空的隐藏 summary 顶掉浏览器自带的「详情」一行，
-					     它不渲染、不可聚焦，这一组也就不可能被收起。 -->
-					<summary hidden></summary>
-					<div class="shead">
-						<div class="shead-text">
-							<h3>{i18n(I18nKey[group.labelKey])}</h3>
+					</button>
+				{/each}
+			</nav>
+
+			<div class="secrets-body">
+				{#each groups as group (group.id)}
+					{@const groupRows = rowsOf(group.id)}
+					{@const verdict = verdictOf(group.id)}
+					<!-- 必填项永远展开，不给折叠；整组都可留空的（人机验证）才可折叠，
+					     折叠形态照参考项目的可选区块：标题 + 当前状态同一行，上面一条细线。 -->
+					<details
+						class="pgroup"
+						class:opt={groupOptional(group.id)}
+						open={!groupOptional(group.id)}
+						data-group={group.id}
+					>
+						{#if groupOptional(group.id)}
+							<summary class="opt-head">
+								<h3>{i18n(I18nKey[group.labelKey])}</h3>
+								{#if verdict}
+									<span class="opt-state">{verdict.word}</span>
+								{/if}
+								<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+									<path
+										d="M6 3.5L10.5 8L6 12.5"
+										stroke="currentColor"
+										stroke-width="1.6"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									/>
+								</svg>
+							</summary>
 							<p class="sdesc">{i18n(I18nKey[group.descKey])}</p>
-						</div>
-						{#if verdict}
-							<div class="state" data-tone={verdict.tone}>
-								<span class="word">{verdict.word}</span>
-								{#if verdict.receipt}
-									<span class="receipt">{verdict.receipt}</span>
+						{:else}
+							<!-- 必填分组不给折叠：空的隐藏 summary 顶掉浏览器自带的「详情」一行，
+							     它不渲染、不可聚焦，这一组也就不可能被收起。 -->
+							<summary hidden></summary>
+							<div class="shead">
+								<div class="shead-text">
+									<h3>{i18n(I18nKey[group.labelKey])}</h3>
+									<p class="sdesc">{i18n(I18nKey[group.descKey])}</p>
+								</div>
+								{#if verdict}
+									<div class="state" data-tone={verdict.tone}>
+										<span class="word">{verdict.word}</span>
+										{#if verdict.receipt}
+											<span class="receipt">{verdict.receipt}</span>
+										{/if}
+									</div>
+								{/if}
+								{#if group.id === "github"}
+									<button
+										type="button"
+										class="ui-btn ui-btn-soft ui-btn-sm"
+										onclick={runProbe}
+										disabled={probe.running || loading}
+									>
+										{probe.running
+											? i18n(I18nKey.secretsCheckRunning)
+											: i18n(I18nKey.secretsProbeCheck)}
+									</button>
 								{/if}
 							</div>
 						{/if}
-						{#if group.id === "github"}
-							<button
-								type="button"
-								class="ui-btn ui-btn-soft ui-btn-sm"
-								onclick={runProbe}
-								disabled={probe.running || loading}
-							>
-								{probe.running
-									? i18n(I18nKey.secretsCheckRunning)
-									: i18n(I18nKey.secretsProbeCheck)}
-							</button>
-						{/if}
-					</div>
-				{/if}
 
-				<SecretFields
-					rows={groupRows}
-					itemOf={(key) => itemByKey.get(key)}
-					{drafts}
-					origin={draftsOrigin}
-					writable={writable}
-					{replacing}
-					addressRaw={addressRaw}
-					addressError={addressError}
-					flashKey={flashKey}
-					{rotating}
-					probeRepoDetail={probeRepo?.detail ?? ""}
-					probeAppDetail={probeApp?.detail ?? ""}
-					probeInstallDetail={probeInstall?.detail ?? ""}
-					probeCandidates={probeInstall?.candidates ?? []}
-					onInput={(key, value) => (drafts[key] = value)}
-					onAddress={setAddress}
-					onView={(key) => {
-						viewTarget = key;
-						viewMode = "text";
-					}}
-					onEdit={(key) => (replacing[key] = true)}
-					onRotate={rotate}
-					onCandidate={(id) => (drafts.GITHUB_INSTALLATION_ID = id)}
-				/>
+						<SecretFields
+							rows={groupRows}
+							itemOf={(key) => itemByKey.get(key)}
+							{drafts}
+							origin={draftsOrigin}
+							writable={writable}
+							{replacing}
+							addressRaw={addressRaw}
+							addressError={addressError}
+							flashKey={flashKey}
+							{rotating}
+							probeRepoDetail={probeRepo?.detail ?? ""}
+							probeAppDetail={probeApp?.detail ?? ""}
+							probeInstallDetail={probeInstall?.detail ?? ""}
+							probeCandidates={probeInstall?.candidates ?? []}
+							onInput={(key, value) => (drafts[key] = value)}
+							onAddress={setAddress}
+							onView={(key) => {
+								viewTarget = key;
+								viewMode = "text";
+							}}
+							onEdit={(key) => (replacing[key] = true)}
+							onRotate={rotate}
+							onCandidate={(id) => (drafts.GITHUB_INSTALLATION_ID = id)}
+						/>
 
-			</details>
-		{/each}
+					</details>
+				{/each}
+			</div>
+		</div>
 
 		<div class="foot-row">
 			<button type="button" class="link" disabled={leakBusy} onclick={checkLeak}
@@ -1046,6 +1126,105 @@ function answerConfirm(ok: boolean) {
 	.secrets-page {
 		display: flex;
 		flex-direction: column;
+	}
+
+	/* 分组侧边栏 + 内容区。
+	   窄屏（≤820px）退回单列：侧边栏变成横向可滚的标签条，
+	   否则两列在手机上会把字段挤到不可用宽度。 */
+	.secrets-layout {
+		display: grid;
+		grid-template-columns: 13rem minmax(0, 1fr);
+		gap: var(--admin-gutter);
+		align-items: start;
+	}
+
+	.secrets-nav {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		position: sticky;
+		top: 0;
+	}
+
+	.secrets-nav-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		padding: 0.5rem 0.625rem;
+		border: none;
+		border-radius: var(--radius-md, 0.375rem);
+		background: transparent;
+		color: var(--content-meta);
+		font-size: var(--admin-fs-body, 0.875rem);
+		text-align: left;
+		cursor: pointer;
+		transition:
+			background 0.15s,
+			color 0.15s;
+	}
+
+	.secrets-nav-item:hover {
+		background: var(--btn-plain-bg-hover);
+		color: var(--deep-text);
+	}
+
+	.secrets-nav-item:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
+	.secrets-nav-label {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* 分组状态点：只用颜色区分 ok / warn / bad，与右侧结论条同一套语义色 */
+	.secrets-nav-dot {
+		width: 0.375rem;
+		height: 0.375rem;
+		border-radius: 50%;
+		flex: none;
+		background: var(--content-meta);
+	}
+
+	.secrets-nav-dot[data-tone="ok"] {
+		background: var(--success);
+	}
+
+	.secrets-nav-dot[data-tone="warn"] {
+		background: var(--warning);
+	}
+
+	.secrets-nav-dot[data-tone="bad"] {
+		background: var(--destructive);
+	}
+
+	.secrets-body {
+		min-width: 0;
+	}
+
+	@media (max-width: 820px) {
+		.secrets-layout {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 1rem;
+		}
+
+		.secrets-nav {
+			position: static;
+			flex-direction: row;
+			overflow-x: auto;
+			padding-bottom: 0.25rem;
+		}
+
+		.secrets-nav-item {
+			width: auto;
+			flex: none;
+			white-space: nowrap;
+		}
 	}
 
 	.state-line {
