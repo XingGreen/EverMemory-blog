@@ -194,3 +194,24 @@
       证据：提交 `47fce982`。`toastUndo` 状态、`runToastUndo()`、`.toast-undo` 样式均已就位，
       实测当前页面无撤回按钮（`hasUndoButton: false`），因尚无调用点传入 undo。
 
+---
+
+## 第 185 轮 · 2026-11-24 20:42
+
+主题：模块 D（排查与评估），产出结论不写业务代码。
+
+- [ ] **1. D1 后台目录分类审计**
+      问题：`src/components/admin/` 37 个文件中 34 个平铺根目录，与
+      `docs/ARCHITECTURE.md` 第 77 行「Domain-grouped components」的约定不符。
+      结论：建议按职责分为 `pages/` / `ui/` / `editor/` / `secrets/` / `shell/`，
+      分类依据是可验证规则（被引用次数、是否取数、文件名是否含业务词），不是审美。
+      证据：`docs/ADMIN_STRUCTURE_AUDIT.md`。**纯结构重整，未改动任何代码**；
+      因会动约 30 个 import 路径，建议等功能项收尾后单独提交。
+
+- [ ] **2. D3 后台内部标签页体系可行性评估**
+      结论：**不建议实现**。三个硬约束——①`AdminDashboard.svelte` 5663 行单实例巨石，
+      页面靠 `{#if}` 切换；②路由锁语义是「同路由只允许一个标签页」，多开会自己锁自己；
+      ③草稿按 slug 单键存储，多实例会互相覆盖导致丢数据。
+      替代方案：命令面板（解决「找页面慢」）或分屏（解决「同时看两样」），成本约为标签页的 1/10。
+      证据：`docs/ADMIN_TABS_EVALUATION.md`。
+
