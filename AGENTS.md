@@ -40,37 +40,45 @@ wired.
   4. **Merge as soon as the work is done.** When the branch is complete and verified, squash it
      into one commit, merge, delete the branch (local and remote), switch back, and `git pull`.
      Do not park a finished branch waiting for a go-ahead.
-  5. **Task ledger.** Every task that was NOT executed — failed and deferred, proposed but not
+  5. **Approval ledger, kept separate from the task ledger.** A finished task is appended to
+     `APPROVAL.md` by the agent, immediately, under the header of the round it belongs to — the
+     owner ticks the box, the agent never does. It is a *separate* file from `todo.md` and the
+     two never merge: `todo.md` holds what is outstanding or failed, `APPROVAL.md` holds what
+     shipped and awaits human sign-off. Group entries by conversation round, append new rounds
+     at the end, never rewrite earlier ones, and state the evidence (commit hash, measurement)
+     instead of a subjective claim. Do not ask the owner to transcribe work the agent already
+     knows; recording it is the agent's job.
+  6. **Task ledger.** Every task that was NOT executed — failed and deferred, proposed but not
      confirmed, skipped, or forgotten — must be recorded in the project's `.todo` file. No
      omissions: the ledger is the single source of truth for outstanding work. When a request
      carries a long or complex task list, record the whole list in `todo.md` before starting:
      the agent runtime's own task tool may not hold a list that size, so it must never be the
      only place the work is tracked.
-  6. **Ten-minute budget per item.** If a single item is not finished within ten minutes of
+  7. **Ten-minute budget per item.** If a single item is not finished within ten minutes of
      work, stop it, record it in `todo.md` with the reason and what was learned, and move on to
      the next item. Do not spend a whole session on one defect; revisit it in a later pass with
      the notes already on file.
-  7. **Long lists are modularised, easy to hard.** When a request carries many items, split it
+  8. **Long lists are modularised, easy to hard.** When a request carries many items, split it
      into modules ordered by difficulty — mechanical fixes first, analysis and evaluation next,
      refactors and migrations last — and work them in that order. The order exists so that the
      inexpensive wins land even if the session ends early.
 
-  8. **Terminology ambiguity stops the work.** When the user names something with a vague or
+  9. **Terminology ambiguity stops the work.** When the user names something with a vague or
      contradictory term (for example mixing up "loading progress bar" and "loading circle"),
      make no code change at all. Stop, state what you believe they mean, and wait for an
      explicit answer before acting.
-  9. **Stay on the current task.** Without an explicit new instruction, never drift away from
+  10. **Stay on the current task.** Without an explicit new instruction, never drift away from
      the task in progress. The conversation context and the current task goal decide what gets
      touched; never switch the object of work on your own initiative (for example, do not
      wander onto an unrelated branch while the task is about a specific screen).
-  10. **Restate, then act; never claim unverified work.** Before touching anything, restate the
+  11. **Restate, then act; never claim unverified work.** Before touching anything, restate the
      task goal in one sentence and keep every edit inside it — a wider reading is not a licence
      to widen the change. When a reference image, layout, or sample exists, it is the contract:
      match its structure, and never substitute your own arrangement for it. Any UI change is
      finished only after a screenshot self-check at the real viewport — read the rendered result,
      name what is wrong, fix it, shoot again. "Done" without that check is not allowed, and
      neither is reporting a fix that was never rendered.
-  11. **Compare against the reference until the geometry matches.** Screenshots are compared to
+  12. **Compare against the reference until the geometry matches.** Screenshots are compared to
      the reference repeatedly, not once: after the first render, after every fix, and again
      before reporting. The comparison covers padding, gutters, and the boundaries between
      regions — not just whether the content appeared. Copy that renders is not a layout that
