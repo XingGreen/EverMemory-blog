@@ -235,7 +235,9 @@
 
 ### 模块 C — 全局视觉（较重）
 
-- [ ] C1 连续曲线圆角（squircle）：全项目圆角规范。
+- [x] C1 连续曲线圆角（squircle）：**已完成**（645ba9c9）。用原生 `corner-shape: squircle`
+      一条通配规则覆盖后台，替代 293 处 `border-radius` 逐改；仅限 `.admin-shell`，前台不动。
+      正圆元素按类名排除（实测 17 个），保持正圆。评估见 `docs/SQUIRCLE_EVALUATION.md`。
 - [ ] C2 通知栏：进度条与左右边缘留白；添加撤回功能。
 - [x] C3 OOBE：**已完成**（7d04191a）。卡片改 flex 居中（实测 top 244 / bottom 256）；
       Logo 恢复渲染（此前入参被 `void` 丢弃）；两处内边距改用 `--admin-gutter`。

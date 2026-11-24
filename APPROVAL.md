@@ -165,3 +165,18 @@
       Logo 已渲染为 `<img>`；卡片 top 244 / bottom 256，垂直居中成立；
       `.oobe` 与 `.sheet` 的 padding 均为 `24px`（= `--admin-gutter` 1.5rem）；
       Logo 与站名间距 `10px`。截图确认 Logo 与「EverMemory's Blog」并排居中。
+
+---
+
+## 第 184 轮 · 2026-11-24 20:21
+
+主题：C1 连续曲线圆角（squircle）落地。
+
+- [ ] **1. C1 后台全站 squircle 圆角**
+      方案：原生 `corner-shape: squircle`（Chrome/Edge 139+），一条通配规则替代 293 处
+      `border-radius` 改写。不支持的浏览器忽略该属性、退回普通圆弧，无需降级代码。
+      证据：提交 `645ba9c9`。实测 `.admin-shell *` 的 `corner-shape` 计算值为
+      `superellipse(2)`（=squircle），范围限定后台，前台不受影响。
+      排除项：17 个正圆元素（`.sidebar-collapse` / `.menu-toggle` / `.user-avatar` /
+      `.post-status-dot` / `.tour-icon` / `.stage-seg`）退回 `round`
+      （= `superellipse(1)`），实测保持正圆。截图确认头像与状态圆点未变形。
