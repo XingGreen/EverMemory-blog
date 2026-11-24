@@ -31,6 +31,15 @@
   --admin-fs-meta: 0.75rem;
   --admin-fs-data: 0.6875rem;
 
+  /* 圆角形状：连续曲线（squircle）。
+     corner-shape 是 CSS Borders Level 4 的属性，Chrome/Edge 139+ 原生支持，
+     它不替代 border-radius 而是修饰它——把圆锥曲线的圆角换成超椭圆。
+     不支持的浏览器（Firefox / Safari）直接忽略这条声明，圆角退回普通圆弧，
+     布局与配色都不受影响，因此不需要写降级分支。
+     只作用于 .admin-shell，前台保持主题原有圆弧，避免公众访客看到两种观感。
+     详见 docs/SQUIRCLE_EVALUATION.md。 */
+  --admin-corner-shape: squircle;
+
   /* 侧边栏底色必须与 --page-bg 拉开一档，否则导航栏会与页面背景完全融为一体。
      引用 --card-bg 而非写死色值：两种模式都取「比页面更亮的卡片色」保持同一套
      凸起语义，且只需在各自模式下改 --card-bg 一处，不会再出现两模式不同步。 */
@@ -96,6 +105,34 @@
   /* 覆盖：前台只在 :root 定义 --title-active(0.6)，暗色下会继承这个偏深的
      亮色版；跟 primary 同 hue 混白色提亮，保证深底可读且跟随主题色相 */
   --title-active: color-mix(in srgb, var(--primary) 88%, white);
+}
+
+/* ── 后台圆角形状：连续曲线（squircle）──
+   用一条通配规则统一整个后台，而不是改动 293 处 border-radius：
+   corner-shape 只「修饰」已有的圆角，不改变半径数值，所以逐个声明没有必要。
+   不支持的浏览器会忽略这条属性，圆角保持普通圆弧——无需降级代码。
+   范围限定在 .admin-shell，前台不受影响。
+
+   为什么必须排除正圆：正圆元素（头像、折叠按钮、状态圆点、分段控件）
+   写作 border-radius: 50% 或 9999px，本来是个圆；套上 squircle 会变成
+   「不方不圆」的形状，比不改更难看。CSS 无法按计算半径判断「是不是正圆」，
+   所以下面按实际存在的类名显式排除——这份名单来自对后台 DOM 的实测枚举
+   （61 个带圆角元素中 17 个是正圆）。新增正圆组件时在此追加即可。 */
+.admin-shell,
+.admin-shell * {
+  corner-shape: var(--admin-corner-shape);
+}
+
+.admin-shell :is(
+  .sidebar-collapse,
+  .menu-toggle,
+  .user-avatar,
+  .post-status-dot,
+  .tour-icon,
+  .stage-seg
+),
+.admin-shell [data-corner="round"] {
+  corner-shape: round;
 }
 
 @media (prefers-reduced-motion: reduce) {
