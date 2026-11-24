@@ -12,6 +12,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { requireAuth } from "@/utils/auth";
+import { IS_PROD_BUILD } from "@/utils/env";
 import { getConfig, getInstallationToken } from "@/utils/github-app";
 
 export const prerender = false;
@@ -135,4 +136,74 @@ export async function GET({ request, url }: { request: Request; url: URL }) {
 
 	const remote = await fetchFromRemote(filePath);
 	return remote ?? notFound();
+}
+
+/**
+ * 写入资源：供「导入 zip」还原配图用。
+ *
+ * 只写 `src/content/` 与 `public/` 下（与 GET 同一份 ALLOWED_PREFIXES），
+ * 且只在本地可写的构建下生效——生产目录只读，与 save/delete 同一假设。
+ *
+ * 请求体：{ path: "assets/posts/images/x.avif", data: base64 }
+ * 包内路径以 `assets/` 开头，这里剥掉前缀还原成仓库内路径。
+ */
+export async function POST({ request }: { request: Request }) {
+	const auth = await requireAuth(request);
+	if (!auth.authenticated && auth.response) {
+		return auth.response;
+	}
+
+	if (IS_PROD_BUILD) {
+		return new Response(
+			JSON.stringify({
+				success: false,
+				message: "生产环境不可写入本地资源",
+			}),
+			{ status: 403, headers: { "Content-Type": "application/json" } },
+		);
+	}
+
+	try {
+		const body = (await request.json()) as { path?: string; data?: string };
+		const rawPath = (body.path ?? "").replace(/^assets\//, "");
+		/* public 下的资源保留 public/ 前缀；其余归到 src/content/ */
+		const candidate = rawPath.startsWith("public/")
+			? rawPath
+			: `src/content/${rawPath}`;
+
+		const filePath = normalizeAssetPath(candidate);
+		if (!filePath) {
+			return new Response(
+				JSON.stringify({ success: false, message: "资源路径不合法" }),
+				{ status: 400, headers: { "Content-Type": "application/json" } },
+			);
+		}
+
+		const root = process.cwd();
+		const absolute = path.join(root, filePath);
+		const relative = path.relative(root, absolute);
+		if (relative.startsWith("..") || path.isAbsolute(relative)) {
+			return new Response(
+				JSON.stringify({ success: false, message: "资源路径越界" }),
+				{ status: 400, headers: { "Content-Type": "application/json" } },
+			);
+		}
+
+		const bytes = Buffer.from(body.data ?? "", "base64");
+		fs.mkdirSync(path.dirname(absolute), { recursive: true });
+		fs.writeFileSync(absolute, bytes);
+
+		return new Response(
+			JSON.stringify({ success: true, path: filePath, bytes: bytes.length }),
+			{ status: 200, headers: { "Content-Type": "application/json" } },
+		);
+	} catch (err) {
+		return new Response(
+			JSON.stringify({
+				success: false,
+				message: err instanceof Error ? err.message : String(err),
+			}),
+			{ status: 500, headers: { "Content-Type": "application/json" } },
+		);
+	}
 }

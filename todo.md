@@ -293,7 +293,12 @@
       实测侧边栏 218px、点击后 `.admin-page-body` scrollTop 0→276。
       注：接 KV 需另立一项——`secret-io.ts` 直接读写 .env，无 provider 抽象。
 - [ ] E2 设置页分流：「管理类」页面移到侧栏，保留纯配置页；评估混合页面方案。
-- [ ] E3 导出功能：单文件 JSON → 含原始文章与静态资源的 Zip 包，评估兼容性优势。
+- [x] E3 导出/导入：**已完成**（按确认：导入+导出一并做）。
+      · 自研 `utils/zip.ts`（基于已有 pako，不新增依赖），7 项单测全绿；
+      · 新增 `/api/admin/export-bundle/` 一次返回正文+资源+manifest（实测 16 篇 + 15 资源，1.59MB）；
+      · 导出为 zip，**用 Windows 原生 Expand-Archive 独立验证解压成功**，图片字节逐一吻合；
+      · 导入支持 zip 且兼容旧 JSON（旧备份不作废）；
+      · `post-asset` 新增 POST 用于还原配图，限定 content/public，生产返回 403。
 
 ### 规范更新
 

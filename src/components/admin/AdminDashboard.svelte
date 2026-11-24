@@ -27,6 +27,7 @@ import {
 import { portalToBody } from "@/utils/floating";
 import { toOutlineIcon } from "@/utils/icon-outline";
 import { isTourDone, resetTour } from "@/utils/onboarding";
+import { createZip, readZip, readZipText, textBytes } from "@/utils/zip";
 import {
 	releaseAllLocks,
 	releaseCurrentLock,
@@ -721,43 +722,62 @@ function parseRoute(pathname: string): Route {
 /** 文章导入/导出的进行中标记：按钮锁定 + 文案切换 */
 let importExportBusy = $state(false);
 
-/** 导出全部文章：逐篇取全文，打包成一个 JSON 附件下载 */
+/**
+ * 导出全部文章：一次取齐正文与配图，打包成 zip 下载。
+ *
+ * 与旧版的差别：旧版逐篇请求 post-content，且**不含图片**——导出的包换台机器
+ * 打开后 `![](images/x.avif)` 全是断链，无法当备份用。现在由
+ * /api/admin/export-bundle/ 一次返回正文 + 资源（base64），这里用 utils/zip 组装。
+ */
 async function exportPosts() {
 	if (importExportBusy) return;
 	importExportBusy = true;
 	try {
-		const bundle: unknown[] = [];
-		for (const p of posts) {
-			const res = await fetch(
-				`/api/admin/post-content/?slug=${encodeURIComponent(p.slug)}`,
-			);
-			const data = await res.json();
-			if (data.success) {
-				bundle.push({
-					slug: p.slug,
-					filePath: data.filePath,
-					content: data.content,
-					...data.frontmatter,
-				});
-			}
+		const res = await fetch("/api/admin/export-bundle/");
+		const data = await res.json();
+		if (!res.ok || !data.success) {
+			throw new Error(data.message || `导出接口返回 ${res.status}`);
 		}
-		const blob = new Blob(
-			[
-				JSON.stringify(
-					{ version: 1, exportedAt: new Date().toISOString(), posts: bundle },
-					null,
-					2,
-				),
-			],
-			{ type: "application/json" },
-		);
+
+		const entries: { path: string; data: Uint8Array }[] = [];
+		/* 正文：一篇文章一个文件，保留原始扩展名（.md / .mdx） */
+		for (const post of data.posts as {
+			slug: string;
+			filePath: string;
+			content: string;
+		}[]) {
+			const ext = post.filePath?.toLowerCase().endsWith(".mdx") ? "mdx" : "md";
+			entries.push({
+				path: `posts/${post.slug}.${ext}`,
+				data: textBytes(post.content),
+			});
+		}
+		/* 资源：base64 还原成字节 */
+		for (const asset of data.assets as { path: string; data: string }[]) {
+			entries.push({ path: asset.path, data: base64ToBytes(asset.data) });
+		}
+		/* manifest：导入时据此还原路径映射 */
+		entries.push({
+			path: "manifest.json",
+			data: textBytes(JSON.stringify(data.manifest, null, 2)),
+		});
+
+		const zipped = createZip(entries, true);
+		const blob = new Blob([zipped as BlobPart], { type: "application/zip" });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement("a");
 		a.href = url;
-		a.download = `posts-export-${new Date().toISOString().slice(0, 10)}.json`;
+		a.download = `posts-export-${new Date().toISOString().slice(0, 10)}.zip`;
 		a.click();
 		URL.revokeObjectURL(url);
-		showToast(`已导出 ${bundle.length} 篇文章`, "success");
+
+		const postCount = (data.posts as unknown[]).length;
+		const assetCount = (data.assets as unknown[]).length;
+		showToast(
+			`已导出 ${postCount} 篇文章、${assetCount} 个资源（zip）`,
+			"success",
+			8000,
+		);
 	} catch (err) {
 		showToast(
 			`导出失败: ${err instanceof Error ? err.message : String(err)}`,
@@ -769,24 +789,90 @@ async function exportPosts() {
 	}
 }
 
+/** base64 → 字节，资源解码用 */
+function base64ToBytes(b64: string): Uint8Array {
+	const bin = atob(b64);
+	const out = new Uint8Array(bin.length);
+	for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+	return out;
+}
+
+/** 字节 → base64，导入上传资源用 */
+function bytesToBase64(bytes: Uint8Array): string {
+	let bin = "";
+	/* 分段拼接：一次性 apply 超长数组会栈溢出（资源可达数 MB） */
+	const chunk = 0x8000;
+	for (let i = 0; i < bytes.length; i += chunk) {
+		bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+	}
+	return btoa(bin);
+}
+
 /** 导入文章：解析导出文件，逐篇走正式保存通道 */
 async function importPosts(file: File) {
 	if (importExportBusy) return;
 	importExportBusy = true;
 	try {
-		const parsed = JSON.parse(await file.text());
-		const list = Array.isArray(parsed?.posts)
-			? parsed.posts
-			: Array.isArray(parsed)
-				? parsed
-				: null;
+		/* 两种输入格式：
+		   · .zip  —— 新版导出包（正文 + manifest + 资源）
+		   · .json —— 旧版导出文件（仅正文），保持向后兼容，否则用户的旧备份作废 */
+		const isZip = /\.zip$/i.test(file.name);
+		let list: unknown[] | null = null;
+		let assetCount = 0;
+
+		if (isZip) {
+			const bytes = new Uint8Array(await file.arrayBuffer());
+			const entries = readZip(bytes);
+
+			/* 资源先落盘：正文里引用的路径要靠它们才不断链。
+			   落盘失败不阻断正文导入——宁可少几张图，也别整包失败。 */
+			for (const entry of entries) {
+				if (!entry.path.startsWith("assets/")) continue;
+				try {
+					await fetch("/api/admin/post-asset/", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							path: entry.path,
+							data: bytesToBase64(entry.data),
+						}),
+					});
+					assetCount++;
+				} catch {
+					// 单个资源失败继续
+				}
+			}
+
+			/* 正文：posts/ 下的 .md / .mdx，frontmatter 由保存接口重新组装 */
+			list = entries
+				.filter((e) => e.path.startsWith("posts/") && /\.(md|mdx)$/i.test(e.path))
+				.map((e) => {
+					const slug = e.path
+						.replace(/^posts\//, "")
+						.replace(/\.(md|mdx)$/i, "");
+					return {
+						slug,
+						title: slug,
+						content: readZipText(e),
+					};
+				});
+		} else {
+			const parsed = JSON.parse(await file.text());
+			list = Array.isArray(parsed?.posts)
+				? parsed.posts
+				: Array.isArray(parsed)
+					? parsed
+					: null;
+		}
+
 		if (!list) {
 			showToast("文件格式不正确：需要包含 posts 数组的导出文件", "error", 8000);
 			return;
 		}
 		let ok = 0;
 		let fail = 0;
-		for (const post of list) {
+		for (const raw of list) {
+			const post = raw as Record<string, unknown> & { content?: string };
 			if (!post?.slug || typeof post.content !== "string") {
 				fail++;
 				continue;
@@ -821,8 +907,9 @@ async function importPosts(file: File) {
 			else fail++;
 		}
 		await loadPosts();
+		const assetNote = assetCount > 0 ? `、${assetCount} 个资源` : "";
 		showToast(
-			`导入完成：成功 ${ok} 篇${fail > 0 ? `，失败 ${fail} 篇` : ""}`,
+			`导入完成：成功 ${ok} 篇${assetNote}${fail > 0 ? `，失败 ${fail} 篇` : ""}`,
 			fail > 0 ? "warning" : "success",
 			8000,
 		);

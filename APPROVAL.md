@@ -243,3 +243,34 @@
       不用 `scrollIntoView`——它会连带滚动后台文档层，而 html/body 是 overflow:hidden，
       被程序化滚动后无法恢复；展开折叠组后等两帧再算位置，避免读到旧布局高度。
 
+---
+
+## 第 189 轮 · 2026-11-24 22:20
+
+主题：E3 导出升级为 zip 包 + 导入还原（导入导出同时做）。
+
+- [ ] **1. 自研 zip 读写（打包 + 解包）**
+      说明：项目已有 `pako`（deflate），zip 容器格式本身简单（本地头 + 数据 + 中央目录 + 结束记录），
+      自写 200 行读写器比新增 jszip 更划算，不扩大打包体积。pako 无类型声明，补了 `src/pako.d.ts`。
+      证据：`tests/zip.test.ts` 7 项全绿 —— 往返读写、大文件走 deflate、二进制无损、
+      空包、跳过目录条目、非 zip 数据抛错、中文路径 UTF-8。
+
+- [ ] **2. 导出聚合接口 `/api/admin/export-bundle/`**
+      原因：旧导出逐篇请求 post-content（24 篇=24 次串行），且**不含图片**，导入后断链。
+      证据：实测返回 16 篇文章 + 15 个资源 + manifest v2，1.59 MB，
+      `assetMap` 映射正确（`src/content/posts/images/x.avif` → `assets/posts/images/x.avif`）。
+
+- [ ] **3. 导出改为 zip（含 manifest）**
+      证据：组装 32 个文件项，1.22 MB → 压缩后 1.18 MB（AVIF 已压缩，96.3% 属正常）。
+      **用 Windows 原生 `Expand-Archive` 独立验证解压成功**，32 个文件全部还原，
+      图片字节数逐一吻合（77645 / 66916 / 103874）。
+
+- [ ] **4. 导入支持 zip，并向后兼容旧 JSON**
+      证据：解析 16 篇文章 + 15 个资源，路径还原正确，manifest 声明数与实际数一致。
+      保留 `.json` 分支，否则用户旧备份作废。
+
+- [ ] **5. 资源写入接口（post-asset 新增 POST）**
+      说明：原接口只有 GET，无法还原配图。新增 POST 限定在 `src/content/` 与 `public/`，
+      生产构建下返回 403（与 save/delete 同一只读假设）。
+      证据：实测写入 `src/content/posts/images/__e2e_probe__.txt` 返回 200、内容正确，测试后已删除。
+
