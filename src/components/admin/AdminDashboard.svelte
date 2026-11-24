@@ -201,7 +201,15 @@ let editingPost = $state<Post | null>(null);
 let showDeleteModal = $state(false);
 let deletingPost = $state<Post | null>(null);
 let deleteTrigger: HTMLElement | null = null;
+/**
+ * 通知的撤回动作。
+ * 只有「刚做完、还能反悔」的操作才带这个参数（例如删除文章）。
+ * 提供 undo 时通知停留更久，否则用户来不及看清按钮就消失了。
+ */
+type ToastUndo = { label: string; run: () => void | Promise<void> };
+
 let toast = $state<{ message: string; type: "success" | "error" } | null>(null);
+let toastUndo = $state<ToastUndo | null>(null);
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 /** 当前提示条总时长，暂停后据此重新计时 */
 let toastDuration = $state(6000);
@@ -1534,19 +1542,39 @@ async function handleConfirmDelete() {
 	}
 }
 
+/**
+ * 通知的撤回动作。
+ * 只有「刚做完、还能反悔」的操作才带这个参数（例如删除文章）。
+ * 提供 undo 时通知停留更久，否则用户来不及看清按钮就消失了。
+ */
 function showToast(
 	message: string,
 	type: "success" | "error",
 	duration = 6000,
+	undo?: ToastUndo,
 ) {
 	toast = { message, type };
-	toastDuration = duration;
+	toastUndo = undo ?? null;
+	/* 带撤回的通知至少留 8 秒：默认 6 秒对「读完→判断→点撤回」太紧 */
+	toastDuration = undo ? Math.max(duration, 8000) : duration;
 	toastPaused = false;
 	toastPressed = false;
 	if (type === "error") {
 		console.error("[Toast] Error:", message);
 	}
 	startToastCountdown();
+}
+
+/** 执行撤回并关闭通知；失败时保留通知并提示原因 */
+async function runToastUndo() {
+	const action = toastUndo;
+	if (!action) return;
+	closeToast();
+	try {
+		await action.run();
+	} catch (e) {
+		showToast(`撤回失败：${e instanceof Error ? e.message : String(e)}`, "error");
+	}
 }
 
 /** 启动（或重启）倒计时：进度条回满 100%，按总时长走完即自动关闭 */
@@ -1600,6 +1628,7 @@ function closeToast() {
 		toastTimer = null;
 	}
 	toast = null;
+	toastUndo = null;
 }
 
 function formatDate(dateStr: string | null): string {
@@ -2650,6 +2679,11 @@ function formatDate(dateStr: string | null): string {
 					</span>
 					<span class="toast-message">{toast.message}</span>
 				</div>
+				{#if toastUndo}
+					<button class="toast-undo" onclick={runToastUndo}>
+						{toastUndo.label}
+					</button>
+				{/if}
 				<button class="toast-close" onclick={closeToast} aria-label="关闭通知">
 					<Icon icon="material-symbols:close" size="sm" />
 				</button>
@@ -5012,6 +5046,35 @@ function formatDate(dateStr: string | null): string {
 	/* 关闭按钮：默认只有图标（次级文字色），悬停提到主文字色。
 	   视觉 24px 圆不动，用 ::after 外扩命中区到 ≥44px（MD3 触控下限），
   	   手机上 21px 的圆点基本点不中。 */
+	/* 撤回按钮：文字型，用主色，与右侧关闭图标区分开。
+	   不使用强调色（--warning 只表示「需要你处理」），这里是一次可选的后悔操作，
+	   所以走 primary，视觉重量低于关闭按钮所在的角落。 */
+	.toast-undo {
+		position: relative;
+		flex-shrink: 0;
+		padding: 0.25rem 0.625rem;
+		background: transparent;
+		border: 1px solid var(--line-color);
+		border-radius: var(--radius-md);
+		color: var(--primary);
+		font-size: var(--admin-fs-meta);
+		font-weight: 500;
+		cursor: pointer;
+		transition:
+			background 0.15s,
+			border-color 0.15s;
+	}
+
+	.toast-undo:hover {
+		background: color-mix(in srgb, var(--primary) 12%, transparent);
+		border-color: color-mix(in srgb, var(--primary) 40%, var(--line-color));
+	}
+
+	.toast-undo:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+
 	.toast-close {
 		position: relative;
 		background: transparent;
@@ -5052,10 +5115,14 @@ function formatDate(dateStr: string | null): string {
 	   抹成灰线。轨道与填充都取 4px 圆角，两端不会出现直角缺口。
 	   填充用语义色（成功/失败各一色，兜底 --primary）——中性浮层上靠颜色
 	   而非光晕拉开对比（设计规范不鼓励装饰性 glow）。 */
+	/* 进度条：贴底、左右留出与通知内边距一致的空隙。
+	   此前写 left: 0 / right: 0，填充条一直顶到圆角边缘，与卡片圆角互相切割，
+	   看起来像「一条线从边框里穿出来」。改成 inset-inline 后两端内收，
+	   与上面文字的左边界对齐，视觉上属于卡片内部而不是边框的一部分。 */
 	.toast-progress {
 		position: absolute;
-		left: 0;
-		right: 0;
+		left: var(--admin-gutter);
+		right: var(--admin-gutter);
 		bottom: 0;
 		height: 3px;
 		border-radius: 4px;

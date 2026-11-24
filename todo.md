@@ -238,7 +238,10 @@
 - [x] C1 连续曲线圆角（squircle）：**已完成**（645ba9c9）。用原生 `corner-shape: squircle`
       一条通配规则覆盖后台，替代 293 处 `border-radius` 逐改；仅限 `.admin-shell`，前台不动。
       正圆元素按类名排除（实测 17 个），保持正圆。评估见 `docs/SQUIRCLE_EVALUATION.md`。
-- [ ] C2 通知栏：进度条与左右边缘留白；添加撤回功能。
+- [x] C2 通知栏：**已完成**（47fce982）。
+      ①进度条改为 `left/right: var(--admin-gutter)`，实测左右各内缩 24px，不再切割圆角。
+      ②撤回：经确认「只给可逆操作加撤回」。后台现无可逆破坏性操作（设置可再改、删除不可逆），
+      故只落地基础设施（`showToast` 第四参数 undo + `.toast-undo` 按钮 + ≥8s 停留），待将来接入。
 - [x] C3 OOBE：**已完成**（7d04191a）。卡片改 flex 居中（实测 top 244 / bottom 256）；
       Logo 恢复渲染（此前入参被 `void` 丢弃）；两处内边距改用 `--admin-gutter`。
       注：验证时需临时清空一个必填项才能进入 `/setup/`，已恢复 `.env.local`（SHA256 一致）。
