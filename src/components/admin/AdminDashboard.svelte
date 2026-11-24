@@ -50,6 +50,19 @@ import SyncPage from "./SyncPage.svelte";
 import TaxonomyManager from "./TaxonomyManager.svelte";
 import PageHeader from "./ui/PageHeader.svelte";
 
+/**
+ * 已从设置页提到主侧边栏的配置项。
+ * 旧地址 /admin/settings/gallery/ 之类的书签必须仍能落地，
+ * 否则用户保存的链接会变成 404。键是旧 section，值是新的页面标识。
+ * friends 只移「管理」的一半：友链条目本来就在 /admin/links/，
+ * 设置页里那个 friends 项是它的开关配置，仍留在设置页。
+ */
+const MOVED_SETTINGS: Record<string, { page: Page }> = {
+	gallery: { page: "gallery" },
+	app: { page: "apps" },
+	announcement: { page: "announcement" },
+};
+
 type Post = {
 	id: string;
 	slug: string;
@@ -76,6 +89,10 @@ type Page =
 	| "sync"
 	/** 友链管理（/admin/links/） */
 	| "links"
+	/** 以下四项原在设置页里，本质是条目管理，提到主侧边栏 */
+	| "gallery"
+	| "apps"
+	| "announcement"
 	| "categories-and-tags"
 	| "settings"
 	| "env"
@@ -411,15 +428,21 @@ const activePage = $derived<Page>(
 					? "sync"
 					: route.page === "links"
 						? "links"
-						: route.page === "settings"
-							? "settings"
-							: route.page === "env"
-								? "env"
-								: route.page === "categories-and-tags"
-									? "categories-and-tags"
-									: route.page === "sessions"
-										? "sessions"
-										: "posts",
+						: route.page === "gallery"
+							? "gallery"
+							: route.page === "apps"
+								? "apps"
+								: route.page === "announcement"
+									? "announcement"
+									: route.page === "settings"
+										? "settings"
+										: route.page === "env"
+											? "env"
+											: route.page === "categories-and-tags"
+												? "categories-and-tags"
+												: route.page === "sessions"
+													? "sessions"
+													: "posts",
 );
 
 const viewMode = $derived<ViewMode>(
@@ -551,10 +574,14 @@ const settingsTabIcons: Record<string, { solid: string; outline: string }> = {
 let railQuery = $state("");
 
 const settingsTabs = $derived(
-	CONFIG_ITEMS.map((item) => ({
-		id: item.key,
-		labelKey: getConfigLabelKey(item.key),
-	})),
+	CONFIG_ITEMS
+		/* 已提到主侧边栏的条目型页面不再出现在设置页，
+		   否则同一份配置有两个入口，用户会困惑「改哪个才生效」。 */
+		.filter((item) => !(item.key in MOVED_SETTINGS))
+		.map((item) => ({
+			id: item.key,
+			labelKey: getConfigLabelKey(item.key),
+		})),
 );
 
 /**
@@ -697,9 +724,13 @@ function parseRoute(pathname: string): Route {
 				: { page: "404" };
 		case "settings": {
 			// /admin/settings/ 无子段时落到第一个配置项（概览层已移除）；
-			// 显式给了未知 section 视为无效地址
+			// 显式给了未知 section 视为无效地址。
+			// 已提到侧边栏的四项（gallery / app / announcement / friends）不再走这里，
+			// 但旧书签仍指向 /admin/settings/gallery/ 之类——下面统一重定向到新地址。
 			if (!segments[1])
 				return { page: "settings", section: CONFIG_ITEMS[0]?.key };
+			const moved = MOVED_SETTINGS[segments[1]];
+			if (moved) return { page: moved.page };
 			return CONFIG_ITEMS.some((item) => item.key === segments[1])
 				? { page: "settings", section: segments[1] }
 				: { page: "404" };
@@ -707,6 +738,11 @@ function parseRoute(pathname: string): Route {
 		case "env":
 			// 环境变量页（原 /admin/user/）
 			return segments.length === 1 ? { page: "env" } : { page: "404" };
+		case "gallery":
+		case "apps":
+		case "announcement":
+			/* 从设置页提到主侧边栏的三项，各自有独立地址 */
+			return segments.length === 1 ? { page: segments[0] as Page } : { page: "404" };
 		case "sessions":
 			return segments.length === 1 ? { page: "sessions" } : { page: "404" };
 		case "secrets":
@@ -1090,6 +1126,9 @@ const headerTitle = $derived.by(() => {
 	   文案沿用既有 i18n 键与侧栏原文，不新造词条。 */
 	if (activePage === "sync") return i18n(I18nKey.postSyncNow);
 	if (activePage === "links") return "友链管理";
+	if (activePage === "gallery") return i18n(I18nKey.configGallery);
+	if (activePage === "apps") return i18n(I18nKey.configApp);
+	if (activePage === "announcement") return i18n(I18nKey.configAnnouncement);
 	if (activePage === "history") return i18n(I18nKey.postHistory);
 	if (viewMode === "edit" && editingPost) return i18n(I18nKey.adminEditPost);
 	if (viewMode === "create") return i18n(I18nKey.adminNewPost);
@@ -1138,6 +1177,22 @@ $effect(() => {
 		getConfigItem(settingsSection)
 	) {
 		loadSettings(settingsSection);
+	}
+});
+
+/* 提到侧栏的三项（相册/软件推荐/公告）同样要载入各自的配置文件，
+   否则复用 SettingsEditor 时拿到的是上一个页面残留的 settingsData。 */
+$effect(() => {
+	const movedKey =
+		activePage === "gallery"
+			? "gallery"
+			: activePage === "apps"
+				? "app"
+				: activePage === "announcement"
+					? "announcement"
+					: null;
+	if (movedKey && getConfigItem(movedKey)) {
+		loadSettings(movedKey);
 	}
 });
 
@@ -1531,6 +1586,19 @@ function goSettings(section?: string) {
 
 function goEnv() {
 	navigate(`${DASHBOARD_PATH}env/`);
+}
+
+/* 从设置页提到主侧边栏的三项：各自独立的地址 */
+function goGallery() {
+	navigate(`${DASHBOARD_PATH}gallery/`);
+}
+
+function goApps() {
+	navigate(`${DASHBOARD_PATH}apps/`);
+}
+
+function goAnnouncement() {
+	navigate(`${DASHBOARD_PATH}announcement/`);
 }
 
 function goSessions() {
@@ -2274,6 +2342,52 @@ function formatDate(dateStr: string | null): string {
 					<span>{i18n(I18nKey.adminSessions)}</span>
 				</button>
 
+				<!-- ── 条目型页面 ──
+				     这四项在设置页里本质上是「条目列表」（相册有 albums 数组、软件推荐有 apps 数组、
+				     公告有正文），和「改一个开关」不是同一类东西。
+				     埋在 24 项配置里既难找，也不符合用户「管理内容去内容区」的预期。
+				     因此提到主侧边栏，设置页只留纯配置项。
+				     不加分组标题：侧栏每一项都是管理，写「内容管理」等于没写。 -->
+
+				<button
+					class="nav-item"
+					class:active={activePage === "gallery"}
+					onclick={goGallery}
+				>
+					{#if activePage === "gallery"}
+						<Icon icon="material-symbols:photo-library" />
+					{:else}
+						<Icon icon="material-symbols:photo-library-outline" />
+					{/if}
+					<span>{i18n(I18nKey.configGallery)}</span>
+				</button>
+
+				<button
+					class="nav-item"
+					class:active={activePage === "apps"}
+					onclick={goApps}
+				>
+					{#if activePage === "apps"}
+						<Icon icon="material-symbols:apps" />
+					{:else}
+						<Icon icon="material-symbols:apps-outline" />
+					{/if}
+					<span>{i18n(I18nKey.configApp)}</span>
+				</button>
+
+				<button
+					class="nav-item"
+					class:active={activePage === "announcement"}
+					onclick={goAnnouncement}
+				>
+					{#if activePage === "announcement"}
+						<Icon icon="material-symbols:campaign" />
+					{:else}
+						<Icon icon="material-symbols:campaign-outline" />
+					{/if}
+					<span>{i18n(I18nKey.configAnnouncement)}</span>
+				</button>
+
 			</nav>
 
 			<div class="sidebar-footer">
@@ -2380,6 +2494,9 @@ function formatDate(dateStr: string | null): string {
 				activePage === "history" ||
 				activePage === "sync" ||
 				activePage === "links" ||
+				activePage === "gallery" ||
+				activePage === "apps" ||
+				activePage === "announcement" ||
 				activePage === "categories-and-tags"}
 			style={`--editor-max-page-width: ${editorConfig.maxPageWidth}`}
 		>
@@ -2404,6 +2521,35 @@ function formatDate(dateStr: string | null): string {
 					/>
 				{:else if activePage === "links"}
 					<LinksPage />
+				{:else if activePage === "gallery" || activePage === "apps" || activePage === "announcement"}
+					<!-- 这三项从设置页提到侧栏，但编辑形态没变：仍是同一套配置表单。
+					     复用 SettingsEditor，只是把 section 固定成对应的配置项 key，
+					     这样它们有独立地址、独立侧栏入口，编辑体验与设置页完全一致。 -->
+					{@const movedKey =
+						activePage === "gallery"
+							? "gallery"
+							: activePage === "apps"
+								? "app"
+								: "announcement"}
+					{@const movedItem = getConfigItem(movedKey)}
+					{#if movedItem}
+						<AdminPage>
+							{#snippet header()}
+								<PageHeader title={i18n(getConfigLabelKey(movedKey))} />
+							{/snippet}
+							<SettingsEditor
+								item={movedItem}
+								data={settingsData}
+								source={settingsSource}
+								error={settingsError}
+								isLoading={settingsLoading}
+								remote={settingsRemote}
+								onUpdate={(v) => (settingsData = v)}
+								onModeChange={(m) => (settingsMode = m)}
+								onSourceChange={(s) => (settingsSource = s)}
+							/>
+						</AdminPage>
+					{/if}
 				{:else if activePage === "dashboard"}
 					{@render dashboardHome()}
 				{:else if activePage === "posts"}
