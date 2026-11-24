@@ -255,9 +255,18 @@ function startResize(e: PointerEvent, side: "left" | "right") {
 	e.preventDefault();
 	resizing = true;
 	const startX = e.clientX;
-	const startW =
-		editorMaxWidth ??
-		(typeof window === "undefined" ? 1440 : window.innerWidth);
+	/* 起点必须取**当前可见正文区的真实宽度**。
+	   编辑模式量 .editor-field，预览模式量 .content-preview——两者互斥渲染，
+	   只量其中一个会让另一种模式拿到 null、退回最小值，拖动立刻跳到 400px。
+	   也不能拿 window.innerWidth 兜底：面板比视口窄（侧栏 + 内边距），
+	   用视口宽当起点会让第一下拖动跳值，随后被 clamp 夹回，表现为「拖了没反应」。 */
+	const measureSelector = ".editor-field, .content-preview";
+	const fieldEl = document.querySelector<HTMLElement>(measureSelector);
+	const measured =
+		fieldEl && fieldEl.getBoundingClientRect().width > 0
+			? Math.round(fieldEl.getBoundingClientRect().width)
+			: null;
+	const startW = editorMaxWidth ?? measured ?? EDITOR_WIDTH_MIN;
 	const viewport = typeof window === "undefined" ? 1920 : window.innerWidth;
 
 	const onMove = (ev: PointerEvent) => {
@@ -462,9 +471,8 @@ function wrapSelection(before: string, after: string, placeholder: string) {
 		after +
 		editorState.content.slice(end);
 	requestAnimationFrame(() => {
-		el.focus();
 		const ns = start + before.length;
-		el.setSelectionRange(ns, ns + selected.length);
+		restoreCaret(el, ns, ns + selected.length);
 	});
 }
 
@@ -491,9 +499,29 @@ function prependLines(prefix: string, firstLineOnly = false) {
 		"\n" +
 		editorState.content.slice(selEnd);
 	requestAnimationFrame(() => {
-		el.focus();
-		el.setSelectionRange(lineStart, lineStart + processed.length);
+		restoreCaret(el, lineStart, lineStart + processed.length);
 	});
+}
+
+/**
+ * 插入内容后把光标放回指定区间，且**保持原滚动位置**。
+ *
+ * 关键顺序：先 setSelectionRange、再恢复 scrollTop，最后才不需要 focus。
+ * 反过来（先 focus 再设选区）会让浏览器在内容已更新、选区还在旧位置时
+ * 执行「滚动到光标可见」——实测把 scrollTop 从 5000 直接拉到 21496（文末），
+ * 表现就是「点工具栏按钮，正文一下滚到底」。
+ *
+ * focus 仍然需要（用户点完按钮应能继续打字），但用 preventScroll 抑制它
+ * 自带的滚动行为，并在之后显式写回原位置。
+ */
+function restoreCaret(el: HTMLTextAreaElement, start: number, end: number) {
+	const scrollTop = el.scrollTop;
+	const scrollLeft = el.scrollLeft;
+	el.setSelectionRange(start, end);
+	el.focus({ preventScroll: true });
+	/* focus 之后浏览器仍可能按选区调整滚动，这里强制写回 */
+	el.scrollTop = scrollTop;
+	el.scrollLeft = scrollLeft;
 }
 
 /** 在光标处插入文本 */
@@ -505,9 +533,8 @@ function insertAtCursor(text: string) {
 	editorState.content =
 		editorState.content.slice(0, start) + text + editorState.content.slice(end);
 	requestAnimationFrame(() => {
-		el.focus();
 		const pos = start + text.length;
-		el.setSelectionRange(pos, pos);
+		restoreCaret(el, pos, pos);
 	});
 }
 
@@ -1603,18 +1630,6 @@ $effect(() => {
 });
 
 $effect(() => {
-	const el = editorState.previewEl;
-	const html = editorState.renderedHtml;
-	if (!el) return;
-	for (const oldScript of [...el.querySelectorAll("script[type='module']")]) {
-		const newScript = document.createElement("script");
-		newScript.type = "module";
-		newScript.textContent = oldScript.textContent ?? "";
-		oldScript.replaceWith(newScript);
-	}
-});
-
-$effect(() => {
 	if (tocItems.length && !editorState.visibleTocLines.length) {
 		editorState.visibleTocLines = [tocItems[0].lineIndex];
 	}
@@ -2222,13 +2237,20 @@ $effect(() => {
 		overflow: hidden;
 	}
 
+	/* 编辑器布局。
+	   宽度手柄（--editor-max-page-width）**只约束正文区**，不约束 Tabs 栏与
+	   工具栏：那两个是面板级控件，缩窄会让按钮换行、图标挤压。
+	   做法：这里保持撑满（手柄的 left/right 相对它定位，需要跟随正文边界），
+	   真正的宽度上限交给内部正文容器——见 PostEditorWritePanel 的
+	   .editor-field / .content-preview。
+
+	   手柄的位置由 --editor-handle-inset 控制：它等于「面板宽 − 正文宽」的一半，
+	   由脚本在拖动时一并更新，这样手柄始终贴在正文左右边缘，而不是面板边缘。 */
 	.editor-layout {
 		position: relative;
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
 		grid-template-rows: minmax(0, 1fr);
-		max-width: var(--editor-max-page-width, 96rem);
-		margin-inline: auto;
 		width: 100%;
 		height: 100%;
 	}
@@ -2250,11 +2272,21 @@ $effect(() => {
 	}
 
 	.resize-handle.left {
-		left: 0;
+		/* 贴正文左缘，而不是面板左缘。
+		   纯 CSS 推导：正文宽度 = min(100%, --editor-max-page-width)，
+		   两侧留白各占 (100% - 正文宽) / 2。
+		   用 max(0px, ...) 兜住「正文比面板还宽」的情况（手柄退回面板边缘）。 */
+		left: max(
+			0px,
+			calc((100% - min(100%, var(--editor-max-page-width, 96rem))) / 2)
+		);
 	}
 
 	.resize-handle.right {
-		right: 0;
+		right: max(
+			0px,
+			calc((100% - min(100%, var(--editor-max-page-width, 96rem))) / 2)
+		);
 	}
 
 	.resize-handle:hover,

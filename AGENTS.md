@@ -28,31 +28,49 @@ wired.
   1. **Fix bugs as they surface.** A defect found while working on a task is fixed in the same
      pass — not logged for later, not left as a caveat in the report. Only stop first if the fix
      would fall outside the scope table, and then say why.
-  2. **Every change lands on its own branch.** Create the feature branch before the first edit,
+  2. **A failed fix is reverted, never patched by hand.** When a change does not achieve its
+     stated goal, revert it to the last known-good state and report. Do not keep editing on top
+     of a broken attempt: a hand-written patch over a wrong change tends to introduce a second
+     defect while hiding the first. Concretely: `git revert`, or `git checkout <good> -- <file>`,
+     confirm the file really is back to the good state, then restart from a fresh diagnosis.
+     Never "improve" the code you just failed to get right in the same attempt.
+  3. **Every change lands on its own branch.** Create the feature branch before the first edit,
      however small the change, and commit there. No direct commits to `master`, and no finished
      work left uncommitted in the working tree.
-  3. **Merge as soon as the work is done.** When the branch is complete and verified, squash it
+  4. **Merge as soon as the work is done.** When the branch is complete and verified, squash it
      into one commit, merge, delete the branch (local and remote), switch back, and `git pull`.
      Do not park a finished branch waiting for a go-ahead.
-  4. **Task ledger.** Every task that was NOT executed — failed and deferred, proposed but not
+  5. **Task ledger.** Every task that was NOT executed — failed and deferred, proposed but not
      confirmed, skipped, or forgotten — must be recorded in the project's `.todo` file. No
-     omissions: the ledger is the single source of truth for outstanding work.
-  5. **Terminology ambiguity stops the work.** When the user names something with a vague or
+     omissions: the ledger is the single source of truth for outstanding work. When a request
+     carries a long or complex task list, record the whole list in `todo.md` before starting:
+     the agent runtime's own task tool may not hold a list that size, so it must never be the
+     only place the work is tracked.
+  6. **Ten-minute budget per item.** If a single item is not finished within ten minutes of
+     work, stop it, record it in `todo.md` with the reason and what was learned, and move on to
+     the next item. Do not spend a whole session on one defect; revisit it in a later pass with
+     the notes already on file.
+  7. **Long lists are modularised, easy to hard.** When a request carries many items, split it
+     into modules ordered by difficulty — mechanical fixes first, analysis and evaluation next,
+     refactors and migrations last — and work them in that order. The order exists so that the
+     inexpensive wins land even if the session ends early.
+
+  8. **Terminology ambiguity stops the work.** When the user names something with a vague or
      contradictory term (for example mixing up "loading progress bar" and "loading circle"),
      make no code change at all. Stop, state what you believe they mean, and wait for an
      explicit answer before acting.
-  6. **Stay on the current task.** Without an explicit new instruction, never drift away from
+  9. **Stay on the current task.** Without an explicit new instruction, never drift away from
      the task in progress. The conversation context and the current task goal decide what gets
      touched; never switch the object of work on your own initiative (for example, do not
      wander onto an unrelated branch while the task is about a specific screen).
-  7. **Restate, then act; never claim unverified work.** Before touching anything, restate the
+  10. **Restate, then act; never claim unverified work.** Before touching anything, restate the
      task goal in one sentence and keep every edit inside it — a wider reading is not a licence
      to widen the change. When a reference image, layout, or sample exists, it is the contract:
      match its structure, and never substitute your own arrangement for it. Any UI change is
      finished only after a screenshot self-check at the real viewport — read the rendered result,
      name what is wrong, fix it, shoot again. "Done" without that check is not allowed, and
      neither is reporting a fix that was never rendered.
-  8. **Compare against the reference until the geometry matches.** Screenshots are compared to
+  11. **Compare against the reference until the geometry matches.** Screenshots are compared to
      the reference repeatedly, not once: after the first render, after every fix, and again
      before reporting. The comparison covers padding, gutters, and the boundaries between
      regions — not just whether the content appeared. Copy that renders is not a layout that

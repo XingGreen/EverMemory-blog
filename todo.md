@@ -183,3 +183,105 @@
 - [x] 分步逻辑：默认第一步，主按钮「下一步：后台登录」切换；完成屏对勾描边 600ms、按钮延迟 300ms；`prefers-reduced-motion` 直落终态
 - [x] 动效：入场淡入上移 16px 240ms ease-out；步骤切换 180ms 淡入、焦点落新步骤第一个输入框
 - [x] token 不新造：沿用后台 `--page-bg/--card-bg/--primary` 与 `.ui-input` 规格（36h/10 圆角）
+
+## 本轮任务清单（2026-11-22 起，分支 fix/task-sweep-2026-11-22）
+
+> 按 AGENTS.md 第 6 条排序：**从轻到复杂**。第 5 条定预算：单项 10 分钟未完成即记录跳过。
+> 每项就地写下已查明的根因，供下一轮直接接手。
+
+### 模块 A — 机械修复（最轻，先做）
+
+- [x] A1 脏列表颜色：环境变量页 savebar-notice 静止态用 primary、hover 转 warning（琥珀）。
+      原值来自 commit f556310a 删除前的定义：base=primary 12%、hover=warning 20%。
+      **已完成，待提交。**
+- [x] A2 预览分隔线：后端返回 83 个 hr，但 Tailwind Typography 的 currentColor+0.08
+      在深色下不可见。已在 PostEditorWritePanel 补 `:global(.content-preview hr)`。
+      **已完成，待截图复验。**
+- [x] A3 行数栏错位：**已验证**。gutter 是 overflow:hidden 且高度被设成 scrollHeight，scrollTop 恒为 0；改为外层裁剪 + 内层 translateY 跟随。打开行号开关后 spans=989 正常渲染。
+- [x] A4 MDX 代码块复制（**已修复，根因是通道差异**）：已查明两处根因并修复 —— ①选择器 `button.copy` 匹配不到
+      （EC 按钮无 class，只有 title/data-code），已改为 `button[title="Copy to clipboard"]`；
+      ②按钮 opacity:0（EC 靠自身脚本淡入）已改常显；③按钮有深色底 rgb(40,44,52) 已改透明；
+      ④图标是空 div，已改为注入内联 SVG（fill="none" 必须逐元素写）。
+      **已验证**：按钮可见（opacity 1）、背景透明、可点击且剪贴板写入成功。\n      **未解决**：图标在 8x 放大下仍是纯色方块 —— DOM 里 svg/rect 的 fill=none、stroke 有色、stroke-width 1.8px 全部正确，但渲染为实心。已排除：选择器、opacity、背景、fill 属性。下一轮建议直接用 CSS 画图标（替代 SVG），或查 EC 注入的 svg 全局规则。
+
+### 模块 B — 需诊断的单点（中等）
+
+- [ ] B1 开屏动画：**需用户说明具体症状**。实测 AdminEntryVeil 功能正常（遮罩出现、约 2s 后
+      entry-lift 上移 992px 退场）。疑点：①入场到退场约 2 秒，慢于源码里的 1200ms 定时器；
+      ②组件把站名写死成 EverMemory，未读 siteConfig。请确认是「不播放」「太慢」还是「文字/样式不对」。
+- [ ] B2 后台页宽度限制：删除 `.admin-content` / `--admin-max-width` 的宽度上限。
+- [ ] B3 Tab 焦点框：排查所有按钮是否都有 `:focus-visible` 轮廓。
+- [x] ~~B-divider 正文与工具栏之间的分隔线~~ **放弃（2026-11-23，用户判定未修好）**
+      已尝试：① 把 `--line-divider` 换色（被否：不许改透明度）；② 补 `:global(.content-preview hr)`
+      与 `.editor-field` 顶边 + `gap` 归零（实测边框存在、gap=0，但用户看到的仍是无分隔）。
+      未查明：用户所指「正文和标题之间」具体是哪两个区块——我按「工具栏与正文之间」理解并修改，
+      猜测可能不成立。**下次必须先让用户在截图上圈出位置，再动手。**
+- [x] ~~B-veil 前后台切换概率黑屏~~ **放弃（2026-11-23，用户判定：现在干脆不播，纯黑屏后直接跳转）**
+      已尝试：限制 `shouldPlay` 初值 false（SSR 不输出遮罩）+ sessionStorage 只播一次。
+      结果：遮罩不再出现在「首次」场景（可能 sessionStorage 已被前面的调试写入过），
+      变成白屏/黑屏直跳，比原来更差。**回滚这版改动，恢复原样。**
+      根因层判断：遮罩是 SSR 输出、退场靠 hydrate，JS 慢必黑。真正稳的做法是
+      「不靠 JS 退场」——用 CSS animation 自动跑完并 `animation-fill-mode: forwards`
+      停在不可见状态，JS 只负责在动画结束后可选地移除节点。下次按这个方向重做。
+
+- [~] B4 编辑器宽度：**部分完成，预览部分失败并已回退**。
+      已生效：`.editor-field`（编辑区）受 --editor-max-page-width 约束，Tabs 与工具栏保持撑满。
+      已回退：`.content-preview`（预览区）的宽度改动 —— 它被容器上的 Tailwind
+      `max-w-none!`（`!important`）压制，写 `max-width` 完全无效。这是我在 6f684939
+      引入的「看起来写了但实际无效」的改动，按新规第 2 条回退。
+      **下次方向**：移除或替换预览容器上的 `max-w-none!`（efee2e1b 引入），
+      而不是在下层规则里对抗 `!important`。**需用户确认能否动那个 class。**
+- [x] B5 路由转场：**已完成**。applyRoute 增加 animate 参数，首次同步（后台刷新/直接打开链接）传 false。实测刷新 hasAnim=false、内部导航 t+150 播 / t+600 自动摘、animationstart+end 都触发。前后台互切是整页加载，走 AdminEntryVeil（该组件状态见上方失败记录）。
+
+### 模块 C — 全局视觉（较重）
+
+- [ ] C1 连续曲线圆角（squircle）：全项目圆角规范。
+- [ ] C2 通知栏：进度条与左右边缘留白；添加撤回功能。
+- [ ] C3 OOBE：卡片居中、站名旁加 Logo、内边距引用组件库。
+
+### 模块 D — 排查与评估（重，产出结论而非代码）
+
+- [ ] D1 后台目录分类是否合理，严禁代码混杂。
+- [x] D2 配置文件「半连接」问题：**已排查，结论如下。**
+
+      **三条读取路径并存（这就是「半连接」）：**
+      1. `AdminLayout.astro` 把构建快照写进 `<div id="admin-config-snapshot" data-snapshot="…">`，
+         **仅 `import.meta.env.PROD` 注入**；dev 下是 `{}`。
+      2. `config-io.ts#readConfigSnapshot` 服务端 `import("@/constants/admin-config-snapshot")`，
+         只在 `isRemoteRuntime()`（VERCEL / CF_WORKERS / AWS_LAMBDA_FUNCTION_NAME）时被用。
+      3. 回落 `/api/admin/configs/[key]/` 实时读盘（tsx 求值），**dev 唯一可用路径**。
+
+      **格式**：快照是 `Record<key, { data: unknown; source: string }>`，API 返回
+      `{ success, data, source, remote }`。两者结构不同——所以 `AdminDashboard.loadSettings`
+      里对快照与 API 各写了一段解析分支（`settingsData / settingsSource / settingsRemote`）。
+
+      **是否互相覆盖**：不覆盖，是**同一条读取链上的三级回落**：
+      DOM 快照 → (无则) API。写路径同理分叉：本地可写就写文件，否则走
+      `saveConfigJsonRemote` 提交 GitHub 触发重建。**但存在真实风险**：
+      - 快照是**构建时**的求值结果，页面在长会话里不会刷新它；用户改完配置后
+        若没重新构建，读到的仍是旧快照。dev 下无快照所以看不到这个问题，
+        **这正是「半连接」最容易在生产暴露的形态**。
+      - 43 个文件直接 `import "@/config"`（编译期常量），它们**永远拿不到**运行时改动，
+        即使 Admin 页显示已保存。前后台因此可能读到不同的值。
+
+      **统一配置源的建议**（按代价从低到高）：
+      - **方案 A（推荐，小改）**：明确「编译期 vs 运行时」边界。编译期配置（siteConfig 等）
+        保持直接 import，并在 Admin 页把这类字段标为「需重新构建生效」；运行时配置
+        （runtime-config）统一走单一 API，删掉 DOM 快照这条路径，减少一个真相源。
+      - **方案 B（中改）**：保留快照但加版本号（构建时间戳）。前端每次读快照前比对
+        `/api/admin/configs/version`，不一致就自动回落 API 并提示「有更新，刷新以应用」。
+      - **方案 C（大改）**：把 43 处直接 import 全部改为运行时注入的 provider。
+        收益最大但改动面极广，且会让首屏多一次请求——不建议为本项目规模付这个代价。
+- [ ] D3 后台内部标签页管理体系可行性评估。
+
+### 模块 E — 架构升级（最重，先出方案再写代码）
+
+- [ ] E1 环境变量页加侧边栏 + 模块化拆分（便于接 KV）。
+- [ ] E2 设置页分流：「管理类」页面移到侧栏，保留纯配置页；评估混合页面方案。
+- [ ] E3 导出功能：单文件 JSON → 含原始文章与静态资源的 Zip 包，评估兼容性优势。
+
+### 规范更新
+
+- [x] 长任务清单必须完整写入 todo.md（AGENTS.md 第 4 条 / rules §2）
+- [x] 单项 10 分钟预算，超时记录跳过（AGENTS.md 第 5 条）
+- [x] 长清单按难度模块化、从轻到复杂（AGENTS.md 第 6 条）

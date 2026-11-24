@@ -26,31 +26,46 @@ const coverUrl = $derived(
 );
 
 /* 行号列：textarea 的文本不是 DOM 节点，CSS 计数器数不了行，所以用一个与正文
-   同字体、同 line-height 的 gutter，靠 scrollTop 同步。行数按换行符统计。 */
+   同字体、同 line-height 的 gutter，靠 translateY 同步。
+   gutterEl 是裁剪框（overflow:hidden），gutterInnerEl 才是被位移的那一层。 */
 let gutterEl = $state<HTMLDivElement | undefined>();
+let gutterInnerEl = $state<HTMLDivElement | undefined>();
 
 /**
  * MDX 预览的代码块复制：EC 的交互脚本不会在预览容器里执行，
  * 这里用事件委托接住复制按钮，把同块代码写进剪贴板。
+ *
+ * EC 生成的按钮没有 class，只带 title="Copy to clipboard"、data-copied
+ * 与 data-code 三个属性（实测 HTML 如此）。早先按 `button.copy` 选，
+ * 永远匹配不到，点击毫无反应。优先读 data-code：它是原始代码，比从
+ * <pre> 取 textContent 更准（后者含行号与语言徽章的文字）。
  */
 function handlePreviewCopyClick(event: MouseEvent) {
 	const target = event.target as HTMLElement;
-	const btn = target.closest<HTMLButtonElement>("button.copy, .copy > button");
+	const btn = target.closest<HTMLButtonElement>(
+		'button[title="Copy to clipboard"], button[data-code], button.copy, .copy > button',
+	);
 	if (!btn) return;
-	const fig =
-		btn.closest("figure") ??
-		btn.closest(".expressive-code") ??
-		btn.parentElement;
+
 	const code =
-		fig?.querySelector("pre code")?.textContent ??
-		fig?.querySelector("pre")?.textContent ??
+		btn.dataset.code ??
+		btn.closest("figure")?.querySelector("pre code")?.textContent ??
+		btn.closest(".expressive-code")?.querySelector("pre code")?.textContent ??
 		"";
 	if (!code) return;
+
 	void navigator.clipboard.writeText(code).then(() => {
 		btn.classList.add("copied");
-		setTimeout(() => btn.classList.remove("copied"), 1500);
+		/* EC 自己的按钮用 data-copied 换成「Copied!」文本，预览里没有它的
+		   脚本，靠这个类给出同样的即时反馈。 */
+		btn.setAttribute("data-copied-active", "true");
+		setTimeout(() => {
+			btn.classList.remove("copied");
+			btn.removeAttribute("data-copied-active");
+			}, 1500);
 	});
 }
+
 const lineNumbers = $derived(
 	Array.from(
 		{ length: Math.max(1, editorState.content.split("\n").length) },
@@ -216,9 +231,11 @@ const TOOLS: {
 		<div class="editor-field" class:with-lines={editorState.showLineNumbers}>
 			{#if editorState.showLineNumbers}
 				<div class="editor-gutter" bind:this={gutterEl} aria-hidden="true">
-					{#each lineNumbers as n (n)}
-						<span>{n}</span>
-					{/each}
+					<div class="editor-gutter-inner" bind:this={gutterInnerEl}>
+						{#each lineNumbers as n (n)}
+							<span>{n}</span>
+						{/each}
+					</div>
 				</div>
 			{/if}
 			<textarea
@@ -226,11 +243,20 @@ const TOOLS: {
 				bind:value={editorState.content}
 				onscroll={(e) => {
 					actions.handleEditorScroll();
-					if (gutterEl) {
-						gutterEl.scrollTop = e.currentTarget.scrollTop;
-						/* 自动换行让正文比逻辑行更高：gutter 空白补到与内容等高，
-						   否则行数栏先到底、右侧还能滚，视觉上两边没对齐 */
-						gutterEl.style.height = `${e.currentTarget.scrollHeight}px`;
+					/* 行号列与正文同步：位移必须写在内层 .editor-gutter-inner 上。
+					   外层 .editor-gutter 才是 overflow:hidden 的裁剪框——给外层加
+					   transform 等于把自己整体挪走，裁剪框跟着移动，数字会跑到
+					   Tabs 栏上方（「向上滚时数字悬空」）。 */
+					if (gutterInnerEl) {
+						gutterInnerEl.style.transform = `translateY(${-e.currentTarget.scrollTop}px)`;
+						/* 行号只数换行符，正文高度却按折行算——有长行时正文更高，
+						   滚到底后最后几行就没有对应数字（「最后的四个数字显示不出来」）。
+						   把内层高度拉到与正文内容等高：多出来的部分是没有号码的
+						   留白，但它保证最后一个数字能滚到视野里，而不是提前卡住。 */
+						const contentH = e.currentTarget.scrollHeight;
+						if (contentH > 0) {
+							gutterInnerEl.style.height = `${contentH}px`;
+						}
 					}
 				}}
 				onkeydown={handleEditorKeydown}
@@ -244,7 +270,7 @@ const TOOLS: {
 			bind:this={editorState.previewEl}
 			onscroll={actions.handlePreviewScroll}
 			onclick={handlePreviewCopyClick}
-			class="prose dark:prose-invert prose-base max-w-none! content-preview custom-md"
+			class="prose dark:prose-invert prose-base max-w-none content-preview custom-md"
 		>
 			<!-- 标题 + 元数据栏：与历史版本页共用 PostMetaBar，
 			     数据源绑定当前编辑器状态，随输入实时更新 -->
@@ -260,6 +286,13 @@ const TOOLS: {
 				tags={editorState.tags}
 				image={coverUrl}
 			/>
+			<!-- 元信息与正文之间的虚线分隔。
+			     照搬前台 src/pages/posts/[...slug].astro:320-324 那一条：
+			       <div class="border-(--line-divider) border-dashed border-b mt-3 mb-5" />
+			     前台只在「没有封面图」时显示，后台预览同样按 coverUrl 判断。 -->
+			{#if !coverUrl}
+				<div class="preview-meta-divider"></div>
+			{/if}
 			{@html editorState.renderedHtml}
 		</div>
 	{/if}
@@ -412,6 +445,18 @@ const TOOLS: {
 		outline: none;
 	}
 
+	/* 元信息与正文之间的虚线分隔。
+	   取值逐项照搬前台 src/pages/posts/[...slug].astro:322 的
+	     border-(--line-divider) border-dashed border-b mt-3 mb-5
+	   即：虚线、颜色 --line-divider、上下外边距 0.75rem / 1.25rem。
+	   前台把这条线放在 PostMetadata 之后、正文之前；后台预览同样是
+	   PostMetaBar 之后、渲染结果之前。 */
+	.preview-meta-divider {
+		margin-top: 0.75rem;
+		margin-bottom: 1.25rem;
+		border-bottom: 1px dashed var(--line-divider);
+	}
+
 	.content-preview {
 		flex: 1;
 		min-height: 0;
@@ -420,6 +465,29 @@ const TOOLS: {
 		border: none;
 		border-radius: var(--radius-md);
 		background: none;
+		/* 与 .editor-field 共用同一条宽度变量，让编辑/预览两种模式的手柄
+		   行为一致。容器上的 Tailwind 类已从 `max-w-none!` 改为 `max-w-none`
+		   （去掉 !important），这条规则才能按正常层叠生效——先前它被
+		   !important 压制，写在这也完全无效，表现就是「预览区拖了不动」。 */
+		max-width: var(--editor-max-page-width, 96rem);
+		margin-inline: auto;
+		width: 100%;
+	}
+
+	/* 分隔线：与前台保持同一份取值。
+	   前台定义在 src/styles/markdown-extend.styl 的 `.custom-md hr`：
+	     border-color: var(--line-divider)
+	     border-style: dashed
+	   预览容器本身带 .custom-md，理论上前台那条规则会命中；但 Tailwind
+	   Typography 的 `.prose hr` 权重更高，先落地成 currentColor + 低透明度，
+	   于是看起来没有线。这里只把前台那两个属性原样补一遍，不改色值、
+	   不改透明度、不改间距——两边必须长得一样。
+
+	   !important boundary: Tailwind Typography 的 `.prose hr` 拥有原有声明；
+	   分隔线外观归前台的 markdown-extend.styl，此处只是把它照搬过来。 */
+	:global(.content-preview.custom-md hr) {
+		border-color: var(--line-divider) !important;
+		border-style: dashed !important;
 	}
 
 	/* 代码块排版：对齐前台 expressive-code（one-light / one-dark）观感，
@@ -468,28 +536,43 @@ const TOOLS: {
 	}
 	/* ── 行号列 ──
 	   必须与 .content-editor 同字体、同 line-height(1.6)、同上下内边距，
-	   否则行号会逐行漂移；滚动由 textarea 的 onscroll 写 gutterEl.scrollTop 同步。
-	   自动换行会让正文高于逻辑行数：滚动同步时把 gutter 高度拉到与内容等高。 */
+	   否则行号会逐行漂移。滚动同步见 textarea 的 onscroll：内层用
+	   translateY 跟随，外层 overflow:hidden 裁掉多余部分。 */
 	.editor-field {
 		position: relative;
 		display: flex;
 		flex: 1;
 		min-height: 0;
+		/* 宽度手柄只约束正文：Tabs 栏与工具栏保持撑满（它们已用负 margin 顶到
+		   面板边缘），正文按 --editor-max-page-width 收窄并居中。 */
+		max-width: var(--editor-max-page-width, 96rem);
+		margin-inline: auto;
+		width: 100%;
 	}
 
 	.editor-gutter {
-		/* 高度由滚动同步时按内容 scrollHeight 拉齐 */
 		flex: 0 0 auto;
 		width: 3rem;
+		/* 外层是裁剪框：必须有确定高度，否则 flex 会按内容（989 行）撑开，
+		   overflow:hidden 等于没有作用范围，内层一位移数字就跑到 Tabs 栏上。
+		   与 textarea 同为 .editor-field 的子项，用 align-self: stretch 取同高。 */
+		position: relative;
+		align-self: stretch;
+		height: auto;
+		min-height: 0;
 		overflow: hidden;
+		user-select: none;
+		pointer-events: none;
+	}
+
+	.editor-gutter-inner {
 		padding: 0.625rem 0.5rem 0.625rem 0;
 		text-align: right;
 		font-family: inherit;
 		font-size: 0.875rem;
 		line-height: 1.6;
 		color: color-mix(in srgb, var(--content-meta) 55%, transparent);
-		user-select: none;
-		pointer-events: none;
+		will-change: transform;
 	}
 
 	.editor-gutter span {

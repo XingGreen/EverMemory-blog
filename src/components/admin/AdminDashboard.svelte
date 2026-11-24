@@ -2792,13 +2792,9 @@ function formatDate(dateStr: string | null): string {
 		   只在超宽视口分档放大，且每档的放大幅度都小于视口增幅，保证缩放单调：
 		   1500→1900 视口 +27% 对 zoom +9.5%；1900→2400 +26% 对 +13%。 */
 		--admin-zoom: 1;
-		/* 整页卡片的高度基准 = 父级分给 .admin-content 的高度。
-		   早先按视口写死 calc((100vh - 3rem) / zoom)：它算的是「视口减去容器内距」，
-		   却漏了 .admin-main 的 gap 与 .mobile-topbar 占位，实测比 .admin-content
-		   实际拿到的 907px 高 45px，溢出到文档层（文章列表页整页可滚）。
-		   改为 100% 后由 .admin-content 的 flex 分配决定，一处覆盖全部整页容器，
-		   与窄屏既有做法一致（见下方 @media 的同一覆盖）。 */
-		--admin-viewport-h: 100%;
+		/* 默认（悬浮卡片布局）：容器四周留 1.5rem（见 admin/*.astro 的
+		   .admin-container），高度为视口减去上下内距。 */
+		--admin-viewport-h: calc((100vh - 3rem) / var(--admin-zoom));
 		display: flex;
 		align-items: stretch;
 		gap: 1.25rem;
@@ -4074,9 +4070,7 @@ function formatDate(dateStr: string | null): string {
 		flex: 1;
 		min-width: 0;
 		/* 高度由受限的 .admin-layout（height 随紧贴开关取整视口或视口减内距）通过 flex 分配。
-		   height:100% 是给子页面 --admin-viewport-h: 100% 用的解析基准：
-		   只写 flex 时子元素的百分比高度没有参照，会退化成内容高。 */
-		height: 100%;
+		   这里不再写死 calc，避免 zoom 容器内基准不一致。 */
 		min-height: 0;
 		/* 内容区铺满可用宽度，不再设置 max-width 限制 */
 		width: 100%;

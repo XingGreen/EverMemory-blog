@@ -11,10 +11,15 @@ these rules win and the older wording is void.
 1. **Fix bugs on sight.** A defect found while working on a task is fixed in that same pass.
    Do not log it for later and do not ship it as a caveat in the report. Stop first only if the
    fix would fall outside the scope table in §1.
-2. **Every change gets its own branch.** Create the feature branch before the first edit, however
+2. **A failed fix is reverted, never patched by hand.** When a change does not achieve its stated
+   goal, revert it to the last known-good state and report. Do not keep editing on top of a broken
+   attempt: a hand-written patch over a wrong change tends to add a second defect while hiding the
+   first. Revert first (`git revert`, or `git checkout <good> -- <file>`), confirm the file is back
+   to the good state, then restart from a fresh diagnosis.
+3. **Every change gets its own branch.** Create the feature branch before the first edit, however
    small the change, and commit there. No direct commits to `master`, no finished work left
    uncommitted.
-3. **Merge when done.** Squash the finished branch to one commit, merge, delete the branch
+4. **Merge when done.** Squash the finished branch to one commit, merge, delete the branch
    (local and remote), switch back, `git pull`. Do not park a completed branch waiting for
    approval; only the destructive operations in §3 need a report first.
 
@@ -45,6 +50,11 @@ inside what was asked.
   user. When a fact cannot be checked, ask.
 - A plan means listing the work, not doing one item at a time. Related bugs found along the way
   are fixed in the same pass, and finished items are ticked off in `todo.md`.
+
+- **Long task lists live in `todo.md`.** When a request arrives with many items (a multi-section
+  sweep, a migration checklist), write the complete list into `todo.md` before the first edit and
+  tick items off as they land. The runtime's internal task tool can cap or drop entries, so it is
+  never the only record — the file is.
 
 ## 3. Git policy
 

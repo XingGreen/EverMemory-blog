@@ -221,6 +221,31 @@ function getEvaluateOptions(): Parameters<typeof evaluate>[1] {
 }
 
 /**
+ * Preact 的 renderToString 会把 <style> 里的文本当普通文本节点转义，
+ * 于是 expressive-code 注入的那段 CSS 变成 `content:&quot;&quot;`。
+ * 浏览器把 <style> 内容当原始文本（raw text），不会解码实体，这条规则
+ * 于是整条失效 —— 更糟的是它后面紧跟的规则会一并被丢弃，其中就包括用
+ * mask 画复制图标的 `button::after`。表现是：代码块复制按钮只剩一个
+ * 实心方块，而 MD 通道（rehype 直出，不转义）完全正常。
+ *
+ * 这里只还原 <style> 块内的实体，不动正文 HTML —— 正文里的 &lt; 等必须
+ * 保持转义，否则会变成真正的标签。
+ */
+function unescapeStyleBlocks(html: string): string {
+	const ENTITIES: Record<string, string> = {
+		"&quot;": '"',
+		"&#39;": "'",
+		"&apos;": "'",
+		"&lt;": "<",
+		"&gt;": ">",
+		"&amp;": "&",
+	};
+	return html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, (block) =>
+		block.replace(/&(?:quot|#39|apos|lt|gt|amp);/g, (m) => ENTITIES[m] ?? m),
+	);
+}
+
+/**
  * 渲染 MDX 为 HTML 字符串。
  * 编译/执行失败（编辑中的半成品、暂不支持的语法）抛出异常，由调用方降级。
  */
@@ -234,5 +259,5 @@ export async function renderMdxRuntime(source: string): Promise<string> {
 		useMDXComponents: createComponentProvider(bindings) as never,
 	};
 	const { default: Content } = await evaluate(code, options);
-	return renderToString(Content({}));
+	return unescapeStyleBlocks(renderToString(Content({})));
 }
