@@ -21,15 +21,10 @@ let {
 /**
  * 首次引导页（/setup/）——六步向导。
  * 一屏一个问题：身份 / 登录方式 / 仓库 / 凭证 / 私钥 / 署名，最后一张完成屏。
- * 页面顶部只放站点标题（读自配置，第 6 步改名后即时跟新）；
+ * 页面顶部放站点 Logo 与标题（读自配置，第 6 步改名后即时跟新）；
  * 卡片顶行只放位置标签「首次配置」；卡片内大标题是这一步要回答的问题。
  * 落盘只在「完成」发生一次，中途跳过不留脏数据。
  */
-// 页面顶部只放站点标题，不再渲染 logo；入参保留以兼容 /setup.astro
-void logoType;
-void logoValue;
-void logoAlt;
-void logoSrc;
 
 let items = $state<SecretItemState[]>([]);
 let loading = $state(true);
@@ -365,7 +360,16 @@ onMount(() => {
 </script>
 
 <div class="oobe">
-	<p class="site">{siteTitle}</p>
+	<div class="brand">
+		{#if logoSrc}
+			<img class="brand-logo" src={logoSrc} alt={logoAlt} />
+		{:else if logoType === "url" && logoValue}
+			<img class="brand-logo" src={logoValue} alt={logoAlt} />
+		{:else if logoType === "icon"}
+			<Icon icon={logoValue} class="brand-logo" />
+		{/if}
+		<p class="site">{siteTitle}</p>
+	</div>
 
 	<section class="sheet">
 		<div class="bar">
@@ -649,39 +653,62 @@ onMount(() => {
 </ConfirmDialog>
 
 <style>
+	/* 页面外层：上下留白 + 水平内边距统一走设计令牌，卡片在剩余空间里居中 */
 	.oobe {
 		min-height: 100vh;
 		min-height: 100dvh;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		padding: 24px 20px 0;
+		justify-content: center;
+		gap: var(--admin-gutter);
+		padding: var(--admin-gutter);
 		background: var(--page-bg);
 		color: var(--deep-text);
 	}
 
-	.site {
+	/* 站点 Logo 与站名并排 */
+	.brand {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.625rem;
 		width: 100%;
 		max-width: 760px;
+	}
+
+	.brand-logo {
+		width: 1.75rem;
+		height: 1.75rem;
+		flex: none;
+		border-radius: var(--radius-large);
+		object-fit: contain;
+		color: var(--deep-text);
+	}
+
+	.site {
+		width: auto;
+		max-width: 100%;
 		margin: 0;
-		text-align: center;
+		text-align: left;
 		font-size: 27px;
 		font-weight: 600;
 		letter-spacing: -0.01em;
 		color: var(--deep-text);
 	}
 
+	/* 卡片：宽度上限保持 760px，内边距与圆角引用令牌；margin 交给 flex 居中 */
 	.sheet {
 		width: 100%;
 		max-width: 760px;
 		height: min(500px, calc(100dvh - 148px));
-		margin: auto 0 4px;
+		margin: 0;
 		background: var(--card-bg);
 		border: 1px solid var(--line-color);
 		border-radius: var(--radius-large);
 		display: flex;
 		flex-direction: column;
-		padding: 28px;
+		padding: var(--admin-gutter);
 		overflow: hidden;
 	}
 

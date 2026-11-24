@@ -146,3 +146,22 @@
 - [ ] **3. squash 合并并推送到 master**
       证据：16 个提交 squash 为 `831fc9ad`，推送 `060f26f8..831fc9ad`；
       远端已同步，源分支内容经 `git diff` 确认差异为零后删除。
+
+---
+
+## 第 182 轮 · 2026-11-24 19:58
+
+主题：建立审批表规范、继续 todo 模块 C。
+
+- [ ] **1. 建立独立人工审批表**
+      要求：与 `todo.md` 严格隔开、完成即入表、由用户打勾、按对话轮次分组。
+      证据：新增 `APPROVAL.md`；规则写入 `AGENTS.md` 第 5 条与 `rules/project-rules.md`。
+      提交 `556f08f6`。
+
+- [ ] **2. C3 OOBE：卡片居中、站名旁加 Logo、内边距引用组件库**
+      原因：Logo 入参此前被 `void` 丢弃（完全不渲染）；卡片靠 `margin: auto 0 4px` 偏移；
+      内边距是硬编码 `28px` / `24px 20px 0`。
+      证据：提交 `7d04191a`。实测（1600×1000）：
+      Logo 已渲染为 `<img>`；卡片 top 244 / bottom 256，垂直居中成立；
+      `.oobe` 与 `.sheet` 的 padding 均为 `24px`（= `--admin-gutter` 1.5rem）；
+      Logo 与站名间距 `10px`。截图确认 Logo 与「EverMemory's Blog」并排居中。
