@@ -39,6 +39,8 @@ import "@/styles/main.css";
 import "@/styles/ui-base.css";
 import "@/styles/variables.styl";
 import "@/styles/markdown-extend.styl";
+/* 开屏 / 转场动画的唯一实现：OOBE、后台入口、后台切页共用 */
+import "@/styles/splash.css";
 import "@rehype-callouts-theme";
 
 interface Props {
@@ -632,10 +634,12 @@ const siteLogo = await getSiteLogo();
         在顶部闪出一条横线（#progress-bar.loading）。 */}
     {!excludeFrontendEffects && <div id="progress-bar"></div>}
 
-    {/* 进入后台的转场遮罩：前台点击控制面板入口时下拉覆盖，后台加载后由 veil 接住退场 */}
+    {/* 进入后台的转场遮罩：前台点击控制面板入口时下拉覆盖，后台加载后由 veil 接住退场。
+        类名沿用共享实现 splash-veil / splash-grid（src/styles/splash.css），
+        与 OOBE 开屏、后台入口遮罩是同一份代码；这里只加一个 is-covering 触发方向。 */}
     {!excludeFrontendEffects && (
       <>
-        <div id="admin-enter-veil" aria-hidden="true"><div class="aev-grid"></div></div>
+        <div id="admin-enter-veil" class="splash-veil splash-cover" data-effect="slide-fade" aria-hidden="true"><div class="splash-grid"></div></div>
         <script is:inline>
           document.addEventListener("click", (event) => {
             if (event.defaultPrevented || event.button !== 0) return;
@@ -658,8 +662,9 @@ const siteLogo = await getSiteLogo();
             // 告知目标页这是转场进入：setup 开屏据此跳过前置静默，避免两段空白叠加
             try { sessionStorage.setItem("admin_entered_from_front", "1"); } catch {}
             const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-            // 遮罩下拉 0.55s，走完约 60% 已盖住视口即可切换，减少与 setup 开屏的空白叠加
-            setTimeout(() => { location.href = anchor.href; }, reduced ? 0 : 320);
+            // 遮罩下拉走完整段时长再切换：此前只等 320ms（约 60% 行程）就跳转，
+            // 后半段运动被页面卸载打断，看起来就是「动画不完整」。
+            setTimeout(() => { location.href = anchor.href; }, reduced ? 0 : 560);
           }, true);
           // 从后台后退回来时，bfcache 会连同 .is-covering 一起恢复，
           // 遮罩因此一直盖在前台。页面每次显示都复位，避免停在纯背景。
@@ -703,37 +708,12 @@ const siteLogo = await getSiteLogo();
 >
   @reference "../styles/main.css";
 
-  /* 进入后台的转场遮罩：默认在视口上方，点击时下拉覆盖前台 */
+  /* 进入后台的转场遮罩样式已移到 src/styles/splash.css：
+     #admin-enter-veil 现在带 .splash-veil .splash-cover 两个类，
+     与 OOBE 开屏、后台入口遮罩共用同一份几何、配色与缓动。
+     这里只保留一个层级微调——它要压在前台内容之上、又低于后台入口遮罩。 */
   #admin-enter-veil {
-    position: fixed;
-    inset: 0;
     z-index: 14998;
-    background: #0e0b16;
-    transform: translateY(-101%);
-    pointer-events: none;
-  }
-
-  #admin-enter-veil.is-covering {
-    transform: translateY(0);
-    transition: transform 0.55s cubic-bezier(0.76, 0, 0.24, 1);
-  }
-
-  #admin-enter-veil .aev-grid {
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(to right, #2a2340 1px, transparent 1px),
-      linear-gradient(to bottom, #2a2340 1px, transparent 1px);
-    background-size: 34px 34px;
-    opacity: 0.55;
-    -webkit-mask-image: radial-gradient(ellipse 72% 62% at 50% 46%, #000 26%, transparent 78%);
-    mask-image: radial-gradient(ellipse 72% 62% at 50% 46%, #000 26%, transparent 78%);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    #admin-enter-veil.is-covering {
-      transition: none;
-    }
   }
 
   @layer components {

@@ -3,7 +3,9 @@ import { onMount } from "svelte";
 import ConfirmDialog from "@/components/admin/ConfirmDialog.svelte";
 import Icon from "@/components/common/Icon.svelte";
 import { siteConfig } from "@/config";
+import { adminConfig } from "@/config/adminConfig";
 import { SECRET_ROWS, type SecretItemState } from "@/utils/admin-secrets";
+import { portalToBody } from "@/utils/floating";
 import { buildEntries, readPrivateKeyFile } from "@/utils/secret-draft";
 
 let {
@@ -354,10 +356,103 @@ async function finish() {
 	step = 7;
 }
 
+/**
+ * 开屏序列：夜色静置 → 基线生长 + LOGO 显影 → 题名收束 + 笔尖写到底
+ * → 数据就绪后幕布上移露出向导。
+ *
+ * 与后台入口的遮罩**共用 adminConfig.entryVeil**：同一套视觉语言、
+ * 同一份时长与效果、同一个开关。此前 OOBE 自建 intro-* 动画、
+ * 后台另有一套 entry-veil，数值各写各的，后来 OOBE 这套被整体删除，
+ * 导致首次配置页完全没有开屏——与后台的进场体验就断成了两截。
+ *
+ * reduced-motion 用户直接跳过（a11y §6）。
+ */
+const veilConfig = adminConfig.entryVeil ?? {};
+const introEnabled = veilConfig.enable !== false;
+const introDuration = veilConfig.duration ?? 900;
+
+let introPhase = $state<"black" | "rise" | "fade" | "done">("black");
+let introDataReady = $state(false);
+
+const introStatus = $derived(
+	introPhase === "fade" || introPhase === "done" ? "已就绪" : "正在读取配置",
+);
+
+/** 数据就绪且已进入 rise 阶段时才收幕，避免向导还没准备好就露出来 */
+$effect(() => {
+	if (introPhase !== "rise" || !introDataReady) return;
+	introPhase = "fade";
+	const t = setTimeout(() => (introPhase = "done"), introDuration + 60);
+	return () => clearTimeout(t);
+});
+
 onMount(() => {
-	void Promise.allSettled([load(), loadSite()]);
+	// 从前台转场进来时跳过前置静默：那一侧已经有下拉遮罩在盖着，
+	// 再叠一段黑屏就成了两段空白（786c8d69 修的就是这个）。
+	let fromFront = false;
+	try {
+		fromFront = sessionStorage.getItem("admin_entered_from_front") === "1";
+		sessionStorage.removeItem("admin_entered_from_front");
+	} catch {
+		// 隐私模式：当作普通进入
+	}
+
+	const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+	if (!introEnabled || reduced) {
+		introPhase = "done";
+		void Promise.allSettled([load(), loadSite()]);
+		return;
+	}
+
+	void Promise.allSettled([load(), loadSite()]).then(() => {
+		introDataReady = true;
+	});
+
+	const t1 = setTimeout(() => (introPhase = "rise"), fromFront ? 0 : 320);
+	return () => clearTimeout(t1);
 });
 </script>
+
+<!-- 开屏幕布：结构与动画类全部来自 src/styles/splash.css（与后台入口共用一份实现），
+     这里只负责绑定阶段状态与传入配置值。 -->
+{#if introPhase !== "done"}
+	{@const introImageSrc =
+		logoSrc ??
+		(logoType === "url" || /^(https?:|\/)/.test(logoValue) ? logoValue : null)}
+	<div
+		class="splash-veil"
+		class:is-leaving={introPhase === "fade"}
+		data-effect={veilConfig.effect ?? "slide-fade"}
+		style={`--splash-duration:${introDuration}ms`}
+		use:portalToBody
+		aria-hidden="true"
+	>
+		<div class="splash-grid"></div>
+		<span class="splash-folio">首次配置</span>
+		<div class="splash-center">
+			<div class="splash-logo">
+				{#if introImageSrc}
+					<img
+						src={introImageSrc}
+						alt={logoAlt}
+						width="512"
+						height="512"
+						fetchpriority="high"
+						decoding="sync"
+					/>
+				{:else}
+					<Icon icon={logoValue} />
+				{/if}
+			</div>
+			<div class="splash-wordmark">{siteTitle}</div>
+			<p class="splash-status">{introStatus}</p>
+		</div>
+		<div class="splash-baseline">
+			<span class="splash-rule"></span>
+			<span class="splash-nib"></span>
+		</div>
+	</div>
+{/if}
 
 <div class="oobe">
 	<div class="brand">

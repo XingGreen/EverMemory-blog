@@ -43,22 +43,29 @@ export type AdminConfig = {
 	};
 
 	/**
-	 * 进入后台的开屏遮罩。
+	 * 开屏遮罩：OOBE（/setup/）与后台入口**共用这一份配置**。
 	 *
-	 * 与 pageTransition 分开是因为两者触发时机不同：pageTransition 管「后台内部
-	 * 切页」，entryVeil 管「整页加载后进后台」。但它们**共用同一套效果与时长语义**，
-	 * 所以 effect 的类型与 pageTransition 相同，不另立一套名字——
-	 * 两套动画曾各自硬编码数值，结果遮罩的退场比页面切换慢四倍、效果也对不上。
+	 * 两者是同一套视觉语言（夜色底 + 坐标格 + 站名 + 上移退场），只有承载的页面不同。
+	 * 历史上 OOBE 在 SetupPage 里自建了一套 intro-* 动画、后台入口又有一套 entry-veil，
+	 * 数值各写各的、先后被删掉一半，结果 OOBE 完全没有开屏、后台的又对不上配置。
+	 * 现在统一从这里读：效果、时长、是否播放都只有一个来源。
 	 */
 	entryVeil?: {
-		/** 是否开启；关闭后整页加载直接显示后台 */
+		/** 是否开启；关闭后两个入口都直接显示内容 */
 		enable?: boolean;
 		/**
-		 * 退场效果，取值与 pageTransition.effect 一致。
-		 * 默认跟随 pageTransition.effect，避免两处各写一个值导致观感不一致。
+		 * 退场效果，取值与 pageTransition.effect 一致（slide-fade / fade / slide / zoom）。
+		 * 默认 "slide-fade"。
 		 */
 		effect?: AdminPageTransitionEffect;
-		/** 退场时长（毫秒）；不填则跟随 pageTransition.duration */
+		/**
+		 * 退场时长（毫秒）。
+		 *
+		 * **不要用 pageTransition.duration 的值。** 后者服务的是「内容位移 10px 的入场」，
+		 * 而开屏遮罩要位移整屏（约 1010px）——位移量差 100 倍，共用数值会让遮罩
+		 * 单帧跳过数百像素，看上去就是「闪一下」，也就是「动画不完整」。
+		 * 建议 800–1000ms：900ms 约合 18px/帧，上移过程能看清。
+		 */
 		duration?: number;
 	};
 

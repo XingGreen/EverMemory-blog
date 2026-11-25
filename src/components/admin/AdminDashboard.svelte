@@ -204,7 +204,9 @@ $effect(() => {
 	const effect = adminConfig.pageTransition?.effect ?? "slide-fade";
 	viewAnimClass = "";
 	const raf = requestAnimationFrame(() => {
-		viewAnimClass = `admin-view-enter admin-view-${effect}`;
+		/* 类名用共享实现（src/styles/splash.css），与 OOBE 开屏、
+		   后台入口遮罩同一套效果名，不再各自维护一份关键帧 */
+		viewAnimClass = `splash-view-enter splash-view-${effect}`;
 	});
 	return () => cancelAnimationFrame(raf);
 });
@@ -5708,70 +5710,10 @@ function formatDate(dateStr: string | null): string {
 		color: var(--content-meta);
 	}
 
-	/* ────────────────────────────────────────────────────────────
-	   后台外观：由 src/config/adminConfig.ts 下发
-	   · 切换动画四种效果，时长走 --admin-view-duration
-	   · 背景图走 --admin-bg-url，铺在最底层并压暗，保证正文可读
-	   · 对话框模糊走 --admin-dialog-blur（0px 即关闭）
-	   ──────────────────────────────────────────────────────────── */
-	.admin-view-enter {
-		animation-duration: var(--admin-view-duration, 220ms);
-		animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
-		animation-fill-mode: both;
-	}
-
-	.admin-view-slide-fade {
-		animation-name: adminViewSlideFade;
-	}
-	.admin-view-fade {
-		animation-name: adminViewFade;
-	}
-	.admin-view-slide {
-		animation-name: adminViewSlide;
-	}
-	.admin-view-zoom {
-		animation-name: adminViewZoom;
-	}
-
-	@keyframes adminViewSlideFade {
-		from {
-			opacity: 0;
-			transform: translateY(10px);
-		}
-		to {
-			opacity: 1;
-			transform: none;
-		}
-	}
-
-	@keyframes adminViewFade {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
-	}
-
-	@keyframes adminViewSlide {
-		from {
-			transform: translateX(-16px);
-		}
-		to {
-			transform: none;
-		}
-	}
-
-	@keyframes adminViewZoom {
-		from {
-			opacity: 0;
-			transform: scale(0.985);
-		}
-		to {
-			opacity: 1;
-			transform: none;
-		}
-	}
+	/* 后台切页动画的实现已移到 src/styles/splash.css（.splash-view-*）。
+	   这里不再保留 adminView* 的副本——OOBE 开屏、后台入口遮罩、内部切页
+	   此前各写一套，数值和缓动都不一致；现在三处共用同一份关键帧与效果名。
+	   时长仍由 adminConfig.pageTransition.duration 通过 --admin-view-duration 下发。 */
 
 	/* 背景图层：固定在视口，压暗后不吃点击 */
 	.admin-layout[data-admin-bg="on"]::before {
@@ -5797,12 +5739,6 @@ function formatDate(dateStr: string | null): string {
 	:global(.sidebar-backdrop) {
 		-webkit-backdrop-filter: blur(var(--admin-dialog-blur, 4px)) !important;
 		backdrop-filter: blur(var(--admin-dialog-blur, 4px)) !important;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.admin-view-enter {
-			animation: none !important;
-		}
 	}
 
 	.config-error-card {
