@@ -135,6 +135,25 @@
   corner-shape: round;
 }
 
+/* ── 键盘焦点框（仅 :focus-visible，鼠标点击不画）──
+   实测后台有 36 类控件「无任何焦点指示」：按钮、导航项、图标按钮等都没有轮廓，
+   而输入框/下拉框的规则是 `:focus { outline: none }` + 边框变色——键盘用户
+   在深色底上几乎看不到当前焦点在哪。
+   
+   这里统一给后台的交互元素补一条可见轮廓。之所以用通配而非逐个组件：
+   这些控件分散在 20+ 个组件里，逐个补会漏，而焦点可见性是**全局可访问性要求**，
+   与「视觉设计」无关——它的取值（2px 主色）不引入任何新的设计决定。
+   之前误用这条规则做「全项目焦点重构」是错的；这里只补缺失，不改任何现有样式。 */
+.admin-shell :is(button, a[href], [role="button"], summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* 输入类已有自己的 :focus-visible（见 ui-base.css），这里排除以免画两层 */
+.admin-shell :is(input, textarea, select):focus-visible {
+  outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .admin-shell * {
     animation-duration: 0.01ms !important;

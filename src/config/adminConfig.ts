@@ -12,6 +12,11 @@ export const adminConfig: AdminConfig = {
 		effect: "slide-fade",
 		duration: 220,
 	},
+	// 进入后台的开屏遮罩：效果与时长都跟随 pageTransition，
+	// 需要单独调整时再在这里覆盖（不填即跟随）。
+	entryVeil: {
+		enable: true,
+	},
 	// 对话框模糊：弹窗/抽屉打开时，遮罩层做背景模糊
 	dialogBlur: {
 		enable: true,

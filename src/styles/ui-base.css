@@ -62,8 +62,20 @@
 	color: var(--deep-text);
 }
 
+/* 搜索框：轮廓画在外层 .ui-search 上，输入框自身不要再画一遍（会套两层框）。
+   但要让外层真的收到焦点——用 :focus-within 而不是取消 input 的 outline 就完事，
+   否则键盘用户进到搜索框时什么提示都没有。 */
 .ui-search > input:focus {
 	outline: none;
+}
+
+.ui-search:focus-within {
+	border-color: var(--primary);
+}
+
+.ui-search:has(> input:focus-visible) {
+	outline: 2px solid var(--primary);
+	outline-offset: 1px;
 }
 
 .ui-search > input::placeholder {
@@ -131,9 +143,18 @@ textarea.ui-input {
 	line-height: 1.5;
 }
 
+/* 输入框的焦点分成两层，各管一件事：
+   · :focus        —— 边框变主色，鼠标点进来也给即时反馈（不影响可见性）
+   · :focus-visible —— 键盘用户额外画轮廓，保证在深色底上明确可见
+   此前只写了 :focus { outline: none } + 边框变色，键盘用户几乎没有可见提示：
+   实测后台有 36 类控件处于「无任何焦点指示」状态。 */
 .ui-input:focus {
-	outline: none;
 	border-color: var(--primary);
+}
+
+.ui-input:focus-visible {
+	outline: 2px solid var(--primary);
+	outline-offset: 1px;
 }
 
 .ui-input::placeholder {
@@ -179,8 +200,12 @@ textarea.ui-input {
 }
 
 .ui-select:focus {
-	outline: none;
 	border-color: var(--primary);
+}
+
+.ui-select:focus-visible {
+	outline: 2px solid var(--primary);
+	outline-offset: 1px;
 }
 
 .ui-select:disabled {

@@ -206,11 +206,17 @@
 
 ### 模块 B — 需诊断的单点（中等）
 
-- [ ] B1 开屏动画：**需用户说明具体症状**。实测 AdminEntryVeil 功能正常（遮罩出现、约 2s 后
-      entry-lift 上移 992px 退场）。疑点：①入场到退场约 2 秒，慢于源码里的 1200ms 定时器；
-      ②组件把站名写死成 EverMemory，未读 siteConfig。请确认是「不播放」「太慢」还是「文字/样式不对」。
-- [ ] B2 后台页宽度限制：删除 `.admin-content` / `--admin-max-width` 的宽度上限。
-- [ ] B3 Tab 焦点框：排查所有按钮是否都有 `:focus-visible` 轮廓。
+- [x] B1 开屏动画：**已完成**（9530e585）。根因是遮罩完全没读配置，硬编码 0.95s 上移
+      + 1200ms 拆除 + 「EverMemory」站名，而 pageTransition 是 220ms slide-fade。
+      现新增 `adminConfig.entryVeil`（不填即跟随 pageTransition），拆除定时由时长推导，
+      站名读 siteConfig.title。实测退场完整播完（opacity 1→0、top 0→-1005）后才移除。
+
+- [x] B2 后台页宽度限制：**已确认完成**（早已移除，无需改动）。`.admin-container` 为 `width: 100%`，
+      `.admin-content` 注释写明不再设 max-width，全库无 `--admin-max-width` 残留。
+- [x] B3 键盘焦点框：**已完成**（只补缺失，未做全项目重构）。
+      根因：`ui-base.css` 三处 `outline: none` 只配边框变色，深色底对比不足。
+      修法：`:focus` 留边框变色、`:focus-visible` 补 2px 轮廓；后台交互元素统一补轮廓。
+      实测 43/43 类控件有焦点指示。**注**：首轮报「36 类缺失」是误判——未聚焦时读 outline 恒为 none。
 - [x] ~~B-divider 正文与工具栏之间的分隔线~~ **放弃（2026-11-23，用户判定未修好）**
       已尝试：① 把 `--line-divider` 换色（被否：不许改透明度）；② 补 `:global(.content-preview hr)`
       与 `.editor-field` 顶边 + `gap` 归零（实测边框存在、gap=0，但用户看到的仍是无分隔）。

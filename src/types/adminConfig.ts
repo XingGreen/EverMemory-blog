@@ -42,6 +42,26 @@ export type AdminConfig = {
 		duration?: number;
 	};
 
+	/**
+	 * 进入后台的开屏遮罩。
+	 *
+	 * 与 pageTransition 分开是因为两者触发时机不同：pageTransition 管「后台内部
+	 * 切页」，entryVeil 管「整页加载后进后台」。但它们**共用同一套效果与时长语义**，
+	 * 所以 effect 的类型与 pageTransition 相同，不另立一套名字——
+	 * 两套动画曾各自硬编码数值，结果遮罩的退场比页面切换慢四倍、效果也对不上。
+	 */
+	entryVeil?: {
+		/** 是否开启；关闭后整页加载直接显示后台 */
+		enable?: boolean;
+		/**
+		 * 退场效果，取值与 pageTransition.effect 一致。
+		 * 默认跟随 pageTransition.effect，避免两处各写一个值导致观感不一致。
+		 */
+		effect?: AdminPageTransitionEffect;
+		/** 退场时长（毫秒）；不填则跟随 pageTransition.duration */
+		duration?: number;
+	};
+
 	/** 对话框（弹窗 / 抽屉）背后的模糊效果 */
 	dialogBlur?: {
 		enable?: boolean;

@@ -293,3 +293,39 @@
       已移除该分组标题，并**删掉**为此新增的 `adminContentGroup` i18n 键及五种语言翻译，
       不留无用键。实测页面 `.nav-section-label` 数量为 0。
 
+---
+
+## 第 193 轮 · 2026-11-25 18:27
+
+主题：B1 开屏动画与初始配置不一致（显示不完整）。
+
+- [ ] **1. B1 开屏遮罩统一到 adminConfig 驱动**
+      问题（用户指出）：开屏动画显示不完整，与初始配置的动画不一致，两页动画逻辑应复用同一套。
+      根因：`AdminEntryVeil` 完全没读配置，硬编码了 `0.95s` 上移 + `1200ms` 拆除 +
+      `EverMemory` 站名；而 `adminConfig.pageTransition` 是 `220ms` / `slide-fade`。
+      同一个后台两套节奏，遮罩退场显得「没播完就被拆掉」。
+      证据：提交 `9530e585`。做法：
+      · 新增 `adminConfig.entryVeil`（enable / effect / duration），effect 与 duration
+        **不填即跟随 pageTransition**，不再有第二套数值；
+      · 四种效果（slide-fade / fade / slide / zoom）与后台切页同名同义；
+      · 拆除定时改为 `duration + 120ms`，由时长推导，不再写死；
+      · 站名改读 `siteConfig.title`，实测显示为「EverMemory's Blog」而非硬编码的「EverMemory」。
+      实测（rAF 逐帧采样）：veil 661ms 出现 → 2347ms 开始退场 → 2642ms 移除，
+      退场过程 opacity 1→0.88→0.65→0.28→0.04→0、top 0→-4→-42→-88→-624→-1005，**完整播完才移除**。
+
+- [ ] **2. B2 后台页宽度限制：确认早已移除**
+      核查结果：`.admin-container` 当前是 `width: 100%`，注释写明「不再设上界」；
+      `.admin-content` 注释为「内容区铺满可用宽度，不再设置 max-width 限制」；
+      全库搜索 `--admin-max-width` 为空。**无需改动**，此项为历史遗留条目。
+
+- [ ] **3. B3 键盘焦点框：只排查缺失，不做全项目重构**
+      实测方法修正：`outline` 只在元素**真正聚焦**时生效，未聚焦时读计算值永远是 `none`——
+      我第一轮据此报出「36 类控件无焦点指示」是**误判**。改为「先 focus + 派发 Tab 事件
+      进入键盘 modality，再读样式」后重新审计。
+      根因：`ui-base.css` 三处 `outline: none` 只配了 `border-color` 变色，
+      深色底上对比不足，且 `:focus` 把鼠标点击也算进去。
+      修法：拆成两层——`:focus` 保留边框变色（即时反馈），`:focus-visible` 补 2px 主色轮廓；
+      并在 `admin.css` 给后台交互元素补一条 `:focus-visible` 轮廓，输入类显式排除以免两层框。
+      证据：实测 5 个页面共 **43 类控件，43/43 全部有焦点指示**，
+      抽样 outline = `2px solid oklch(0.75 0.14 270)`、`focus-visible=true`。
+
