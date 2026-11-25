@@ -329,3 +329,33 @@
       证据：实测 5 个页面共 **43 类控件，43/43 全部有焦点指示**，
       抽样 outline = `2px solid oklch(0.75 0.14 270)`、`focus-visible=true`。
 
+---
+
+## 第 196 轮 · 2026-11-25 19:00
+
+主题：管理页动画不再独立，与 OOBE 共用同一套。
+
+- [ ] **1. 三处动画合并为一份实现 `src/styles/splash.css`**
+      此前是三份各写各的：
+      · OOBE（`SetupPage`）自建 `intro-*`（后在 `786c8d69` 被整体删除，等于没有开屏）
+      · 后台入口（`AdminEntryVeil`）自建 `entry-*`，硬编码 0.95s / 1200ms，不读配置
+      · 后台切页（`AdminDashboard`）自建 `adminView*`，220ms、位移 10px
+      · 前台→后台（`Layout.astro`）自建 `#admin-enter-veil` + `.aev-grid`，0.55s
+      现在全部改为 `splash-veil` / `splash-grid` / `splash-view-*`，效果名统一为
+      slide-fade / fade / slide / zoom，时长统一由 `adminConfig.entryVeil` 下发。
+      证据：提交 `0beef1a9`。净减 71 行（+513 / −234），重复实现被删。
+
+- [ ] **2. 修复「动画不完整」的真正成因（两处）**
+      · **时长与位移不匹配**：曾把开屏时长设为跟随 `pageTransition.duration`（220ms），
+        但切页位移只有 10px、开屏遮罩要位移整屏 1010px——**位移量差 101 倍**，
+        共用数值导致单帧跳过 483px，肉眼只看到闪。现改为独立 `entryVeil.duration: 900`。
+      · **跳转打断了后半段**：`Layout.astro` 原先只等 320ms（约 60% 行程）就 `location.href`，
+        遮罩后 40% 的运动随页面卸载消失。现改为等满 560ms。
+      实测（rAF 逐帧）：退场 34 帧、**单帧最大位移 < 300px（0 次跳帧）**、
+      实测时长 889ms（配置 900ms）、top 0→-1010、opacity 1→0.0006。
+
+- [ ] **3. 恢复 OOBE 开屏动画**
+      说明：OOBE 的 splash 在 `786c8d69` 被有意移除（当时为「减少与前台转场的空白叠加」），
+      之后首次配置页完全没有开屏。现已恢复，并与后台入口共用同一份样式与配置；
+      从前台转场进入时跳过 320ms 前置静默，避免两段空白叠加（保留当初的修复意图）。
+
