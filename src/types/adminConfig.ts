@@ -42,33 +42,6 @@ export type AdminConfig = {
 		duration?: number;
 	};
 
-	/**
-	 * 开屏遮罩：OOBE（/setup/）与后台入口**共用这一份配置**。
-	 *
-	 * 两者是同一套视觉语言（夜色底 + 坐标格 + 站名 + 上移退场），只有承载的页面不同。
-	 * 历史上 OOBE 在 SetupPage 里自建了一套 intro-* 动画、后台入口又有一套 entry-veil，
-	 * 数值各写各的、先后被删掉一半，结果 OOBE 完全没有开屏、后台的又对不上配置。
-	 * 现在统一从这里读：效果、时长、是否播放都只有一个来源。
-	 */
-	entryVeil?: {
-		/** 是否开启；关闭后两个入口都直接显示内容 */
-		enable?: boolean;
-		/**
-		 * 退场效果，取值与 pageTransition.effect 一致（slide-fade / fade / slide / zoom）。
-		 * 默认 "slide-fade"。
-		 */
-		effect?: AdminPageTransitionEffect;
-		/**
-		 * 退场时长（毫秒）。
-		 *
-		 * **不要用 pageTransition.duration 的值。** 后者服务的是「内容位移 10px 的入场」，
-		 * 而开屏遮罩要位移整屏（约 1010px）——位移量差 100 倍，共用数值会让遮罩
-		 * 单帧跳过数百像素，看上去就是「闪一下」，也就是「动画不完整」。
-		 * 建议 800–1000ms：900ms 约合 18px/帧，上移过程能看清。
-		 */
-		duration?: number;
-	};
-
 	/** 对话框（弹窗 / 抽屉）背后的模糊效果 */
 	dialogBlur?: {
 		enable?: boolean;
