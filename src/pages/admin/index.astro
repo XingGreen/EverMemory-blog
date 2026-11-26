@@ -9,6 +9,7 @@ import { adminConfig } from "@/config/adminConfig";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import { resolveAdminLogo } from "@/utils/admin-logo";
 import { resolveAdminAvatarUrl } from "@/utils/avatar-url";
+import { getAuthTokenFromRequest } from "@/utils/auth";
 import { canBootstrap } from "@/utils/bootstrap-mode";
 
 // 服务端渲染：canBootstrap 读 Astro.request.headers 判断是否来自本机回环，
@@ -18,6 +19,14 @@ export const prerender = false;
 // 首次配置阶段：后台首页也让位给 /setup/，与 [...slug] 兜底页保持一致。
 if (canBootstrap(Astro.request)) {
 	return Astro.redirect("/setup/");
+}
+
+/* 未登录时在服务端直接跳到登录页。
+   此前是「先渲染整个后台外壳 → 客户端发现没登录 → location.replace 到 /login/」，
+   前台那个入口又硬编码指向 /login/，于是多出一次整页加载。
+   在服务端判定可以省掉这一跳：浏览器一次请求就落到登录页。 */
+if (!getAuthTokenFromRequest(Astro.request)) {
+	return Astro.redirect("/login/");
 }
 
 const title = "控制面板";

@@ -1568,6 +1568,10 @@ function disableAnimation() {
       if (!adminNavPath(currentPath) && !adminNavPath(targetPath)) return;
       // 后台为单页应用（History API 路由，无 hash），路径相同即不触发导航
       if (currentPath === targetPath) return;
+      /* 带 data-admin-exit 的链接自带出站转场，由页面自己的捕获监听接管。
+         这里必须让路：下面会 stopPropagation，拦住的话那个监听永远收不到点击，
+         转场就「点了直接跳走、没有任何过渡」。 */
+      if (anchor.hasAttribute("data-admin-exit")) return;
       event.preventDefault();
       event.stopPropagation();
       window.location.href = anchor.href; // 整页加载，绕过 swup

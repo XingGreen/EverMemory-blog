@@ -7,6 +7,7 @@ import { adminConfig } from "@/config/adminConfig";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import { resolveAdminLogo } from "@/utils/admin-logo";
 import { resolveAdminAvatarUrl } from "@/utils/avatar-url";
+import { getAuthTokenFromRequest } from "@/utils/auth";
 import { canBootstrap } from "@/utils/bootstrap-mode";
 
 // 服务端渲染：canBootstrap 读 Astro.request.headers 判断请求是否来自本机回环，
@@ -17,6 +18,11 @@ export const prerender = false;
 // 在后台里空转（接口全 401）。配齐后此判定为假，后台正常渲染。
 if (canBootstrap(Astro.request)) {
 	return Astro.redirect("/setup/");
+}
+
+/* 未登录时服务端直接跳登录页，省掉「渲染外壳 → 客户端 replace」那一次整页加载 */
+if (!getAuthTokenFromRequest(Astro.request)) {
+	return Astro.redirect("/login/");
 }
 
 // 后台是单页应用（前端 History API 路由）：

@@ -192,22 +192,36 @@ const adminBgUrl = (() => {
 	return `${import.meta.env.BASE_URL ?? "/"}${first.replace(/^\//, "")}`;
 })();
 
-/** 页面切换动画类：切页时短暂挂上，动画结束后移除，避免影响后续布局 */
+/**
+ * 页面切换动画类：**只在用户点击导航时挂上**。
+ *
+ * 早先是 $effect 监听 activePage，导致刷新页面、直接打开链接、
+ * 浏览器前进后退都会播一遍入场动画——用户明确要求「动画只绑在入口按钮上，
+ * 刷新不得播放」。所以改成由 navigate() 显式触发。
+ *
+ * 实现顺序必须是「摘类 → 下一帧挂类」：同一元素带着同一个 animation-name 时，
+ * 改其他属性不会让动画重播。
+ */
 let viewAnimClass = $state("");
-$effect(() => {
-	// 依赖 activePage：路由变化即重新触发动画
-	void activePage;
-	if (adminConfig.pageTransition?.enable === false || !adminViewDuration) {
-		viewAnimClass = "";
-		return;
-	}
+let viewAnimTimer: ReturnType<typeof setTimeout> | null = null;
+
+function playViewTransition() {
+	if (adminConfig.pageTransition?.enable === false) return;
 	const effect = adminConfig.pageTransition?.effect ?? "slide-fade";
+	const duration = Math.max(0, adminConfig.pageTransition?.duration ?? 220);
+	if (duration === 0) return;
+
+	if (viewAnimTimer) clearTimeout(viewAnimTimer);
 	viewAnimClass = "";
-	const raf = requestAnimationFrame(() => {
+	requestAnimationFrame(() => {
 		viewAnimClass = `admin-view-enter admin-view-${effect}`;
+		viewAnimTimer = setTimeout(() => {
+			viewAnimClass = "";
+			viewAnimTimer = null;
+		}, duration + 60);
 	});
-	return () => cancelAnimationFrame(raf);
-});
+}
+
 let posts = $state<Post[]>([]);
 let isLoading = $state(true);
 let error = $state("");
@@ -1062,7 +1076,22 @@ onMount(() => {
 	const off = onAuthExpired(() => {
 		authExpiredOpen = true;
 	});
+
+	/* 「返回前台」的出站转场用 document 级捕获监听实现。
+	   为什么不用 <a onclick>：实测编译产物里 <a> 上根本没有 onclick
+	   （点击后 defaultPrevented 为 true，但处理函数从未执行），
+	   事件被其他全局处理器先吃掉。捕获阶段能在它们之前拿到。 */
+	const onExitClick = (event: MouseEvent) => {
+		const target = event.target;
+		if (!(target instanceof Element)) return;
+		const link = target.closest<HTMLAnchorElement>("a[data-admin-exit]");
+		if (!link) return;
+		playExitTransition(event, link.getAttribute("href") || "/");
+	};
+	document.addEventListener("click", onExitClick, true);
+
 	return () => {
+		document.removeEventListener("click", onExitClick, true);
 		off();
 		uninstall();
 	};
@@ -1559,6 +1588,9 @@ function navigate(path: string) {
 	}
 	history.pushState({}, "", target);
 	applyRoute();
+	/* 只有「用户点击导航」走到这里，才播入场动画。
+	   刷新、直接打开链接、浏览器前进后退都不经过 navigate()，因此不会播。 */
+	playViewTransition();
 }
 
 /** 确认离开：执行挂起的跳转 */
@@ -1569,6 +1601,8 @@ function confirmLeave() {
 	if (path) {
 		history.pushState({}, "", path);
 		applyRoute();
+		/* 用户点了「离开」确认，同样属于主动导航 */
+		playViewTransition();
 	}
 }
 
@@ -1603,6 +1637,51 @@ function goAnnouncement() {
 
 function goSessions() {
 	navigate(`${DASHBOARD_PATH}sessions/`);
+}
+
+/**
+ * 出站转场：后台 → 前台。
+ *
+ * 进入后台时前台有一层遮罩下拉盖住页面；返回时此前是直接 href 跳转，
+ * 没有任何过渡，来回两个方向不对称。
+ * 这里补一个反向动作：遮罩从下方升起盖住后台，再开始导航。
+ *
+ * 复用的是与入口同一套视觉与缓动（白天/夜色底 + 坐标格 + 上移方向相反），
+ * 时长取 adminConfig.pageTransition.duration，与切页动画同一来源。
+ */
+function playExitTransition(event: MouseEvent, href: string) {
+	/* 修饰键或中键点击：尊重浏览器的「新标签打开」，不拦截 */
+	if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+		return;
+	}
+	event.preventDefault();
+
+	const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+	const effect = adminConfig.pageTransition?.effect ?? "slide-fade";
+	const duration = Math.max(0, adminConfig.pageTransition?.duration ?? 220);
+
+	const leave = document.createElement("div");
+	leave.className = "admin-exit-veil";
+	leave.dataset.effect = effect;
+	leave.style.setProperty("--exit-duration", `${duration}ms`);
+	document.body.appendChild(leave);
+
+	// 两帧后加类，确保初始位置先被绘制一次，过渡才会运行
+	requestAnimationFrame(() => {
+		requestAnimationFrame(() => {
+			leave.classList.add("is-covering");
+		});
+	});
+
+	const go = () => {
+		window.location.href = href;
+	};
+	if (reduced || duration === 0) {
+		go();
+		return;
+	}
+	// 等过渡走完再导航，避免后半段运动被页面卸载打断
+	setTimeout(go, duration + 60);
 }
 
 function goCategoriesAndTags() {
@@ -2357,7 +2436,7 @@ function formatDate(dateStr: string | null): string {
 					{#if activePage === "gallery"}
 						<Icon icon="material-symbols:photo-library" />
 					{:else}
-						<Icon icon="material-symbols:photo-library-outline" />
+						<Icon icon="material-symbols:photo-library-outline-rounded" />
 					{/if}
 					<span>{i18n(I18nKey.configGallery)}</span>
 				</button>
@@ -2367,11 +2446,9 @@ function formatDate(dateStr: string | null): string {
 					class:active={activePage === "apps"}
 					onclick={goApps}
 				>
-					{#if activePage === "apps"}
-						<Icon icon="material-symbols:apps" />
-					{:else}
-						<Icon icon="material-symbols:apps-outline" />
-					{/if}
+					<!-- 图标集里没有 apps-outline，只有实心的 apps；
+					     选中态用同一枚，靠 nav-item 的 active 底色区分。 -->
+					<Icon icon="material-symbols:apps" />
 					<span>{i18n(I18nKey.configApp)}</span>
 				</button>
 
@@ -2405,8 +2482,11 @@ function formatDate(dateStr: string | null): string {
 						<span class="user-role">{i18n(I18nKey.adminSidebarRole)}</span>
 					</div>
 				</div>
-				<!-- 返回前台首页 -->
-				<a class="nav-item" href="/">
+				<!-- 返回前台首页：走与「进入后台」对称的转场。
+				     直接 href="/" 是瞬间换页，出站没有任何过渡。
+				     不用 onclick 绑定：实测该属性没有落到 DOM 上（编译后 <a> 上没有事件），
+				     点击由 document 级的捕获监听处理，见 onMount 里的 data-admin-exit 委托。 -->
+				<a class="nav-item" href="/" data-admin-exit>
 					<Icon icon="material-symbols:home-outline-rounded" />
 					<span>{i18n(I18nKey.adminBackHome)}</span>
 				</a>
@@ -3049,6 +3129,43 @@ function formatDate(dateStr: string | null): string {
 />
 
 <style>
+	/* ── 出站转场遮罩（后台 → 前台）──
+	   与进入后台时的下拉遮罩对称：这一层从下方升起盖住后台，然后才开始导航。
+	   视觉沿用入口遮罩的夜色底 + 坐标格，只是方向相反，让来回两个方向成为一对。
+	   这是运行时创建的一次性节点，用 :global 让它脱离组件作用域。 */
+	:global(.admin-exit-veil) {
+		position: fixed;
+		inset: 0;
+		z-index: 15000;
+		background: #0e0b16;
+		/* 初始位置在视口下方 */
+		transform: translateY(101%);
+		transition: transform var(--exit-duration, 220ms) cubic-bezier(0.76, 0, 0.24, 1);
+		will-change: transform;
+		pointer-events: none;
+	}
+
+	:global(.admin-exit-veil[data-effect="fade"]) {
+		transform: none;
+		opacity: 0;
+		transition: opacity var(--exit-duration, 220ms) ease-out;
+	}
+
+	:global(.admin-exit-veil[data-effect="slide"]) {
+		transform: translateY(101%);
+	}
+
+	:global(.admin-exit-veil[data-effect="zoom"]) {
+		transform: none;
+		opacity: 0;
+		transition: opacity var(--exit-duration, 220ms) ease-out;
+	}
+
+	:global(.admin-exit-veil.is-covering) {
+		transform: translateY(0);
+		opacity: 1;
+	}
+
 	/* 后台统一视口高度：给 zoom 容器内部的卡片用。
 	   .admin-content 带 zoom，其子元素的高度会被放大，
 	   所以这里预先除以 zoom，让卡片渲染后正好等于 (100vh - 3rem)。 */
@@ -3095,7 +3212,12 @@ function formatDate(dateStr: string | null): string {
 		   会把文章列表的「状态/操作」列挤到换行。折叠态 5.75rem(92px) 两边一致。 */
 		width: 16rem;
 		flex-shrink: 0;
-		height: calc(100vh - 3rem);
+		/* 高度走 --admin-viewport-h（已按 zoom 换算），不要直接写 100vh：
+		   .admin-content 带 zoom，视口单位会在缩放容器里被二次缩放，
+		   浏览器缩放加大时侧栏高度算出来偏大或偏小，导航项就被挤压。
+		   这一条与 min-height:0 配合，让 flex 子项按真实可用高度分配。 */
+		height: var(--admin-viewport-h, calc(100vh - 3rem));
+		min-height: 0;
 		overflow: visible;
 		display: flex;
 		flex-direction: column;
@@ -3270,6 +3392,12 @@ function formatDate(dateStr: string | null): string {
 		width: 100%;
 		display: flex;
 		align-items: center;
+		/* 不许被压缩：.sidebar-nav 是 flex 列容器，子项默认 flex-shrink:1，
+		   浏览器缩放加大（或视口变矮）时可用高度不足，浏览器会把每一项
+		   压扁、行高挤在一起，选项彼此贴住。
+		   设为 0 后每项保持自身高度，装不下就交给 .sidebar-nav 滚动——
+		   这才是「高度不被挤压」的正解，而不是只给容器加滚动条。 */
+		flex-shrink: 0;
 		/* 22px：参考项目用 --sidebar-icon-column: 4.25rem(68px) 的网格列，
 		   24px 图标居中后右缘到文字正好 22px。之前 10px 明显偏挤。 */
 		gap: 1.375rem;
