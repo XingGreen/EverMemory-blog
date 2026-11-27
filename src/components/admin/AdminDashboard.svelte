@@ -1658,7 +1658,13 @@ function playExitTransition(event: MouseEvent, href: string) {
 
 	const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 	const effect = adminConfig.pageTransition?.effect ?? "slide-fade";
-	const duration = Math.max(0, adminConfig.pageTransition?.duration ?? 220);
+	/* 时长不能直接取 pageTransition.duration（默认 220ms）。
+	   那个值服务的是「内容位移 10px 的入场」，而这里的遮罩要位移整屏
+	   （约 1000px）——位移量差两个数量级，用 220ms 的结果就是
+	   「链接闪一下就已经跳走了」，用户根本看不出有动画。
+	   900ms 对应约 18px/帧，升起的全过程能看清，
+	   与入口开屏遮罩同一量级，来回两个方向速度才一致。 */
+	const duration = 900;
 
 	const leave = document.createElement("div");
 	leave.className = "admin-exit-veil";
@@ -1676,12 +1682,13 @@ function playExitTransition(event: MouseEvent, href: string) {
 	const go = () => {
 		window.location.href = href;
 	};
-	if (reduced || duration === 0) {
+	if (reduced) {
 		go();
 		return;
 	}
-	// 等过渡走完再导航，避免后半段运动被页面卸载打断
-	setTimeout(go, duration + 60);
+	/* 等过渡走完再导航。+120 而非 +60：留出两帧延迟与首帧绘制的时间，
+	   否则遮罩刚到顶就被卸载，看起来仍是「没到位就走了」。 */
+	setTimeout(go, duration + 120);
 }
 
 function goCategoriesAndTags() {
@@ -3212,11 +3219,14 @@ function formatDate(dateStr: string | null): string {
 		   会把文章列表的「状态/操作」列挤到换行。折叠态 5.75rem(92px) 两边一致。 */
 		width: 16rem;
 		flex-shrink: 0;
-		/* 高度走 --admin-viewport-h（已按 zoom 换算），不要直接写 100vh：
-		   .admin-content 带 zoom，视口单位会在缩放容器里被二次缩放，
-		   浏览器缩放加大时侧栏高度算出来偏大或偏小，导航项就被挤压。
-		   这一条与 min-height:0 配合，让 flex 子项按真实可用高度分配。 */
-		height: var(--admin-viewport-h, calc(100vh - 3rem));
+		/* 高度必须由 flex 容器分配，不能自己算。
+		   早先写死 height: var(--admin-viewport-h) 并配 align-self: flex-start，
+		   侧栏高度来自「视口高 ÷ zoom」，而右侧 .admin-main 是 flex:1 撑满容器——
+		   两个基准不同，浏览器缩放后必然错位（侧栏比内容区高或矮）。
+		   改回 align-self: stretch（flex 默认），两者都从同一行高的父容器取高，
+		   再加 min-height:0 让内部滚动正常。 */
+		align-self: stretch;
+		height: auto;
 		min-height: 0;
 		overflow: visible;
 		display: flex;
@@ -3845,11 +3855,12 @@ function formatDate(dateStr: string | null): string {
 	/* 设置页工作区：与侧栏等高，滚动交给内部 .settings-body。
 	   保存栏因此能常驻底部而不随内容滚走。 */
 	/* 文章列表页外壳：卡片 + 限高，页头与滚动都由 PostList 自己管。
-	   与 .admin-page 保持同一套高度契约，避免和侧栏不等高。 */
+	   高度取父容器的 100%（.admin-main 已由 flex 撑满），不再自算视口：
+	   自算视口时它和侧栏用的是两套基准，缩放后必然不齐。 */
 	.posts-shell {
 		display: flex;
 		flex-direction: column;
-		height: var(--admin-viewport-h, calc(100vh - 3rem));
+		height: 100%;
 		min-height: 0;
 		overflow: hidden;
 		padding: 0;
@@ -3858,7 +3869,7 @@ function formatDate(dateStr: string | null): string {
 	.settings-workspace {
 		display: flex;
 		flex-direction: column;
-		height: var(--admin-viewport-h, calc(100vh - 3rem));
+		height: 100%;
 		min-height: 0;
 		overflow: hidden;
 		padding: 0;
@@ -4208,6 +4219,9 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	/* 未保存改动：左侧一颗提示按钮，点开就是逐行 diff */
+	/* 未保存改动提示：警告色（琥珀），不是危险色。
+	   这里的语义是「有东西没保存」，需要你处理但没出错；用 --destructive 会读成
+	   「出问题了」。基准与 hover 用同一个色相、只提浓度，避免紫黄混搭。 */
 	.savebar-notice {
 		display: inline-flex;
 		align-items: center;
@@ -4216,8 +4230,8 @@ function formatDate(dateStr: string | null): string {
 		padding: 0.5rem 0.75rem;
 		border: none;
 		border-radius: 10px;
-		background: color-mix(in srgb, var(--destructive, #d33) 12%, transparent);
-		color: var(--destructive, #d33);
+		background: color-mix(in srgb, var(--warning) 12%, transparent);
+		color: var(--warning);
 		font-size: var(--admin-fs-meta, 0.75rem);
 		font-family: inherit;
 		font-weight: 500;
@@ -4226,7 +4240,7 @@ function formatDate(dateStr: string | null): string {
 	}
 
 	.savebar-notice:hover {
-		background: color-mix(in srgb, var(--primary) 20%, transparent);
+		background: color-mix(in srgb, var(--warning) 20%, transparent);
 	}
 
 	.savebar-notice:focus-visible {
